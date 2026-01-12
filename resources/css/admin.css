@@ -1,0 +1,131 @@
+/* ===== GLOBAL ===== */
+body {
+    background-color: #f2f8fd;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.admin-wrapper {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* ===== SIDEBAR ===== */
+.sidebar {
+    width: 230px;
+    background: linear-gradient(180deg, #8fd3ff, #6ec1f7);
+    color: white;
+    padding: 20px 0;
+}
+
+/* Logo */
+.sidebar-logo {
+    text-align: center;
+    font-weight: 600;
+    margin-bottom: 30px;
+    letter-spacing: 0.5px;
+}
+
+.sidebar-logo i {
+    font-size: 32px;
+    display: block;
+    margin-bottom: 6px;
+}
+
+/* Menu */
+.sidebar-menu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar-menu li a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 22px;
+    color: white;
+    text-decoration: none;
+    font-size: 14.5px;
+    border-radius: 10px;
+    margin: 4px 12px;
+    transition: all 0.2s ease;
+}
+
+.sidebar-menu li a i {
+    font-size: 16px;
+    opacity: 0.95;
+}
+
+.sidebar-menu li a:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* Active menu (để sẵn dùng sau) */
+.sidebar-menu li a.active {
+    background: rgba(255, 255, 255, 0.35);
+    font-weight: 600;
+}
+
+/* ===== MAIN ===== */
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ===== TOPBAR ===== */
+.topbar {
+    height: 60px;
+    background: #ffffff;
+    padding: 0 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+/* Admin dropdown */
+.topbar .dropdown-toggle {
+    border-radius: 20px;
+    font-size: 14px;
+    padding: 6px 12px;
+}
+
+.topbar .dropdown-toggle i {
+    font-size: 18px;
+}
+
+/* Dropdown menu */
+.dropdown-menu {
+    border-radius: 12px;
+    font-size: 14px;
+}
+
+.dropdown-item {
+    padding: 10px 16px;
+}
+
+.dropdown-item:hover {
+    background-color: #eef6fb;
+}
+
+/* ===== CONTENT ===== */
+.content {
+    padding: 24px;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .sidebar {
+        position: fixed;
+        left: -230px;
+        top: 0;
+        height: 100%;
+        transition: 0.3s ease;
+        z-index: 1000;
+    }
+
+    .sidebar.show {
+        left: 0;
+    }
+}
