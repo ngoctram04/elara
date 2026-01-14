@@ -1,11 +1,26 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\ProfileController;
+
+/*
+|--------------------------------------------------------------------------
+| CONTROLLERS
+|--------------------------------------------------------------------------
+*/
+
+// Frontend
 use App\Http\Controllers\Frontend\HomeController;
 use App\Http\Controllers\Frontend\ShopController;
+
+// Admin
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
+use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\BrandController;
+use App\Http\Controllers\Admin\ProductController;
+
+// User profile (Laravel default)
+use App\Http\Controllers\ProfileController;
 
 /*
 |--------------------------------------------------------------------------
@@ -13,15 +28,12 @@ use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 |--------------------------------------------------------------------------
 */
 
-// Trang chủ (ai cũng vào được)
 Route::get('/', [HomeController::class, 'index'])
     ->name('home');
 
-// Trang shop – yêu cầu đăng nhập
 Route::get('/shop', [ShopController::class, 'index'])
     ->middleware('auth')
     ->name('shop');
-
 
 /*
 |--------------------------------------------------------------------------
@@ -30,22 +42,18 @@ Route::get('/shop', [ShopController::class, 'index'])
 */
 
 Route::prefix('admin')
-    ->as('admin.')
+    ->name('admin.')
     ->middleware(['auth', 'is_admin'])
     ->group(function () {
 
         /*
-        |-------------------------
         | Dashboard
-        |-------------------------
         */
         Route::get('/dashboard', [DashboardController::class, 'index'])
             ->name('dashboard');
 
         /*
-        |-------------------------
-        | Admin Profile (RIÊNG)
-        |-------------------------
+        | Admin Profile
         */
         Route::get('/profile', [AdminProfileController::class, 'show'])
             ->name('profile.show');
@@ -57,18 +65,51 @@ Route::prefix('admin')
             ->name('profile.update');
 
         /*
-        |-------------------------
-        | (Sau này mở rộng)
-        |-------------------------
+        | Category Management
         */
-        // Route::resource('users', UserController::class);
-        // Route::resource('products', ProductController::class);
-    });
+        Route::resource('categories', CategoryController::class)->only([
+            'index',
+            'create',
+            'store',
+            'show',
+            'edit',
+            'update',
+            'destroy',
+        ]);
 
+        /*
+        | Brand Management
+        */
+        Route::resource('brands', BrandController::class)->only([
+            'index',
+            'create',
+            'store',
+            'edit',
+            'update',
+            'destroy',
+        ]);
+
+        /*
+        | Product Management
+        | ✔ index, create, store
+        | ✔ show  → 👁 xem chi tiết (có biến thể)
+        | ✔ edit  → ✏️ chỉnh sửa (có biến thể)
+        | ✔ update, destroy
+        */
+        Route::resource('products', ProductController::class)->only([
+            'index',
+            'create',
+            'store',
+            'show',
+            'edit',
+            'update',
+            'destroy',
+        ]);
+    });
 
 /*
 |--------------------------------------------------------------------------
-| PROFILE – USER (GIỮ LẠI)
+| PROFILE – USER (DEFAULT)
 |--------------------------------------------------------------------------
 */
 
@@ -84,10 +125,9 @@ Route::middleware('auth')->group(function () {
         ->name('profile.destroy');
 });
 
-
 /*
 |--------------------------------------------------------------------------
-| AUTH ROUTES (LOGIN / REGISTER / LOGOUT)
+| AUTH ROUTES
 |--------------------------------------------------------------------------
 */
 

@@ -30,42 +30,74 @@ class ProfileController extends Controller
     // CẬP NHẬT
     public function update(Request $request)
     {
-        // ✅ VALIDATION (TĂNG SIZE AVATAR)
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255',
-            'password' => 'nullable|min:6|confirmed',
-            'avatar' => 'nullable|image|mimes:jpg,jpeg,png|max:5120', // 5MB
-        ]);
-
         $admin = User::findOrFail(Auth::id());
 
-        // cập nhật thông tin cơ bản
-        $admin->name = $request->name;
-        $admin->email = $request->email;
+        // ✅ VALIDATION
+        $validated = $request->validate([
+            'name'  => 'required|string|max:255',
+            'phone' => 'nullable|string|max:15',
 
-        // đổi mật khẩu nếu có
-        if ($request->filled('password')) {
-            $admin->password = Hash::make($request->password);
+            // email chỉ để hiển thị
+            'email' => 'required|email|max:255',
+
+            // 🔐 đổi mật khẩu
+            'current_password' => 'required_with:password',
+            'password' => 'nullable|string|min:8|confirmed',
+
+            'avatar' => 'nullable|image|mimes:jpg,jpeg,png|max:5120',
+        ], [
+            'current_password.required_with' => 'Vui lòng nhập mật khẩu hiện tại',
+            'password.min' => 'Mật khẩu mới phải ít nhất 8 ký tự',
+            'password.confirmed' => 'Xác nhận mật khẩu không khớp',
+        ]);
+
+        $changed = false;
+
+        /* ========= HỌ TÊN ========= */
+        if ($admin->name !== $validated['name']) {
+            $admin->name = $validated['name'];
+            $changed = true;
         }
 
-        // upload avatar
-        if ($request->hasFile('avatar')) {
+        /* ========= SỐ ĐIỆN THOẠI ========= */
+        if ($admin->phone !== $validated['phone']) {
+            $admin->phone = $validated['phone'];
+            $changed = true;
+        }
 
-            // xoá avatar cũ nếu tồn tại
+        /* ========= ĐỔI MẬT KHẨU ========= */
+        if ($request->filled('password')) {
+
+            // ❌ mật khẩu cũ sai
+            if (!Hash::check($request->current_password, $admin->password)) {
+                return back()->withErrors([
+                    'current_password' => 'Mật khẩu hiện tại không đúng'
+                ]);
+            }
+
+            $admin->password = Hash::make($validated['password']);
+            $changed = true;
+        }
+
+        /* ========= AVATAR ========= */
+        if ($request->hasFile('avatar')) {
             if ($admin->avatar) {
                 Storage::disk('public')->delete($admin->avatar);
             }
 
-            // lưu avatar mới
-            $admin->avatar = $request->file('avatar')
-                ->store('avatars', 'public');
+            $admin->avatar = $request->file('avatar')->store('avatars', 'public');
+            $changed = true;
+        }
+
+        /* ========= KHÔNG CÓ GÌ THAY ĐỔI ========= */
+        if (!$changed) {
+            return back()->with('info', 'Không có thay đổi nào được cập nhật.');
         }
 
         $admin->save();
 
         return redirect()
             ->route('admin.profile.show')
-            ->with('success', 'Cập nhật thông tin thành công');
+            ->with('success', 'Cập nhật thông tin cá nhân thành công.');
     }
 }

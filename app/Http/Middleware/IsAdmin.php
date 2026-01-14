@@ -11,20 +11,19 @@ class IsAdmin
 {
     public function handle(Request $request, Closure $next): Response
     {
-        // Chưa đăng nhập → quay về login
+        // Chưa đăng nhập → về login
         if (!Auth::check()) {
-            return redirect('/login');
+            return redirect()->route('login');
         }
 
-        // Lấy user hiện tại
-        $user = $request->user();
+        $user = Auth::user();
 
-        // Không phải admin
-        if ($user->role != 1) {
+        // Không phải admin → cấm
+        if ($user->role !== 'admin') {
             abort(403);
         }
 
-        // Là admin
+        // Là admin → cho qua
         return $next($request);
     }
 }

@@ -16,21 +16,11 @@ class DatabaseSeeder extends Seeder
         // ===== ADMIN =====
         User::create([
             'name' => 'Admin ELARA',
-            'email' => 'admin@elara.com',
+            'email' => 'elara.shop26@gmail.com',
             'password' => Hash::make('123456'),
             'phone' => '0900000000',
             'avatar' => null,
             'role' => 1, // admin
-        ]);
-
-        // ===== USER THƯỜNG =====
-        User::create([
-            'name' => 'Nguyễn Thị Ngọc Trâm',
-            'email' => 'user@elara.com',
-            'password' => Hash::make('123456'),
-            'phone' => '0912345678',
-            'avatar' => null,
-            'role' => 0, // user
         ]);
     }
 }

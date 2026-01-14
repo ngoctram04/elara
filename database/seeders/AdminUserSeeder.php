@@ -11,7 +11,7 @@ class AdminUserSeeder extends Seeder
     public function run(): void
     {
         User::updateOrCreate(
-            ['email' => 'admin@elara.com'], // điều kiện tìm
+            ['email' => 'elara.shop26@gmail.com'], // điều kiện tìm
             [
                 'name' => 'Admin ELARA',
                 'password' => Hash::make('123456'),

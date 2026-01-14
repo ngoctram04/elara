@@ -11,7 +11,7 @@
     {{-- Icons --}}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
-    {{-- Admin CSS & JS (VITE) --}}
+    {{-- Admin CSS & JS --}}
     @vite([
         'resources/css/admin.css',
         'resources/js/admin.js'
@@ -30,17 +30,60 @@
 
         <ul class="sidebar-menu">
             <li>
-                <a href="{{ route('admin.dashboard') }}">
+                <a href="{{ route('admin.dashboard') }}"
+                   class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
                     <i class="bi bi-speedometer2"></i> Tổng quan
                 </a>
             </li>
-            <li><a href="#"><i class="bi bi-person"></i> Quản lý người dùng</a></li>
-            <li><a href="#"><i class="bi bi-grid"></i> Quản lý danh mục</a></li>
-            <li><a href="#"><i class="bi bi-tags"></i> Quản lý thương hiệu</a></li>
-            <li><a href="#"><i class="bi bi-box"></i> Quản lý sản phẩm</a></li>
-            <li><a href="#"><i class="bi bi-cart"></i> Quản lý đơn hàng</a></li>
-            <li><a href="#"><i class="bi bi-gift"></i> Quản lý khuyến mãi</a></li>
-            <li><a href="#"><i class="bi bi-bar-chart"></i> Thống kê</a></li>
+
+            <li>
+                <a href="#"
+                   class="{{ request()->is('admin/users*') ? 'active' : '' }}">
+                    <i class="bi bi-person"></i> Quản lý người dùng
+                </a>
+            </li>
+
+            <li>
+                <a href="{{ route('admin.categories.index') }}"
+                   class="{{ request()->is('admin/categories*') ? 'active' : '' }}">
+                    <i class="bi bi-grid"></i> Quản lý danh mục
+                </a>
+            </li>
+
+            <li>
+                <a href="{{ route('admin.brands.index') }}"
+                   class="{{ request()->is('admin/brands*') ? 'active' : '' }}">
+                    <i class="bi bi-tags"></i> Quản lý thương hiệu
+                </a>
+            </li>
+
+            <li>
+                <a href="{{ route('admin.products.index') }}"
+                   class="{{ request()->is('admin/products*') ? 'active' : '' }}">
+                    <i class="bi bi-box"></i> Quản lý sản phẩm
+                </a>
+            </li>
+
+            <li>
+                <a href="#"
+                   class="{{ request()->is('admin/orders*') ? 'active' : '' }}">
+                    <i class="bi bi-cart"></i> Quản lý đơn hàng
+                </a>
+            </li>
+
+            <li>
+                <a href="#"
+                   class="{{ request()->is('admin/promotions*') ? 'active' : '' }}">
+                    <i class="bi bi-gift"></i> Quản lý khuyến mãi
+                </a>
+            </li>
+
+            <li>
+                <a href="#"
+                   class="{{ request()->is('admin/statistics*') ? 'active' : '' }}">
+                    <i class="bi bi-bar-chart"></i> Thống kê
+                </a>
+            </li>
         </ul>
     </aside>
 
@@ -58,38 +101,24 @@
                 <button
                     class="btn btn-light d-flex align-items-center gap-2 rounded-pill dropdown-toggle"
                     type="button"
-                    id="adminDropdown"
                     data-bs-toggle="dropdown"
-                    aria-expanded="false"
                 >
-                    {{-- AVATAR --}}
                     @if (auth()->user()->avatar)
-                        <img
-                            src="{{ asset('storage/' . auth()->user()->avatar) }}"
-                            class="rounded-circle"
-                            width="32"
-                            height="32"
-                            alt="Avatar"
-                        >
+                        <img src="{{ asset('storage/' . auth()->user()->avatar) }}"
+                             class="rounded-circle" width="32" height="32">
                     @else
-                        <div
-                            class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
-                            style="width:32px;height:32px;font-size:14px"
-                        >
+                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
+                             style="width:32px;height:32px;font-size:14px">
                             {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
                         </div>
                     @endif
 
-                    <span class="fw-semibold">
-                        {{ auth()->user()->name ?? 'Admin' }}
-                    </span>
+                    <span class="fw-semibold">{{ auth()->user()->name }}</span>
                 </button>
 
-                <ul class="dropdown-menu dropdown-menu-end shadow"
-                    aria-labelledby="adminDropdown"
-                >
+                <ul class="dropdown-menu dropdown-menu-end shadow">
                     <li class="dropdown-header">
-                        Xin chào, <strong>{{ auth()->user()->name ?? 'Admin' }}</strong>
+                        Xin chào, <strong>{{ auth()->user()->name }}</strong>
                     </li>
 
                     <li>
@@ -109,7 +138,7 @@
                     <li>
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
-                            <button type="submit" class="dropdown-item text-danger">
+                            <button class="dropdown-item text-danger">
                                 <i class="bi bi-box-arrow-right me-2"></i> Đăng xuất
                             </button>
                         </form>
@@ -119,15 +148,25 @@
         </header>
 
         {{-- CONTENT --}}
-        <section class="content">
-            @yield('content')
-        </section>
+<section class="content container-fluid px-4 py-3">
+
+    {{-- ALERT --}}
+    @foreach (['success','info','error'] as $msg)
+        @if (session($msg))
+            <div class="alert alert-{{ $msg == 'error' ? 'danger' : $msg }} alert-dismissible fade show">
+                {{ session($msg) }}
+                <button class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        @endif
+    @endforeach
+
+    @yield('content')
+</section>
+
     </main>
 
 </div>
 
-{{-- Bootstrap JS --}}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-
 </body>
 </html>

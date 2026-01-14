@@ -33,9 +33,10 @@ class AuthenticatedSessionController extends Controller
         $user = Auth::user();
 
         // Nếu là admin
-        if ($user->role == 1) {
+        if ($user->role === 'admin') {
             return redirect('/admin/dashboard');
         }
+
 
         // Nếu là user thường
         return redirect('/shop');

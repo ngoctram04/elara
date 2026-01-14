@@ -1,37 +1,55 @@
-/* ===== GLOBAL ===== */
+/* ======================
+   GLOBAL
+====================== */
 body {
     background-color: #f2f8fd;
-    font-family: 'Segoe UI', sans-serif;
+    font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 14px;
+    color: #1f2937;
 }
 
 .admin-wrapper {
     display: flex;
     min-height: 100vh;
+    overflow-x: hidden;
 }
 
-/* ===== SIDEBAR ===== */
+/* ======================
+   SIDEBAR
+====================== */
 .sidebar {
     width: 230px;
     background: linear-gradient(180deg, #8fd3ff, #6ec1f7);
-    color: white;
+    color: #ffffff;
     padding: 20px 0;
+    flex-shrink: 0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 1000;
 }
 
-/* Logo */
+/* ======================
+   LOGO
+====================== */
 .sidebar-logo {
     text-align: center;
-    font-weight: 600;
-    margin-bottom: 30px;
+    font-weight: 700;
+    margin-bottom: 32px;
     letter-spacing: 0.5px;
+    font-size: 15px;
 }
 
 .sidebar-logo i {
-    font-size: 32px;
+    font-size: 34px;
     display: block;
     margin-bottom: 6px;
 }
 
-/* Menu */
+/* ======================
+   MENU
+====================== */
 .sidebar-menu {
     list-style: none;
     padding: 0;
@@ -43,89 +61,189 @@ body {
     align-items: center;
     gap: 12px;
     padding: 12px 22px;
-    color: white;
+    color: #ffffff;
     text-decoration: none;
     font-size: 14.5px;
-    border-radius: 10px;
-    margin: 4px 12px;
-    transition: all 0.2s ease;
+    border-radius: 12px;
+    margin: 6px 14px;
+    font-weight: 500;
+    transition:
+        background 0.25s ease,
+        color 0.25s ease,
+        transform 0.15s ease,
+        box-shadow 0.25s ease;
 }
 
 .sidebar-menu li a i {
-    font-size: 16px;
+    font-size: 17px;
     opacity: 0.95;
 }
 
-.sidebar-menu li a:hover {
+/* HOVER */
+.sidebar-menu li a:hover:not(.active) {
     background: rgba(255, 255, 255, 0.25);
+    transform: translateX(4px);
 }
 
-/* Active menu (để sẵn dùng sau) */
+/* ACTIVE */
 .sidebar-menu li a.active {
-    background: rgba(255, 255, 255, 0.35);
-    font-weight: 600;
+    background: #ffffff;
+    color: #1e88e5;
+    font-weight: 700;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
 }
 
-/* ===== MAIN ===== */
+.sidebar-menu li a.active i {
+    color: #1e88e5;
+}
+
+/* ======================
+   MAIN CONTENT
+====================== */
 .main-content {
+    margin-left: 230px;
     flex: 1;
     display: flex;
     flex-direction: column;
+    min-height: 100vh;
+    width: calc(100% - 230px);
 }
 
-/* ===== TOPBAR ===== */
+/* ======================
+   TOPBAR
+====================== */
 .topbar {
     height: 60px;
     background: #ffffff;
     padding: 0 24px;
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    gap: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    z-index: 10;
 }
 
 /* Admin dropdown */
 .topbar .dropdown-toggle {
-    border-radius: 20px;
+    border-radius: 999px;
     font-size: 14px;
-    padding: 6px 12px;
+    padding: 6px 14px;
+    background: #f4f9fd;
 }
 
-.topbar .dropdown-toggle i {
-    font-size: 18px;
+.topbar .dropdown-toggle:hover {
+    background: #eaf4fb;
+}
+
+.topbar img {
+    object-fit: cover;
 }
 
 /* Dropdown menu */
 .dropdown-menu {
-    border-radius: 12px;
+    border-radius: 14px;
     font-size: 14px;
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+    padding: 6px 0;
+}
+
+.dropdown-header {
+    font-weight: 600;
+    font-size: 13px;
+    color: #6b7280;
 }
 
 .dropdown-item {
-    padding: 10px 16px;
+    padding: 10px 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .dropdown-item:hover {
     background-color: #eef6fb;
 }
 
-/* ===== CONTENT ===== */
+/* ======================
+   CONTENT
+====================== */
 .content {
-    padding: 24px;
+    padding: 24px 24px 24px 16px;
+    flex-grow: 1;
+    min-height: calc(100vh - 60px);
 }
 
-/* ===== RESPONSIVE ===== */
+/* ======================
+   CARD
+====================== */
+.card {
+    border-radius: 14px;
+    border: none;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+}
+
+.card .card-body {
+    padding: 22px;
+}
+
+/* ======================
+   TABLE
+====================== */
+.table {
+    background: #ffffff;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.table thead th {
+    font-weight: 600;
+    font-size: 13.5px;
+    background: #f8fbfe;
+}
+
+.table td,
+.table th {
+    vertical-align: middle;
+}
+
+/* ======================
+   BUTTON
+====================== */
+.btn {
+    border-radius: 10px;
+    font-size: 13.5px;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+}
+
+/* ======================
+   ALERT
+====================== */
+.alert {
+    border-radius: 12px;
+    font-size: 14px;
+}
+
+/* ======================
+   MOBILE
+====================== */
 @media (max-width: 768px) {
     .sidebar {
-        position: fixed;
         left: -230px;
-        top: 0;
-        height: 100%;
         transition: 0.3s ease;
-        z-index: 1000;
     }
 
     .sidebar.show {
         left: 0;
+    }
+
+    .main-content {
+        margin-left: 0;
+    }
+
+    .content {
+        padding: 16px;
     }
 }
