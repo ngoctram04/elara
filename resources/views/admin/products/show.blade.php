@@ -100,8 +100,24 @@
                         </td>
 
                         <td class="text-end">
-                            {{ number_format($variant->price) }}đ
-                        </td>
+    @if ($variant->isOnSale())
+        {{-- GIÁ SAU GIẢM --}}
+        <div class="fw-semibold text-danger">
+            {{ number_format($variant->final_price) }}đ
+        </div>
+
+        {{-- GIÁ GỐC --}}
+        <div class="text-muted text-decoration-line-through small">
+            {{ number_format($variant->price) }}đ
+        </div>
+    @else
+        {{-- KHÔNG CÓ KHUYẾN MÃI --}}
+        <span class="fw-semibold">
+            {{ number_format($variant->price) }}đ
+        </span>
+    @endif
+</td>
+
 
                         <td>{{ $variant->stock }}</td>
 

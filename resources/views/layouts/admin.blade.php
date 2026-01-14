@@ -21,7 +21,7 @@
 
 <div class="admin-wrapper">
 
-    {{-- SIDEBAR --}}
+    {{-- ================= SIDEBAR ================= --}}
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-logo">
             <i class="bi bi-emoji-smile"></i>
@@ -29,6 +29,7 @@
         </div>
 
         <ul class="sidebar-menu">
+
             <li>
                 <a href="{{ route('admin.dashboard') }}"
                    class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
@@ -71,8 +72,9 @@
                 </a>
             </li>
 
+            {{-- ✅ PROMOTIONS --}}
             <li>
-                <a href="#"
+                <a href="{{ route('admin.promotions.index') }}"
                    class="{{ request()->is('admin/promotions*') ? 'active' : '' }}">
                     <i class="bi bi-gift"></i> Quản lý khuyến mãi
                 </a>
@@ -84,10 +86,11 @@
                     <i class="bi bi-bar-chart"></i> Thống kê
                 </a>
             </li>
+
         </ul>
     </aside>
 
-    {{-- MAIN --}}
+    {{-- ================= MAIN ================= --}}
     <main class="main-content">
 
         {{-- TOPBAR --}}
@@ -147,21 +150,21 @@
             </div>
         </header>
 
-        {{-- CONTENT --}}
-<section class="content container-fluid px-4 py-3">
+        {{-- ================= CONTENT ================= --}}
+        <section class="content container-fluid px-4 py-3">
 
-    {{-- ALERT --}}
-    @foreach (['success','info','error'] as $msg)
-        @if (session($msg))
-            <div class="alert alert-{{ $msg == 'error' ? 'danger' : $msg }} alert-dismissible fade show">
-                {{ session($msg) }}
-                <button class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        @endif
-    @endforeach
+            {{-- ALERT --}}
+            @foreach (['success','info','error'] as $msg)
+                @if (session($msg))
+                    <div class="alert alert-{{ $msg == 'error' ? 'danger' : $msg }} alert-dismissible fade show">
+                        {{ session($msg) }}
+                        <button class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                @endif
+            @endforeach
 
-    @yield('content')
-</section>
+            @yield('content')
+        </section>
 
     </main>
 

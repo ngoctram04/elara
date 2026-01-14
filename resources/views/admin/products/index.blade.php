@@ -92,13 +92,13 @@
                     <th width="70">Mã</th>
                     <th width="90">Ảnh</th>
                     <th>Tên sản phẩm</th>
-                    <th width="120">Giá</th>
+                    <th width="140">Giá</th>
                     <th width="140">Danh mục</th>
                     <th width="120">Thương hiệu</th>
                     <th width="80">Kho</th>
                     <th width="80">Đã bán</th>
                     <th width="100">Trạng thái</th>
-                    <th width="170">Hành động</th>
+                    <th width="150">Hành động</th>
                 </tr>
                 </thead>
 
@@ -122,29 +122,67 @@
                         </td>
 
                         {{-- NAME --}}
-                        <td class="fw-medium">
+                        <td class="text-center fw-medium">
                             {{ $product->name }}
                         </td>
 
                         {{-- PRICE --}}
-                        <td class="text-end">
-                            @if($product->variants->count())
-                                <span class="fw-semibold text-danger">
-                                    {{ number_format($product->min_price) }}
-                                    @if($product->min_price != $product->max_price)
-                                        – {{ number_format($product->max_price) }}
-                                    @endif
-                                    đ
-                                </span>
-                            @else
-                                <span class="text-muted">---</span>
-                            @endif
-                        </td>
+                        <td class="text-center text-end">
+    @if ($product->variants->count())
+
+        @php
+            // Giá gốc
+            $originPrices = $product->variants->pluck('price');
+            $originMin = $originPrices->min();
+            $originMax = $originPrices->max();
+
+            // Giá sau khuyến mãi
+            $finalPrices = $product->variants->pluck('final_price');
+            $finalMin = $finalPrices->min();
+            $finalMax = $finalPrices->max();
+
+            $hasSale = $finalMin < $originMin;
+        @endphp
+
+        @if ($hasSale)
+            {{-- GIÁ SAU GIẢM --}}
+            <div class="fw-semibold text-danger">
+                {{ number_format($finalMin) }}
+                @if ($finalMin != $finalMax)
+                    – {{ number_format($finalMax) }}
+                @endif
+                đ
+            </div>
+
+            {{-- GIÁ GỐC --}}
+            <div class="text-muted text-decoration-line-through small">
+                {{ number_format($originMin) }}
+                @if ($originMin != $originMax)
+                    – {{ number_format($originMax) }}
+                @endif
+                đ
+            </div>
+        @else
+            {{-- KHÔNG CÓ KHUYẾN MÃI --}}
+            <span class="fw-semibold">
+                {{ number_format($originMin) }}
+                @if ($originMin != $originMax)
+                    – {{ number_format($originMax) }}
+                @endif
+                đ
+            </span>
+        @endif
+
+    @else
+        <span class="text-muted">---</span>
+    @endif
+</td>
+
 
                         {{-- CATEGORY --}}
-                        <td>
+                        <td class="text-center">
                             @if($product->category)
-                                <small class="text-muted">
+                                <small class="text-center text-muted">
                                     {{ $product->category->parent?->name }} →
                                 </small>
                                 {{ $product->category->name }}
@@ -152,7 +190,7 @@
                         </td>
 
                         {{-- BRAND --}}
-                        <td>{{ $product->brand?->name }}</td>
+                        <td class="text-center">{{ $product->brand?->name }}</td>
 
                         {{-- STOCK --}}
                         <td class="text-center fw-semibold">
