@@ -6,6 +6,7 @@
 <div class="card shadow-sm">
     <div class="card-body">
 
+        {{-- HEADER --}}
         <div class="d-flex justify-content-between mb-3">
             <h5 class="fw-semibold mb-0">Chi tiết sản phẩm</h5>
 
@@ -19,16 +20,29 @@
             {{-- LEFT --}}
             <div class="col-md-6">
                 <p><strong>Tên sản phẩm:</strong> {{ $product->name }}</p>
-                <p><strong>Danh mục:</strong> {{ $product->category?->name }}</p>
+
+                <p>
+                    <strong>Danh mục:</strong>
+                    {{ $product->category?->parent?->name }}
+                    @if($product->category?->parent)
+                        →
+                    @endif
+                    {{ $product->category?->name }}
+                </p>
+
                 <p><strong>Thương hiệu:</strong> {{ $product->brand?->name }}</p>
-                <p><strong>Trạng thái:</strong>
+
+                <p>
+                    <strong>Trạng thái:</strong>
                     @if($product->is_active)
                         <span class="badge bg-success">Còn hàng</span>
                     @else
                         <span class="badge bg-secondary">Ẩn</span>
                     @endif
                 </p>
-                <p><strong>Nổi bật:</strong>
+
+                <p>
+                    <strong>Nổi bật:</strong>
                     {{ $product->is_featured ? 'Có' : 'Không' }}
                 </p>
             </div>
@@ -37,53 +51,80 @@
             <div class="col-md-6">
                 <strong>Ảnh sản phẩm:</strong>
                 <div class="d-flex gap-2 flex-wrap mt-2">
-                    @foreach($product->images as $img)
+                    @forelse($product->images as $img)
                         <img src="{{ $img->url }}"
                              width="90"
                              class="rounded border">
-                    @endforeach
+                    @empty
+                        <span class="text-muted">Chưa có ảnh</span>
+                    @endforelse
                 </div>
             </div>
         </div>
 
         <hr>
 
-        {{-- BIẾN THỂ --}}
+        {{-- ================= BIẾN THỂ ================= --}}
+        @php
+            $attributeName = $product->variants->first()?->attribute_name;
+        @endphp
+
         <h6 class="fw-semibold text-primary">
-            Biến thể ({{ $product->variants->count() }})
+            Biến thể
+            @if($attributeName)
+                <span class="text-muted">
+                    ({{ $attributeName }})
+                </span>
+            @endif
         </h6>
 
         <div class="table-responsive mt-3">
             <table class="table table-bordered align-middle">
                 <thead class="table-light text-center">
                 <tr>
-                    <th>#</th>
-                    <th>Biến thể</th>
-                    <th>Giá</th>
-                    <th>Tồn kho</th>
-                    <th>Đã bán</th>
-                    <th>Ảnh</th>
+                    <th width="60">#</th>
+                    <th>Giá trị</th>
+                    <th width="120">Giá</th>
+                    <th width="100">Tồn kho</th>
+                    <th width="100">Đã bán</th>
+                    <th width="100">Ảnh</th>
                 </tr>
                 </thead>
                 <tbody>
-                @foreach($product->variants as $index => $variant)
+                @forelse($product->variants as $index => $variant)
                     <tr class="text-center">
                         <td>{{ $index + 1 }}</td>
-                        <td>{{ $variant->attribute_value }}</td>
-                        <td>{{ number_format($variant->price) }}đ</td>
+
+                        <td class="fw-semibold">
+                            {{ $variant->attribute_value }}
+                        </td>
+
+                        <td class="text-end">
+                            {{ number_format($variant->price) }}đ
+                        </td>
+
                         <td>{{ $variant->stock }}</td>
-                        <td>{{ $variant->sold_quantity ?? 0 }}</td>
+
+                        <td>{{ $variant->sold_quantity }}</td>
+
                         <td>
                             @if($variant->images->first())
                                 <img src="{{ $variant->images->first()->url }}"
                                      width="60"
                                      class="rounded border">
                             @else
-                                -
+                                <span class="text-muted">-</span>
                             @endif
                         </td>
                     </tr>
-                @endforeach
+                @empty
+                    <tr>
+                        <td colspan="6"
+                            class="text-center text-muted py-4">
+                            Chưa có biến thể nào
+                        </td>
+                    </tr>
+                @endforelse
                 </tbody>
             </table>
         </div>

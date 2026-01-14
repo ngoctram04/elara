@@ -20,13 +20,11 @@
                 {{-- LEFT --}}
                 <div class="col-md-6">
 
-                    {{-- TÊN --}}
                     <div class="mb-3">
                         <label class="form-label">Tên sản phẩm</label>
                         <input type="text" name="name" class="form-control" required>
                     </div>
 
-                    {{-- DANH MỤC --}}
                     <div class="mb-3">
                         <label class="form-label">Danh mục</label>
                         <select name="category_id" class="form-select" required>
@@ -37,7 +35,6 @@
                         </select>
                     </div>
 
-                    {{-- THƯƠNG HIỆU --}}
                     <div class="mb-3">
                         <label class="form-label">Thương hiệu</label>
                         <select name="brand_id" class="form-select" required>
@@ -48,121 +45,109 @@
                         </select>
                     </div>
 
-                    {{-- TRẠNG THÁI --}}
-                    <div class="mb-3">
-                        <label class="form-label">Trạng thái</label>
-                        <select name="is_active" class="form-select">
-                            <option value="1">Còn hàng</option>
-                            <option value="0">Ẩn</option>
-                        </select>
-                    </div>
-
-                    {{-- NỔI BẬT --}}
-                    <div class="mb-3">
-                        <label class="form-label">Sản phẩm nổi bật</label>
-                        <select name="is_featured" class="form-select">
-                            <option value="0">Không</option>
-                            <option value="1">Có</option>
-                        </select>
-                    </div>
                 </div>
 
                 {{-- RIGHT --}}
                 <div class="col-md-6">
 
-                    {{-- MÔ TẢ --}}
                     <div class="mb-3">
-                        <label class="form-label">Mô tả sản phẩm</label>
+                        <label class="form-label">Mô tả</label>
                         <textarea name="description" rows="5" class="form-control"></textarea>
                     </div>
 
-                    {{-- HÌNH ẢNH SẢN PHẨM --}}
-<div class="mb-3">
-    <label class="form-label">Hình ảnh sản phẩm</label>
+                    <div class="mb-3">
+                        <label class="form-label">Hình ảnh sản phẩm</label>
 
-    {{-- Ảnh đại diện --}}
-    <input type="file"
-           name="main_image"
-           class="form-control mb-2"
-           required>
+                        <input type="file"
+                               name="main_image"
+                               class="form-control mb-2"
+                               required>
 
-    {{-- Ảnh phụ --}}
-    <div id="image-wrapper"></div>
+                        <div id="image-wrapper"></div>
 
-    <button type="button"
-            class="btn btn-outline-primary btn-sm mt-2"
-            id="btn-add-image">
-        + Thêm hình ảnh
-    </button>
-
-    <small class="text-muted d-block mt-1">
-        Có thể chọn nhiều ảnh
-    </small>
-</div>
+                        <button type="button"
+                                class="btn btn-outline-primary btn-sm mt-2"
+                                id="btn-add-image">
+                            + Thêm hình ảnh
+                        </button>
+                    </div>
 
                 </div>
             </div>
 
             <hr>
 
-            {{-- BIẾN THỂ --}}
+            {{-- ================= BIẾN THỂ ================= --}}
             <h6 class="fw-semibold text-primary mb-3">Biến thể</h6>
 
+            {{-- TÊN LOẠI BIẾN THỂ (CHỈ 1) --}}
+            <div class="mb-3">
+                <label class="form-label">Loại biến thể</label>
+                <input type="text"
+                       name="variant_attribute_name"
+                       class="form-control"
+                       placeholder="VD: Màu sắc / Công dụng / Loại da"
+                       required>
+            </div>
+
             <div id="variant-wrapper">
+
                 <div class="variant-item border rounded p-3 mb-3">
                     <div class="row g-2">
+
                         <div class="col-md-4">
-                            <label class="form-label">Tên biến thể</label>
+                            <label class="form-label">Giá trị</label>
                             <input type="text"
                                    name="variants[0][attribute_value]"
                                    class="form-control"
-                                   placeholder="VD: 500ml">
-                            <input type="hidden"
-                                   name="variants[0][attribute_name]"
-                                   value="Dung tích">
+                                   placeholder="VD: Đỏ / Da dầu"
+                                   required>
                         </div>
 
                         <div class="col-md-3">
-                            <label class="form-label">Giá riêng</label>
+                            <label class="form-label">Giá</label>
                             <input type="number"
                                    name="variants[0][price]"
-                                   class="form-control">
+                                   class="form-control"
+                                   min="0"
+                                   required>
                         </div>
 
                         <div class="col-md-3">
                             <label class="form-label">Số lượng</label>
                             <input type="number"
                                    name="variants[0][stock]"
-                                   class="form-control">
+                                   class="form-control"
+                                   min="0"
+                                   required>
                         </div>
 
                         <div class="col-md-2">
-                            <label class="form-label">Ảnh biến thể</label>
+                            <label class="form-label">Ảnh</label>
                             <input type="file"
                                    name="variants[0][image]"
                                    class="form-control">
                         </div>
+
                     </div>
 
                     <button type="button"
                             class="btn btn-danger btn-sm mt-2 btn-remove-variant">
-                        Xóa biến thể
+                        Xóa
                     </button>
                 </div>
+
             </div>
 
             <button type="button"
                     class="btn btn-outline-success btn-sm mb-4"
                     id="btn-add-variant">
-                + Thêm biến thể
+                + Thêm giá trị
             </button>
 
-            {{-- ACTION --}}
             <div class="text-end">
                 <a href="{{ route('admin.products.index') }}"
-                   class="btn btn-outline-danger">
-                    ✕ Hủy
-                </a>
+                   class="btn btn-outline-danger">Hủy</a>
 
                 <button class="btn btn-primary">
                     <i class="bi bi-plus-lg"></i> Thêm sản phẩm
@@ -173,54 +158,55 @@
 
     </div>
 </div>
-@endsection
 
 @push('scripts')
 <script>
 let variantIndex = 1;
 
-document.getElementById('btn-add-variant').addEventListener('click', function () {
-    const wrapper = document.getElementById('variant-wrapper');
-
-    const html = `
+document.getElementById('btn-add-variant').addEventListener('click', () => {
+    document.getElementById('variant-wrapper').insertAdjacentHTML('beforeend', `
         <div class="variant-item border rounded p-3 mb-3">
             <div class="row g-2">
                 <div class="col-md-4">
-                    <input type="text" name="variants[${variantIndex}][attribute_value]"
-                           class="form-control" placeholder="VD: 500ml">
-                    <input type="hidden"
-                           name="variants[${variantIndex}][attribute_name]"
-                           value="Dung tích">
+                    <input type="text"
+                           name="variants[${variantIndex}][attribute_value]"
+                           class="form-control"
+                           placeholder="VD: Xanh / Trị mụn"
+                           required>
                 </div>
                 <div class="col-md-3">
-                    <input type="number" name="variants[${variantIndex}][price]"
-                           class="form-control">
+                    <input type="number"
+                           name="variants[${variantIndex}][price]"
+                           class="form-control"
+                           min="0" required>
                 </div>
                 <div class="col-md-3">
-                    <input type="number" name="variants[${variantIndex}][stock]"
-                           class="form-control">
+                    <input type="number"
+                           name="variants[${variantIndex}][stock]"
+                           class="form-control"
+                           min="0" required>
                 </div>
                 <div class="col-md-2">
-                    <input type="file" name="variants[${variantIndex}][image]"
+                    <input type="file"
+                           name="variants[${variantIndex}][image]"
                            class="form-control">
                 </div>
             </div>
-
             <button type="button"
                     class="btn btn-danger btn-sm mt-2 btn-remove-variant">
-                Xóa biến thể
+                Xóa
             </button>
         </div>
-    `;
+    `);
 
-    wrapper.insertAdjacentHTML('beforeend', html);
     variantIndex++;
 });
 
-document.addEventListener('click', function (e) {
+document.addEventListener('click', e => {
     if (e.target.classList.contains('btn-remove-variant')) {
         e.target.closest('.variant-item').remove();
     }
 });
 </script>
 @endpush
+@endsection

@@ -89,16 +89,16 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light text-center">
                 <tr>
-                    <th style="width:70px">Mã</th> {{-- MÃ --}}
-                    <th style="width:90px">Ảnh</th>
+                    <th width="70">Mã</th>
+                    <th width="90">Ảnh</th>
                     <th>Tên sản phẩm</th>
-                    <th style="width:100px">Giá</th>
-                    <th style="width:90px">Danh mục</th>
-                    <th style="width:90px">Thương hiệu</th>
-                    <th style="width:90px">Kho</th>
-                    <th style="width:90px">Đã bán</th>
-                    <th style="width:110px">Trạng thái</th>
-                    <th style="width:170px">Hành động</th>
+                    <th width="120">Giá</th>
+                    <th width="140">Danh mục</th>
+                    <th width="120">Thương hiệu</th>
+                    <th width="80">Kho</th>
+                    <th width="80">Đã bán</th>
+                    <th width="100">Trạng thái</th>
+                    <th width="170">Hành động</th>
                 </tr>
                 </thead>
 
@@ -128,11 +128,11 @@
 
                         {{-- PRICE --}}
                         <td class="text-end">
-                            @if($product->hasVariants())
+                            @if($product->variants->count())
                                 <span class="fw-semibold text-danger">
-                                    {{ number_format($product->minPrice()) }}
-                                    @if($product->minPrice() != $product->maxPrice())
-                                        – {{ number_format($product->maxPrice()) }}
+                                    {{ number_format($product->min_price) }}
+                                    @if($product->min_price != $product->max_price)
+                                        – {{ number_format($product->max_price) }}
                                     @endif
                                     đ
                                 </span>
@@ -156,17 +156,17 @@
 
                         {{-- STOCK --}}
                         <td class="text-center fw-semibold">
-                            {{ $product->totalStock() }}
+                            {{ $product->total_stock }}
                         </td>
 
                         {{-- SOLD --}}
                         <td class="text-center">
-                            {{ $product->totalSold() }}
+                            {{ $product->total_sold }}
                         </td>
 
                         {{-- STATUS --}}
                         <td class="text-center">
-                            @if($product->totalStock() > 0)
+                            @if($product->total_stock > 0)
                                 <span class="badge bg-success">Còn hàng</span>
                             @else
                                 <span class="badge bg-secondary">Hết hàng</span>
@@ -202,7 +202,8 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="10" class="text-center text-muted py-4">
+                        <td colspan="10"
+                            class="text-center text-muted py-4">
                             Chưa có sản phẩm nào
                         </td>
                     </tr>
@@ -214,8 +215,12 @@
         {{-- PAGINATION --}}
         <div class="mt-3 d-flex justify-content-between align-items-center">
             <small class="text-muted">
-                Hiển thị {{ $products->firstItem() }} – {{ $products->lastItem() }}
-                / {{ $products->total() }} sản phẩm
+                @if($products->total() > 0)
+                    Hiển thị {{ $products->firstItem() }} – {{ $products->lastItem() }}
+                    / {{ $products->total() }} sản phẩm
+                @else
+                    Không có dữ liệu
+                @endif
             </small>
 
             {{ $products->links() }}

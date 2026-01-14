@@ -19,12 +19,12 @@ use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\ProductController;
 
-// User profile (Laravel default)
+// User profile
 use App\Http\Controllers\ProfileController;
 
 /*
 |--------------------------------------------------------------------------
-| FRONTEND – USER
+| FRONTEND
 |--------------------------------------------------------------------------
 */
 
@@ -46,15 +46,11 @@ Route::prefix('admin')
     ->middleware(['auth', 'is_admin'])
     ->group(function () {
 
-        /*
-        | Dashboard
-        */
+        /* ================= DASHBOARD ================= */
         Route::get('/dashboard', [DashboardController::class, 'index'])
             ->name('dashboard');
 
-        /*
-        | Admin Profile
-        */
+        /* ================= ADMIN PROFILE ================= */
         Route::get('/profile', [AdminProfileController::class, 'show'])
             ->name('profile.show');
 
@@ -64,9 +60,7 @@ Route::prefix('admin')
         Route::put('/profile', [AdminProfileController::class, 'update'])
             ->name('profile.update');
 
-        /*
-        | Category Management
-        */
+        /* ================= CATEGORIES ================= */
         Route::resource('categories', CategoryController::class)->only([
             'index',
             'create',
@@ -77,9 +71,7 @@ Route::prefix('admin')
             'destroy',
         ]);
 
-        /*
-        | Brand Management
-        */
+        /* ================= BRANDS ================= */
         Route::resource('brands', BrandController::class)->only([
             'index',
             'create',
@@ -89,13 +81,7 @@ Route::prefix('admin')
             'destroy',
         ]);
 
-        /*
-        | Product Management
-        | ✔ index, create, store
-        | ✔ show  → 👁 xem chi tiết (có biến thể)
-        | ✔ edit  → ✏️ chỉnh sửa (có biến thể)
-        | ✔ update, destroy
-        */
+        /* ================= PRODUCTS ================= */
         Route::resource('products', ProductController::class)->only([
             'index',
             'create',
@@ -109,12 +95,11 @@ Route::prefix('admin')
 
 /*
 |--------------------------------------------------------------------------
-| PROFILE – USER (DEFAULT)
+| USER PROFILE (DEFAULT LARAVEL)
 |--------------------------------------------------------------------------
 */
 
 Route::middleware('auth')->group(function () {
-
     Route::get('/profile', [ProfileController::class, 'edit'])
         ->name('profile.edit');
 

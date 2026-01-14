@@ -8,19 +8,20 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProductVariant extends Model
 {
+    protected $table = 'product_variants';
+
     protected $fillable = [
         'product_id',
         'sku',
 
-        'attribute_name',   // VD: Dung tích
-        'attribute_value',  // VD: 500ml
+        // ✅ CHỈ DÙNG TỰ NHẬP
+        'attribute_name',   // VD: Màu sắc / Loại da / Công dụng
+        'attribute_value',  // VD: Đỏ / Da dầu / Trị mụn
 
         'price',
         'original_price',
-
         'stock',
         'sold_quantity',
-
         'is_active',
     ];
 
@@ -71,7 +72,7 @@ class ProductVariant extends Model
 
     /**
      * Chuỗi hiển thị biến thể
-     * VD: Dung tích: 500ml
+     * VD: Màu sắc: Đỏ
      */
     public function displayName(): string
     {
