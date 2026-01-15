@@ -22,6 +22,7 @@ use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\PromotionController;
+use App\Http\Controllers\Admin\CustomerController;
 
 /*
 |--------------------------------------------------------------------------
@@ -41,7 +42,6 @@ Route::get('/shop', [ShopController::class, 'index'])
 |--------------------------------------------------------------------------
 | USER PROFILE (FRONTEND)
 |--------------------------------------------------------------------------
-| Dùng cho dropdown tài khoản + trang "Tài khoản của bạn"
 */
 
 Route::middleware('auth')
@@ -49,15 +49,15 @@ Route::middleware('auth')
     ->name('profile.')
     ->group(function () {
 
-        // 👤 Trang thông tin tài khoản
+        // 👤 Thông tin tài khoản
         Route::get('/', [ProfileController::class, 'edit'])
             ->name('index');
 
-        // ✏️ Cập nhật thông tin (name, phone)
+        // ✏️ Cập nhật thông tin
         Route::patch('/', [ProfileController::class, 'update'])
             ->name('update');
 
-        // 🖼 Cập nhật avatar
+        // 🖼 Avatar
         Route::post('/avatar', [ProfileController::class, 'updateAvatar'])
             ->name('avatar');
 
@@ -65,16 +65,16 @@ Route::middleware('auth')
         Route::post('/password', [ProfileController::class, 'updatePassword'])
             ->name('password');
 
-        // ❌ Xoá tài khoản
+        // ❌ Xóa tài khoản
         Route::delete('/', [ProfileController::class, 'destroy'])
             ->name('destroy');
 
-        // 📦 Danh sách đơn hàng (view tạm)
+        // 📦 Đơn hàng (tạm)
         Route::get('/orders', function () {
             return view('frontend.profile.orders');
         })->name('orders');
 
-        // 📍 Danh sách địa chỉ (view tạm)
+        // 📍 Địa chỉ (tạm)
         Route::get('/address', function () {
             return view('frontend.profile.address');
         })->name('address');
@@ -104,6 +104,17 @@ Route::prefix('admin')
 
         Route::put('/profile', [AdminProfileController::class, 'update'])
             ->name('profile.update');
+
+        /* ================= CUSTOMERS (CHỈ KHÁCH HÀNG) ================= */
+
+        Route::get('/customers', [CustomerController::class, 'index'])
+            ->name('customers.index');
+
+        Route::get('/customers/{user}', [CustomerController::class, 'show'])
+            ->name('customers.show');
+
+        Route::post('/customers/{user}/toggle-status', [CustomerController::class, 'toggleStatus'])
+            ->name('customers.toggle-status');
 
         /* ================= CATEGORIES ================= */
         Route::resource('categories', CategoryController::class)->only([
@@ -157,28 +168,22 @@ Route::prefix('admin')
         Route::get('promotions/{promotion}/edit', [PromotionController::class, 'edit'])
             ->name('promotions.edit');
 
-        Route::get(
-            'promotions/{promotion}/edit/product',
-            [PromotionController::class, 'editProduct']
-        )->name('promotions.edit.product');
+        Route::get('promotions/{promotion}/edit/product', [PromotionController::class, 'editProduct'])
+            ->name('promotions.edit.product');
 
-        Route::get(
-            'promotions/{promotion}/edit/order',
-            [PromotionController::class, 'editOrder']
-        )->name('promotions.edit.order');
+        Route::get('promotions/{promotion}/edit/order', [PromotionController::class, 'editOrder'])
+            ->name('promotions.edit.order');
 
         Route::put('promotions/{promotion}', [PromotionController::class, 'update'])
             ->name('promotions.update');
 
-        Route::patch(
-            'promotions/{promotion}/toggle',
-            [PromotionController::class, 'toggle']
-        )->name('promotions.toggle');
+        Route::patch('promotions/{promotion}/toggle', [PromotionController::class, 'toggle'])
+            ->name('promotions.toggle');
     });
 
 /*
 |--------------------------------------------------------------------------
-| AUTH (LOGIN / REGISTER / RESET PASSWORD)
+| AUTH
 |--------------------------------------------------------------------------
 */
 

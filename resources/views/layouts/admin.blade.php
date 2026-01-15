@@ -37,12 +37,14 @@
                 </a>
             </li>
 
-            <li>
-                <a href="#"
-                   class="{{ request()->is('admin/users*') ? 'active' : '' }}">
-                    <i class="bi bi-person"></i> Quản lý người dùng
-                </a>
-            </li>
+            <li class="nav-item">
+    <a href="{{ route('admin.customers.index') }}"
+       class="nav-link {{ request()->routeIs('admin.customers.*') ? 'active' : '' }}">
+        <i class="bi bi-people"></i>
+        <span>Quản lý người dùng</span>
+    </a>
+</li>
+
 
             <li>
                 <a href="{{ route('admin.categories.index') }}"

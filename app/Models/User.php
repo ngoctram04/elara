@@ -11,6 +11,9 @@ class User extends Authenticatable implements MustVerifyEmail
 {
     use HasFactory, Notifiable;
 
+    /**
+     * Các cột cho phép mass assignment
+     */
     protected $fillable = [
         'name',
         'email',
@@ -18,19 +21,28 @@ class User extends Authenticatable implements MustVerifyEmail
         'phone',
         'avatar',
         'role',
+        'is_active',
+        'blocked_reason',
         'email_verified_at',
     ];
 
+    /**
+     * Các cột ẩn khi trả JSON
+     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
+    /**
+     * Ép kiểu dữ liệu
+     */
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'password'          => 'hashed',
+            'is_active'         => 'boolean',
         ];
     }
 }

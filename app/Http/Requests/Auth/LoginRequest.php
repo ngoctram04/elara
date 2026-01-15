@@ -26,7 +26,7 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => ['required', 'string', 'email'],
+            'email'    => ['required', 'string', 'email'],
             'password' => ['required', 'string'],
         ];
     }
@@ -40,7 +40,9 @@ class LoginRequest extends FormRequest
 
         $credentials = $this->only('email', 'password');
 
-        // 🔹 Kiểm tra user có tồn tại không
+        /**
+         * 🔹 Kiểm tra user tồn tại
+         */
         $user = User::where('email', $credentials['email'])->first();
 
         if (! $user) {
@@ -51,14 +53,27 @@ class LoginRequest extends FormRequest
             ]);
         }
 
-        // 🔹 Chặn login nếu chưa xác thực email
+        /**
+         * 🔹 Chặn email chưa xác thực
+         */
         if (is_null($user->email_verified_at)) {
             throw ValidationException::withMessages([
                 'email' => 'Email chưa được xác thực. Vui lòng kiểm tra hộp thư.',
             ]);
         }
 
-        // 🔹 Thử đăng nhập
+        /**
+         * 🔒 Chặn tài khoản bị khóa
+         */
+        if (! $user->is_active) {
+            throw ValidationException::withMessages([
+                'email' => 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.',
+            ]);
+        }
+
+        /**
+         * 🔐 Thử đăng nhập
+         */
         if (! Auth::attempt($credentials, $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
@@ -67,6 +82,9 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        /**
+         * ✅ Đăng nhập thành công
+         */
         RateLimiter::clear($this->throttleKey());
     }
 
