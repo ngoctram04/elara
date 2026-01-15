@@ -49,7 +49,7 @@ class RegisteredUserController extends Controller
             'phone' => $request->phone,
             'avatar' => $avatarPath,
             'password' => Hash::make($request->password),
-            'role' => 0,
+            'role' => 'customer',
         ]);
 
         // ✅ GỬI EMAIL XÁC THỰC

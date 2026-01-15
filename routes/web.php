@@ -8,11 +8,14 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-// Frontend
+// ================= FRONTEND =================
 use App\Http\Controllers\Frontend\HomeController;
 use App\Http\Controllers\Frontend\ShopController;
 
-// Admin
+// ================= USER (FRONTEND PROFILE) =================
+use App\Http\Controllers\ProfileController;
+
+// ================= ADMIN =================
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\CategoryController;
@@ -20,21 +23,62 @@ use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\PromotionController;
 
-// User profile
-use App\Http\Controllers\ProfileController;
-
 /*
 |--------------------------------------------------------------------------
-| FRONTEND
+| FRONTEND – USER
 |--------------------------------------------------------------------------
 */
 
+// 🏠 Trang chủ
 Route::get('/', [HomeController::class, 'index'])
     ->name('home');
 
+// 🛍 Trang shop
 Route::get('/shop', [ShopController::class, 'index'])
-    ->middleware('auth')
     ->name('shop');
+
+/*
+|--------------------------------------------------------------------------
+| USER PROFILE (FRONTEND)
+|--------------------------------------------------------------------------
+| Dùng cho dropdown tài khoản + trang "Tài khoản của bạn"
+*/
+
+Route::middleware('auth')
+    ->prefix('profile')
+    ->name('profile.')
+    ->group(function () {
+
+        // 👤 Trang thông tin tài khoản
+        Route::get('/', [ProfileController::class, 'edit'])
+            ->name('index');
+
+        // ✏️ Cập nhật thông tin (name, phone)
+        Route::patch('/', [ProfileController::class, 'update'])
+            ->name('update');
+
+        // 🖼 Cập nhật avatar
+        Route::post('/avatar', [ProfileController::class, 'updateAvatar'])
+            ->name('avatar');
+
+        // 🔐 Đổi mật khẩu
+        Route::post('/password', [ProfileController::class, 'updatePassword'])
+            ->name('password');
+
+        // ❌ Xoá tài khoản
+        Route::delete('/', [ProfileController::class, 'destroy'])
+            ->name('destroy');
+
+        // 📦 Danh sách đơn hàng (view tạm)
+        Route::get('/orders', function () {
+            return view('frontend.profile.orders');
+        })->name('orders');
+
+        // 📍 Danh sách địa chỉ (view tạm)
+        Route::get('/address', function () {
+            return view('frontend.profile.address');
+        })->name('address');
+    });
 
 /*
 |--------------------------------------------------------------------------
@@ -93,51 +137,39 @@ Route::prefix('admin')
             'destroy',
         ]);
 
-        /* =================================================
-           PROMOTIONS – QUẢN LÝ KHUYẾN MÃI (TÁCH LOẠI)
-        ================================================= */
+        /* ================= PROMOTIONS ================= */
 
-        // 1️⃣ Danh sách
         Route::get('promotions', [PromotionController::class, 'index'])
             ->name('promotions.index');
 
-        // 2️⃣ Chọn loại khuyến mãi
         Route::get('promotions/create/type', [PromotionController::class, 'chooseType'])
             ->name('promotions.choose');
 
-        // 3️⃣ Tạo khuyến mãi SẢN PHẨM
         Route::get('promotions/create/product', [PromotionController::class, 'createProduct'])
             ->name('promotions.create.product');
 
-        // 4️⃣ Tạo mã giảm giá ĐƠN HÀNG
         Route::get('promotions/create/order', [PromotionController::class, 'createOrder'])
             ->name('promotions.create.order');
 
-        // 5️⃣ Lưu khuyến mãi (POST – dùng chung)
         Route::post('promotions', [PromotionController::class, 'store'])
             ->name('promotions.store');
 
-        // 6️⃣ Redirect edit (tự phân loại theo type)
         Route::get('promotions/{promotion}/edit', [PromotionController::class, 'edit'])
             ->name('promotions.edit');
 
-        // 6.1️⃣ Edit khuyến mãi SẢN PHẨM
         Route::get(
             'promotions/{promotion}/edit/product',
             [PromotionController::class, 'editProduct']
         )->name('promotions.edit.product');
 
-        // 6.2️⃣ Edit khuyến mãi ĐƠN HÀNG
         Route::get(
             'promotions/{promotion}/edit/order',
             [PromotionController::class, 'editOrder']
         )->name('promotions.edit.order');
 
-        // 7️⃣ Cập nhật (PUT – dùng chung)
         Route::put('promotions/{promotion}', [PromotionController::class, 'update'])
             ->name('promotions.update');
 
-        // 8️⃣ Bật / tắt nhanh
         Route::patch(
             'promotions/{promotion}/toggle',
             [PromotionController::class, 'toggle']
@@ -146,24 +178,7 @@ Route::prefix('admin')
 
 /*
 |--------------------------------------------------------------------------
-| USER PROFILE (DEFAULT LARAVEL)
-|--------------------------------------------------------------------------
-*/
-
-Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])
-        ->name('profile.edit');
-
-    Route::patch('/profile', [ProfileController::class, 'update'])
-        ->name('profile.update');
-
-    Route::delete('/profile', [ProfileController::class, 'destroy'])
-        ->name('profile.destroy');
-});
-
-/*
-|--------------------------------------------------------------------------
-| AUTH ROUTES
+| AUTH (LOGIN / REGISTER / RESET PASSWORD)
 |--------------------------------------------------------------------------
 */
 
