@@ -147,4 +147,5 @@ class Promotion extends Model
             'expired'  => 'dark',
         };
     }
+    
 }

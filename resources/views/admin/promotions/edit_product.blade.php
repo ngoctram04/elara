@@ -10,6 +10,9 @@
     @csrf
     @method('PUT')
 
+    {{-- 🔒 FIX CỨNG GIẢM THEO % --}}
+    <input type="hidden" name="discount_type" value="percent">
+
     <div class="card-body">
 
         {{-- ERROR --}}
@@ -39,32 +42,21 @@
                 >
             </div>
 
-            {{-- DISCOUNT TYPE --}}
+            {{-- DISCOUNT VALUE --}}
             <div class="col-md-6">
-                <label class="form-label">Kiểu giảm</label>
-                <select name="discount_type" class="form-select">
-                    <option value="percent"
-                        @selected(old('discount_type', $promotion->discount_type) === 'percent')>
-                        Giảm %
-                    </option>
-                    <option value="fixed"
-                        @selected(old('discount_type', $promotion->discount_type) === 'fixed')>
-                        Giảm tiền
-                    </option>
-                </select>
-            </div>
-
-            {{-- VALUE --}}
-            <div class="col-md-6">
-                <label class="form-label">Giá trị giảm</label>
+                <label class="form-label">Giá trị giảm (%)</label>
                 <input
                     type="number"
                     name="discount_value"
                     class="form-control"
                     value="{{ old('discount_value', $promotion->discount_value) }}"
-                    min="0"
+                    min="1"
+                    max="100"
                     required
                 >
+                <small class="text-muted">
+                    Nhập từ 1 đến 100 (%)
+                </small>
             </div>
 
             {{-- DATE --}}
@@ -108,7 +100,9 @@
         @foreach ($products as $product)
             <div class="border rounded p-3 mb-2">
 
-                <strong>{{ $product->name }}</strong>
+                <label class="fw-semibold">
+                    {{ $product->name }}
+                </label>
 
                 <div class="ms-4 mt-2">
                     @foreach ($product->variants as $variant)

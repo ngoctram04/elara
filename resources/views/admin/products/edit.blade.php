@@ -54,6 +54,19 @@
                         </select>
                     </div>
 
+                    {{-- 🔥 NỔI BẬT --}}
+                    <div class="mb-3 form-check">
+                        <input type="checkbox"
+                               class="form-check-input"
+                               id="is_featured"
+                               name="is_featured"
+                               value="1"
+                               {{ old('is_featured', $product->is_featured) ? 'checked' : '' }}>
+                        <label class="form-check-label" for="is_featured">
+                            Sản phẩm nổi bật
+                        </label>
+                    </div>
+
                 </div>
 
                 {{-- RIGHT --}}
@@ -75,7 +88,9 @@
                                  class="rounded border mb-2">
                         @endif
 
-                        <input type="file" name="main_image" class="form-control">
+                        <input type="file"
+                               name="main_image"
+                               class="form-control">
                     </div>
 
                 </div>
@@ -86,20 +101,19 @@
             {{-- ================= BIẾN THỂ ================= --}}
             <h6 class="fw-semibold text-primary mb-3">Biến thể</h6>
 
-            {{-- TÊN LOẠI BIẾN THỂ --}}
             <div class="mb-3">
                 <label class="form-label">Loại biến thể</label>
                 <input type="text"
                        name="variant_attribute_name"
                        class="form-control"
                        value="{{ $product->variants->first()?->attribute_name }}"
-                       placeholder="VD: Màu sắc / Công dụng"
                        required>
             </div>
 
             <div id="variant-wrapper">
                 @foreach($product->variants as $index => $variant)
                     <div class="variant-item border rounded p-3 mb-3">
+
                         <input type="hidden"
                                name="variants[{{ $index }}][id]"
                                value="{{ $variant->id }}">
@@ -141,6 +155,7 @@
                                        name="variants[{{ $index }}][image]"
                                        class="form-control">
                             </div>
+
                         </div>
 
                         @if($variant->images->first())
@@ -165,7 +180,9 @@
 
             <div class="text-end">
                 <a href="{{ route('admin.products.index') }}"
-                   class="btn btn-outline-danger">Hủy</a>
+                   class="btn btn-outline-danger">
+                    Hủy
+                </a>
 
                 <button class="btn btn-primary">
                     <i class="bi bi-save"></i> Cập nhật sản phẩm
@@ -189,7 +206,6 @@ document.getElementById('btn-add-variant').addEventListener('click', () => {
                     <input type="text"
                            name="variants[${variantIndex}][attribute_value]"
                            class="form-control"
-                           placeholder="VD: Đỏ / Da dầu"
                            required>
                 </div>
                 <div class="col-md-3">
@@ -216,7 +232,6 @@ document.getElementById('btn-add-variant').addEventListener('click', () => {
             </button>
         </div>
     `);
-
     variantIndex++;
 });
 

@@ -82,11 +82,18 @@ class BrandController extends Controller
     // XÓA
     public function destroy(Brand $brand)
     {
-        // Sau này có products thì chặn xoá ở đây
+        // Đếm số sản phẩm thuộc thương hiệu
+        if ($brand->products()->count() > 0) {
+            return redirect()
+                ->back()
+                ->with('error', 'Không thể xóa thương hiệu đang có sản phẩm.');
+        }
+
         $brand->delete();
 
         return redirect()
             ->route('admin.brands.index')
-            ->with('success', 'Đã xóa thương hiệu');
+            ->with('success', 'Xóa thương hiệu thành công.');
     }
+
 }

@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Route;
 // ================= FRONTEND =================
 use App\Http\Controllers\Frontend\HomeController;
 use App\Http\Controllers\Frontend\ShopController;
+use App\Http\Controllers\Frontend\ProductController as FrontendProductController;
 
 // ================= USER (FRONTEND PROFILE) =================
 use App\Http\Controllers\ProfileController;
@@ -34,9 +35,13 @@ use App\Http\Controllers\Admin\CustomerController;
 Route::get('/', [HomeController::class, 'index'])
     ->name('home');
 
-// 🛍 Trang shop
+// 🛍 Trang mua sắm
 Route::get('/shop', [ShopController::class, 'index'])
     ->name('shop');
+
+// ✅ CHI TIẾT SẢN PHẨM (FIX LỖI products.show)
+Route::get('/products/{slug}', [FrontendProductController::class, 'show'])
+    ->name('products.show');
 
 /*
 |--------------------------------------------------------------------------
@@ -49,32 +54,25 @@ Route::middleware('auth')
     ->name('profile.')
     ->group(function () {
 
-        // 👤 Thông tin tài khoản
         Route::get('/', [ProfileController::class, 'edit'])
             ->name('index');
 
-        // ✏️ Cập nhật thông tin
         Route::patch('/', [ProfileController::class, 'update'])
             ->name('update');
 
-        // 🖼 Avatar
         Route::post('/avatar', [ProfileController::class, 'updateAvatar'])
             ->name('avatar');
 
-        // 🔐 Đổi mật khẩu
         Route::post('/password', [ProfileController::class, 'updatePassword'])
             ->name('password');
 
-        // ❌ Xóa tài khoản
         Route::delete('/', [ProfileController::class, 'destroy'])
             ->name('destroy');
 
-        // 📦 Đơn hàng (tạm)
         Route::get('/orders', function () {
             return view('frontend.profile.orders');
         })->name('orders');
 
-        // 📍 Địa chỉ (tạm)
         Route::get('/address', function () {
             return view('frontend.profile.address');
         })->name('address');
@@ -105,8 +103,7 @@ Route::prefix('admin')
         Route::put('/profile', [AdminProfileController::class, 'update'])
             ->name('profile.update');
 
-        /* ================= CUSTOMERS (CHỈ KHÁCH HÀNG) ================= */
-
+        /* ================= CUSTOMERS ================= */
         Route::get('/customers', [CustomerController::class, 'index'])
             ->name('customers.index');
 
@@ -149,7 +146,6 @@ Route::prefix('admin')
         ]);
 
         /* ================= PROMOTIONS ================= */
-
         Route::get('promotions', [PromotionController::class, 'index'])
             ->name('promotions.index');
 

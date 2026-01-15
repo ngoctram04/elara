@@ -56,31 +56,27 @@
                 </small>
             </div>
 
-            {{-- DISCOUNT TYPE --}}
-            <div class="col-md-6">
-                <label class="form-label">Kiểu giảm</label>
-                <select name="discount_type" class="form-select">
-                    <option value="percent" @selected(old('discount_type') === 'percent')>
-                        Giảm theo %
-                    </option>
-                    <option value="fixed" @selected(old('discount_type') === 'fixed')>
-                        Giảm theo tiền (VNĐ)
-                    </option>
-                </select>
-            </div>
+            {{-- DISCOUNT TYPE (hidden, fixed percent) --}}
+<input type="hidden" name="discount_type" value="percent">
 
-            {{-- DISCOUNT VALUE --}}
-            <div class="col-md-6">
-                <label class="form-label">Giá trị giảm</label>
-                <input
-                    type="number"
-                    name="discount_value"
-                    class="form-control"
-                    value="{{ old('discount_value') }}"
-                    min="0"
-                    required
-                >
-            </div>
+{{-- DISCOUNT VALUE --}}
+<div class="col-md-6">
+    <label class="form-label">Giá trị giảm (%)</label>
+    <input
+        type="number"
+        name="discount_value"
+        class="form-control"
+        value="{{ old('discount_value') }}"
+        min="1"
+        max="100"
+        placeholder="VD: 10"
+        required
+    >
+    <small class="text-muted">
+        Nhập từ 1 đến 100 (%)
+    </small>
+</div>
+
 
             {{-- MIN ORDER --}}
             <div class="col-md-6">

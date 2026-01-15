@@ -53,12 +53,11 @@ class PromotionController extends Controller
         $request->validate([
             'name'           => 'required|string|max:255',
             'type'           => 'required|in:product,order',
-            'discount_type'  => 'required|in:percent,fixed',
-            'discount_value' => 'required|numeric|min:0',
+            'discount_value' => 'required|integer|min:1|max:100',
             'start_date'     => 'required|date',
             'end_date'       => 'required|date|after_or_equal:start_date',
 
-            // ✅ order only – UNIQUE CODE
+            // ORDER ONLY
             'code' => [
                 'nullable',
                 'required_if:type,order',
@@ -80,14 +79,14 @@ class PromotionController extends Controller
             'usage_limit'     => 'nullable|integer|min:1',
         ]);
 
-        // ❗ CHỈ PRODUCT PROMOTION mới check trùng thời gian
+        // ✅ CHỈ CHECK TRÙNG BIẾN THỂ ĐANG KHUYẾN MÃI
         if (
             $request->type === 'product'
-            && $this->hasTimeConflict($request)
+            && $this->hasActiveProductConflict($request)
         ) {
             return back()
                 ->withErrors([
-                    'start_date' => 'Thời gian khuyến mãi bị trùng với khuyến mãi sản phẩm khác'
+                    'products' => 'Một số sản phẩm / biến thể đang có khuyến mãi khác đang diễn ra'
                 ])
                 ->withInput();
         }
@@ -95,10 +94,12 @@ class PromotionController extends Controller
         DB::transaction(function () use ($request) {
 
             $promotion = Promotion::create([
-                'code'            => $request->type === 'order' ? $request->code : null,
+                'code'            => $request->type === 'order'
+                    ? strtoupper($request->code)
+                    : null,
                 'name'            => $request->name,
                 'type'            => $request->type,
-                'discount_type'   => $request->discount_type,
+                'discount_type'   => 'percent',
                 'discount_value'  => $request->discount_value,
                 'min_order_value' => $request->min_order_value,
                 'max_discount'    => $request->max_discount,
@@ -108,14 +109,13 @@ class PromotionController extends Controller
                 'is_active'       => $request->boolean('is_active'),
             ]);
 
-            // product promotion → bảng trung gian
             if ($promotion->type === 'product') {
                 foreach ($request->products ?? [] as $productId => $variantIds) {
                     foreach ($variantIds as $variantId) {
                         PromotionProduct::create([
                             'promotion_id' => $promotion->id,
                             'product_id'   => $productId,
-                            'variant_id'   => $variantId ?: null,
+                            'variant_id'   => $variantId,
                         ]);
                     }
                 }
@@ -160,7 +160,6 @@ class PromotionController extends Controller
     public function editOrder(Promotion $promotion)
     {
         abort_if($promotion->type !== 'order', 404);
-
         return view('admin.promotions.edit_order', compact('promotion'));
     }
 
@@ -171,8 +170,7 @@ class PromotionController extends Controller
     {
         $request->validate([
             'name'           => 'required|string|max:255',
-            'discount_type'  => 'required|in:percent,fixed',
-            'discount_value' => 'required|numeric|min:0',
+            'discount_value' => 'required|integer|min:1|max:100',
             'start_date'     => 'required|date',
             'end_date'       => 'required|date|after_or_equal:start_date',
             'min_order_value' => 'nullable|numeric|min:0',
@@ -180,14 +178,14 @@ class PromotionController extends Controller
             'usage_limit'    => 'nullable|integer|min:1',
         ]);
 
-        // ❗ CHỈ PRODUCT PROMOTION mới check trùng
+        // ✅ CHECK TRÙNG BIẾN THỂ (BỎ QUA CHÍNH NÓ)
         if (
             $promotion->type === 'product'
-            && $this->hasTimeConflict($request, $promotion)
+            && $this->hasActiveProductConflict($request, $promotion)
         ) {
             return back()
                 ->withErrors([
-                    'start_date' => 'Thời gian khuyến mãi bị trùng với khuyến mãi sản phẩm khác'
+                    'products' => 'Một số sản phẩm / biến thể đang có khuyến mãi khác đang diễn ra'
                 ])
                 ->withInput();
         }
@@ -196,7 +194,7 @@ class PromotionController extends Controller
 
             $promotion->update([
                 'name'            => $request->name,
-                'discount_type'   => $request->discount_type,
+                'discount_type'   => 'percent',
                 'discount_value'  => $request->discount_value,
                 'min_order_value' => $request->min_order_value,
                 'max_discount'    => $request->max_discount,
@@ -214,7 +212,7 @@ class PromotionController extends Controller
                         PromotionProduct::create([
                             'promotion_id' => $promotion->id,
                             'product_id'   => $productId,
-                            'variant_id'   => $variantId ?: null,
+                            'variant_id'   => $variantId,
                         ]);
                     }
                 }
@@ -239,19 +237,26 @@ class PromotionController extends Controller
     }
 
     /* =========================================================
-        CHECK TIME CONFLICT (PRODUCT ONLY)
+        CHECK TRÙNG BIẾN THỂ ĐANG KHUYẾN MÃI
     ========================================================= */
-    private function hasTimeConflict(Request $request, Promotion $ignore = null): bool
+    private function hasActiveProductConflict(Request $request, Promotion $ignore = null): bool
     {
-        return Promotion::where('type', 'product')
-            ->when($ignore, fn($q) => $q->where('id', '!=', $ignore->id))
-            ->where(function ($q) use ($request) {
-                $q->whereBetween('start_date', [$request->start_date, $request->end_date])
-                    ->orWhereBetween('end_date', [$request->start_date, $request->end_date])
-                    ->orWhere(function ($q2) use ($request) {
-                        $q2->where('start_date', '<=', $request->start_date)
-                            ->where('end_date', '>=', $request->end_date);
-                    });
+        if (empty($request->products)) {
+            return false;
+        }
+
+        $variantIds = collect($request->products)->flatten()->filter();
+
+        return PromotionProduct::whereIn('variant_id', $variantIds)
+            ->whereHas('promotion', function ($q) use ($ignore) {
+                $q->where('type', 'product')
+                    ->where('is_active', true)
+                    ->where('start_date', '<=', now())
+                    ->where('end_date', '>=', now());
+
+                if ($ignore) {
+                    $q->where('id', '!=', $ignore->id);
+                }
             })
             ->exists();
     }

@@ -10,6 +10,9 @@
     @csrf
     @method('PUT')
 
+    {{-- 🔒 FIX CỨNG GIẢM THEO % --}}
+    <input type="hidden" name="discount_type" value="percent">
+
     <div class="card-body">
 
         {{-- ERROR --}}
@@ -39,7 +42,7 @@
                 >
             </div>
 
-            {{-- CODE --}}
+            {{-- CODE (READ ONLY) --}}
             <div class="col-md-6">
                 <label class="form-label">Mã giảm giá</label>
                 <input
@@ -50,32 +53,21 @@
                 >
             </div>
 
-            {{-- DISCOUNT TYPE --}}
+            {{-- DISCOUNT VALUE --}}
             <div class="col-md-6">
-                <label class="form-label">Kiểu giảm</label>
-                <select name="discount_type" class="form-select">
-                    <option value="percent"
-                        @selected(old('discount_type', $promotion->discount_type) === 'percent')>
-                        Giảm %
-                    </option>
-                    <option value="fixed"
-                        @selected(old('discount_type', $promotion->discount_type) === 'fixed')>
-                        Giảm tiền
-                    </option>
-                </select>
-            </div>
-
-            {{-- VALUE --}}
-            <div class="col-md-6">
-                <label class="form-label">Giá trị giảm</label>
+                <label class="form-label">Giá trị giảm (%)</label>
                 <input
                     type="number"
                     name="discount_value"
                     class="form-control"
                     value="{{ old('discount_value', $promotion->discount_value) }}"
-                    min="0"
+                    min="1"
+                    max="100"
                     required
                 >
+                <small class="text-muted">
+                    Nhập từ 1 đến 100 (%)
+                </small>
             </div>
 
             {{-- MIN ORDER --}}
@@ -86,6 +78,7 @@
                     name="min_order_value"
                     class="form-control"
                     value="{{ old('min_order_value', $promotion->min_order_value) }}"
+                    min="0"
                 >
             </div>
 
@@ -97,6 +90,7 @@
                     name="max_discount"
                     class="form-control"
                     value="{{ old('max_discount', $promotion->max_discount) }}"
+                    min="0"
                 >
             </div>
 
@@ -108,6 +102,7 @@
                     name="usage_limit"
                     class="form-control"
                     value="{{ old('usage_limit', $promotion->usage_limit) }}"
+                    min="1"
                 >
             </div>
 

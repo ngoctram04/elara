@@ -22,27 +22,51 @@
 
                     <div class="mb-3">
                         <label class="form-label">Tên sản phẩm</label>
-                        <input type="text" name="name" class="form-control" required>
+                        <input type="text"
+                               name="name"
+                               class="form-control"
+                               required>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Danh mục</label>
-                        <select name="category_id" class="form-select" required>
+                        <select name="category_id"
+                                class="form-select"
+                                required>
                             <option value="">-- Chọn danh mục --</option>
                             @foreach($categories as $cat)
-                                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                <option value="{{ $cat->id }}">
+                                    {{ $cat->name }}
+                                </option>
                             @endforeach
                         </select>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Thương hiệu</label>
-                        <select name="brand_id" class="form-select" required>
+                        <select name="brand_id"
+                                class="form-select"
+                                required>
                             <option value="">-- Chọn thương hiệu --</option>
                             @foreach($brands as $brand)
-                                <option value="{{ $brand->id }}">{{ $brand->name }}</option>
+                                <option value="{{ $brand->id }}">
+                                    {{ $brand->name }}
+                                </option>
                             @endforeach
                         </select>
+                    </div>
+
+                    {{-- 🔥 NỔI BẬT --}}
+                    <div class="mb-3 form-check">
+                        <input type="checkbox"
+                               class="form-check-input"
+                               id="is_featured"
+                               name="is_featured"
+                               value="1">
+                        <label class="form-check-label"
+                               for="is_featured">
+                            Sản phẩm nổi bật
+                        </label>
                     </div>
 
                 </div>
@@ -52,7 +76,9 @@
 
                     <div class="mb-3">
                         <label class="form-label">Mô tả</label>
-                        <textarea name="description" rows="5" class="form-control"></textarea>
+                        <textarea name="description"
+                                  rows="5"
+                                  class="form-control"></textarea>
                     </div>
 
                     <div class="mb-3">
@@ -64,12 +90,6 @@
                                required>
 
                         <div id="image-wrapper"></div>
-
-                        <button type="button"
-                                class="btn btn-outline-primary btn-sm mt-2"
-                                id="btn-add-image">
-                            + Thêm hình ảnh
-                        </button>
                     </div>
 
                 </div>
@@ -80,7 +100,6 @@
             {{-- ================= BIẾN THỂ ================= --}}
             <h6 class="fw-semibold text-primary mb-3">Biến thể</h6>
 
-            {{-- TÊN LOẠI BIẾN THỂ (CHỈ 1) --}}
             <div class="mb-3">
                 <label class="form-label">Loại biến thể</label>
                 <input type="text"
@@ -100,7 +119,6 @@
                             <input type="text"
                                    name="variants[0][attribute_value]"
                                    class="form-control"
-                                   placeholder="VD: Đỏ / Da dầu"
                                    required>
                         </div>
 
@@ -147,7 +165,9 @@
 
             <div class="text-end">
                 <a href="{{ route('admin.products.index') }}"
-                   class="btn btn-outline-danger">Hủy</a>
+                   class="btn btn-outline-danger">
+                    Hủy
+                </a>
 
                 <button class="btn btn-primary">
                     <i class="bi bi-plus-lg"></i> Thêm sản phẩm
@@ -171,7 +191,6 @@ document.getElementById('btn-add-variant').addEventListener('click', () => {
                     <input type="text"
                            name="variants[${variantIndex}][attribute_value]"
                            class="form-control"
-                           placeholder="VD: Xanh / Trị mụn"
                            required>
                 </div>
                 <div class="col-md-3">
@@ -198,7 +217,6 @@ document.getElementById('btn-add-variant').addEventListener('click', () => {
             </button>
         </div>
     `);
-
     variantIndex++;
 });
 

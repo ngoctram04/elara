@@ -39,7 +39,7 @@ class ProductController extends Controller
         }
 
         return view('admin.products.index', [
-            'products'   => $query->orderByDesc('created_at')->paginate(10)->withQueryString(),
+            'products'   => $query->latest()->paginate(10)->withQueryString(),
             'categories' => Category::whereNull('parent_id')->with('children')->get(),
             'brands'     => Brand::orderBy('name')->get(),
         ]);
@@ -69,35 +69,48 @@ class ProductController extends Controller
             ],
             'brand_id'    => 'required|exists:brands,id',
             'description' => 'nullable|string',
+            'main_image'  => 'required|image',
 
-            'main_image' => 'required|image',
+            // 🔥 NỔI BẬT
+            'is_featured' => 'nullable|boolean',
 
-            // 🔥 BIẾN THỂ TỰ NHẬP
-            'variant_attribute_name'        => 'required|string|max:100',
-            'variants'                      => 'required|array|min:1',
-            'variants.*.attribute_value'    => 'required|string|max:100',
-            'variants.*.price'              => 'required|numeric|min:0',
-            'variants.*.stock'              => 'required|integer|min:0',
-            'variants.*.image'              => 'nullable|image',
+            'variant_attribute_name'     => 'required|string|max:100',
+            'variants'                   => 'required|array|min:1',
+            'variants.*.attribute_value' => 'required|string|max:100',
+            'variants.*.price'           => 'required|numeric|min:0',
+            'variants.*.stock'           => 'required|integer|min:0',
+            'variants.*.image'           => 'nullable|image',
         ]);
 
         DB::transaction(function () use ($request, $data) {
 
+            /* ===== SLUG ===== */
+            $baseSlug = Str::slug($data['name']);
+            $slug = $baseSlug;
+            $i = 1;
+            while (Product::where('slug', $slug)->exists()) {
+                $slug = $baseSlug . '-' . $i++;
+            }
+
+            /* ===== TẠO SẢN PHẨM ===== */
             $product = Product::create([
                 'name'        => $data['name'],
-                'slug'        => Str::slug($data['name']),
+                'slug'        => $slug,
                 'category_id' => $data['category_id'],
                 'brand_id'    => $data['brand_id'],
                 'description' => $data['description'] ?? null,
+                'is_active'   => true,
+                // ✅ LƯU NỔI BẬT
+                'is_featured' => $request->boolean('is_featured'),
             ]);
 
-            /* Ảnh chính */
+            /* ===== ẢNH CHÍNH ===== */
             $product->images()->create([
                 'image_path' => $request->file('main_image')->store('products', 'public'),
-                'is_main'    => true,
+                'is_main'    => 1,
             ]);
 
-            /* Biến thể */
+            /* ===== BIẾN THỂ ===== */
             foreach ($data['variants'] as $variantData) {
                 $variant = $product->variants()->create([
                     'attribute_name'  => $data['variant_attribute_name'],
@@ -109,7 +122,7 @@ class ProductController extends Controller
                 if (!empty($variantData['image'])) {
                     $variant->images()->create([
                         'image_path' => $variantData['image']->store('variants', 'public'),
-                        'is_main'    => true,
+                        'is_main'    => 1,
                     ]);
                 }
             }
@@ -155,47 +168,82 @@ class ProductController extends Controller
             ],
             'brand_id'    => 'required|exists:brands,id',
             'description' => 'nullable|string',
+            'main_image'  => 'nullable|image',
 
-            'variant_attribute_name'        => 'required|string|max:100',
-            'variants'                      => 'required|array|min:1',
-            'variants.*.id'                 => 'nullable|exists:product_variants,id',
-            'variants.*.attribute_value'    => 'required|string|max:100',
-            'variants.*.price'              => 'required|numeric|min:0',
-            'variants.*.stock'              => 'required|integer|min:0',
-            'variants.*.image'              => 'nullable|image',
+            // 🔥 NỔI BẬT
+            'is_featured' => 'nullable|boolean',
+
+            'variant_attribute_name'     => 'required|string|max:100',
+            'variants'                   => 'required|array|min:1',
+            'variants.*.attribute_value' => 'required|string|max:100',
+            'variants.*.price'           => 'required|numeric|min:0',
+            'variants.*.stock'           => 'required|integer|min:0',
+            'variants.*.image'           => 'nullable|image',
         ]);
 
         DB::transaction(function () use ($request, $data, $product) {
 
+            /* ===== SLUG ===== */
+            if ($product->name !== $data['name']) {
+                $baseSlug = Str::slug($data['name']);
+                $slug = $baseSlug;
+                $i = 1;
+                while (
+                    Product::where('slug', $slug)
+                    ->where('id', '!=', $product->id)
+                    ->exists()
+                ) {
+                    $slug = $baseSlug . '-' . $i++;
+                }
+                $product->slug = $slug;
+            }
+
+            /* ===== UPDATE SẢN PHẨM ===== */
             $product->update([
                 'name'        => $data['name'],
-                'slug'        => Str::slug($data['name']),
                 'category_id' => $data['category_id'],
                 'brand_id'    => $data['brand_id'],
                 'description' => $data['description'] ?? null,
+                // ✅ UPDATE NỔI BẬT (QUAN TRỌNG)
+                'is_featured' => $request->boolean('is_featured'),
             ]);
 
-            $oldIds = $product->variants->pluck('id')->toArray();
-            $newIds = [];
+            /* ===== ẢNH CHÍNH ===== */
+            if ($request->hasFile('main_image')) {
+                if ($product->mainImage) {
+                    Storage::disk('public')->delete($product->mainImage->image_path);
+                    $product->mainImage->delete();
+                }
+
+                $product->images()->create([
+                    'image_path' => $request->file('main_image')->store('products', 'public'),
+                    'is_main'    => 1,
+                ]);
+            }
+
+            /* ===== BIẾN THỂ (XÓA & TẠO LẠI) ===== */
+            foreach ($product->variants as $variant) {
+                foreach ($variant->images as $img) {
+                    Storage::disk('public')->delete($img->image_path);
+                    $img->delete();
+                }
+                $variant->delete();
+            }
 
             foreach ($data['variants'] as $variantData) {
-                $variant = !empty($variantData['id'])
-                    ? $product->variants()->find($variantData['id'])
-                    : $product->variants()->create([]);
-
-                $variant->update([
+                $variant = $product->variants()->create([
                     'attribute_name'  => $data['variant_attribute_name'],
                     'attribute_value' => $variantData['attribute_value'],
                     'price'           => $variantData['price'],
                     'stock'           => $variantData['stock'],
                 ]);
 
-                $newIds[] = $variant->id;
-            }
-
-            $deleteIds = array_diff($oldIds, $newIds);
-            if ($deleteIds) {
-                $product->variants()->whereIn('id', $deleteIds)->delete();
+                if (!empty($variantData['image'])) {
+                    $variant->images()->create([
+                        'image_path' => $variantData['image']->store('variants', 'public'),
+                        'is_main'    => 1,
+                    ]);
+                }
             }
 
             $this->recalculateProduct($product);
@@ -219,45 +267,25 @@ class ProductController extends Controller
     }
 
     /* =======================
-        CHI TIẾT
+        XÓA
     ======================= */
-    public function show(Product $product)
-    {
-        $product->load([
-            'category',
-            'brand',
-            'images',
-            'mainImage',
-            'variants.images',
-        ]);
-
-        return view('admin.products.show', compact('product'));
-    }
-    /* =======================
-    XÓA
-======================= */
     public function destroy(Product $product)
     {
         DB::transaction(function () use ($product) {
 
-            // Xóa ảnh chính & ảnh phụ
             foreach ($product->images as $image) {
                 Storage::disk('public')->delete($image->image_path);
                 $image->delete();
             }
 
-            // Xóa ảnh biến thể
             foreach ($product->variants as $variant) {
                 foreach ($variant->images as $image) {
                     Storage::disk('public')->delete($image->image_path);
                     $image->delete();
                 }
+                $variant->delete();
             }
 
-            // Xóa biến thể
-            $product->variants()->delete();
-
-            // Xóa sản phẩm
             $product->delete();
         });
 
@@ -265,5 +293,17 @@ class ProductController extends Controller
             ->route('admin.products.index')
             ->with('success', 'Đã xóa sản phẩm thành công');
     }
+    public function show(Product $product)
+    {
+        $product->load([
+            'images',
+            'category.parent',
+            'brand',
+            'variants.images', // 🔥 BẮT BUỘC
+        ]);
+
+        return view('admin.products.show', compact('product'));
+    }
+
 
 }

@@ -40,8 +40,10 @@
                         {{-- NAME --}}
                         <td>
                             <strong>{{ $promo->name }}</strong><br>
-                            @if ($promo->code)
-                                <span class="badge bg-info">{{ $promo->code }}</span>
+                            @if ($promo->type === 'order' && $promo->code)
+                                <span class="badge bg-info">
+                                    {{ $promo->code }}
+                                </span>
                             @endif
                         </td>
 
@@ -52,13 +54,11 @@
                             </span>
                         </td>
 
-                        {{-- DISCOUNT --}}
+                        {{-- DISCOUNT (ONLY %) --}}
                         <td>
-                            @if ($promo->discount_type === 'percent')
-                                {{ $promo->discount_value }}%
-                            @else
-                                {{ number_format($promo->discount_value) }}đ
-                            @endif
+                            <span class="fw-semibold text-danger">
+                                -{{ $promo->discount_value }}%
+                            </span>
                         </td>
 
                         {{-- DATE --}}
@@ -74,7 +74,7 @@
                             </span>
                         </td>
 
-                        {{-- TIME STATUS (LẤY TỪ MODEL) --}}
+                        {{-- TIME STATUS --}}
                         <td>
                             <span class="badge bg-{{ $promo->time_status_color }}">
                                 {{ $promo->time_status_label }}
