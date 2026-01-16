@@ -7,9 +7,7 @@
 <div class="profile-wrapper">
 
     {{-- TITLE --}}
-    <h2 class="profile-title">
-        Tài khoản của bạn
-    </h2>
+    <h2 class="profile-title">Tài khoản của bạn</h2>
 
     {{-- SUCCESS MESSAGE --}}
     @if(session('success'))
@@ -51,7 +49,7 @@
         {{-- ================= CONTENT ================= --}}
         <div class="profile-content">
 
-            {{-- ===== THÔNG TIN TÀI KHOẢN ===== --}}
+            {{-- ===== ACCOUNT INFO ===== --}}
             <section class="profile-card">
                 <h5 class="card-title">Thông tin tài khoản</h5>
 
@@ -63,8 +61,9 @@
                             src="{{ $user->avatar
                                 ? asset('storage/'.$user->avatar)
                                 : asset('images/avatar-default.png') }}"
+                            alt="Avatar"
                             class="avatar-img"
-                            alt="Avatar">
+                        >
 
                         {{-- CAMERA ICON --}}
                         <form method="POST"
@@ -91,8 +90,10 @@
                     @enderror
                 </div>
 
-                {{-- FORM UPDATE INFO --}}
-                <form method="POST" action="{{ route('profile.update') }}" class="profile-form">
+                {{-- UPDATE INFO FORM --}}
+                <form method="POST"
+                      action="{{ route('profile.update') }}"
+                      class="profile-form">
                     @csrf
                     @method('PATCH')
 
@@ -132,11 +133,13 @@
                 </form>
             </section>
 
-            {{-- ===== ĐỔI MẬT KHẨU ===== --}}
+            {{-- ===== CHANGE PASSWORD ===== --}}
             <section class="profile-card mt-4">
                 <h5 class="card-title">Bảo mật</h5>
 
-                <form method="POST" action="{{ route('profile.password') }}" class="profile-form">
+                <form method="POST"
+                      action="{{ route('profile.password') }}"
+                      class="profile-form">
                     @csrf
 
                     <div class="form-group">

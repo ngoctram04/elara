@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Carbon\Carbon;
 
 class Product extends Model
 {
@@ -57,7 +56,12 @@ class Product extends Model
 
     public function promotions(): BelongsToMany
     {
-        return $this->belongsToMany(Promotion::class, 'promotion_products');
+        return $this->belongsToMany(
+            Promotion::class,
+            'promotion_products',
+            'product_id',
+            'promotion_id'
+        );
     }
 
     /* ======================
@@ -71,7 +75,7 @@ class Product extends Model
 
     public function getMainImageUrlAttribute(): string
     {
-        if ($this->mainImage && $this->mainImage->image_path) {
+        if ($this->relationLoaded('mainImage') && $this->mainImage?->image_path) {
             return asset('storage/' . $this->mainImage->image_path);
         }
 
@@ -80,25 +84,35 @@ class Product extends Model
 
     /* ======================
         🔥 FLASH SALE LOGIC
-        (QUAN TRỌNG NHẤT)
+        (TRỌNG TÂM)
     ====================== */
 
     /**
-     * Promotion flash sale đang hiệu lực
+     * Promotion theo sản phẩm đang hiệu lực
+     * (ưu tiên giảm nhiều nhất nếu có nhiều KM)
      */
-
     public function activeFlashPromotion()
     {
-        return $this->promotions()
-            ->where('type', 'product') // KM theo sản phẩm
-            ->where('is_active', 1)
+        return $this->promotions
+            ->where('type', 'product')
+            ->where('is_active', true)
             ->where('start_date', '<=', now())
             ->where('end_date', '>=', now())
-            ->orderByDesc('discount_value')
+            ->sortByDesc('discount_value')
             ->first();
     }
 
-    /* % giảm */
+    /**
+     * Có đang sale không
+     */
+    public function getIsFlashSaleAttribute(): bool
+    {
+        return !is_null($this->activeFlashPromotion());
+    }
+
+    /**
+     * % giảm
+     */
     public function getFlashDiscountPercentAttribute(): int
     {
         $promo = $this->activeFlashPromotion();
@@ -110,43 +124,42 @@ class Product extends Model
         return (int) $promo->discount_value;
     }
 
-    /* Giá gốc */
+    /**
+     * Giá gốc (lấy min_price)
+     */
     public function getFlashOriginalPriceAttribute(): int
     {
         return (int) $this->min_price;
     }
 
-    /* Giá sau giảm */
+    /**
+     * Giá sau giảm
+     */
     public function getFlashSalePriceAttribute(): int
     {
         $promo = $this->activeFlashPromotion();
+        $price = (int) $this->min_price;
 
         if (!$promo) {
-            return (int) $this->min_price;
+            return $price;
         }
 
         // Giảm theo %
         if ($promo->discount_type === 'percent') {
-            return (int) round(
-                $this->min_price * (100 - $promo->discount_value) / 100
+            return max(
+                (int) round($price * (100 - $promo->discount_value) / 100),
+                0
             );
         }
 
         // Giảm theo số tiền
         if ($promo->discount_type === 'fixed') {
             return max(
-                (int) ($this->min_price - $promo->discount_value),
+                (int) ($price - $promo->discount_value),
                 0
             );
         }
 
-        return (int) $this->min_price;
+        return $price;
     }
-
-    /* Có đang flash sale không */
-    public function getIsFlashSaleAttribute(): bool
-    {
-        return (bool) $this->activeFlashPromotion();
-    }
-
 }

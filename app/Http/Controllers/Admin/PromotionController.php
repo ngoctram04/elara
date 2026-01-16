@@ -79,7 +79,6 @@ class PromotionController extends Controller
             'usage_limit'     => 'nullable|integer|min:1',
         ]);
 
-        // ✅ CHỈ CHECK TRÙNG BIẾN THỂ ĐANG KHUYẾN MÃI
         if (
             $request->type === 'product'
             && $this->hasActiveProductConflict($request)
@@ -128,38 +127,22 @@ class PromotionController extends Controller
     }
 
     /* =========================================================
-        EDIT REDIRECT
+        EDIT (CHUẨN – KHÔNG REDIRECT)
     ========================================================= */
     public function edit(Promotion $promotion)
     {
-        return $promotion->type === 'product'
-            ? redirect()->route('admin.promotions.edit.product', $promotion)
-            : redirect()->route('admin.promotions.edit.order', $promotion);
-    }
+        if ($promotion->type === 'product') {
 
-    /* =========================================================
-        EDIT – PRODUCT
-    ========================================================= */
-    public function editProduct(Promotion $promotion)
-    {
-        abort_if($promotion->type !== 'product', 404);
+            $products = Product::with('variants')->get();
+            $selected = $promotion->promotionProducts;
 
-        $products = Product::with('variants')->get();
-        $selected = $promotion->promotionProducts;
+            return view('admin.promotions.edit_product', compact(
+                'promotion',
+                'products',
+                'selected'
+            ));
+        }
 
-        return view('admin.promotions.edit_product', compact(
-            'promotion',
-            'products',
-            'selected'
-        ));
-    }
-
-    /* =========================================================
-        EDIT – ORDER
-    ========================================================= */
-    public function editOrder(Promotion $promotion)
-    {
-        abort_if($promotion->type !== 'order', 404);
         return view('admin.promotions.edit_order', compact('promotion'));
     }
 
@@ -169,16 +152,15 @@ class PromotionController extends Controller
     public function update(Request $request, Promotion $promotion)
     {
         $request->validate([
-            'name'           => 'required|string|max:255',
-            'discount_value' => 'required|integer|min:1|max:100',
-            'start_date'     => 'required|date',
-            'end_date'       => 'required|date|after_or_equal:start_date',
+            'name'            => 'required|string|max:255',
+            'discount_value'  => 'required|integer|min:1|max:100',
+            'start_date'      => 'required|date',
+            'end_date'        => 'required|date|after_or_equal:start_date',
             'min_order_value' => 'nullable|numeric|min:0',
-            'max_discount'   => 'nullable|numeric|min:0',
-            'usage_limit'    => 'nullable|integer|min:1',
+            'max_discount'    => 'nullable|numeric|min:0',
+            'usage_limit'     => 'nullable|integer|min:1',
         ]);
 
-        // ✅ CHECK TRÙNG BIẾN THỂ (BỎ QUA CHÍNH NÓ)
         if (
             $promotion->type === 'product'
             && $this->hasActiveProductConflict($request, $promotion)

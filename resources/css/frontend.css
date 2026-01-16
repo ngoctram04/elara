@@ -1,20 +1,41 @@
+/* =====================================================
+   ROOT VARIABLES
+===================================================== */
 :root {
     --primary: #7ec8ea;
-    /* xanh pastel */
     --primary-soft: #eef8fd;
-    /* nền nhạt */
     --text-dark: #2c3e50;
+    --text-muted: #6c757d;
+
+    --radius-lg: 16px;
+    --radius-md: 12px;
+    --radius-sm: 8px;
+    --radius-pill: 999px;
 }
 
-/* ================= BODY ================= */
+/* =====================================================
+   BODY
+===================================================== */
 body {
     background: #f6f9fc;
     color: var(--text-dark);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
-/* ================= HEADER ================= */
+/* =====================================================
+   PAGE WRAPPER
+===================================================== */
+.page-wrapper {
+    max-width: 1200px;
+    margin: 24px auto;
+    padding: 0 16px;
+}
+
+/* =====================================================
+   HEADER
+===================================================== */
 .header-box {
-    background: white;
+    background: #fff;
     border-bottom: 1px solid #eee;
 }
 
@@ -27,13 +48,11 @@ body {
     gap: 24px;
 }
 
-/* LOGO */
 .logo {
     font-size: 28px;
     font-weight: 700;
     color: var(--text-dark);
     text-decoration: none;
-    white-space: nowrap;
 }
 
 /* SEARCH */
@@ -41,67 +60,50 @@ body {
     flex: 1;
     display: flex;
     background: var(--primary-soft);
-    border-radius: 999px;
-    overflow: hidden;
+    border-radius: var(--radius-pill);
+    overflow: visible;
+}
+.header-box,
+.header-inner {
+    overflow: visible !important;
+}
+
+.dropdown-menu {
+    z-index: 9999;
 }
 
 .search-pill input {
     flex: 1;
     border: none;
+    outline: none;
     background: transparent;
     padding: 10px 18px;
-    outline: none;
+    font-size: 14px;
 }
 
 .search-pill button {
     background: var(--primary);
-    color: white;
+    color: #fff;
     border: none;
-    padding: 0 20px;
+    padding: 0 22px;
     cursor: pointer;
 }
 
-.search-pill button:hover {
-    opacity: .9;
-}
-
-/* ICONS / USER */
+/* ICONS */
 .header-icons {
     display: flex;
-    align-items: center;
     gap: 16px;
-    white-space: nowrap;
 }
 
-/* ================= USER DROPDOWN ================= */
-.user-menu {
-    display: flex;
-    align-items: center;
-}
-
-.user-toggle {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    text-decoration: none;
+.icon-btn {
     color: var(--text-dark);
-    font-weight: 500;
-    cursor: pointer;
+    font-size: 18px;
+    text-decoration: none;
 }
 
-.user-toggle i {
-    font-size: 20px;
-}
-
-.user-name {
-    white-space: nowrap;
-}
-
-.user-toggle:hover {
-    color: var(--primary);
-}
-
-/* ================= NAV ================= */
+/* =====================================================
+   NAVIGATION
+===================================================== */
 .nav-box {
     background: var(--primary);
 }
@@ -111,520 +113,193 @@ body {
     margin: 0 auto;
     padding: 12px 16px;
     display: flex;
-    justify-content: center;
     align-items: center;
+    justify-content: center;
+    /* CÂN GIỮA */
     gap: 32px;
 }
 
-.nav-inner a {
-    color: white;
+.nav-inner>a,
+.nav-category-trigger {
+    color: #fff;
     text-decoration: none;
-    font-weight: 500;
-    padding: 6px 10px;
-    border-radius: 6px;
-    transition: .2s;
-}
-
-.nav-inner a:hover {
-    background: rgba(255, 255, 255, .25);
-}
-
-/* ================= PAGE ================= */
-.page-wrapper {
-    max-width: 1200px;
-    margin: 24px auto;
-    padding: 0 16px;
-}
-
-/* ================= TITLES ================= */
-.page-title {
-    font-weight: 700;
-    color: var(--primary);
-}
-
-/* =====================================================
-   PROFILE PAGE – THÔNG TIN TÀI KHOẢN
-===================================================== */
-
-.profile-wrapper {
-    max-width: 1100px;
-    margin: 40px auto;
-}
-
-/* TITLE */
-.profile-title {
-    text-align: center;
-    font-size: 26px;
-    font-weight: 600;
-    margin-bottom: 40px;
-}
-
-/* LAYOUT */
-.profile-layout {
-    display: grid;
-    grid-template-columns: 240px 1fr;
-    gap: 40px;
-}
-
-/* SIDEBAR */
-.profile-sidebar h6 {
-    font-weight: 700;
-    margin-bottom: 16px;
-}
-
-.profile-sidebar a {
-    display: block;
-    margin-bottom: 12px;
-    color: #333;
-    text-decoration: none;
-}
-
-.profile-sidebar a.active {
-    font-weight: 600;
-}
-
-.logout-btn {
-    background: none;
-    border: none;
-    padding: 0;
-    margin-top: 16px;
-    cursor: pointer;
-    color: #333;
-}
-
-/* CARD */
-.profile-card {
-    background: #fff;
-    padding: 32px;
-    border-radius: 6px;
-    border: 1px solid #eee;
-}
-
-.profile-card h5 {
-    font-weight: 700;
-    margin-bottom: 24px;
-}
-
-/* AVATAR */
-.avatar-row {
-    display: flex;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    transition: background .2s;
+    display: inline-flex;
     align-items: center;
-    gap: 20px;
-    margin-bottom: 28px;
+    gap: 6px;
 }
 
-.avatar-img {
-    width: 96px;
-    height: 96px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 1px solid #ddd;
+.nav-inner>a:hover,
+.nav-category-trigger:hover {
+    background: rgba(255, 255, 255, .15);
+}
+/* ================= MEGA MENU – FIX DỨT ĐIỂM ================= */
+
+.nav-box {
+    position: relative;
+    z-index: 2000;
 }
 
-.btn-link {
-    color: var(--primary);
-    cursor: pointer;
-    font-weight: 500;
+.nav-category {
+    position: relative;
 }
 
-/* FORM */
-.form-group {
-    margin-bottom: 20px;
+/* wrapper */
+.mega-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    display: none;
+    z-index: 3000;
 }
 
-.form-group label {
+/* chỉ mở khi hover đúng */
+.nav-category-trigger:hover + .mega-menu,
+.mega-menu:hover {
     display: block;
-    margin-bottom: 6px;
-    font-size: 14px;
 }
 
-.form-group input {
-    width: 100%;
-    padding: 12px;
-    border: none;
-    background: #f1f1f1;
-    border-radius: 4px;
-}
-
-/* BUTTON */
-.btn-update {
-    background: #e91e63;
-    color: white;
-    border: none;
-    padding: 12px 28px;
-    font-weight: 600;
-    cursor: pointer;
-    border-radius: 4px;
-}
-
-/* ================= RESPONSIVE ================= */
-@media (max-width: 768px) {
-    .header-inner {
-        flex-wrap: wrap;
-        gap: 12px;
-    }
-
-    .search-pill {
-        order: 3;
-        width: 100%;
-    }
-
-    .nav-inner {
-        flex-wrap: wrap;
-        gap: 16px;
-    }
-
-    .profile-layout {
-        grid-template-columns: 1fr;
-    }
-}
-/* ================= PROFILE ================= */
-
-.profile-wrapper {
-    max-width: 1200px;
-    margin: auto;
-}
-
-.profile-title {
-    font-weight: 700;
-    margin-bottom: 24px;
-    color: var(--primary);
-}
-
-.profile-layout {
-    display: grid;
-    grid-template-columns: 260px 1fr;
-    gap: 24px;
-}
-
-/* SIDEBAR */
-.profile-sidebar {
+/* container tổng */
+.mega-container {
+    width: 1000px;
+    height: 420px;
     background: #fff;
-    border-radius: 12px;
-    padding: 20px;
+    border-radius: 14px;
+    box-shadow: 0 20px 50px rgba(0,0,0,.18);
+    display: flex;
+    overflow: hidden;
 }
 
-.sidebar-title {
-    font-size: 13px;
-    color: #888;
-    margin-bottom: 12px;
+/* ===== LEFT ===== */
+.mega-left {
+    width: 260px;
+    border-right: 1px solid #eee;
+    list-style: none;
+    margin: 0;
+    padding: 8px 0;
 }
 
-.profile-sidebar a {
+.mega-parent {
+    position: relative;
+}
+
+.mega-parent-label {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 10px 12px;
-    border-radius: 8px;
-    color: var(--text-dark);
-    text-decoration: none;
-    margin-bottom: 6px;
-}
-
-.profile-sidebar a.active,
-.profile-sidebar a:hover {
-    background: var(--primary-soft);
-    color: var(--primary);
-}
-
-.logout-btn {
-    margin-top: 12px;
-    width: 100%;
-    border: none;
-    background: none;
-    text-align: left;
-    color: #d33;
-    padding: 10px 12px;
-}
-
-/* CARD */
-.profile-card {
-    background: #fff;
-    border-radius: 16px;
-    padding: 24px;
-}
-
-.card-title {
-    font-weight: 600;
-    margin-bottom: 20px;
-}
-
-/* AVATAR */
-.avatar-row {
-    display: flex;
-    align-items: center;
-    margin-bottom: 24px;
-}
-
-.avatar-box {
-    position: relative;
-    width: 120px;
-    height: 120px;
-}
-
-.avatar-img {
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 4px solid var(--primary-soft);
-}
-
-.avatar-camera {
-    position: absolute;
-    bottom: 4px;
-    right: 4px;
-    width: 36px;
-    height: 36px;
-    background: var(--primary);
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    padding: 12px 16px;
+    font-size: 14px;
     cursor: pointer;
 }
 
-.avatar-camera:hover {
-    opacity: .9;
+.mega-parent-label:hover {
+    background: #f5f7fa;
 }
 
-/* FORM */
-.profile-form .form-group {
-    margin-bottom: 16px;
+.mega-parent-label .arrow {
+    margin-left: auto;
+    font-size: 12px;
+    color: #999;
 }
 
-.profile-form label {
-    font-weight: 500;
-    margin-bottom: 6px;
-}
-
-.profile-form input {
-    width: 100%;
-    padding: 10px 12px;
-    border-radius: 8px;
-    border: 1px solid #ddd;
-}
-
-.btn-update {
-    background: var(--primary);
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 999px;
-    font-weight: 600;
-}
-
-.btn-update:hover {
-    opacity: .9;
-}
-/* ===== SERVICE BOX ===== */
-.service-box {
-    background: #eef8ff;
-    border-radius: 14px;
-    padding: 25px 15px;
-}
-
-.service-item h6 {
-    font-weight: 600;
-    margin-top: 10px;
-    margin-bottom: 4px;
-}
-
-.service-item small {
-    color: #6c757d;
-    font-size: 13px;
-}
-
-.service-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    margin: 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-}
-
-/* ICON COLORS */
-.service-icon.blue {
-    background: #e7f1ff;
-    color: #0d6efd;
-}
-
-.service-icon.green {
-    background: #e9f8f1;
-    color: #198754;
-}
-
-.service-icon.red {
-    background: #fdecea;
-    color: #dc3545;
-}
-/* ================= FLASH SALE CARD ================= */
-.fs-card {
-    position: relative;
-    background: #fff;
-    border-radius: 20px;
-    padding: 14px;
-    height: 100%;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, .08);
-    transition: transform .25s ease, box-shadow .25s ease;
-}
-
-.fs-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 18px 40px rgba(0, 0, 0, .12);
-}
-
-/* ================= BADGE ================= */
-.fs-badge {
+/* ===== RIGHT ===== */
+.mega-right {
     position: absolute;
-    top: 12px;
-    left: 12px;
-    background: #ff4d4f;
-    color: #fff;
-    font-size: 13px;
-    font-weight: 600;
-    padding: 4px 10px;
-    border-radius: 999px;
-    z-index: 2;
-}
-
-/* ================= IMAGE ================= */
-.fs-image {
-    width: 100%;
-    height: 200px;
-    /* 👈 giống ảnh mẫu */
-    border-radius: 14px;
-    overflow: hidden;
-    background: #f3f3f3;
-    margin-bottom: 12px;
-}
-
-.fs-image img {
-    width: 100%;
+    top: 0;
+    left: 260px;
+    width: 740px;
     height: 100%;
-    object-fit: cover;
-    /* 🔥 then chốt */
-    object-position: center;
+    padding: 24px;
+    background: #fff;
+    display: none;
+}
+
+.mega-parent:hover .mega-right {
     display: block;
-    transition: transform .35s ease;
 }
 
-.fs-card:hover .fs-image img {
-    transform: scale(1.05);
+/* columns */
+.mega-columns {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
 }
 
-/* ================= TITLE ================= */
-.fs-title {
-    font-size: 15px;
-    font-weight: 600;
-    line-height: 1.4;
-    margin-bottom: 6px;
-    min-height: 42px;
+.mega-columns ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
 }
 
-/* ================= SOLD ================= */
-.fs-sold {
-    font-size: 13px;
-    color: #666;
-    margin-bottom: 6px;
+.mega-columns li {
+    margin-bottom: 8px;
 }
 
-.fs-sold i {
-    margin-right: 4px;
+.mega-columns a {
+    font-size: 14px;
+    color: #333;
+    text-decoration: none;
 }
 
-/* ================= PRICE ================= */
-.fs-price {
-    margin-bottom: 12px;
-}
-
-.fs-price .old {
-    font-size: 13px;
-    color: #aaa;
-    text-decoration: line-through;
-    margin-right: 6px;
-}
-
-.fs-price .new {
-    font-size: 18px;
-    font-weight: 700;
+.mega-columns a:hover {
     color: #ff4d4f;
 }
 
-/* ================= ACTIONS ================= */
-.fs-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+.mega-columns span {
+    font-size: 13px;
+    color: #999;
 }
 
-.fs-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border: 1px solid #1677ff;
+
+/* =====================================================
+   HOME PAGE
+===================================================== */
+.home-banner img {
+    height: 420px;
+    object-fit: cover;
+}
+
+.home-services .service-item {
     background: #fff;
+    padding: 24px;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, .06);
+    height: 100%;
+}
+
+.service-icon {
+    font-size: 32px;
+    margin-bottom: 10px;
+}
+
+.service-icon.blue {
     color: #1677ff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all .2s ease;
 }
 
-.fs-icon i {
-    font-size: 16px;
+.service-icon.green {
+    color: #52c41a;
 }
 
-.fs-icon:hover {
-    background: #1677ff;
-    color: #fff;
+.service-icon.red {
+    color: #ff4d4f;
 }
 
-.fs-icon.eye {
-    border-color: #ccc;
-    color: #666;
-}
-
-.fs-icon.eye:hover {
-    background: #eee;
-    color: #333;
-}
-
-/* ================= BUY BUTTON ================= */
-.fs-buy {
-    flex: 1;
-    background: #1677ff;
-    color: #fff;
+.section-title {
     text-align: center;
-    padding: 8px 0;
-    border-radius: 999px;
-    font-size: 14px;
-    font-weight: 600;
-    text-decoration: none;
-    transition: background .2s ease;
+    font-weight: 700;
+    margin-bottom: 24px;
 }
 
-.fs-buy i {
-    font-size: 15px;
-}
-
-.fs-buy:hover {
-    background: #0958d9;
-    color: #fff;
-}
-
-/* ================= FOOTER ================= */
+/* =====================================================
+   FOOTER
+===================================================== */
 .footer-box {
     background: #e9f6fb;
-    padding: 50px 0 20px;
+    padding: 60px 0 24px;
 }
 
-/* 👉 CĂN GIỮA – GIỐNG HEADER */
 .footer-inner {
     max-width: 1200px;
     margin: 0 auto;
@@ -633,49 +308,45 @@ body {
 
 .footer-title {
     font-weight: 700;
-    font-size: 20px;
+    font-size: 18px;
+    margin-bottom: 12px;
 }
 
 .footer-title-sm {
     font-weight: 600;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
 }
 
 .footer-desc {
     font-size: 14px;
     color: #555;
+    line-height: 1.6;
 }
 
 .footer-info,
 .footer-links {
     list-style: none;
     padding: 0;
-    font-size: 14px;
 }
 
 .footer-info li,
 .footer-links li {
+    font-size: 14px;
     margin-bottom: 6px;
 }
 
-.footer-info i {
-    color: #1677ff;
-    margin-right: 6px;
-}
-
 .footer-links a {
-    text-decoration: none;
     color: #333;
+    text-decoration: none;
 }
 
 .footer-links a:hover {
-    color: #1677ff;
+    color: var(--primary);
 }
 
-/* Newsletter */
 .footer-newsletter input {
     width: 100%;
-    padding: 10px;
+    padding: 8px 10px;
     margin-bottom: 8px;
     border-radius: 6px;
     border: 1px solid #ccc;
@@ -683,18 +354,46 @@ body {
 
 .footer-newsletter button {
     width: 100%;
-    background: #000;
-    color: #fff;
-    padding: 10px;
-    border-radius: 6px;
     border: none;
+    background: var(--primary);
+    color: #fff;
+    padding: 8px;
+    border-radius: 6px;
 }
 
-/* Bottom */
 .footer-bottom {
     border-top: 1px solid #ddd;
-    margin-top: 30px;
+    margin-top: 40px;
     padding-top: 16px;
     text-align: center;
     font-size: 13px;
+    color: #777;
+}
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+@media (max-width: 768px) {
+
+    .header-inner {
+        flex-wrap: wrap;
+    }
+
+    .search-pill {
+        width: 100%;
+    }
+
+    .nav-inner {
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    .home-banner img {
+        height: 260px;
+    }
+
+    /* TẮT MEGA MENU MOBILE */
+    .mega-menu {
+        display: none !important;
+    }
 }

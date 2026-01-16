@@ -2,56 +2,77 @@
 <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
     <div class="fs-card">
 
-        {{-- Badge giảm giá --}}
-        <span class="fs-badge">
-            -{{ $product->flash_discount_percent }}%
-        </span>
-
-        {{-- Ảnh --}}
+        {{-- IMAGE --}}
         <div class="fs-image">
-            <img src="{{ $product->main_image_url }}"
-                 alt="{{ $product->name }}">
-        </div>
 
-        {{-- Tên --}}
-        <h6 class="fs-title">
-            {{ \Illuminate\Support\Str::limit($product->name, 40) }}
-        </h6>
-
-        {{-- Đã bán --}}
-        <div class="fs-sold">
-            <i class="bi bi-fire text-danger"></i>
-            Đã bán {{ $product->total_sold }}
-        </div>
-
-        {{-- Giá --}}
-        <div class="fs-price">
-            <span class="old">
-                {{ number_format($product->flash_original_price) }}đ
+            {{-- BADGE --}}
+            <span class="fs-badge">
+                -{{ $product->flash_discount_percent }}%
             </span>
 
-            <span class="new">
-                {{ number_format($product->flash_sale_price) }}đ
-            </span>
+            <img
+                src="{{ $product->main_image_url }}"
+                alt="{{ $product->name }}"
+                loading="lazy"
+            >
+
+            {{-- OVERLAY --}}
+            <div class="fs-overlay">
+
+                {{-- LEFT ICON --}}
+                <button
+                    type="button"
+                    class="fs-icon fs-left"
+                    title="Xem nhanh"
+                >
+                    <i class="bi bi-eye"></i>
+                </button>
+
+                {{-- BUY --}}
+                <a href="{{ route('products.show', $product->slug) }}"
+                   class="fs-buy">
+                    <i class="bi bi-lightning-charge-fill"></i>
+                    Mua ngay
+                </a>
+
+                {{-- RIGHT ICON --}}
+                <button class="fs-icon fs-right" title="Thêm vào giỏ">
+                    <i class="bi bi-cart-plus"></i>
+                </button>
+
+            </div>
         </div>
 
-        {{-- Hành động --}}
-        <div class="fs-actions">
-            <button class="fs-icon" title="Thêm vào giỏ">
-                <i class="bi bi-cart-plus"></i>
-            </button>
+        {{-- INFO --}}
+        <div class="fs-info">
 
-            <a href="{{ route('shop') }}"
-               class="fs-buy">
-                <i class="bi bi-lightning-charge-fill me-1"></i>
-                Mua ngay
-            </a>
+            <div class="fs-brand">
+                {{ $product->brand->name ?? 'Thương hiệu' }}
+            </div>
 
-            <button class="fs-icon eye" title="Xem nhanh">
-                <i class="bi bi-eye"></i>
-            </button>
+            <div class="fs-title">
+                {{ \Illuminate\Support\Str::limit($product->name, 48) }}
+            </div>
+
+            <div class="fs-meta">
+                <div class="fs-rating">
+                    ⭐⭐⭐⭐⭐ <span>(5.0)</span>
+                </div>
+                <div class="fs-sold">
+                    🔥 {{ $product->total_sold }}
+                </div>
+            </div>
+
+            <div class="fs-price">
+                <span class="old">
+                    {{ number_format($product->flash_original_price) }}đ
+                </span>
+                <span class="new">
+                    {{ number_format($product->flash_sale_price) }}đ
+                </span>
+            </div>
+
         </div>
-
     </div>
 </div>
 @endif

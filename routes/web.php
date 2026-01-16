@@ -4,19 +4,27 @@ use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| CONTROLLERS
+| FRONTEND CONTROLLERS
 |--------------------------------------------------------------------------
 */
-
-// ================= FRONTEND =================
 use App\Http\Controllers\Frontend\HomeController;
 use App\Http\Controllers\Frontend\ShopController;
 use App\Http\Controllers\Frontend\ProductController as FrontendProductController;
+use App\Http\Controllers\Frontend\CategoryController as FrontendCategoryController;
+use App\Http\Controllers\Frontend\CartController;
 
-// ================= USER (FRONTEND PROFILE) =================
+/*
+|--------------------------------------------------------------------------
+| USER (FRONTEND PROFILE)
+|--------------------------------------------------------------------------
+*/
 use App\Http\Controllers\ProfileController;
 
-// ================= ADMIN =================
+/*
+|--------------------------------------------------------------------------
+| ADMIN CONTROLLERS
+|--------------------------------------------------------------------------
+*/
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\CategoryController;
@@ -27,7 +35,7 @@ use App\Http\Controllers\Admin\CustomerController;
 
 /*
 |--------------------------------------------------------------------------
-| FRONTEND – USER
+| FRONTEND – PUBLIC
 |--------------------------------------------------------------------------
 */
 
@@ -35,44 +43,75 @@ use App\Http\Controllers\Admin\CustomerController;
 Route::get('/', [HomeController::class, 'index'])
     ->name('home');
 
-// 🛍 Trang mua sắm
+// 🛍 Trang shop
 Route::get('/shop', [ShopController::class, 'index'])
     ->name('shop');
 
-// ✅ CHI TIẾT SẢN PHẨM (FIX LỖI products.show)
+// 📂 Trang danh mục
+Route::get('/danh-muc/{slug}', [FrontendCategoryController::class, 'show'])
+    ->name('category.show');
+
+// 📦 Chi tiết sản phẩm  ✅ (ROUTE ĐÚNG ĐỂ DÙNG TRONG BLADE)
 Route::get('/products/{slug}', [FrontendProductController::class, 'show'])
     ->name('products.show');
 
 /*
 |--------------------------------------------------------------------------
-| USER PROFILE (FRONTEND)
+| CART
 |--------------------------------------------------------------------------
 */
 
+// 🛒 Giỏ hàng
+Route::get('/cart', [CartController::class, 'index'])
+    ->name('cart.index');
+
+// ➕ Thêm sản phẩm vào giỏ
+Route::post('/cart/add', [CartController::class, 'add'])
+    ->name('cart.add');
+
+// 🔄 Cập nhật số lượng
+Route::post('/cart/update', [CartController::class, 'update'])
+    ->name('cart.update');
+
+// ❌ Xóa sản phẩm
+Route::delete('/cart/remove/{id}', [CartController::class, 'remove'])
+    ->name('cart.remove');
+
+/*
+|--------------------------------------------------------------------------
+| FRONTEND – USER PROFILE (AUTH REQUIRED)
+|--------------------------------------------------------------------------
+*/
 Route::middleware('auth')
     ->prefix('profile')
     ->name('profile.')
     ->group(function () {
 
+        // 👤 Thông tin cá nhân
         Route::get('/', [ProfileController::class, 'edit'])
             ->name('index');
 
         Route::patch('/', [ProfileController::class, 'update'])
             ->name('update');
 
+        // 🖼 Avatar
         Route::post('/avatar', [ProfileController::class, 'updateAvatar'])
             ->name('avatar');
 
+        // 🔐 Đổi mật khẩu
         Route::post('/password', [ProfileController::class, 'updatePassword'])
             ->name('password');
 
+        // ❌ Xóa tài khoản
         Route::delete('/', [ProfileController::class, 'destroy'])
             ->name('destroy');
 
+        // 📦 Đơn hàng
         Route::get('/orders', function () {
             return view('frontend.profile.orders');
         })->name('orders');
 
+        // 📍 Địa chỉ
         Route::get('/address', function () {
             return view('frontend.profile.address');
         })->name('address');
@@ -80,10 +119,9 @@ Route::middleware('auth')
 
 /*
 |--------------------------------------------------------------------------
-| BACKEND – ADMIN
+| BACKEND – ADMIN (AUTH + IS_ADMIN)
 |--------------------------------------------------------------------------
 */
-
 Route::prefix('admin')
     ->name('admin.')
     ->middleware(['auth', 'is_admin'])
@@ -164,12 +202,6 @@ Route::prefix('admin')
         Route::get('promotions/{promotion}/edit', [PromotionController::class, 'edit'])
             ->name('promotions.edit');
 
-        Route::get('promotions/{promotion}/edit/product', [PromotionController::class, 'editProduct'])
-            ->name('promotions.edit.product');
-
-        Route::get('promotions/{promotion}/edit/order', [PromotionController::class, 'editOrder'])
-            ->name('promotions.edit.order');
-
         Route::put('promotions/{promotion}', [PromotionController::class, 'update'])
             ->name('promotions.update');
 
@@ -182,5 +214,4 @@ Route::prefix('admin')
 | AUTH
 |--------------------------------------------------------------------------
 */
-
 require __DIR__ . '/auth.php';

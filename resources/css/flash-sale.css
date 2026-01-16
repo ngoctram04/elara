@@ -1,0 +1,165 @@
+/* ================= FLASH SALE CARD ================= */
+
+.fs-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.08);
+    transition: .25s ease;
+}
+
+.fs-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 14px 34px rgba(0,0,0,.14);
+}
+
+/* IMAGE */
+.fs-image {
+    position: relative;
+    height: 220px;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.fs-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: .35s ease;
+}
+
+.fs-card:hover .fs-image img {
+    transform: scale(1.06);
+}
+
+/* BADGE */
+.fs-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: #ff4d4f;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 999px;
+    z-index: 3;
+}
+
+/* OVERLAY */
+.fs-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,.45);
+    opacity: 0;
+    transition: .25s ease;
+}
+
+.fs-card:hover .fs-overlay {
+    opacity: 1;
+}
+
+/* ICONS */
+.fs-icon {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: #fff;
+    color: #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    cursor: pointer;
+    transition: .2s ease;
+}
+
+.fs-icon:hover {
+    background: #1677ff;
+    color: #fff;
+}
+
+.fs-left {
+    left: 14px;
+}
+
+.fs-right {
+    right: 14px;
+}
+
+/* BUY BUTTON */
+.fs-buy {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #1677ff;
+    color: #fff;
+    padding: 8px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 999px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.fs-buy:hover {
+    background: #0958d9;
+}
+
+/* INFO */
+.fs-info {
+    padding: 6px 2px 2px;
+}
+
+.fs-brand {
+    font-size: 11px;
+    color: #888;
+}
+
+.fs-title {
+    font-size: 14px;
+    font-weight: 600;
+    height: 38px;
+    overflow: hidden;
+}
+
+.fs-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+}
+
+.fs-sold {
+    color: #ff4d4f;
+}
+
+.fs-price {
+    display: flex;
+    gap: 6px;
+}
+
+.fs-price .old {
+    font-size: 12px;
+    text-decoration: line-through;
+    color: #999;
+}
+
+.fs-price .new {
+    font-size: 16px;
+    font-weight: 700;
+    color: #ff4d4f;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+    .fs-image {
+        height: 180px;
+    }
+}

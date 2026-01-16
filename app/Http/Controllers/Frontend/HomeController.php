@@ -21,8 +21,8 @@ class HomeController extends Controller
             SẢN PHẨM NỔI BẬT
         =============================== */
         $featuredProducts = Product::with('mainImage')
-            ->where('is_active', 1)
-            ->where('is_featured', 1)
+            ->where('is_active', true)
+            ->where('is_featured', true)
             ->latest()
             ->take(8)
             ->get();
@@ -31,35 +31,36 @@ class HomeController extends Controller
             SẢN PHẨM MỚI
         =============================== */
         $latestProducts = Product::with('mainImage')
-            ->where('is_active', 1)
+            ->where('is_active', true)
             ->latest()
             ->take(8)
             ->get();
 
         /* ===============================
-            🔥 FLASH SALE (CHUẨN LOGIC)
-            - Có promotion type = flash_sale
+            🔥 FLASH SALE
+            - Sản phẩm CÓ promotion theo sản phẩm
             - Promotion đang active
-            - Còn trong thời gian hiệu lực
-            - Còn hàng
+            - Trong thời gian hiệu lực
+            - Không cần cột is_flash_sale
         =============================== */
-        $flashSaleProducts = Product::where('is_active', 1)
-            ->where('total_stock', '>', 0)
+        $flashSaleProducts = Product::with([
+            'mainImage',
+            'brand',
+            'variants',
+            'promotions' => function ($q) {
+                $q->where('type', 'product')
+                    ->where('is_active', true)
+                    ->where('start_date', '<=', now())
+                    ->where('end_date', '>=', now());
+            }
+        ])
+            ->where('is_active', true)
             ->whereHas('promotions', function ($q) {
-                $q->where('type', 'flash_sale')
-                    ->where('is_active', 1)
-                    ->where('start_at', '<=', now())
-                    ->where('end_at', '>=', now());
+                $q->where('type', 'product')
+                    ->where('is_active', true)
+                    ->where('start_date', '<=', now())
+                    ->where('end_date', '>=', now());
             })
-            ->with([
-                'mainImage',
-                'promotions' => function ($q) {
-                    $q->where('type', 'flash_sale')
-                        ->where('is_active', 1)
-                        ->where('start_at', '<=', now())
-                        ->where('end_at', '>=', now());
-                }
-            ])
             ->orderByDesc('total_sold')
             ->take(8)
             ->get();
