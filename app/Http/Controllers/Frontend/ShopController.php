@@ -4,41 +4,82 @@ namespace App\Http\Controllers\Frontend;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Models\Brand;
+use App\Models\Category;
+use Illuminate\Http\Request;
 
 class ShopController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        // 🔥 Flash Sale (tạm thời lấy sản phẩm mới)
-        $flashSaleProducts = Product::where('is_active', 1)
-            ->latest()
-            ->take(4)
+        /* ================= BASE QUERY ================= */
+        $query = Product::where('is_active', 1);
+
+        /* ================= CATEGORY FILTER ================= */
+        if ($request->filled('category')) {
+            $query->where('category_id', $request->category);
+        }
+
+        /* ================= PRICE FILTER ================= */
+        if ($request->filled('price')) {
+            match ($request->price) {
+                '0-500' =>
+                $query->whereBetween('min_price', [0, 500000]),
+
+                '500-1000' =>
+                $query->whereBetween('min_price', [500000, 1000000]),
+
+                '1000+' =>
+                $query->where('min_price', '>=', 1000000),
+
+                default => null,
+            };
+        }
+
+        /* ================= BRAND FILTER ================= */
+        if ($request->filled('brands')) {
+            $query->whereIn('brand_id', $request->brands);
+        }
+
+        /* ================= SORT ================= */
+        switch ($request->sort) {
+            case 'price_asc':
+                $query->orderBy('min_price', 'asc');
+                break;
+
+            case 'price_desc':
+                $query->orderBy('min_price', 'desc');
+                break;
+
+            case 'bestseller':
+                $query->orderByDesc('total_sold');
+                break;
+
+            default: // MỚI NHẤT
+                $query->orderByDesc('created_at');
+        }
+
+        $products = $query->paginate(20)->withQueryString();
+
+        /* ================= SIDEBAR DATA ================= */
+
+        // 👉 DANH MỤC CHA + CON
+        $categories = Category::whereNull('parent_id')
+            ->with('children')
+            ->orderBy('name')
             ->get();
 
-        // ⭐ Sản phẩm nổi bật
-        $featuredProducts = Product::where('is_active', 1)
-            ->where('is_featured', 1)
-            ->latest()
-            ->take(4)
+        // 👉 CHỈ BRAND CÓ SẢN PHẨM
+        $brands = Brand::whereHas('products', function ($q) {
+            $q->where('is_active', 1);
+        })
+            ->orderBy('name')
             ->get();
 
-        // 🆕 Sản phẩm mới
-        $latestProducts = Product::where('is_active', 1)
-            ->latest()
-            ->take(4)
-            ->get();
-
-        // 🔥🔥 SẢN PHẨM BÁN CHẠY (DÙNG CỘT total_sold)
-        $bestSellerProducts = Product::where('is_active', 1)
-            ->orderByDesc('total_sold')
-            ->take(4)
-            ->get();
-
-        return view('frontend.home', compact(
-            'flashSaleProducts',
-            'featuredProducts',
-            'latestProducts',
-            'bestSellerProducts'
+        return view('frontend.shop.index', compact(
+            'products',
+            'brands',
+            'categories'
         ));
     }
 }

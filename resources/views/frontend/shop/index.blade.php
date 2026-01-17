@@ -1,20 +1,19 @@
 @extends('layouts.frontend')
-@section('title', $category->name)
+@section('title', 'Sản phẩm')
 
 @section('content')
 
 <x-breadcrumb :items="[
     ['label' => 'Danh mục', 'url' => route('shop')],
-    ['label' => $category->name]
+    ['label' => 'Tất cả sản phẩm']
 ]" />
 
-{{-- ================= CATEGORY BANNER ================= --}}
+{{-- ================= PAGE BANNER ================= --}}
 <section class="category-banner mb-3">
-    <h1 class="fw-bold text-uppercase">{{ $category->name }}</h1>
+    <h1 class="fw-bold text-uppercase">TẤT CẢ SẢN PHẨM</h1>
 </section>
 
 <div class="container">
-
 
     <div class="row">
 
@@ -22,14 +21,14 @@
         <aside class="col-md-3 mb-4">
             <form method="GET" class="sidebar-box">
 
-                {{-- giữ sort --}}
+                {{-- giữ sort + limit --}}
                 <input type="hidden" name="sort" value="{{ request('sort') }}">
                 <input type="hidden" name="limit" value="{{ request('limit', 20) }}">
 
                 {{-- CATEGORY --}}
-                @foreach($allCategories as $parent)
+                @foreach($categories as $parent)
                     <div class="accordion-item
-                        {{ $parent->children->pluck('id')->contains($category->id) ? 'active' : '' }}">
+                        {{ $parent->children->pluck('id')->contains(request('category')) ? 'active' : '' }}">
 
                         <button type="button" class="accordion-header">
                             <span>{{ strtoupper($parent->name) }}</span>
@@ -39,10 +38,14 @@
                         <div class="accordion-body">
                             <ul class="sidebar-list">
                                 @foreach($parent->children as $child)
-                                    <li class="{{ $category->id === $child->id ? 'active' : '' }}">
-                                        <a href="{{ route('category.show', $child->slug) }}">
+                                    <li class="{{ request('category') == $child->id ? 'active' : '' }}">
+                                        <label>
+                                            <input type="radio"
+                                                   name="category"
+                                                   value="{{ $child->id }}"
+                                                   {{ request('category') == $child->id ? 'checked' : '' }}>
                                             {{ $child->name }}
-                                        </a>
+                                        </label>
                                     </li>
                                 @endforeach
                             </ul>
@@ -54,20 +57,18 @@
                 <div class="sidebar-section">
                     <div class="sidebar-title">Khoảng giá</div>
 
-                    @php $price = request('price'); @endphp
-
                     <label class="price-pill pink">
-                        <input type="radio" name="price" value="0-500" hidden {{ $price==='0-500'?'checked':'' }}>
+                        <input type="radio" name="price" value="0-500" hidden {{ request('price')==='0-500'?'checked':'' }}>
                         0 – 500.000đ
                     </label>
 
                     <label class="price-pill blue">
-                        <input type="radio" name="price" value="500-1000" hidden {{ $price==='500-1000'?'checked':'' }}>
+                        <input type="radio" name="price" value="500-1000" hidden {{ request('price')==='500-1000'?'checked':'' }}>
                         500.000đ – 1.000.000đ
                     </label>
 
                     <label class="price-pill yellow">
-                        <input type="radio" name="price" value="1000+" hidden {{ $price==='1000+'?'checked':'' }}>
+                        <input type="radio" name="price" value="1000+" hidden {{ request('price')==='1000+'?'checked':'' }}>
                         Trên 1.000.000đ
                     </label>
                 </div>
@@ -96,7 +97,7 @@
         {{-- ================= PRODUCTS ================= --}}
         <section class="col-md-9">
 
-            {{-- ===== TOOLBAR (SORT + LIMIT) ===== --}}
+            {{-- ===== TOOLBAR (GIỐNG TRANG DANH MỤC) ===== --}}
             <div class="product-toolbar mb-4">
 
                 <div class="toolbar-left">
@@ -125,7 +126,6 @@
 
                 <div class="toolbar-right">
                     <form method="GET">
-                        {{-- giữ filter --}}
                         @foreach(request()->except('limit') as $key=>$value)
                             @if(is_array($value))
                                 @foreach($value as $v)

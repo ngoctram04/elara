@@ -5,20 +5,23 @@ namespace App\Http\Controllers\Frontend;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Category;
+use Carbon\Carbon;
 
 class HomeController extends Controller
 {
     public function index()
     {
+        $now = Carbon::now(); // ✅ cố định thời điểm cho toàn bộ request
+
         /* ===============================
-            DANH MỤC (MENU)
+            DANH MỤC (MENU / MEGA MENU)
         =============================== */
         $categories = Category::whereNull('parent_id')
             ->orderBy('name')
             ->get();
 
         /* ===============================
-            SẢN PHẨM NỔI BẬT
+            ⭐ SẢN PHẨM NỔI BẬT
         =============================== */
         $featuredProducts = Product::with('mainImage')
             ->where('is_active', true)
@@ -28,38 +31,32 @@ class HomeController extends Controller
             ->get();
 
         /* ===============================
-            SẢN PHẨM MỚI
+            🆕 SẢN PHẨM MỚI
         =============================== */
         $latestProducts = Product::with('mainImage')
             ->where('is_active', true)
-            ->latest()
+            ->orderByDesc('created_at')
             ->take(8)
             ->get();
 
         /* ===============================
-            🔥 FLASH SALE
-            - Sản phẩm CÓ promotion theo sản phẩm
-            - Promotion đang active
-            - Trong thời gian hiệu lực
-            - Không cần cột is_flash_sale
+            🔥 FLASH SALE (FIXED)
+            - Chỉ filter ở whereHas
+            - with() chỉ để load quan hệ
+            - Dùng $now để tránh lệch giây
         =============================== */
         $flashSaleProducts = Product::with([
             'mainImage',
             'brand',
             'variants',
-            'promotions' => function ($q) {
-                $q->where('type', 'product')
-                    ->where('is_active', true)
-                    ->where('start_date', '<=', now())
-                    ->where('end_date', '>=', now());
-            }
+            'promotions'
         ])
             ->where('is_active', true)
-            ->whereHas('promotions', function ($q) {
-                $q->where('type', 'product')
+            ->whereHas('promotions', function ($q) use ($now) {
+                $q->where('type', 'product') // hoặc 'flash_sale' nếu bạn tách riêng
                     ->where('is_active', true)
-                    ->where('start_date', '<=', now())
-                    ->where('end_date', '>=', now());
+                    ->where('start_date', '<=', $now)
+                    ->where('end_date', '>=', $now);
             })
             ->orderByDesc('total_sold')
             ->take(8)

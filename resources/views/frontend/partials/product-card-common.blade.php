@@ -1,10 +1,11 @@
 <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
-    <div class="fs-card">
+    <div class="fs-card js-card"
+         data-href="{{ route('products.show', $product->slug) }}">
 
-        {{-- IMAGE --}}
+        {{-- ================= IMAGE ================= --}}
         <div class="fs-image">
 
-            {{-- BADGE (chỉ hiển thị nếu có flash sale) --}}
+            {{-- BADGE --}}
             @if($product->is_flash_sale)
                 <span class="fs-badge">
                     -{{ $product->flash_discount_percent }}%
@@ -20,50 +21,42 @@
             {{-- OVERLAY --}}
             <div class="fs-overlay">
 
-                {{-- QUICK VIEW --}}
-                <button
-                    type="button"
-                    class="fs-icon fs-left"
-                    title="Xem nhanh"
-                >
+                {{-- 👁 XEM NHANH --}}
+                <span class="fs-icon fs-left js-go-detail"
+                      title="Xem chi tiết">
                     <i class="bi bi-eye"></i>
-                </button>
+                </span>
 
-                {{-- BUY --}}
-                <a
-                    href="{{ route('products.show', $product->slug) }}"
-                    class="fs-buy"
-                >
+                {{-- ⚡ MUA NGAY --}}
+                <span class="fs-buy js-go-detail">
                     <i class="bi bi-lightning-charge-fill"></i>
                     Mua ngay
-                </a>
+                </span>
 
-                {{-- ADD TO CART --}}
+                {{-- 🛒 ADD TO CART --}}
                 <button
                     type="button"
-                    class="fs-icon fs-right"
+                    class="fs-icon fs-right btn-add-to-cart"
+                    data-product-id="{{ $product->id }}"
                     title="Thêm vào giỏ"
-                >
+                    onclick="event.stopPropagation()">
                     <i class="bi bi-cart-plus"></i>
                 </button>
 
             </div>
         </div>
 
-        {{-- INFO --}}
+        {{-- ================= INFO ================= --}}
         <div class="fs-info">
 
-            {{-- BRAND --}}
             <div class="fs-brand">
                 {{ $product->brand->name ?? 'Thương hiệu' }}
             </div>
 
-            {{-- TITLE --}}
-            <div class="fs-title">
+            <div class="fs-title js-go-detail">
                 {{ \Illuminate\Support\Str::limit($product->name, 48) }}
             </div>
 
-            {{-- META --}}
             <div class="fs-meta">
                 <div class="fs-rating">
                     ⭐⭐⭐⭐⭐ <span>(5.0)</span>
@@ -73,7 +66,6 @@
                 </div>
             </div>
 
-            {{-- PRICE --}}
             <div class="fs-price">
                 @if($product->is_flash_sale)
                     <span class="old">
@@ -92,3 +84,23 @@
         </div>
     </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    // Click toàn bộ card → chi tiết
+    document.querySelectorAll('.js-card').forEach(card => {
+        card.addEventListener('click', function () {
+            window.location.href = this.dataset.href;
+        });
+    });
+
+    // Click icon / title → chi tiết
+    document.querySelectorAll('.js-go-detail').forEach(el => {
+        el.addEventListener('click', function (e) {
+            e.stopPropagation();
+            window.location.href = this.closest('.js-card').dataset.href;
+        });
+    });
+
+});
+</script>

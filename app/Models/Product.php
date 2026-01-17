@@ -20,7 +20,7 @@ class Product extends Model
         'min_price',
         'max_price',
         'total_stock',
-        'total_sold',
+        'total_sold',   // ✅ dùng cho "Bán chạy"
         'is_active',
         'is_featured',
     ];
@@ -65,7 +65,7 @@ class Product extends Model
     }
 
     /* ======================
-        HELPERS (CHUNG)
+        HELPERS
     ====================== */
 
     public function hasVariants(): bool
@@ -84,12 +84,10 @@ class Product extends Model
 
     /* ======================
         🔥 FLASH SALE LOGIC
-        (TRỌNG TÂM)
     ====================== */
 
     /**
-     * Promotion theo sản phẩm đang hiệu lực
-     * (ưu tiên giảm nhiều nhất nếu có nhiều KM)
+     * Lấy promotion đang hiệu lực (ưu tiên giảm nhiều nhất)
      */
     public function activeFlashPromotion()
     {
@@ -103,7 +101,7 @@ class Product extends Model
     }
 
     /**
-     * Có đang sale không
+     * Có đang flash sale không
      */
     public function getIsFlashSaleAttribute(): bool
     {
@@ -125,7 +123,7 @@ class Product extends Model
     }
 
     /**
-     * Giá gốc (lấy min_price)
+     * Giá gốc (min_price)
      */
     public function getFlashOriginalPriceAttribute(): int
     {
@@ -144,7 +142,6 @@ class Product extends Model
             return $price;
         }
 
-        // Giảm theo %
         if ($promo->discount_type === 'percent') {
             return max(
                 (int) round($price * (100 - $promo->discount_value) / 100),
@@ -152,7 +149,6 @@ class Product extends Model
             );
         }
 
-        // Giảm theo số tiền
         if ($promo->discount_type === 'fixed') {
             return max(
                 (int) ($price - $promo->discount_value),

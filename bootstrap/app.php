@@ -3,6 +3,8 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use App\Http\Middleware\IsAdmin;
+use App\Http\Middleware\CheckUserActive;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -12,9 +14,24 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
 
-        // Đăng ký alias middleware cho Laravel 12
+        /*
+        |--------------------------------------------------------------------------
+        | 🔥 GLOBAL WEB MIDDLEWARE
+        | (khóa là bấm đâu cũng bị văng)
+        |--------------------------------------------------------------------------
+        */
+        $middleware->web(append: [
+            CheckUserActive::class,
+        ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Alias middleware
+        |--------------------------------------------------------------------------
+        */
         $middleware->alias([
-            'is_admin' => \App\Http\Middleware\IsAdmin::class,
+            'is_admin'     => IsAdmin::class,
+            'check_active' => CheckUserActive::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

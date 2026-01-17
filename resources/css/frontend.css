@@ -397,3 +397,30 @@ body {
         display: none !important;
     }
 }
+.breadcrumb-box {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 12px;
+}
+
+.breadcrumb-box a {
+    color: #1677ff;
+    text-decoration: none;
+}
+
+.breadcrumb-box a:hover {
+    text-decoration: underline;
+}
+
+.breadcrumb-sep {
+    color: #999;
+}
+
+.breadcrumb-current {
+    font-weight: 600;
+    color: #333;
+    text-transform: uppercase;
+}

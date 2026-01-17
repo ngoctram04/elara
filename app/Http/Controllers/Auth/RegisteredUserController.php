@@ -7,7 +7,6 @@ use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\View\View;
@@ -27,7 +26,7 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        // ✅ VALIDATION (KHÔNG GIỚI HẠN DUNG LƯỢNG ẢNH)
+        // ✅ VALIDATION
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email'],
@@ -42,7 +41,7 @@ class RegisteredUserController extends Controller
             $avatarPath = $request->file('avatar')->store('avatars', 'public');
         }
 
-        // ✅ TẠO USER (USER THƯỜNG)
+        // ✅ TẠO USER (KHÔNG LOGIN)
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
@@ -55,10 +54,13 @@ class RegisteredUserController extends Controller
         // ✅ GỬI EMAIL XÁC THỰC
         event(new Registered($user));
 
-        // ✅ TỰ ĐĂNG NHẬP SAU KHI ĐĂNG KÝ
-        Auth::login($user);
+        // ❌ KHÔNG login
+        // ❌ KHÔNG redirect home
 
-        // 👉 Chuyển sang trang shop
-        return redirect('/shop');
+        // ✅ VỀ TRANG LOGIN
+        return redirect()->route('login')->with(
+            'status',
+            'Đăng ký thành công 🎉 Vui lòng kiểm tra email để xác thực tài khoản.'
+        );
     }
 }

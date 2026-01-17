@@ -1,7 +1,18 @@
 <x-guest-layout>
     <div class="max-w-md mx-auto bg-white p-8 rounded-2xl shadow-lg border border-blue-100">
-        <!-- Thông báo session -->
-        <x-auth-session-status class="mb-4 text-blue-500" :status="session('status')" />
+
+        {{-- ✅ Thông báo xác thực email --}}
+        @if (session('verified'))
+            <div class="mb-4 rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-green-700 text-sm">
+                🎉 Xác thực email thành công. Vui lòng đăng nhập để tiếp tục.
+            </div>
+        @endif
+
+        {{-- Thông báo hệ thống khác (reset password, logout, v.v.) --}}
+        <x-auth-session-status
+            class="mb-4 text-blue-500"
+            :status="session('status')"
+        />
 
         <h2 class="text-2xl font-bold text-center text-blue-500 mb-6">
             Đăng nhập
@@ -10,7 +21,7 @@
         <form method="POST" action="{{ route('login') }}">
             @csrf
 
-            <!-- Email -->
+            {{-- Email --}}
             <div>
                 <x-input-label for="email" value="Email" class="text-blue-600" />
                 <x-text-input
@@ -25,7 +36,7 @@
                 <x-input-error :messages="$errors->get('email')" class="mt-2" />
             </div>
 
-            <!-- Mật khẩu -->
+            {{-- Mật khẩu --}}
             <div class="mt-4">
                 <x-input-label for="password" value="Mật khẩu" class="text-blue-600" />
                 <x-text-input
@@ -38,7 +49,7 @@
                 <x-input-error :messages="$errors->get('password')" class="mt-2" />
             </div>
 
-            <!-- Ghi nhớ đăng nhập -->
+            {{-- Ghi nhớ đăng nhập --}}
             <div class="flex items-center mt-4">
                 <input
                     id="remember_me"
@@ -51,7 +62,7 @@
                 </label>
             </div>
 
-            <!-- Nút + link -->
+            {{-- Nút + link --}}
             <div class="mt-6 flex flex-col gap-3">
                 <x-primary-button class="w-full justify-center bg-blue-400 hover:bg-blue-500">
                     Đăng nhập

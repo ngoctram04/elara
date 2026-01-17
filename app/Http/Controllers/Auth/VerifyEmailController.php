@@ -3,28 +3,39 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Auth\Events\Verified;
-use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class VerifyEmailController extends Controller
 {
     /**
-     * Xác thực email và redirect về shop
+     * Verify email KHÔNG CẦN LOGIN
      */
-    public function __invoke(EmailVerificationRequest $request): RedirectResponse
+    public function __invoke(Request $request, $id, $hash): RedirectResponse
     {
-        // Nếu đã xác thực rồi thì về shop luôn
-        if ($request->user()->hasVerifiedEmail()) {
-            return redirect('/shop?verified=1');
+        $user = User::findOrFail($id);
+
+        // 🔐 Check hash email
+        if (! hash_equals(
+            sha1($user->getEmailForVerification()),
+            (string) $hash
+        )) {
+            abort(403);
         }
 
-        // Đánh dấu đã xác thực
-        if ($request->user()->markEmailAsVerified()) {
-            event(new Verified($request->user()));
+        // ✅ Verify nếu chưa verify
+        if (! $user->hasVerifiedEmail()) {
+            $user->markEmailAsVerified();
+            event(new Verified($user));
         }
 
-        // Xác thực xong → về shop
-        return redirect('/shop?verified=1');
+        // 🔐 Đảm bảo không còn login
+        Auth::logout();
+
+        return redirect()->route('login')
+            ->with('verified', true);
     }
 }

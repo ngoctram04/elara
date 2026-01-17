@@ -39,99 +39,85 @@ use App\Http\Controllers\Admin\CustomerController;
 |--------------------------------------------------------------------------
 */
 
-// 🏠 Trang chủ
+// 🏠 Home
 Route::get('/', [HomeController::class, 'index'])
     ->name('home');
 
-// 🛍 Trang shop
-Route::get('/shop', [ShopController::class, 'index'])
+// 🛍 Shop – all products
+Route::get('/products', [ShopController::class, 'index'])
     ->name('shop');
 
-// 📂 Trang danh mục
-Route::get('/danh-muc/{slug}', [FrontendCategoryController::class, 'show'])
+// 📂 Category
+Route::get('/category/{slug}', [FrontendCategoryController::class, 'show'])
     ->name('category.show');
 
-// 📦 Chi tiết sản phẩm  ✅ (ROUTE ĐÚNG ĐỂ DÙNG TRONG BLADE)
-Route::get('/products/{slug}', [FrontendProductController::class, 'show'])
+// 📦 Product detail
+Route::get('/product/{slug}', [FrontendProductController::class, 'show'])
     ->name('products.show');
 
 /*
 |--------------------------------------------------------------------------
-| CART
+| CART (PUBLIC – CHƯA ÉP LOGIN)
 |--------------------------------------------------------------------------
 */
 
-// 🛒 Giỏ hàng
 Route::get('/cart', [CartController::class, 'index'])
     ->name('cart.index');
 
-// ➕ Thêm sản phẩm vào giỏ
 Route::post('/cart/add', [CartController::class, 'add'])
     ->name('cart.add');
 
-// 🔄 Cập nhật số lượng
 Route::post('/cart/update', [CartController::class, 'update'])
     ->name('cart.update');
 
-// ❌ Xóa sản phẩm
 Route::delete('/cart/remove/{id}', [CartController::class, 'remove'])
     ->name('cart.remove');
 
 /*
 |--------------------------------------------------------------------------
-| FRONTEND – USER PROFILE (AUTH REQUIRED)
+| FRONTEND – USER PROFILE (AUTH + CHECK_ACTIVE)
 |--------------------------------------------------------------------------
 */
-Route::middleware('auth')
+Route::middleware(['auth', 'check_active'])
     ->prefix('profile')
     ->name('profile.')
     ->group(function () {
 
-        // 👤 Thông tin cá nhân
         Route::get('/', [ProfileController::class, 'edit'])
             ->name('index');
 
         Route::patch('/', [ProfileController::class, 'update'])
             ->name('update');
 
-        // 🖼 Avatar
         Route::post('/avatar', [ProfileController::class, 'updateAvatar'])
             ->name('avatar');
 
-        // 🔐 Đổi mật khẩu
         Route::post('/password', [ProfileController::class, 'updatePassword'])
             ->name('password');
 
-        // ❌ Xóa tài khoản
         Route::delete('/', [ProfileController::class, 'destroy'])
             ->name('destroy');
 
-        // 📦 Đơn hàng
-        Route::get('/orders', function () {
-            return view('frontend.profile.orders');
-        })->name('orders');
+        Route::get('/orders', fn() => view('frontend.profile.orders'))
+            ->name('orders');
 
-        // 📍 Địa chỉ
-        Route::get('/address', function () {
-            return view('frontend.profile.address');
-        })->name('address');
+        Route::get('/address', fn() => view('frontend.profile.address'))
+            ->name('address');
     });
 
 /*
 |--------------------------------------------------------------------------
-| BACKEND – ADMIN (AUTH + IS_ADMIN)
+| BACKEND – ADMIN (AUTH + CHECK_ACTIVE + IS_ADMIN)
 |--------------------------------------------------------------------------
 */
 Route::prefix('admin')
     ->name('admin.')
-    ->middleware(['auth', 'is_admin'])
+    ->middleware(['auth', 'check_active', 'is_admin'])
     ->group(function () {
 
-        /* ================= DASHBOARD ================= */
         Route::get('/dashboard', [DashboardController::class, 'index'])
             ->name('dashboard');
 
-        /* ================= ADMIN PROFILE ================= */
         Route::get('/profile', [AdminProfileController::class, 'show'])
             ->name('profile.show');
 
@@ -141,49 +127,35 @@ Route::prefix('admin')
         Route::put('/profile', [AdminProfileController::class, 'update'])
             ->name('profile.update');
 
-        /* ================= CUSTOMERS ================= */
+        // 👥 Customers
         Route::get('/customers', [CustomerController::class, 'index'])
             ->name('customers.index');
 
         Route::get('/customers/{user}', [CustomerController::class, 'show'])
             ->name('customers.show');
 
-        Route::post('/customers/{user}/toggle-status', [CustomerController::class, 'toggleStatus'])
-            ->name('customers.toggle-status');
+        Route::post(
+            '/customers/{user}/toggle-status',
+            [CustomerController::class, 'toggleStatus']
+        )->name('customers.toggle-status');
 
-        /* ================= CATEGORIES ================= */
-        Route::resource('categories', CategoryController::class)->only([
-            'index',
-            'create',
-            'store',
-            'show',
-            'edit',
-            'update',
-            'destroy',
-        ]);
+        // 📂 Categories
+        Route::resource('categories', CategoryController::class)
+            ->except(['update']);
 
-        /* ================= BRANDS ================= */
-        Route::resource('brands', BrandController::class)->only([
-            'index',
-            'create',
-            'store',
-            'edit',
-            'update',
-            'destroy',
-        ]);
+        Route::put(
+            'categories/{category}',
+            [CategoryController::class, 'update']
+        )->name('categories.update');
 
-        /* ================= PRODUCTS ================= */
-        Route::resource('products', ProductController::class)->only([
-            'index',
-            'create',
-            'store',
-            'show',
-            'edit',
-            'update',
-            'destroy',
-        ]);
+        // 🏷 Brands
+        Route::resource('brands', BrandController::class)
+            ->except(['show']);
 
-        /* ================= PROMOTIONS ================= */
+        // 📦 Products
+        Route::resource('products', ProductController::class);
+
+        // 🎯 Promotions
         Route::get('promotions', [PromotionController::class, 'index'])
             ->name('promotions.index');
 
@@ -211,7 +183,7 @@ Route::prefix('admin')
 
 /*
 |--------------------------------------------------------------------------
-| AUTH
+| AUTH ROUTES
 |--------------------------------------------------------------------------
 */
 require __DIR__ . '/auth.php';

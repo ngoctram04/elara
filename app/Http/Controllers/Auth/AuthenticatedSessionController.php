@@ -12,7 +12,7 @@ use Illuminate\View\View;
 class AuthenticatedSessionController extends Controller
 {
     /**
-     * Display the login view.
+     * Hiển thị form đăng nhập
      */
     public function create(): View
     {
@@ -20,11 +20,11 @@ class AuthenticatedSessionController extends Controller
     }
 
     /**
-     * Handle an incoming authentication request.
+     * Xử lý đăng nhập
      */
     public function store(LoginRequest $request): RedirectResponse
     {
-        // Xác thực đăng nhập
+        // Xác thực tài khoản + mật khẩu
         $request->authenticate();
 
         // Tạo lại session
@@ -32,26 +32,67 @@ class AuthenticatedSessionController extends Controller
 
         $user = Auth::user();
 
-        // Nếu là admin
-        if ($user->role === 'admin') {
-            return redirect('/admin/dashboard');
+        /*
+        |--------------------------------------------------------------------------
+        | ❌ CHẶN LOGIN NẾU TÀI KHOẢN BỊ KHÓA
+        |--------------------------------------------------------------------------
+        */
+        if ((int) $user->is_active !== 1) {
+
+            Auth::logout();
+
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return back()->withErrors([
+                'email' => 'Tài khoản của bạn đã bị khóa.',
+            ]);
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | (OPTIONAL) ❌ CHẶN LOGIN NẾU CHƯA XÁC THỰC EMAIL
+        |--------------------------------------------------------------------------
+        */
+        /*
+        if (! $user->hasVerifiedEmail()) {
 
-        // Nếu là user thường
-        return redirect('/shop');
+            Auth::logout();
+
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return back()->withErrors([
+                'email' => 'Vui lòng xác thực email trước khi đăng nhập.',
+            ]);
+        }
+        */
+
+        /*
+        |--------------------------------------------------------------------------
+        | REDIRECT SAU LOGIN
+        |--------------------------------------------------------------------------
+        */
+
+        // Admin → dashboard
+        if ($user->role === 'admin') {
+            return redirect()->route('admin.dashboard');
+        }
+
+        // User thường → LUÔN về trang chủ "/"
+        return redirect()->route('home');
     }
 
     /**
-     * Destroy an authenticated session.
+     * Đăng xuất
      */
     public function destroy(Request $request): RedirectResponse
     {
-        Auth::guard('web')->logout();
+        Auth::logout();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect('/login');
+        return redirect()->route('login');
     }
 }

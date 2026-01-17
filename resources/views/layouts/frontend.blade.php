@@ -86,9 +86,12 @@
             @include('components.mega-menu')
         </div>
 
-        <a href="#">Sản phẩm mới</a>
-        <a href="#">Tin tức</a>
+        <a href="{{ route('shop', ['sort' => 'newest']) }}">
+    Sản phẩm mới
+</a>
 
+        <a href="#">Tin tức</a>
+        <a href="#">Tra cứu đơn hàng</a>
         @auth
             <a href="{{ route('profile.orders') }}">Đơn hàng của tôi</a>
         @endauth
