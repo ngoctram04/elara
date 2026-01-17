@@ -126,56 +126,53 @@
                             {{ $product->name }}
                         </td>
 
-                        {{-- PRICE --}}
-                        <td class="text-center text-end">
-    @if ($product->variants->count())
+<td class="text-center text-end">
+@if ($product->variants->count())
 
-        @php
-            // Giá gốc
-            $originPrices = $product->variants->pluck('price');
-            $originMin = $originPrices->min();
-            $originMax = $originPrices->max();
+    @php
+        // ===== GIÁ GỐC =====
+        $originMin = $product->variants->min('price');
+        $originMax = $product->variants->max('price');
 
-            // Giá sau khuyến mãi
-            $finalPrices = $product->variants->pluck('final_price');
-            $finalMin = $finalPrices->min();
-            $finalMax = $finalPrices->max();
+        // ===== GIÁ BÁN THỰC TẾ =====
+        $sellPrices = $product->variants->map(function ($v) {
+            return $v->final_price < $v->price
+                ? $v->final_price
+                : $v->price;
+        });
 
-            $hasSale = $finalMin < $originMin;
-        @endphp
+        $sellMin = $sellPrices->min();
+        $sellMax = $sellPrices->max();
 
-        @if ($hasSale)
-            {{-- GIÁ SAU GIẢM --}}
-            <div class="fw-semibold text-danger">
-                {{ number_format($finalMin) }}
-                @if ($finalMin != $finalMax)
-                    – {{ number_format($finalMax) }}
-                @endif
-                đ
-            </div>
+        // ✅ CHỈ CÓ KM KHI TỒN TẠI BIẾN THỂ THỰC SỰ GIẢM
+        $hasPromotion = $product->variants
+            ->contains(fn ($v) => $v->final_price < $v->price);
+    @endphp
 
-            {{-- GIÁ GỐC --}}
-            <div class="text-muted text-decoration-line-through small">
-                {{ number_format($originMin) }}
-                @if ($originMin != $originMax)
-                    – {{ number_format($originMax) }}
-                @endif
-                đ
-            </div>
-        @else
-            {{-- KHÔNG CÓ KHUYẾN MÃI --}}
-            <span class="fw-semibold">
-                {{ number_format($originMin) }}
-                @if ($originMin != $originMax)
-                    – {{ number_format($originMax) }}
-                @endif
-                đ
-            </span>
-        @endif
-
-    @else
-        <span class="text-muted">---</span>
+    {{-- GIÁ KHUYẾN MÃI (CHỈ KHI CÓ KM THỰC SỰ) --}}
+    @if ($hasPromotion)
+        <div class="fw-semibold text-danger">
+            {{ number_format($sellMin, 0, ',', '.') }}
+            @if ($sellMin != $sellMax)
+                – {{ number_format($sellMax, 0, ',', '.') }}
+            @endif
+            đ
+        </div>
     @endif
+
+    {{-- GIÁ GỐC --}}
+    <div class="text-muted
+        {{ $hasPromotion ? 'text-decoration-line-through small' : 'fw-semibold' }}">
+        {{ number_format($originMin, 0, ',', '.') }}
+        @if ($originMin != $originMax)
+            – {{ number_format($originMax, 0, ',', '.') }}
+        @endif
+        đ
+    </div>
+
+@else
+    <span class="text-muted">---</span>
+@endif
 </td>
 
 

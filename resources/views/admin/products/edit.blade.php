@@ -54,14 +54,13 @@
                         </select>
                     </div>
 
-                    {{-- 🔥 NỔI BẬT --}}
                     <div class="mb-3 form-check">
                         <input type="checkbox"
                                class="form-check-input"
                                id="is_featured"
                                name="is_featured"
                                value="1"
-                               {{ old('is_featured', $product->is_featured) ? 'checked' : '' }}>
+                               {{ $product->is_featured ? 'checked' : '' }}>
                         <label class="form-check-label" for="is_featured">
                             Sản phẩm nổi bật
                         </label>
@@ -79,18 +78,66 @@
                                   class="form-control">{{ old('description', $product->description) }}</textarea>
                     </div>
 
+                    {{-- ẢNH ĐẠI DIỆN --}}
                     <div class="mb-3">
                         <label class="form-label">Ảnh đại diện</label>
 
                         @if($product->mainImage)
                             <img src="{{ $product->mainImage->url }}"
-                                 width="120"
-                                 class="rounded border mb-2">
+                                 class="img-thumbnail d-block mb-2"
+                                 style="height:120px">
                         @endif
 
                         <input type="file"
                                name="main_image"
-                               class="form-control">
+                               class="form-control"
+                               accept="image/*">
+                    </div>
+
+                    {{-- ẢNH PHỤ --}}
+                    <div class="mb-3">
+                        <label class="form-label">Ảnh phụ</label>
+
+                        <div class="row mb-2">
+    @forelse($product->subImages as $img)
+        <div class="col-3 mb-3 text-center">
+            <img src="{{ $img->url }}"
+                 class="img-thumbnail mb-1"
+                 style="height:80px;object-fit:cover">
+
+            <div class="form-check">
+                <input type="checkbox"
+                       class="form-check-input"
+                       name="delete_images[]"
+                       value="{{ $img->id }}"
+                       id="delete_image_{{ $img->id }}">
+                <label class="form-check-label small"
+                       for="delete_image_{{ $img->id }}">
+                    Xóa ảnh
+                </label>
+            </div>
+        </div>
+    @empty
+        <p class="text-muted">Chưa có ảnh phụ</p>
+    @endforelse
+</div>
+
+
+                        <input type="file"
+       id="sub_images"
+       name="sub_images[]"
+       class="form-control"
+       multiple
+       accept="image/*">
+
+
+                        <button type="button"
+                                class="btn btn-outline-primary btn-sm"
+                                id="btn-add-image">
+                            + Thêm hình ảnh
+                        </button>
+
+                        <div class="row mt-2" id="image-wrapper"></div>
                     </div>
 
                 </div>
@@ -98,7 +145,7 @@
 
             <hr>
 
-            {{-- ================= BIẾN THỂ ================= --}}
+            {{-- BIẾN THỂ --}}
             <h6 class="fw-semibold text-primary mb-3">Biến thể</h6>
 
             <div class="mb-3">
@@ -114,14 +161,13 @@
                 @foreach($product->variants as $index => $variant)
                     <div class="variant-item border rounded p-3 mb-3">
 
+                        {{-- 🔥 ID biến thể (QUAN TRỌNG) --}}
                         <input type="hidden"
                                name="variants[{{ $index }}][id]"
                                value="{{ $variant->id }}">
 
                         <div class="row g-2">
-
                             <div class="col-md-4">
-                                <label class="form-label">Giá trị</label>
                                 <input type="text"
                                        name="variants[{{ $index }}][attribute_value]"
                                        class="form-control"
@@ -130,38 +176,33 @@
                             </div>
 
                             <div class="col-md-3">
-                                <label class="form-label">Giá</label>
                                 <input type="number"
                                        name="variants[{{ $index }}][price]"
                                        class="form-control"
                                        value="{{ $variant->price }}"
-                                       min="0"
-                                       required>
+                                       min="0" required>
                             </div>
 
                             <div class="col-md-3">
-                                <label class="form-label">Số lượng</label>
                                 <input type="number"
                                        name="variants[{{ $index }}][stock]"
                                        class="form-control"
                                        value="{{ $variant->stock }}"
-                                       min="0"
-                                       required>
+                                       min="0" required>
                             </div>
 
                             <div class="col-md-2">
-                                <label class="form-label">Ảnh</label>
                                 <input type="file"
                                        name="variants[{{ $index }}][image]"
-                                       class="form-control">
+                                       class="form-control"
+                                       accept="image/*">
                             </div>
-
                         </div>
 
                         @if($variant->images->first())
                             <img src="{{ $variant->images->first()->url }}"
-                                 width="80"
-                                 class="border rounded mt-2">
+                                 class="img-thumbnail mt-2"
+                                 style="height:70px">
                         @endif
 
                         <button type="button"
@@ -193,10 +234,35 @@
 
     </div>
 </div>
-
+@endsection
 @push('scripts')
 <script>
-let variantIndex = document.querySelectorAll('.variant-item').length;
+/* ===== ẢNH PHỤ ===== */
+const btnAddImage = document.getElementById('btn-add-image');
+const inputImages = document.getElementById('sub_images');
+const wrapper = document.getElementById('image-wrapper');
+
+btnAddImage.addEventListener('click', () => inputImages.click());
+
+inputImages.addEventListener('change', function () {
+    wrapper.innerHTML = '';
+    [...this.files].forEach(file => {
+        const reader = new FileReader();
+        reader.onload = e => {
+            wrapper.insertAdjacentHTML('beforeend', `
+                <div class="col-3 mb-2">
+                    <img src="${e.target.result}"
+                         class="img-thumbnail"
+                         style="height:80px;object-fit:cover">
+                </div>
+            `);
+        };
+        reader.readAsDataURL(file);
+    });
+});
+
+/* ===== BIẾN THỂ ===== */
+let variantIndex = document.querySelectorAll('#variant-wrapper .variant-item').length;
 
 document.getElementById('btn-add-variant').addEventListener('click', () => {
     document.getElementById('variant-wrapper').insertAdjacentHTML('beforeend', `
@@ -205,20 +271,17 @@ document.getElementById('btn-add-variant').addEventListener('click', () => {
                 <div class="col-md-4">
                     <input type="text"
                            name="variants[${variantIndex}][attribute_value]"
-                           class="form-control"
-                           required>
+                           class="form-control" required>
                 </div>
                 <div class="col-md-3">
                     <input type="number"
                            name="variants[${variantIndex}][price]"
-                           class="form-control"
-                           min="0" required>
+                           class="form-control" min="0" required>
                 </div>
                 <div class="col-md-3">
                     <input type="number"
                            name="variants[${variantIndex}][stock]"
-                           class="form-control"
-                           min="0" required>
+                           class="form-control" min="0" required>
                 </div>
                 <div class="col-md-2">
                     <input type="file"
@@ -242,4 +305,3 @@ document.addEventListener('click', e => {
 });
 </script>
 @endpush
-@endsection

@@ -16,11 +16,11 @@ class ProductVariant extends Model
         'sku',
 
         // Thuộc tính biến thể
-        'attribute_name',   // VD: Màu sắc / Dung tích
-        'attribute_value',  // VD: Đỏ / 500ml
+        'attribute_name',   // VD: Dung tích
+        'attribute_value',  // VD: 500ml
 
-        'price',            // Giá gốc (KHÔNG BAO GIỜ UPDATE)
-        'original_price',   // (optional – nếu muốn lưu giá niêm yết)
+        'price',            // GIÁ GỐC – KHÔNG BAO GIỜ UPDATE
+        'original_price',   // (optional)
         'stock',
         'sold_quantity',
         'is_active',
@@ -77,33 +77,29 @@ class ProductVariant extends Model
     }
 
     /* =====================================================
-        PROMOTION CORE
+        PROMOTION CORE (QUAN TRỌNG)
     ===================================================== */
 
     /**
-     * Khuyến mãi sản phẩm đang áp dụng
-     * - Ưu tiên biến thể
-     * - Fallback theo sản phẩm
+     * 🔥 Khuyến mãi đang áp dụng cho BIẾN THỂ
+     * - Ưu tiên khuyến mãi gắn trực tiếp variant
+     * - KHÔNG fallback về product khi đang hiển thị Flash Sale
      */
     public function activePromotion(): ?Promotion
     {
-        return Promotion::where('type', 'product')
+        return Promotion::query()
+            ->where('type', 'product')
             ->where('is_active', true)
             ->where('start_date', '<=', now())
             ->where('end_date', '>=', now())
             ->whereHas('promotionProducts', function ($q) {
-                $q->where('variant_id', $this->id)
-                    ->orWhere(function ($q2) {
-                        $q2->whereNull('variant_id')
-                            ->where('product_id', $this->product_id);
-                    });
+                $q->where('variant_id', $this->id);
             })
             ->first();
     }
 
     /**
-     * Giá cuối cùng sau khuyến mãi
-     * 👉 DÙNG DUY NHẤT THUỘC TÍNH NÀY
+     * 🔥 GIÁ CUỐI CÙNG (DÙNG DUY NHẤT Ở FRONTEND)
      */
     public function getFinalPriceAttribute(): float
     {
@@ -120,6 +116,7 @@ class ProductVariant extends Model
             ));
         }
 
+        // discount_type === 'fixed'
         return max(0, $this->price - $promotion->discount_value);
     }
 
@@ -133,7 +130,7 @@ class ProductVariant extends Model
     }
 
     /**
-     * Alias để dùng dạng hàm nếu cần
+     * Alias dạng hàm
      * 👉 $variant->isOnSale()
      */
     public function isOnSale(): bool
@@ -150,7 +147,7 @@ class ProductVariant extends Model
     }
 
     /**
-     * Nhãn giảm giá (VD: -20% | -50.000đ)
+     * Nhãn giảm giá (VD: -15% | -50.000đ)
      */
     public function getDiscountLabelAttribute(): ?string
     {
@@ -162,6 +159,6 @@ class ProductVariant extends Model
 
         return $promotion->discount_type === 'percent'
             ? "-{$promotion->discount_value}%"
-            : "-" . number_format($promotion->discount_value) . "đ";
+            : '-' . number_format($promotion->discount_value, 0, ',', '.') . 'đ';
     }
 }

@@ -60,14 +60,6 @@
                         <td>{{ $user->phone ?? '—' }}</td>
                     </tr>
                     <tr>
-                        <th>Vai trò</th>
-                        <td>
-                            <span class="badge bg-info text-dark">
-                                {{ ucfirst($user->role) }}
-                            </span>
-                        </td>
-                    </tr>
-                    <tr>
                         <th>Ngày tạo</th>
                         <td>{{ $user->created_at->format('d/m/Y H:i') }}</td>
                     </tr>

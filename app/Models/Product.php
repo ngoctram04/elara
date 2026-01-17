@@ -158,4 +158,28 @@ class Product extends Model
 
         return $price;
     }
+    // App\Models\Product.php
+    public function subImages()
+    {
+        return $this->hasMany(ProductImage::class)
+            ->where('is_main', 0);
+    }
+    // app/Models/Product.php
+
+    public function displayVariant()
+    {
+        // 1️⃣ Ưu tiên biến thể đang sale
+        $saleVariant = $this->variants
+            ->first(fn($v) => $v->is_on_sale);
+
+        if ($saleVariant) {
+            return $saleVariant;
+        }
+
+        // 2️⃣ Nếu không sale → lấy biến thể có giá thấp nhất
+        return $this->variants
+            ->sortBy(fn($v) => $v->final_price)
+            ->first();
+    }
+
 }

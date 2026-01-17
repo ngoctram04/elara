@@ -547,3 +547,25 @@
     color: #fff;
     font-weight: 600;
 }
+
+.category-price {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    /* tạo khoảng cách giữa 2 giá */
+}
+
+/* GIÁ CŨ */
+.category-price .old {
+    font-size: 13px;
+    font-weight: 500;
+    color: #999;
+    text-decoration: line-through;
+}
+
+/* GIÁ MỚI */
+.category-price .new {
+    font-size: 16px;
+    font-weight: 700;
+    color: #ff4d4f;
+}

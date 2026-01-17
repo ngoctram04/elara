@@ -1,3 +1,15 @@
+@php
+    /**
+     * 🔥 BIẾN THỂ ĐẠI DIỆN CHO CARD
+     * - LẤY BIẾN THỂ CÓ final_price NHỎ NHẤT
+     * - final_price đã bao gồm khuyến mãi (nếu có)
+     */
+    $displayVariant = $product->variants
+        ->sortBy(fn ($v) => $v->final_price)
+        ->first();
+@endphp
+
+@if($displayVariant)
 <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
     <div class="fs-card js-card"
          data-href="{{ route('products.show', $product->slug) }}">
@@ -5,13 +17,14 @@
         {{-- ================= IMAGE ================= --}}
         <div class="fs-image">
 
-            {{-- BADGE --}}
-            @if($product->is_flash_sale)
+            {{-- BADGE: CHỈ HIỆN KHI BIẾN THỂ RẺ NHẤT ĐANG SALE --}}
+            @if($displayVariant->is_on_sale)
                 <span class="fs-badge">
-                    -{{ $product->flash_discount_percent }}%
+                    {{ $displayVariant->discount_label }}
                 </span>
             @endif
 
+            {{-- ẢNH ĐẠI DIỆN PRODUCT --}}
             <img
                 src="{{ $product->main_image_url }}"
                 alt="{{ $product->name }}"
@@ -33,11 +46,11 @@
                     Mua ngay
                 </span>
 
-                {{-- 🛒 ADD TO CART --}}
+                {{-- 🛒 ADD TO CART (THEO BIẾN THỂ ĐẠI DIỆN) --}}
                 <button
                     type="button"
                     class="fs-icon fs-right btn-add-to-cart"
-                    data-product-id="{{ $product->id }}"
+                    data-variant-id="{{ $displayVariant->id }}"
                     title="Thêm vào giỏ"
                     onclick="event.stopPropagation()">
                     <i class="bi bi-cart-plus"></i>
@@ -66,41 +79,46 @@
                 </div>
             </div>
 
+            {{-- ================= PRICE ================= --}}
             <div class="fs-price">
-                @if($product->is_flash_sale)
+
+                {{-- GIÁ GỐC CHỈ HIỆN KHI BIẾN THỂ RẺ NHẤT ĐANG SALE --}}
+                @if($displayVariant->is_on_sale)
                     <span class="old">
-                        {{ number_format($product->flash_original_price) }}đ
-                    </span>
-                    <span class="new">
-                        {{ number_format($product->flash_sale_price) }}đ
-                    </span>
-                @else
-                    <span class="new">
-                        {{ number_format($product->min_price) }}đ
+                        {{ number_format($displayVariant->price, 0, ',', '.') }}đ
                     </span>
                 @endif
+
+                {{-- GIÁ CUỐI CÙNG (LUÔN LÀ GIÁ NHỎ NHẤT) --}}
+                <span class="new">
+                    {{ number_format($displayVariant->final_price, 0, ',', '.') }}đ
+                </span>
+
             </div>
 
         </div>
     </div>
 </div>
+@endif
 <script>
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('click', function (e) {
 
-    // Click toàn bộ card → chi tiết
-    document.querySelectorAll('.js-card').forEach(card => {
-        card.addEventListener('click', function () {
-            window.location.href = this.dataset.href;
-        });
-    });
+    // CLICK TOÀN CARD
+    const card = e.target.closest('.js-category-card, .js-card');
+    if (card && !e.target.closest('.btn-add-to-cart')) {
+        window.location.href = card.dataset.href;
+        return;
+    }
 
-    // Click icon / title → chi tiết
-    document.querySelectorAll('.js-go-detail').forEach(el => {
-        el.addEventListener('click', function (e) {
-            e.stopPropagation();
-            window.location.href = this.closest('.js-card').dataset.href;
-        });
-    });
+    // CLICK ICON 👁 / MUA NGAY
+    const goDetail = e.target.closest('.js-go-detail');
+    if (goDetail) {
+        e.stopPropagation();
+        const card = goDetail.closest('.js-category-card, .js-card');
+        if (card) {
+            window.location.href = card.dataset.href;
+        }
+    }
 
 });
 </script>

@@ -3,8 +3,15 @@
 @section('title', $product->name)
 
 @section('content')
-<div class="container py-4">
+@php
+    // 🔥 BIẾN THỂ MẶC ĐỊNH
+    $defaultVariant = $product->variants
+        ->where('is_default', 1)
+        ->first()
+        ?? $product->variants->first();
+@endphp
 
+<div class="container py-4">
     <div class="row g-4">
 
         {{-- ================= THUMBNAILS ================= --}}
@@ -22,9 +29,11 @@
         <div class="col-md-5 d-flex align-items-center justify-content-center">
             <img
                 id="main-image"
-                src="{{ $product->mainImage
-                        ? asset('storage/' . $product->mainImage->image_path)
-                        : asset('images/no-image.png') }}"
+                src="{{ $defaultVariant?->images->first()
+                        ? asset('storage/'.$defaultVariant->images->first()->image_path)
+                        : ($product->mainImage
+                            ? asset('storage/'.$product->mainImage->image_path)
+                            : asset('images/no-image.png')) }}"
                 class="img-fluid border rounded"
                 style="max-height:480px;object-fit:contain;transition:opacity .2s"
             >
@@ -35,10 +44,10 @@
 
             <h3 class="fw-bold mb-2">{{ $product->name }}</h3>
 
-            {{-- PRICE --}}
+            {{-- PRICE (LẤY GIÁ BIẾN THỂ MẶC ĐỊNH) --}}
             <div class="mb-3">
                 <span id="price" class="fs-3 fw-bold text-danger">
-                    {{ number_format($product->min_price) }}đ
+                    {{ number_format($defaultVariant?->final_price ?? 0, 0, ',', '.') }}đ
                 </span>
             </div>
 
@@ -62,23 +71,24 @@
                             @php
                                 $variantImage = $variant->images->first();
                                 $fallbackImage = $product->mainImage
-                                    ? asset('storage/' . $product->mainImage->image_path)
+                                    ? asset('storage/'.$product->mainImage->image_path)
                                     : asset('images/no-image.png');
                             @endphp
 
                             <button
                                 type="button"
-                                class="btn btn-outline-secondary variant-btn text-center"
+                                class="btn btn-outline-secondary variant-btn text-center
+                                    {{ $defaultVariant && $variant->id === $defaultVariant->id ? 'active' : '' }}"
                                 data-id="{{ $variant->id }}"
                                 data-price="{{ $variant->final_price }}"
                                 data-stock="{{ $variant->availableStock() }}"
                                 data-image="{{ $variantImage
-                                    ? asset('storage/' . $variantImage->image_path)
+                                    ? asset('storage/'.$variantImage->image_path)
                                     : $fallbackImage }}"
                             >
                                 @if($variantImage)
                                     <img
-                                        src="{{ asset('storage/' . $variantImage->image_path) }}"
+                                        src="{{ asset('storage/'.$variantImage->image_path) }}"
                                         class="rounded mb-1"
                                         style="width:40px;height:40px;object-fit:cover"
                                     >
@@ -91,7 +101,11 @@
                         @endforeach
                     </div>
 
-                    <div id="stock-text" class="text-muted mt-2"></div>
+                    <div id="stock-text" class="text-muted mt-2">
+                        @if($defaultVariant)
+                            Còn {{ $defaultVariant->availableStock() }} sản phẩm
+                        @endif
+                    </div>
                 </div>
             @endif
 
@@ -100,7 +114,10 @@
                   action="{{ route('cart.add') }}"
                   class="d-flex gap-2 mt-4">
                 @csrf
-                <input type="hidden" name="variant_id" id="variant_id">
+                <input type="hidden"
+                       name="variant_id"
+                       id="variant_id"
+                       value="{{ $defaultVariant?->id }}">
 
                 <input type="number"
                        name="qty"
@@ -123,30 +140,16 @@
             {!! nl2br(e($product->description)) !!}
         </div>
     </div>
-
 </div>
 @endsection
-@push('styles')
-<style>
-.thumb-img:hover {
-    border-color: #0d6efd;
-}
-
-.variant-btn.active {
-    border-color: #0d6efd;
-    background: #e7f1ff;
-    color: #0d6efd;
-}
-</style>
-@endpush
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', () => {
 
-    const mainImg       = document.getElementById('main-image');
-    const priceEl       = document.getElementById('price');
-    const stockEl       = document.getElementById('stock-text');
-    const variantInput  = document.getElementById('variant_id');
+    const mainImg      = document.getElementById('main-image');
+    const priceEl      = document.getElementById('price');
+    const stockEl      = document.getElementById('stock-text');
+    const variantInput = document.getElementById('variant_id');
 
     document.querySelectorAll('.variant-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -188,4 +191,3 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 @endpush
-

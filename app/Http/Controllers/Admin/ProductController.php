@@ -69,9 +69,10 @@ class ProductController extends Controller
             ],
             'brand_id'    => 'required|exists:brands,id',
             'description' => 'nullable|string',
-            'main_image'  => 'required|image',
 
-            // 🔥 NỔI BẬT
+            'main_image'   => 'required|image',
+            'sub_images.*' => 'nullable|image',
+
             'is_featured' => 'nullable|boolean',
 
             'variant_attribute_name'     => 'required|string|max:100',
@@ -84,7 +85,7 @@ class ProductController extends Controller
 
         DB::transaction(function () use ($request, $data) {
 
-            /* ===== SLUG ===== */
+            /* SLUG */
             $baseSlug = Str::slug($data['name']);
             $slug = $baseSlug;
             $i = 1;
@@ -92,7 +93,7 @@ class ProductController extends Controller
                 $slug = $baseSlug . '-' . $i++;
             }
 
-            /* ===== TẠO SẢN PHẨM ===== */
+            /* PRODUCT */
             $product = Product::create([
                 'name'        => $data['name'],
                 'slug'        => $slug,
@@ -100,17 +101,26 @@ class ProductController extends Controller
                 'brand_id'    => $data['brand_id'],
                 'description' => $data['description'] ?? null,
                 'is_active'   => true,
-                // ✅ LƯU NỔI BẬT
                 'is_featured' => $request->boolean('is_featured'),
             ]);
 
-            /* ===== ẢNH CHÍNH ===== */
+            /* MAIN IMAGE */
             $product->images()->create([
                 'image_path' => $request->file('main_image')->store('products', 'public'),
                 'is_main'    => 1,
             ]);
 
-            /* ===== BIẾN THỂ ===== */
+            /* SUB IMAGES */
+            if ($request->hasFile('sub_images')) {
+                foreach ($request->file('sub_images') as $image) {
+                    $product->images()->create([
+                        'image_path' => $image->store('products/sub', 'public'),
+                        'is_main'    => 0,
+                    ]);
+                }
+            }
+
+            /* VARIANTS */
             foreach ($data['variants'] as $variantData) {
                 $variant = $product->variants()->create([
                     'attribute_name'  => $data['variant_attribute_name'],
@@ -143,8 +153,8 @@ class ProductController extends Controller
         $product->load([
             'category',
             'brand',
-            'images',
             'mainImage',
+            'subImages',        // 👈 BẮT BUỘC
             'variants.images',
         ]);
 
@@ -154,6 +164,7 @@ class ProductController extends Controller
             'brands'     => Brand::all(),
         ]);
     }
+
 
     /* =======================
         CẬP NHẬT
@@ -168,22 +179,26 @@ class ProductController extends Controller
             ],
             'brand_id'    => 'required|exists:brands,id',
             'description' => 'nullable|string',
-            'main_image'  => 'nullable|image',
 
-            // 🔥 NỔI BẬT
+            'main_image'   => 'nullable|image',
+            'sub_images.*' => 'nullable|image',
+
             'is_featured' => 'nullable|boolean',
 
             'variant_attribute_name'     => 'required|string|max:100',
             'variants'                   => 'required|array|min:1',
+            'variants.*.id'              => 'nullable|exists:product_variants,id',
             'variants.*.attribute_value' => 'required|string|max:100',
             'variants.*.price'           => 'required|numeric|min:0',
             'variants.*.stock'           => 'required|integer|min:0',
             'variants.*.image'           => 'nullable|image',
+
+            'delete_images.*' => 'nullable|integer|exists:product_images,id',
         ]);
 
         DB::transaction(function () use ($request, $data, $product) {
 
-            /* ===== SLUG ===== */
+            /* ========= SLUG ========= */
             if ($product->name !== $data['name']) {
                 $baseSlug = Str::slug($data['name']);
                 $slug = $baseSlug;
@@ -198,17 +213,29 @@ class ProductController extends Controller
                 $product->slug = $slug;
             }
 
-            /* ===== UPDATE SẢN PHẨM ===== */
+            /* ========= PRODUCT ========= */
             $product->update([
                 'name'        => $data['name'],
                 'category_id' => $data['category_id'],
                 'brand_id'    => $data['brand_id'],
                 'description' => $data['description'] ?? null,
-                // ✅ UPDATE NỔI BẬT (QUAN TRỌNG)
                 'is_featured' => $request->boolean('is_featured'),
             ]);
 
-            /* ===== ẢNH CHÍNH ===== */
+            /* ========= DELETE SUB IMAGES ========= */
+            if ($request->filled('delete_images')) {
+                $images = $product->images()
+                ->whereIn('id', $request->delete_images)
+                ->where('is_main', 0)
+                ->get();
+
+                foreach ($images as $img) {
+                    Storage::disk('public')->delete($img->image_path);
+                    $img->delete();
+                }
+            }
+
+            /* ========= MAIN IMAGE ========= */
             if ($request->hasFile('main_image')) {
                 if ($product->mainImage) {
                     Storage::disk('public')->delete($product->mainImage->image_path);
@@ -221,28 +248,83 @@ class ProductController extends Controller
                 ]);
             }
 
-            /* ===== BIẾN THỂ (XÓA & TẠO LẠI) ===== */
-            foreach ($product->variants as $variant) {
-                foreach ($variant->images as $img) {
-                    Storage::disk('public')->delete($img->image_path);
-                    $img->delete();
+            /* ========= ADD SUB IMAGES ========= */
+            $subImages = $request->file('sub_images');
+
+            if (is_array($subImages)) {
+                foreach ($subImages as $image) {
+                    if (!$image) continue;
+
+                    $product->images()->create([
+                        'image_path' => $image->store('products/sub', 'public'),
+                        'is_main' => 0,
+                    ]);
                 }
-                $variant->delete();
             }
 
-            foreach ($data['variants'] as $variantData) {
-                $variant = $product->variants()->create([
-                    'attribute_name'  => $data['variant_attribute_name'],
-                    'attribute_value' => $variantData['attribute_value'],
-                    'price'           => $variantData['price'],
-                    'stock'           => $variantData['stock'],
-                ]);
 
-                if (!empty($variantData['image'])) {
-                    $variant->images()->create([
-                        'image_path' => $variantData['image']->store('variants', 'public'),
-                        'is_main'    => 1,
+            /* ========= VARIANTS ========= */
+            $existingVariantIds = $product->variants()->pluck('id')->toArray();
+            $submittedIds = [];
+
+            foreach ($data['variants'] as $variantData) {
+
+                /* UPDATE */
+                if (!empty($variantData['id'])) {
+                    $variant = $product->variants()->find($variantData['id']);
+                    if (!$variant) continue;
+
+                    $submittedIds[] = $variant->id;
+
+                    $variant->update([
+                        'attribute_name'  => $data['variant_attribute_name'],
+                        'attribute_value' => $variantData['attribute_value'],
+                        'price'           => $variantData['price'],
+                        'stock'           => $variantData['stock'],
                     ]);
+
+                    // CHỈ đổi ảnh khi có upload mới
+                    if (!empty($variantData['image'])) {
+                        if ($variant->images->first()) {
+                            Storage::disk('public')->delete($variant->images->first()->image_path);
+                            $variant->images()->delete();
+                        }
+
+                        $variant->images()->create([
+                            'image_path' => $variantData['image']->store('variants', 'public'),
+                            'is_main'    => 1,
+                        ]);
+                    }
+                }
+                /* CREATE */ else {
+                    $variant = $product->variants()->create([
+                            'attribute_name'  => $data['variant_attribute_name'],
+                            'attribute_value' => $variantData['attribute_value'],
+                            'price'           => $variantData['price'],
+                            'stock'           => $variantData['stock'],
+                        ]);
+
+                    if (!empty($variantData['image'])) {
+                        $variant->images()->create([
+                            'image_path' => $variantData['image']->store('variants', 'public'),
+                            'is_main'    => 1,
+                        ]);
+                    }
+
+                    $submittedIds[] = $variant->id;
+                }
+            }
+
+            /* ========= DELETE REMOVED VARIANTS ========= */
+            $toDelete = array_diff($existingVariantIds, $submittedIds);
+            if (!empty($toDelete)) {
+                $variants = $product->variants()->whereIn('id', $toDelete)->get();
+                foreach ($variants as $variant) {
+                    foreach ($variant->images as $img) {
+                        Storage::disk('public')->delete($img->image_path);
+                        $img->delete();
+                    }
+                    $variant->delete();
                 }
             }
 
@@ -253,6 +335,7 @@ class ProductController extends Controller
             ->route('admin.products.index')
             ->with('success', 'Cập nhật sản phẩm thành công');
     }
+
 
     /* =======================
         HELPER
@@ -295,15 +378,7 @@ class ProductController extends Controller
     }
     public function show(Product $product)
     {
-        $product->load([
-            'images',
-            'category.parent',
-            'brand',
-            'variants.images', // 🔥 BẮT BUỘC
-        ]);
-
         return view('admin.products.show', compact('product'));
     }
-
 
 }
