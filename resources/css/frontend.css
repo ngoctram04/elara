@@ -136,7 +136,6 @@ body {
     background: rgba(255, 255, 255, .15);
 }
 /* ================= MEGA MENU – FIX DỨT ĐIỂM ================= */
-
 .nav-box {
     position: relative;
     z-index: 2000;
@@ -156,7 +155,7 @@ body {
 }
 
 /* chỉ mở khi hover đúng */
-.nav-category-trigger:hover + .mega-menu,
+.nav-category-trigger:hover+.mega-menu,
 .mega-menu:hover {
     display: block;
 }
@@ -167,9 +166,11 @@ body {
     height: 420px;
     background: #fff;
     border-radius: 14px;
-    box-shadow: 0 20px 50px rgba(0,0,0,.18);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, .18);
     display: flex;
     overflow: hidden;
+    position: relative;
+    /* ⭐ thêm */
 }
 
 /* ===== LEFT ===== */
@@ -181,15 +182,20 @@ body {
     padding: 8px 0;
 }
 
+/* mỗi danh mục cha */
 .mega-parent {
-    position: relative;
+    position: static;
+    /* ⭐ RẤT QUAN TRỌNG */
 }
 
+/* label */
 .mega-parent-label {
+    height: 56px;
+    /* ⭐ cố định chiều cao */
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 12px 16px;
+    padding: 0 16px;
     font-size: 14px;
     cursor: pointer;
 }
@@ -208,6 +214,7 @@ body {
 .mega-right {
     position: absolute;
     top: 0;
+    /* căn theo container */
     left: 260px;
     width: 740px;
     height: 100%;
@@ -216,11 +223,12 @@ body {
     display: none;
 }
 
-.mega-parent:hover .mega-right {
+/* chỉ hiện submenu của item đang hover */
+.mega-parent:hover>.mega-right {
     display: block;
 }
 
-/* columns */
+/* ===== COLUMNS ===== */
 .mega-columns {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -423,4 +431,57 @@ body {
     font-weight: 600;
     color: #333;
     text-transform: uppercase;
+}
+
+/* ================= SECTION TITLE – PREMIUM ================= */
+.section-title.fancy {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-align: center;
+    margin-bottom: 32px;
+    position: relative;
+    text-transform: uppercase;
+}
+
+/* gạch nhấn dưới */
+.section-title.fancy::after {
+    content: "";
+    display: block;
+    width: 70px;
+    height: 3px;
+    background: currentColor;
+    margin: 12px auto 0;
+    border-radius: 2px;
+}
+
+/* gạch mờ trang trí trên */
+.section-title.fancy::before {
+    content: "";
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 140px;
+    height: 1px;
+    background: #eee;
+}
+
+/* FLASH SALE nổi bật hơn */
+.section-title.text-danger.fancy {
+    text-shadow: 0 6px 14px rgba(231, 76, 60, 0.3);
+}
+
+/* spacing section */
+.home-section {
+    padding-top: 10px;
+}
+
+/* responsive */
+@media (max-width: 768px) {
+    .section-title.fancy {
+        font-size: 24px;
+        letter-spacing: 1px;
+        margin-bottom: 24px;
+    }
 }

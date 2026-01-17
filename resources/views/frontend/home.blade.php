@@ -5,7 +5,7 @@
 @section('content')
 
 {{-- ================= BANNER ================= --}}
-<section class="home-banner mb-5">
+<section class="home-banner mb-4">
     <div id="homeBanner"
          class="carousel slide rounded-4 overflow-hidden"
          data-bs-ride="carousel">
@@ -39,7 +39,7 @@
 </section>
 
 {{-- ================= SERVICE / USP ================= --}}
-<section class="home-services mb-5">
+<section class="home-services mb-4">
     <div class="row text-center g-4">
 
         <div class="col-md-4">
@@ -71,12 +71,11 @@
 
 {{-- ================= FLASH SALE ================= --}}
 @if($flashSaleProducts->count())
-<section class="home-section mb-5">
-    <h3 class="section-title text-danger">
-        🔥 FLASH SALE
-    </h3>
+<section class="home-section mb-3">
+    <h2 class="section-title fancy text-danger">
+        FLASH SALE
+    </h2>
 
-    {{-- BẮT BUỘC PHẢI CÓ ROW --}}
     <div class="row g-4">
         @foreach($flashSaleProducts as $product)
             @include('frontend.partials.product-card-flash', [
@@ -89,10 +88,10 @@
 
 {{-- ================= FEATURED PRODUCTS ================= --}}
 @if($featuredProducts->count())
-<section class="home-section mb-5">
-    <h3 class="section-title">
-        ⭐ SẢN PHẨM NỔI BẬT
-    </h3>
+<section class="home-section mb-3">
+    <h2 class="section-title fancy">
+        SẢN PHẨM NỔI BẬT
+    </h2>
 
     <div class="row g-4">
         @foreach($featuredProducts as $product)
@@ -106,10 +105,10 @@
 
 {{-- ================= LATEST PRODUCTS ================= --}}
 @if($latestProducts->count())
-<section class="home-section mb-5">
-    <h3 class="section-title">
-        🆕 SẢN PHẨM MỚI
-    </h3>
+<section class="home-section mb-3">
+    <h2 class="section-title fancy">
+        SẢN PHẨM MỚI
+    </h2>
 
     <div class="row g-4">
         @foreach($latestProducts as $product)
@@ -120,5 +119,6 @@
     </div>
 </section>
 @endif
+
 
 @endsection

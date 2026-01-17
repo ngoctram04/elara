@@ -68,7 +68,7 @@
             <table class="table table-hover align-middle">
                 <thead class="table-light">
                 <tr>
-                    <th width="60">#</th>
+                    <th width="60">Mã</th>
                     <th>Họ và tên</th>
                     <th>Email</th>
                     <th width="130">Trạng thái</th>
@@ -79,7 +79,7 @@
                 <tbody>
                 @forelse($customers as $key => $customer)
                     <tr>
-                        <td>{{ $customers->firstItem() + $key }}</td>
+                        <td>{{ $customer->id }}</td>
 
                         <td>{{ $customer->name }}</td>
 

@@ -3,6 +3,8 @@
 
 @section('content')
 
+<div class="shop-page"><!-- 🔥 QUAN TRỌNG -->
+
 <x-breadcrumb :items="[
     ['label' => 'Danh mục', 'url' => route('shop')],
     ['label' => 'Tất cả sản phẩm']
@@ -14,7 +16,6 @@
 </section>
 
 <div class="container">
-
     <div class="row">
 
         {{-- ================= SIDEBAR ================= --}}
@@ -97,7 +98,7 @@
         {{-- ================= PRODUCTS ================= --}}
         <section class="col-md-9">
 
-            {{-- ===== TOOLBAR (GIỐNG TRANG DANH MỤC) ===== --}}
+            {{-- ===== TOOLBAR ===== --}}
             <div class="product-toolbar mb-4">
 
                 <div class="toolbar-left">
@@ -166,6 +167,8 @@
         </section>
     </div>
 </div>
+
+</div><!-- /shop-page -->
 
 @endsection
 

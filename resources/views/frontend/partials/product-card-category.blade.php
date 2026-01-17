@@ -56,7 +56,7 @@
 
         <div class="category-meta">
             <span>⭐ 5.0</span>
-            <span>🔥 {{ $product->total_sold }}</span>
+            <span>Đã bán{{ $product->total_sold }}</span>
         </div>
 
         <div class="category-price">

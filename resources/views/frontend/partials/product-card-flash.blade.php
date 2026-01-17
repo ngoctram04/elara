@@ -64,7 +64,7 @@
                         ⭐⭐⭐⭐⭐ <span>(5.0)</span>
                     </div>
                     <div class="fs-sold">
-                        🔥 {{ $product->total_sold }}
+                        Đã bán {{ $product->total_sold }}
                     </div>
                 </div>
 

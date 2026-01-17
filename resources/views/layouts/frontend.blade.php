@@ -104,7 +104,7 @@
 </main>
 
 {{-- ================= FOOTER ================= --}}
-<footer class="footer-box mt-5">
+<footer class="footer-box mt-2">
     <div class="footer-inner">
         <div class="row">
 

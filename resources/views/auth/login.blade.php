@@ -4,7 +4,7 @@
         {{-- ✅ Thông báo xác thực email --}}
         @if (session('verified'))
             <div class="mb-4 rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-green-700 text-sm">
-                🎉 Xác thực email thành công. Vui lòng đăng nhập để tiếp tục.
+                Xác thực email thành công. Vui lòng đăng nhập để tiếp tục.
             </div>
         @endif
 

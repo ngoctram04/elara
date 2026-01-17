@@ -60,7 +60,7 @@ class RegisteredUserController extends Controller
         // ✅ VỀ TRANG LOGIN
         return redirect()->route('login')->with(
             'status',
-            'Đăng ký thành công 🎉 Vui lòng kiểm tra email để xác thực tài khoản.'
+            'Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản.'
         );
     }
 }

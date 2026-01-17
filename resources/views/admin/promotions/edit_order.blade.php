@@ -53,20 +53,21 @@
                 >
             </div>
 
-            {{-- DISCOUNT VALUE --}}
+            {{-- ✅ DISCOUNT VALUE – FIX 10,00 --}}
             <div class="col-md-6">
                 <label class="form-label">Giá trị giảm (%)</label>
                 <input
                     type="number"
                     name="discount_value"
                     class="form-control"
-                    value="{{ old('discount_value', $promotion->discount_value) }}"
                     min="1"
                     max="100"
+                    step="1"
+                    value="{{ old('discount_value', (int) $promotion->discount_value) }}"
                     required
                 >
                 <small class="text-muted">
-                    Nhập từ 1 đến 100 (%)
+                    Nhập số nguyên từ 1 đến 100 (%)
                 </small>
             </div>
 
@@ -77,8 +78,8 @@
                     type="number"
                     name="min_order_value"
                     class="form-control"
-                    value="{{ old('min_order_value', $promotion->min_order_value) }}"
                     min="0"
+                    value="{{ old('min_order_value', $promotion->min_order_value) }}"
                 >
             </div>
 
@@ -89,8 +90,8 @@
                     type="number"
                     name="max_discount"
                     class="form-control"
-                    value="{{ old('max_discount', $promotion->max_discount) }}"
                     min="0"
+                    value="{{ old('max_discount', $promotion->max_discount) }}"
                 >
             </div>
 
@@ -101,8 +102,8 @@
                     type="number"
                     name="usage_limit"
                     class="form-control"
-                    value="{{ old('usage_limit', $promotion->usage_limit) }}"
                     min="1"
+                    value="{{ old('usage_limit', $promotion->usage_limit) }}"
                 >
             </div>
 

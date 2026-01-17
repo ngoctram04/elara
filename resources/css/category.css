@@ -521,3 +521,29 @@
 .category-icon.right {
     right: 14px;
 }
+
+/* ================= SHOP PAGE – RADIO → BLOCK ================= */
+.shop-page .sidebar-list input[type="radio"] {
+    display: none;
+}
+
+.shop-page .sidebar-list label {
+    display: block;
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 14px;
+    color: #333;
+    cursor: pointer;
+    transition: .2s;
+}
+
+.shop-page .sidebar-list label:hover {
+    background: var(--primary-soft);
+}
+
+.shop-page .sidebar-list li.active label {
+    background: var(--primary);
+    color: #fff;
+    font-weight: 600;
+}
