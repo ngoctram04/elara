@@ -12,6 +12,7 @@ use App\Http\Controllers\Frontend\ShopController;
 use App\Http\Controllers\Frontend\ProductController as FrontendProductController;
 use App\Http\Controllers\Frontend\CategoryController as FrontendCategoryController;
 use App\Http\Controllers\Frontend\CartController;
+use App\Http\Controllers\Frontend\CheckoutController;
 
 /*
 |--------------------------------------------------------------------------
@@ -40,12 +41,10 @@ use App\Http\Controllers\Admin\CustomerController;
 */
 
 // 🏠 Home
-Route::get('/', [HomeController::class, 'index'])
-    ->name('home');
+Route::get('/', [HomeController::class, 'index'])->name('home');
 
-// 🛍 Shop – all products
-Route::get('/products', [ShopController::class, 'index'])
-    ->name('shop');
+// 🛍 Shop
+Route::get('/products', [ShopController::class, 'index'])->name('shop');
 
 // 📂 Category
 Route::get('/category/{slug}', [FrontendCategoryController::class, 'show'])
@@ -60,18 +59,42 @@ Route::get('/product/{slug}', [FrontendProductController::class, 'show'])
 | CART (PUBLIC – CHƯA ÉP LOGIN)
 |--------------------------------------------------------------------------
 */
+Route::prefix('cart')->name('cart.')->group(function () {
 
-Route::get('/cart', [CartController::class, 'index'])
-    ->name('cart.index');
+    Route::get('/', [CartController::class, 'index'])
+        ->name('index');
 
-Route::post('/cart/add', [CartController::class, 'add'])
-    ->name('cart.add');
+    Route::post('/add', [CartController::class, 'add'])
+        ->name('add');
 
-Route::post('/cart/update', [CartController::class, 'update'])
-    ->name('cart.update');
+    Route::post('/update', [CartController::class, 'update'])
+        ->name('update');
 
-Route::delete('/cart/remove/{id}', [CartController::class, 'remove'])
-    ->name('cart.remove');
+    Route::delete('/remove/{variantId}', [CartController::class, 'remove'])
+        ->name('remove');
+
+    Route::delete('/clear', [CartController::class, 'clear'])
+        ->name('clear');
+});
+
+/*
+|--------------------------------------------------------------------------
+| CHECKOUT (FRONTEND – REQUIRE LOGIN)
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'check_active'])
+    ->prefix('checkout')
+    ->name('checkout.')
+    ->group(function () {
+
+        // Trang checkout
+        Route::get('/', [CheckoutController::class, 'index'])
+            ->name('index');
+
+        // Đặt hàng
+        Route::post('/', [CheckoutController::class, 'store'])
+            ->name('store');
+    });
 
 /*
 |--------------------------------------------------------------------------
@@ -143,10 +166,8 @@ Route::prefix('admin')
         Route::resource('categories', CategoryController::class)
             ->except(['update']);
 
-        Route::put(
-            'categories/{category}',
-            [CategoryController::class, 'update']
-        )->name('categories.update');
+        Route::put('categories/{category}', [CategoryController::class, 'update'])
+            ->name('categories.update');
 
         // 🏷 Brands
         Route::resource('brands', BrandController::class)

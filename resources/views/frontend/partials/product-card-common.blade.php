@@ -1,30 +1,37 @@
 @php
     /**
-     * 🔥 BIẾN THỂ ĐẠI DIỆN CHO CARD
-     * - LẤY BIẾN THỂ CÓ final_price NHỎ NHẤT
-     * - final_price đã bao gồm khuyến mãi (nếu có)
+     * ✅ BIẾN THỂ DÙNG ĐỂ ADD TO CART
      */
-    $displayVariant = $product->variants
-        ->sortBy(fn ($v) => $v->final_price)
+    $addVariant = $product->variants->first();
+
+    /**
+     * ✅ BIẾN THỂ HIỂN THỊ GIÁ (THẤP NHẤT)
+     */
+    $priceVariant = $product->variants
+        ->sortBy(fn ($v) => $v->final_price ?? $v->price)
         ->first();
+
+    /**
+     * ✅ CHỈ CẦN 1 BIẾN THỂ SALE → HIỆN BADGE
+     */
+    $saleVariant = $product->variants->first(fn ($v) => $v->is_on_sale);
 @endphp
 
-@if($displayVariant)
+@if ($addVariant && $priceVariant)
 <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
     <div class="fs-card js-card"
          data-href="{{ route('products.show', $product->slug) }}">
 
-        {{-- ================= IMAGE ================= --}}
+        {{-- IMAGE --}}
         <div class="fs-image">
 
-            {{-- BADGE: CHỈ HIỆN KHI BIẾN THỂ RẺ NHẤT ĐANG SALE --}}
-            @if($displayVariant->is_on_sale)
+            {{-- BADGE SALE THEO SẢN PHẨM --}}
+            @if ($saleVariant)
                 <span class="fs-badge">
-                    {{ $displayVariant->discount_label }}
+                    {{ $saleVariant->discount_label }}
                 </span>
             @endif
 
-            {{-- ẢNH ĐẠI DIỆN PRODUCT --}}
             <img
                 src="{{ $product->main_image_url }}"
                 alt="{{ $product->name }}"
@@ -34,32 +41,28 @@
             {{-- OVERLAY --}}
             <div class="fs-overlay">
 
-                {{-- 👁 XEM NHANH --}}
-                <span class="fs-icon fs-left js-go-detail"
-                      title="Xem chi tiết">
+                <span class="fs-icon fs-left js-go-detail">
                     <i class="bi bi-eye"></i>
                 </span>
 
-                {{-- ⚡ MUA NGAY --}}
                 <span class="fs-buy js-go-detail">
                     <i class="bi bi-lightning-charge-fill"></i>
                     Mua ngay
                 </span>
 
-                {{-- 🛒 ADD TO CART (THEO BIẾN THỂ ĐẠI DIỆN) --}}
+                {{-- ADD TO CART --}}
                 <button
                     type="button"
                     class="fs-icon fs-right btn-add-to-cart"
-                    data-variant-id="{{ $displayVariant->id }}"
-                    title="Thêm vào giỏ"
-                    onclick="event.stopPropagation()">
+                    data-variant-id="{{ $addVariant->id }}"
+                    title="Thêm vào giỏ">
                     <i class="bi bi-cart-plus"></i>
                 </button>
 
             </div>
         </div>
 
-        {{-- ================= INFO ================= --}}
+        {{-- INFO --}}
         <div class="fs-info">
 
             <div class="fs-brand">
@@ -71,29 +74,21 @@
             </div>
 
             <div class="fs-meta">
-                <div class="fs-rating">
-                    ⭐⭐⭐⭐⭐ <span>(5.0)</span>
-                </div>
-                <div class="fs-sold">
-                    Đã bán {{ $product->total_sold }}
-                </div>
+                <span>⭐⭐⭐⭐⭐ (5.0)</span>
+                <span>Đã bán {{ $product->total_sold }}</span>
             </div>
 
-            {{-- ================= PRICE ================= --}}
+            {{-- PRICE --}}
             <div class="fs-price">
-
-                {{-- GIÁ GỐC CHỈ HIỆN KHI BIẾN THỂ RẺ NHẤT ĐANG SALE --}}
-                @if($displayVariant->is_on_sale)
+                @if ($priceVariant->is_on_sale && $priceVariant->original_price)
                     <span class="old">
-                        {{ number_format($displayVariant->price, 0, ',', '.') }}đ
+                        {{ number_format($priceVariant->original_price, 0, ',', '.') }}đ
                     </span>
                 @endif
 
-                {{-- GIÁ CUỐI CÙNG (LUÔN LÀ GIÁ NHỎ NHẤT) --}}
                 <span class="new">
-                    {{ number_format($displayVariant->final_price, 0, ',', '.') }}đ
+                    {{ number_format($priceVariant->final_price ?? $priceVariant->price, 0, ',', '.') }}đ
                 </span>
-
             </div>
 
         </div>
@@ -103,21 +98,54 @@
 <script>
 document.addEventListener('click', function (e) {
 
-    // CLICK TOÀN CARD
-    const card = e.target.closest('.js-category-card, .js-card');
-    if (card && !e.target.closest('.btn-add-to-cart')) {
-        window.location.href = card.dataset.href;
+    // ADD TO CART
+    const addBtn = e.target.closest('.btn-add-to-cart');
+    if (addBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        fetch("{{ route('cart.add') }}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "application/json",
+                "X-CSRF-TOKEN": "{{ csrf_token() }}"
+            },
+            body: new URLSearchParams({
+                variant_id: addBtn.dataset.variantId,
+                quantity: 1
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (!data.success) {
+                showCenterNotify(data.message || 'Không thể thêm sản phẩm', 'error');
+                return;
+            }
+
+            addBtn.classList.add('text-success');
+            setTimeout(() => addBtn.classList.remove('text-success'), 600);
+            showCenterNotify('Đã thêm sản phẩm vào giỏ hàng');
+        })
+        .catch(() => {
+            showCenterNotify('Lỗi kết nối máy chủ', 'error');
+        });
+
         return;
     }
 
-    // CLICK ICON 👁 / MUA NGAY
+    // VIEW / BUY
     const goDetail = e.target.closest('.js-go-detail');
     if (goDetail) {
-        e.stopPropagation();
-        const card = goDetail.closest('.js-category-card, .js-card');
-        if (card) {
-            window.location.href = card.dataset.href;
-        }
+        const card = goDetail.closest('.js-card');
+        if (card) window.location.href = card.dataset.href;
+        return;
+    }
+
+    // CLICK CARD
+    const card = e.target.closest('.js-card');
+    if (card) {
+        window.location.href = card.dataset.href;
     }
 
 });

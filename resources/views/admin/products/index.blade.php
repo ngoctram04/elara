@@ -122,7 +122,7 @@
                         </td>
 
                         {{-- NAME --}}
-                        <td class="text-center fw-medium">
+                        <td class="fw-medium">
                             {{ $product->name }}
                         </td>
 

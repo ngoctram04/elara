@@ -20,7 +20,7 @@ class Product extends Model
         'min_price',
         'max_price',
         'total_stock',
-        'total_sold',   // ✅ dùng cho "Bán chạy"
+        'total_sold',
         'is_active',
         'is_featured',
     ];
@@ -46,12 +46,25 @@ class Product extends Model
 
     public function mainImage(): HasOne
     {
-        return $this->hasOne(ProductImage::class)->where('is_main', 1);
+        return $this->hasOne(ProductImage::class)
+            ->where('is_main', 1);
     }
 
+    public function subImages(): HasMany
+    {
+        return $this->hasMany(ProductImage::class)
+            ->where('is_main', 0);
+    }
+
+    /**
+     * 🔥 BIẾN THỂ
+     * - THỨ TỰ QUYẾT ĐỊNH BIẾN THỂ MẶC ĐỊNH
+     * - BIẾN THỂ ĐẦU TIÊN = MẶC ĐỊNH
+     */
     public function variants(): HasMany
     {
-        return $this->hasMany(ProductVariant::class);
+        return $this->hasMany(ProductVariant::class)
+            ->orderBy('id'); // hoặc orderBy('position')
     }
 
     public function promotions(): BelongsToMany
@@ -82,13 +95,20 @@ class Product extends Model
         return asset('images/no-image.png');
     }
 
+    /**
+     * 🔥 BIẾN THỂ HIỂN THỊ TRÊN CARD
+     * - LUÔN LẤY BIẾN THỂ ĐẦU TIÊN
+     * - FRONTEND KHÔNG SORT
+     */
+    public function displayVariant()
+    {
+        return $this->variants->first();
+    }
+
     /* ======================
         🔥 FLASH SALE LOGIC
     ====================== */
 
-    /**
-     * Lấy promotion đang hiệu lực (ưu tiên giảm nhiều nhất)
-     */
     public function activeFlashPromotion()
     {
         return $this->promotions
@@ -100,17 +120,11 @@ class Product extends Model
             ->first();
     }
 
-    /**
-     * Có đang flash sale không
-     */
     public function getIsFlashSaleAttribute(): bool
     {
         return !is_null($this->activeFlashPromotion());
     }
 
-    /**
-     * % giảm
-     */
     public function getFlashDiscountPercentAttribute(): int
     {
         $promo = $this->activeFlashPromotion();
@@ -122,17 +136,11 @@ class Product extends Model
         return (int) $promo->discount_value;
     }
 
-    /**
-     * Giá gốc (min_price)
-     */
     public function getFlashOriginalPriceAttribute(): int
     {
         return (int) $this->min_price;
     }
 
-    /**
-     * Giá sau giảm
-     */
     public function getFlashSalePriceAttribute(): int
     {
         $promo = $this->activeFlashPromotion();
@@ -158,28 +166,4 @@ class Product extends Model
 
         return $price;
     }
-    // App\Models\Product.php
-    public function subImages()
-    {
-        return $this->hasMany(ProductImage::class)
-            ->where('is_main', 0);
-    }
-    // app/Models/Product.php
-
-    public function displayVariant()
-    {
-        // 1️⃣ Ưu tiên biến thể đang sale
-        $saleVariant = $this->variants
-            ->first(fn($v) => $v->is_on_sale);
-
-        if ($saleVariant) {
-            return $saleVariant;
-        }
-
-        // 2️⃣ Nếu không sale → lấy biến thể có giá thấp nhất
-        return $this->variants
-            ->sortBy(fn($v) => $v->final_price)
-            ->first();
-    }
-
 }
