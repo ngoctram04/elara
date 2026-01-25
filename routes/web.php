@@ -56,23 +56,36 @@ Route::get('/product/{slug}', [FrontendProductController::class, 'show'])
 
 /*
 |--------------------------------------------------------------------------
-| CART (PUBLIC – CHƯA ÉP LOGIN)
+| CART (PUBLIC – KHÔNG CẦN LOGIN)
 |--------------------------------------------------------------------------
 */
 Route::prefix('cart')->name('cart.')->group(function () {
 
+    // 📄 Trang giỏ hàng
     Route::get('/', [CartController::class, 'index'])
         ->name('index');
 
+    // ➕ Thêm vào giỏ (form + ajax)
     Route::post('/add', [CartController::class, 'add'])
         ->name('add');
 
+    // ✏️ Cập nhật số lượng (input)
     Route::post('/update', [CartController::class, 'update'])
         ->name('update');
 
+    // ➕➖ Tăng / giảm số lượng (AJAX + −)
+    Route::post('/change-qty', [CartController::class, 'changeQty'])
+        ->name('changeQty');
+
+    // 🔁 Đổi biến thể trong giỏ
+    Route::post('/change-variant', [CartController::class, 'changeVariant'])
+        ->name('changeVariant');
+
+    // ❌ Xóa 1 sản phẩm
     Route::delete('/remove/{variantId}', [CartController::class, 'remove'])
         ->name('remove');
 
+    // 🧹 Xóa toàn bộ giỏ
     Route::delete('/clear', [CartController::class, 'clear'])
         ->name('clear');
 });
@@ -87,18 +100,18 @@ Route::middleware(['auth', 'check_active'])
     ->name('checkout.')
     ->group(function () {
 
-        // Trang checkout
+        // 🧾 Trang checkout
         Route::get('/', [CheckoutController::class, 'index'])
             ->name('index');
 
-        // Đặt hàng
+        // 💳 Đặt hàng
         Route::post('/', [CheckoutController::class, 'store'])
             ->name('store');
     });
 
 /*
 |--------------------------------------------------------------------------
-| FRONTEND – USER PROFILE (AUTH + CHECK_ACTIVE)
+| FRONTEND – USER PROFILE
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth', 'check_active'])
@@ -130,7 +143,7 @@ Route::middleware(['auth', 'check_active'])
 
 /*
 |--------------------------------------------------------------------------
-| BACKEND – ADMIN (AUTH + CHECK_ACTIVE + IS_ADMIN)
+| BACKEND – ADMIN
 |--------------------------------------------------------------------------
 */
 Route::prefix('admin')
@@ -141,6 +154,7 @@ Route::prefix('admin')
         Route::get('/dashboard', [DashboardController::class, 'index'])
             ->name('dashboard');
 
+        // 👤 Admin profile
         Route::get('/profile', [AdminProfileController::class, 'show'])
             ->name('profile.show');
 
@@ -166,8 +180,10 @@ Route::prefix('admin')
         Route::resource('categories', CategoryController::class)
             ->except(['update']);
 
-        Route::put('categories/{category}', [CategoryController::class, 'update'])
-            ->name('categories.update');
+        Route::put(
+            'categories/{category}',
+            [CategoryController::class, 'update']
+        )->name('categories.update');
 
         // 🏷 Brands
         Route::resource('brands', BrandController::class)
