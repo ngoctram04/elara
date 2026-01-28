@@ -150,17 +150,20 @@ class ProductController extends Controller
     ======================= */
     public function edit(Product $product)
     {
+        // 🔥 EAGER LOAD ĐẦY ĐỦ – QUAN TRỌNG
         $product->load([
             'category',
             'brand',
             'mainImage',
-            'subImages',        // 👈 BẮT BUỘC
-            'variants.images',
+            'subImages',        // 👈 ẢNH PHỤ (is_main = 0)
+            'variants.images', // 👈 ẢNH BIẾN THỂ
         ]);
 
         return view('admin.products.edit', [
             'product'    => $product,
-            'categories' => Category::whereNotNull('parent_id')->orderBy('name')->get(),
+            'categories' => Category::whereNotNull('parent_id')
+                ->orderBy('name')
+                ->get(),
             'brands'     => Brand::all(),
         ]);
     }

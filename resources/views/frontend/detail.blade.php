@@ -17,11 +17,35 @@
     animation: shake 0.35s ease-in-out 2;
 }
 @keyframes shake {
-    0%   { transform: translateX(0); }
-    25%  { transform: translateX(-4px); }
-    50%  { transform: translateX(4px); }
-    75%  { transform: translateX(-4px); }
-    100% { transform: translateX(0); }
+    0% {transform:translateX(0)}
+    25% {transform:translateX(-4px)}
+    50% {transform:translateX(4px)}
+    75% {transform:translateX(-4px)}
+    100% {transform:translateX(0)}
+}
+
+/* ===== THUMBNAIL COLUMN ===== */
+.thumb-wrapper {
+    max-height: 480px;
+    overflow-y: auto;
+    padding-right: 6px;
+}
+
+.thumb-img {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: contain;
+    background: #fff;
+    cursor: pointer;
+    transition: .2s;
+}
+
+.thumb-img:hover {
+    border: 2px solid #0d6efd;
+}
+
+.thumb-img.active {
+    border: 2px solid #dc3545;
 }
 </style>
 
@@ -29,12 +53,27 @@
     <div class="row g-4">
 
         {{-- ================= THUMBNAILS ================= --}}
-        <div class="col-md-1 d-flex flex-column gap-2">
-            @foreach($product->images as $img)
-                <img src="{{ asset('storage/' . $img->image_path) }}"
-                     class="img-thumbnail thumb-img"
-                     style="cursor:pointer">
-            @endforeach
+        <div class="col-md-2">
+            <div class="d-flex flex-column gap-2 thumb-wrapper">
+
+                {{-- ảnh sản phẩm --}}
+                @foreach($product->images as $img)
+                    <img src="{{ asset('storage/'.$img->image_path) }}"
+                         class="img-thumbnail thumb-img"
+                         data-image="{{ asset('storage/'.$img->image_path) }}">
+                @endforeach
+
+                {{-- ảnh biến thể --}}
+                @foreach($product->variants as $variant)
+                    @foreach($variant->images as $vImg)
+                        <img src="{{ asset('storage/'.$vImg->image_path) }}"
+                             class="img-thumbnail thumb-img"
+                             data-image="{{ asset('storage/'.$vImg->image_path) }}"
+                             data-variant="{{ $variant->id }}">
+                    @endforeach
+                @endforeach
+
+            </div>
         </div>
 
         {{-- ================= MAIN IMAGE ================= --}}
@@ -46,14 +85,13 @@
                         ? asset('storage/'.$product->mainImage->image_path)
                         : asset('images/no-image.png')) }}"
                  class="img-fluid border rounded"
-                 style="max-height:480px;object-fit:contain;transition:opacity .2s">
+                 style="max-height:480px;object-fit:contain;transition:.2s">
         </div>
 
         {{-- ================= INFO ================= --}}
-        <div class="col-md-6">
+        <div class="col-md-5">
             <h3 class="fw-bold mb-2">{{ $product->name }}</h3>
 
-            {{-- PRICE --}}
             <div class="mb-3">
                 <div id="price-original"
                      class="text-muted text-decoration-line-through"
@@ -75,7 +113,7 @@
                         @foreach($product->variants as $variant)
                             @php
                                 $variantImage = $variant->images->first();
-                                $fallbackImage = $product->mainImage
+                                $fallback = $product->mainImage
                                     ? asset('storage/'.$product->mainImage->image_path)
                                     : asset('images/no-image.png');
                             @endphp
@@ -86,12 +124,9 @@
                                     data-final="{{ $variant->final_price ?? $variant->price }}"
                                     data-original="{{ $variant->is_on_sale ? $variant->price : '' }}"
                                     data-stock="{{ $variant->availableStock() }}"
-                                    data-image="{{ $variantImage
-                                        ? asset('storage/'.$variantImage->image_path)
-                                        : $fallbackImage }}">
+                                    data-image="{{ $variantImage ? asset('storage/'.$variantImage->image_path) : $fallback }}">
                                 @if($variantImage)
                                     <img src="{{ asset('storage/'.$variantImage->image_path) }}"
-                                         class="rounded mb-1"
                                          style="width:40px;height:40px;object-fit:cover">
                                 @endif
                                 <div class="small fw-semibold">
@@ -102,9 +137,8 @@
                     </div>
 
                     <div id="stock-text" class="text-muted mt-2"></div>
-
                     <div id="variant-error" class="text-danger small mt-1 d-none">
-                        ⚠️ Vui lòng chọn phân loại sản phẩm
+                        Vui lòng chọn phân loại sản phẩm
                     </div>
                 </div>
             @endif
@@ -113,11 +147,14 @@
             <form method="POST"
                   action="{{ route('cart.add') }}"
                   id="add-to-cart-form"
-                  class="d-flex gap-2 mt-4">
+                  class="d-flex gap-2">
                 @csrf
                 <input type="hidden" name="variant_id" id="variant_id">
 
-                <input type="number" name="qty" value="1" min="1"
+                <input type="number"
+                       name="qty"
+                       value="1"
+                       min="1"
                        class="form-control w-auto">
 
                 <button class="btn btn-primary">
@@ -141,80 +178,82 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
 
-    const mainImg          = document.getElementById('main-image');
-    const priceFinalEl    = document.getElementById('price-final');
-    const priceOriginalEl = document.getElementById('price-original');
-    const stockEl         = document.getElementById('stock-text');
-    const variantInput    = document.getElementById('variant_id');
-    const errorEl         = document.getElementById('variant-error');
-    const form            = document.getElementById('add-to-cart-form');
+    const mainImg  = document.getElementById('main-image');
+    const qtyInput = document.querySelector('input[name="qty"]');
+    const addBtn   = document.querySelector('#add-to-cart-form button');
 
-    // notify backend
-    @if(session('success'))
-        showCenterNotify(@json(session('success')), 'success');
-    @endif
+    // click thumbnail
+    document.querySelectorAll('.thumb-img').forEach(img => {
+        img.addEventListener('click', () => {
 
-    @if($errors->any())
-        showCenterNotify(@json($errors->first()), 'error');
-    @endif
+            document.querySelectorAll('.thumb-img')
+                .forEach(i => i.classList.remove('active'));
+            img.classList.add('active');
 
-    // chọn biến thể
+            mainImg.style.opacity = 0;
+            setTimeout(() => {
+                mainImg.src = img.dataset.image;
+                mainImg.style.opacity = 1;
+            }, 120);
+
+            if (img.dataset.variant) {
+                document.querySelector(
+                    `.variant-btn[data-id="${img.dataset.variant}"]`
+                )?.click();
+            }
+        });
+    });
+
+    // ===== VARIANT LOGIC (ĐÃ FIX QTY) =====
     document.querySelectorAll('.variant-btn').forEach(btn => {
         btn.addEventListener('click', () => {
 
             document.querySelectorAll('.variant-btn')
                 .forEach(b => b.classList.remove('active'));
-
             btn.classList.add('active');
 
-            const finalPrice    = btn.dataset.final;
-            const originalPrice = btn.dataset.original;
+            // price
+            document.getElementById('price-final').innerText =
+                new Intl.NumberFormat('vi-VN').format(btn.dataset.final) + 'đ';
 
-            priceFinalEl.innerText =
-                new Intl.NumberFormat('vi-VN').format(finalPrice) + 'đ';
-
-            if (originalPrice) {
-                priceOriginalEl.innerText =
-                    new Intl.NumberFormat('vi-VN').format(originalPrice) + 'đ';
-                priceOriginalEl.style.display = 'block';
+            if (btn.dataset.original) {
+                document.getElementById('price-original').style.display = 'block';
+                document.getElementById('price-original').innerText =
+                    new Intl.NumberFormat('vi-VN').format(btn.dataset.original) + 'đ';
             } else {
-                priceOriginalEl.style.display = 'none';
+                document.getElementById('price-original').style.display = 'none';
             }
 
-            stockEl.innerText = 'Còn ' + btn.dataset.stock + ' sản phẩm';
+            // stock
+            const stock = parseInt(btn.dataset.stock);
+            document.getElementById('stock-text').innerText =
+                'Còn ' + stock + ' sản phẩm';
 
-            mainImg.style.opacity = 0;
-            setTimeout(() => {
-                mainImg.src = btn.dataset.image;
-                mainImg.style.opacity = 1;
-            }, 120);
+            // 🔥 FIX QTY
+            qtyInput.max = stock;
 
-            variantInput.value = btn.dataset.id;
-            errorEl.classList.add('d-none');
+            if (parseInt(qtyInput.value) > stock) {
+                qtyInput.value = stock;
+            }
+
+            if (stock <= 0) {
+                qtyInput.value = 0;
+                addBtn.disabled = true;
+                addBtn.innerHTML = '<i class="bi bi-x-circle"></i> Hết hàng';
+            } else {
+                addBtn.disabled = false;
+                addBtn.innerHTML = '<i class="bi bi-cart-plus"></i> Thêm vào giỏ';
+                if (qtyInput.value == 0) qtyInput.value = 1;
+            }
+
+            // image + variant
+            mainImg.src = btn.dataset.image;
+            document.getElementById('variant_id').value = btn.dataset.id;
         });
     });
 
-    // auto chọn biến thể đầu
-    const firstVariant = document.querySelector('.variant-btn');
-    if (firstVariant) {
-        firstVariant.click();
-    }
-
-    // submit
-    form.addEventListener('submit', e => {
-        if (!variantInput.value) {
-            e.preventDefault();
-            showCenterNotify('Vui lòng chọn phân loại sản phẩm', 'error');
-
-            errorEl.classList.remove('d-none');
-            errorEl.classList.add('variant-error-show');
-
-            setTimeout(() => {
-                errorEl.classList.add('d-none');
-                errorEl.classList.remove('variant-error-show');
-            }, 3000);
-        }
-    });
+    // auto chọn variant đầu
+    document.querySelector('.variant-btn')?.click();
 });
 </script>
 @endpush

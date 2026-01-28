@@ -92,7 +92,7 @@
                     <th width="70">Mã</th>
                     <th width="90">Ảnh</th>
                     <th>Tên sản phẩm</th>
-                    <th width="140">Giá</th>
+                    <th width="150">Giá</th>
                     <th width="140">Danh mục</th>
                     <th width="120">Thương hiệu</th>
                     <th width="80">Kho</th>

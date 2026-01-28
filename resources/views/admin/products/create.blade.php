@@ -45,8 +45,12 @@
                         </select>
                     </div>
 
-                    <div class="mb-3 form-check">
-                        <input type="checkbox" class="form-check-input" id="is_featured" name="is_featured" value="1">
+                    <div class="form-check mb-3">
+                        <input type="checkbox"
+                               class="form-check-input"
+                               id="is_featured"
+                               name="is_featured"
+                               value="1">
                         <label class="form-check-label" for="is_featured">
                             Sản phẩm nổi bật
                         </label>
@@ -59,7 +63,9 @@
 
                     <div class="mb-3">
                         <label class="form-label">Mô tả</label>
-                        <textarea name="description" rows="5" class="form-control"></textarea>
+                        <textarea name="description"
+                                  rows="5"
+                                  class="form-control"></textarea>
                     </div>
 
                     {{-- ================= HÌNH ẢNH ================= --}}
@@ -77,22 +83,16 @@
                             Ảnh đại diện sản phẩm
                         </small>
 
-                        {{-- ẢNH PHỤ --}}
+                        {{-- ẢNH PHỤ (CHUẨN – KHÔNG d-none) --}}
                         <input type="file"
                                id="sub_images"
                                name="sub_images[]"
-                               class="d-none"
+                               class="form-control"
                                multiple
                                accept="image/*">
 
-                        <button type="button"
-                                class="btn btn-outline-primary btn-sm"
-                                id="btn-add-image">
-                            + Thêm hình ảnh
-                        </button>
-
                         <small class="text-muted d-block mt-1">
-                            Có thể chọn nhiều ảnh
+                            Ảnh phụ
                         </small>
 
                         {{-- PREVIEW --}}
@@ -139,7 +139,8 @@
                         <div class="col-md-2">
                             <input type="file"
                                    name="variants[0][image]"
-                                   class="form-control">
+                                   class="form-control"
+                                   accept="image/*">
                         </div>
                     </div>
 
@@ -175,17 +176,14 @@
 
 @push('scripts')
 <script>
-/* ===== MỞ FILE PICKER ẢNH PHỤ ===== */
-document.getElementById('btn-add-image').addEventListener('click', () => {
-    document.getElementById('sub_images').click();
-});
-
 /* ===== PREVIEW ẢNH PHỤ ===== */
 document.getElementById('sub_images').addEventListener('change', function () {
     const wrapper = document.getElementById('image-wrapper');
     wrapper.innerHTML = '';
 
     [...this.files].forEach(file => {
+        if (!file.type.startsWith('image/')) return;
+
         const reader = new FileReader();
         reader.onload = e => {
             wrapper.insertAdjacentHTML('beforeend', `
@@ -202,6 +200,7 @@ document.getElementById('sub_images').addEventListener('change', function () {
 
 /* ===== BIẾN THỂ ===== */
 let variantIndex = 1;
+
 document.getElementById('btn-add-variant').addEventListener('click', () => {
     document.getElementById('variant-wrapper').insertAdjacentHTML('beforeend', `
         <div class="variant-item border rounded p-3 mb-3">
@@ -224,7 +223,8 @@ document.getElementById('btn-add-variant').addEventListener('click', () => {
                 <div class="col-md-2">
                     <input type="file"
                            name="variants[${variantIndex}][image]"
-                           class="form-control">
+                           class="form-control"
+                           accept="image/*">
                 </div>
             </div>
             <button type="button"
