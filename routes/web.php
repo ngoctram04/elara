@@ -33,7 +33,7 @@ use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\PromotionController;
 use App\Http\Controllers\Admin\CustomerController;
-
+use App\Http\Controllers\Admin\StockImportController;
 /*
 |--------------------------------------------------------------------------
 | FRONTEND – PUBLIC
@@ -216,6 +216,14 @@ Route::prefix('admin')
 
         Route::patch('promotions/{promotion}/toggle', [PromotionController::class, 'toggle'])
             ->name('promotions.toggle');
+    Route::get('/stock-import', [StockImportController::class, 'create'])
+        ->name('stock.create');
+
+    Route::post('/stock-import', [StockImportController::class, 'store'])
+        ->name('stock.store');
+
+    Route::get('/stock-import/history', [StockImportController::class, 'history'])
+    ->name('stock.history');
     });
 
 /*

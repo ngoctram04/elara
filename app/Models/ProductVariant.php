@@ -15,20 +15,28 @@ class ProductVariant extends Model
         'product_id',
         'sku',
 
-        // Thuộc tính biến thể
-        'attribute_name',   // VD: Dung tích
-        'attribute_value',  // VD: 500ml
+        // Thuộc tính
+        'attribute_name',
+        'attribute_value',
 
-        'price',            // GIÁ GỐC – KHÔNG BAO GIỜ UPDATE
-        'original_price',   // (optional)
+        // Giá bán
+        'price',
+        'original_price',
+
+        // 🔥 GIÁ VỐN (QUAN TRỌNG CHO LỢI NHUẬN)
+        'cost_price',
+
+        // Kho
         'stock',
         'sold_quantity',
+
         'is_active',
     ];
 
     protected $casts = [
         'price'          => 'float',
         'original_price' => 'float',
+        'cost_price'     => 'float',
         'stock'          => 'integer',
         'sold_quantity'  => 'integer',
         'is_active'      => 'boolean',
@@ -51,6 +59,12 @@ class ProductVariant extends Model
     public function promotionProducts(): HasMany
     {
         return $this->hasMany(PromotionProduct::class, 'variant_id');
+    }
+
+    // 🔥 Lịch sử nhập hàng
+    public function stockImports(): HasMany
+    {
+        return $this->hasMany(StockImport::class, 'variant_id');
     }
 
     /* =====================================================
@@ -77,14 +91,9 @@ class ProductVariant extends Model
     }
 
     /* =====================================================
-        PROMOTION CORE (QUAN TRỌNG)
+        PROMOTION CORE
     ===================================================== */
 
-    /**
-     * 🔥 Khuyến mãi đang áp dụng cho BIẾN THỂ
-     * - Ưu tiên khuyến mãi gắn trực tiếp variant
-     * - KHÔNG fallback về product khi đang hiển thị Flash Sale
-     */
     public function activePromotion(): ?Promotion
     {
         return Promotion::query()
@@ -99,7 +108,7 @@ class ProductVariant extends Model
     }
 
     /**
-     * 🔥 GIÁ CUỐI CÙNG (DÙNG DUY NHẤT Ở FRONTEND)
+     * Giá sau khuyến mãi
      */
     public function getFinalPriceAttribute(): float
     {
@@ -116,39 +125,24 @@ class ProductVariant extends Model
             ));
         }
 
-        // discount_type === 'fixed'
         return max(0, $this->price - $promotion->discount_value);
     }
 
-    /**
-     * Có đang giảm giá không
-     * 👉 $variant->is_on_sale
-     */
     public function getIsOnSaleAttribute(): bool
     {
         return $this->activePromotion() !== null;
     }
 
-    /**
-     * Alias dạng hàm
-     * 👉 $variant->isOnSale()
-     */
     public function isOnSale(): bool
     {
         return $this->is_on_sale;
     }
 
-    /**
-     * Số tiền giảm được
-     */
     public function getDiscountAmountAttribute(): float
     {
         return max(0, $this->price - $this->final_price);
     }
 
-    /**
-     * Nhãn giảm giá (VD: -15% | -50.000đ)
-     */
     public function getDiscountLabelAttribute(): ?string
     {
         $promotion = $this->activePromotion();
@@ -160,5 +154,15 @@ class ProductVariant extends Model
         return $promotion->discount_type === 'percent'
             ? "-{$promotion->discount_value}%"
             : '-' . number_format($promotion->discount_value, 0, ',', '.') . 'đ';
+    }
+
+    /* =====================================================
+        PROFIT (CHUẨN CHO DASHBOARD)
+    ===================================================== */
+
+    // Lãi trên 1 sản phẩm
+    public function getProfitPerItemAttribute(): float
+    {
+        return $this->final_price - $this->cost_price;
     }
 }

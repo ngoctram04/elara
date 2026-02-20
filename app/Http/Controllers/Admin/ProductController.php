@@ -23,7 +23,6 @@ class ProductController extends Controller
             'category.parent',
             'brand',
             'mainImage',
-            'variants',
         ]);
 
         if ($request->filled('keyword')) {
@@ -79,7 +78,6 @@ class ProductController extends Controller
             'variants'                   => 'required|array|min:1',
             'variants.*.attribute_value' => 'required|string|max:100',
             'variants.*.price'           => 'required|numeric|min:0',
-            'variants.*.stock'           => 'required|integer|min:0',
             'variants.*.image'           => 'nullable|image',
         ]);
 
@@ -126,7 +124,9 @@ class ProductController extends Controller
                     'attribute_name'  => $data['variant_attribute_name'],
                     'attribute_value' => $variantData['attribute_value'],
                     'price'           => $variantData['price'],
-                    'stock'           => $variantData['stock'],
+                    'cost_price'      => 0,
+                    'stock_quantity'  => 0,
+                    'sold_quantity'   => 0,
                 ]);
 
                 if (!empty($variantData['image'])) {
@@ -150,24 +150,20 @@ class ProductController extends Controller
     ======================= */
     public function edit(Product $product)
     {
-        // 🔥 EAGER LOAD ĐẦY ĐỦ – QUAN TRỌNG
         $product->load([
             'category',
             'brand',
             'mainImage',
-            'subImages',        // 👈 ẢNH PHỤ (is_main = 0)
-            'variants.images', // 👈 ẢNH BIẾN THỂ
+            'subImages',
+            'variants.images',
         ]);
 
         return view('admin.products.edit', [
             'product'    => $product,
-            'categories' => Category::whereNotNull('parent_id')
-                ->orderBy('name')
-                ->get(),
+            'categories' => Category::whereNotNull('parent_id')->orderBy('name')->get(),
             'brands'     => Brand::all(),
         ]);
     }
-
 
     /* =======================
         CẬP NHẬT
@@ -186,146 +182,63 @@ class ProductController extends Controller
             'main_image'   => 'nullable|image',
             'sub_images.*' => 'nullable|image',
 
-            'is_featured' => 'nullable|boolean',
-
             'variant_attribute_name'     => 'required|string|max:100',
             'variants'                   => 'required|array|min:1',
             'variants.*.id'              => 'nullable|exists:product_variants,id',
             'variants.*.attribute_value' => 'required|string|max:100',
             'variants.*.price'           => 'required|numeric|min:0',
-            'variants.*.stock'           => 'required|integer|min:0',
             'variants.*.image'           => 'nullable|image',
-
-            'delete_images.*' => 'nullable|integer|exists:product_images,id',
         ]);
 
         DB::transaction(function () use ($request, $data, $product) {
 
-            /* ========= SLUG ========= */
-            if ($product->name !== $data['name']) {
-                $baseSlug = Str::slug($data['name']);
-                $slug = $baseSlug;
-                $i = 1;
-                while (
-                    Product::where('slug', $slug)
-                    ->where('id', '!=', $product->id)
-                    ->exists()
-                ) {
-                    $slug = $baseSlug . '-' . $i++;
-                }
-                $product->slug = $slug;
-            }
-
-            /* ========= PRODUCT ========= */
+            /* PRODUCT */
             $product->update([
                 'name'        => $data['name'],
                 'category_id' => $data['category_id'],
                 'brand_id'    => $data['brand_id'],
                 'description' => $data['description'] ?? null,
-                'is_featured' => $request->boolean('is_featured'),
             ]);
 
-            /* ========= DELETE SUB IMAGES ========= */
-            if ($request->filled('delete_images')) {
-                $images = $product->images()
-                ->whereIn('id', $request->delete_images)
-                ->where('is_main', 0)
-                ->get();
-
-                foreach ($images as $img) {
-                    Storage::disk('public')->delete($img->image_path);
-                    $img->delete();
-                }
-            }
-
-            /* ========= MAIN IMAGE ========= */
-            if ($request->hasFile('main_image')) {
-                if ($product->mainImage) {
-                    Storage::disk('public')->delete($product->mainImage->image_path);
-                    $product->mainImage->delete();
-                }
-
-                $product->images()->create([
-                    'image_path' => $request->file('main_image')->store('products', 'public'),
-                    'is_main'    => 1,
-                ]);
-            }
-
-            /* ========= ADD SUB IMAGES ========= */
-            $subImages = $request->file('sub_images');
-
-            if (is_array($subImages)) {
-                foreach ($subImages as $image) {
-                    if (!$image) continue;
-
-                    $product->images()->create([
-                        'image_path' => $image->store('products/sub', 'public'),
-                        'is_main' => 0,
-                    ]);
-                }
-            }
-
-
-            /* ========= VARIANTS ========= */
-            $existingVariantIds = $product->variants()->pluck('id')->toArray();
+            /* VARIANTS */
+            $existingIds = $product->variants()->pluck('id')->toArray();
             $submittedIds = [];
 
             foreach ($data['variants'] as $variantData) {
 
-                /* UPDATE */
                 if (!empty($variantData['id'])) {
                     $variant = $product->variants()->find($variantData['id']);
                     if (!$variant) continue;
-
-                    $submittedIds[] = $variant->id;
 
                     $variant->update([
                         'attribute_name'  => $data['variant_attribute_name'],
                         'attribute_value' => $variantData['attribute_value'],
                         'price'           => $variantData['price'],
-                        'stock'           => $variantData['stock'],
                     ]);
 
-                    // CHỈ đổi ảnh khi có upload mới
-                    if (!empty($variantData['image'])) {
-                        if ($variant->images->first()) {
-                            Storage::disk('public')->delete($variant->images->first()->image_path);
-                            $variant->images()->delete();
-                        }
-
-                        $variant->images()->create([
-                            'image_path' => $variantData['image']->store('variants', 'public'),
-                            'is_main'    => 1,
-                        ]);
-                    }
-                }
-                /* CREATE */ else {
+                    $submittedIds[] = $variant->id;
+                } else {
                     $variant = $product->variants()->create([
-                            'attribute_name'  => $data['variant_attribute_name'],
-                            'attribute_value' => $variantData['attribute_value'],
-                            'price'           => $variantData['price'],
-                            'stock'           => $variantData['stock'],
-                        ]);
-
-                    if (!empty($variantData['image'])) {
-                        $variant->images()->create([
-                            'image_path' => $variantData['image']->store('variants', 'public'),
-                            'is_main'    => 1,
-                        ]);
-                    }
+                        'attribute_name'  => $data['variant_attribute_name'],
+                        'attribute_value' => $variantData['attribute_value'],
+                        'price'           => $variantData['price'],
+                        'cost_price'      => 0,
+                        'stock_quantity'  => 0,
+                        'sold_quantity'   => 0,
+                    ]);
 
                     $submittedIds[] = $variant->id;
                 }
             }
 
-            /* ========= DELETE REMOVED VARIANTS ========= */
-            $toDelete = array_diff($existingVariantIds, $submittedIds);
-            if (!empty($toDelete)) {
+            /* KHÔNG XÓA variant còn tồn hoặc đã bán */
+            $toDelete = array_diff($existingIds, $submittedIds);
+            if ($toDelete) {
                 $variants = $product->variants()->whereIn('id', $toDelete)->get();
+
                 foreach ($variants as $variant) {
-                    foreach ($variant->images as $img) {
-                        Storage::disk('public')->delete($img->image_path);
-                        $img->delete();
+                    if ($variant->stock_quantity > 0 || $variant->sold_quantity > 0) {
+                        continue;
                     }
                     $variant->delete();
                 }
@@ -339,7 +252,6 @@ class ProductController extends Controller
             ->with('success', 'Cập nhật sản phẩm thành công');
     }
 
-
     /* =======================
         HELPER
     ======================= */
@@ -348,7 +260,8 @@ class ProductController extends Controller
         $product->update([
             'min_price'   => $product->variants()->min('price'),
             'max_price'   => $product->variants()->max('price'),
-            'total_stock' => $product->variants()->sum('stock'),
+            'total_stock' => $product->variants()->sum('stock_quantity'),
+            'total_sold'  => $product->variants()->sum('sold_quantity'),
         ]);
     }
 
@@ -357,31 +270,14 @@ class ProductController extends Controller
     ======================= */
     public function destroy(Product $product)
     {
-        DB::transaction(function () use ($product) {
+        if ($product->variants()->sum('stock_quantity') > 0) {
+            return back()->with('error', 'Sản phẩm còn tồn kho, không thể xóa');
+        }
 
-            foreach ($product->images as $image) {
-                Storage::disk('public')->delete($image->image_path);
-                $image->delete();
-            }
-
-            foreach ($product->variants as $variant) {
-                foreach ($variant->images as $image) {
-                    Storage::disk('public')->delete($image->image_path);
-                    $image->delete();
-                }
-                $variant->delete();
-            }
-
-            $product->delete();
-        });
+        $product->delete();
 
         return redirect()
             ->route('admin.products.index')
-            ->with('success', 'Đã xóa sản phẩm thành công');
+            ->with('success', 'Đã xóa sản phẩm');
     }
-    public function show(Product $product)
-    {
-        return view('admin.products.show', compact('product'));
-    }
-
 }

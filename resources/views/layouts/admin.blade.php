@@ -27,69 +27,82 @@
             <i class="bi bi-emoji-smile"></i>
             <span>QUẢN LÝ BÁN HÀNG</span>
         </div>
-
         <ul class="sidebar-menu">
 
-            <li>
-                <a href="{{ route('admin.dashboard') }}"
-                   class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
-                    <i class="bi bi-speedometer2"></i> Tổng quan
-                </a>
-            </li>
+    <li>
+        <a href="{{ route('admin.dashboard') }}"
+           class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
+            <i class="bi bi-speedometer2"></i> Tổng quan
+        </a>
+    </li>
 
-            <li class="nav-item">
-    <a href="{{ route('admin.customers.index') }}"
-       class="nav-link {{ request()->routeIs('admin.customers.*') ? 'active' : '' }}">
-        <i class="bi bi-people"></i>
-        <span>Quản lý người dùng</span>
-    </a>
-</li>
+    {{-- USERS --}}
+    <li>
+        <a href="{{ route('admin.customers.index') }}"
+           class="{{ request()->routeIs('admin.customers.*') ? 'active' : '' }}">
+            <i class="bi bi-people"></i> Quản lý người dùng
+        </a>
+    </li>
 
+    {{-- CATEGORIES --}}
+    <li>
+        <a href="{{ route('admin.categories.index') }}"
+           class="{{ request()->is('admin/categories*') ? 'active' : '' }}">
+            <i class="bi bi-grid"></i> Quản lý danh mục
+        </a>
+    </li>
 
-            <li>
-                <a href="{{ route('admin.categories.index') }}"
-                   class="{{ request()->is('admin/categories*') ? 'active' : '' }}">
-                    <i class="bi bi-grid"></i> Quản lý danh mục
-                </a>
-            </li>
+    {{-- BRANDS --}}
+    <li>
+        <a href="{{ route('admin.brands.index') }}"
+           class="{{ request()->is('admin/brands*') ? 'active' : '' }}">
+            <i class="bi bi-tags"></i> Quản lý thương hiệu
+        </a>
+    </li>
 
-            <li>
-                <a href="{{ route('admin.brands.index') }}"
-                   class="{{ request()->is('admin/brands*') ? 'active' : '' }}">
-                    <i class="bi bi-tags"></i> Quản lý thương hiệu
-                </a>
-            </li>
+    {{-- PRODUCTS --}}
+    <li>
+        <a href="{{ route('admin.products.index') }}"
+           class="{{ request()->is('admin/products*') ? 'active' : '' }}">
+            <i class="bi bi-box"></i> Quản lý sản phẩm
+        </a>
+    </li>
 
-            <li>
-                <a href="{{ route('admin.products.index') }}"
-                   class="{{ request()->is('admin/products*') ? 'active' : '' }}">
-                    <i class="bi bi-box"></i> Quản lý sản phẩm
-                </a>
-            </li>
+    {{-- 🔥 STOCK IMPORT (MỚI) --}}
+    <li>
+        <a href="{{ route('admin.stock.create') }}"
+           class="{{ request()->is('admin/stock-import*') ? 'active' : '' }}">
+            <i class="bi bi-box-arrow-in-down"></i> Nhập hàng
+        </a>
+    </li>
 
-            <li>
-                <a href="#"
-                   class="{{ request()->is('admin/orders*') ? 'active' : '' }}">
-                    <i class="bi bi-cart"></i> Quản lý đơn hàng
-                </a>
-            </li>
+    {{-- ORDERS --}}
+    <li>
+        <a href="#"
+           class="{{ request()->is('admin/orders*') ? 'active' : '' }}">
+            <i class="bi bi-cart"></i> Quản lý đơn hàng
+        </a>
+    </li>
 
-            {{-- ✅ PROMOTIONS --}}
-            <li>
-                <a href="{{ route('admin.promotions.index') }}"
-                   class="{{ request()->is('admin/promotions*') ? 'active' : '' }}">
-                    <i class="bi bi-gift"></i> Quản lý khuyến mãi
-                </a>
-            </li>
+    {{-- PROMOTIONS --}}
+    <li>
+        <a href="{{ route('admin.promotions.index') }}"
+           class="{{ request()->is('admin/promotions*') ? 'active' : '' }}">
+            <i class="bi bi-gift"></i> Quản lý khuyến mãi
+        </a>
+    </li>
 
-            <li>
-                <a href="#"
-                   class="{{ request()->is('admin/statistics*') ? 'active' : '' }}">
-                    <i class="bi bi-bar-chart"></i> Thống kê
-                </a>
-            </li>
+    {{-- STATISTICS --}}
+    <li>
+        <a href="#"
+           class="{{ request()->is('admin/statistics*') ? 'active' : '' }}">
+            <i class="bi bi-bar-chart"></i> Thống kê
+        </a>
+    </li>
 
-        </ul>
+</ul>
+
+        
     </aside>
 
     {{-- ================= MAIN ================= --}}
@@ -174,4 +187,5 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
+@stack('scripts')
 </html>

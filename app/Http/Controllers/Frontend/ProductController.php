@@ -14,37 +14,35 @@ class ProductController extends Controller
     public function show(string $slug)
     {
         $product = Product::with([
-            /* =============================
-                ẢNH SẢN PHẨM
-            ============================= */
+            /* ẢNH */
             'images',
             'mainImage',
 
-            /* =============================
-                BIẾN THỂ + ẢNH BIẾN THỂ
-                (ĐÚNG THEO MODEL)
-            ============================= */
+            /* BIẾN THỂ CÒN HÀNG */
             'variants' => function ($q) {
                 $q->where('is_active', 1)
-                    ->where('stock', '>', 0)
-                    ->with('images'); // ✅ ĐÚNG – KHÔNG PHẢI variantImages
+                    ->where('stock_quantity', '>', 0)
+                    ->orderBy('id')
+                    ->with('images');
             },
 
-            /* =============================
-                DANH MỤC – THƯƠNG HIỆU
-            ============================= */
+            /* THÔNG TIN */
             'category',
             'brand',
 
-            /* =============================
-                KHUYẾN MÃI
-            ============================= */
+            /* KHUYẾN MÃI */
             'promotions' => function ($q) {
                 $q->where('is_active', 1);
             },
         ])
             ->where('slug', $slug)
+            ->where('is_active', 1)
             ->firstOrFail();
+
+        /* Nếu sản phẩm không còn biến thể nào có hàng */
+        if ($product->variants->isEmpty()) {
+            abort(404);
+        }
 
         /* =============================
             SẢN PHẨM LIÊN QUAN
@@ -53,6 +51,11 @@ class ProductController extends Controller
             ->where('id', '!=', $product->id)
             ->where('category_id', $product->category_id)
             ->where('is_active', 1)
+            ->whereHas('variants', function ($q) {
+                $q->where('stock_quantity', '>', 0)
+                    ->where('is_active', 1);
+            })
+            ->latest()
             ->limit(8)
             ->get();
 
@@ -62,6 +65,7 @@ class ProductController extends Controller
         ));
     }
 
+
     /**
      * Xem nhanh – dùng cho modal AJAX
      */
@@ -70,10 +74,19 @@ class ProductController extends Controller
         $product = Product::with([
             'images',
             'mainImage',
-            'variants.images', // ✅ SỬA ĐÚNG
+
+            'variants' => function ($q) {
+                $q->where('is_active', 1)
+                    ->where('stock_quantity', '>', 0)
+                    ->with('images');
+            },
+
             'category',
             'brand',
-            'promotions'
+
+            'promotions' => function ($q) {
+                $q->where('is_active', 1);
+            }
         ])
             ->where('id', $id)
             ->where('is_active', 1)

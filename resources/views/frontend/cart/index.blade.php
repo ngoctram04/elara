@@ -1,314 +1,239 @@
 @extends('layouts.frontend')
-
 @section('title', 'Giỏ hàng')
 
 @section('content')
 <div class="container py-4">
 
-    <h4 class="mb-4">Giỏ hàng của bạn</h4>
+<h4 class="mb-4">Giỏ hàng của bạn</h4>
 
-    {{-- EMPTY CART --}}
-    <div id="cart-empty"
-         class="alert alert-info {{ empty($cart) ? '' : 'd-none' }}">
-        Giỏ hàng của bạn đang trống.
-        <a href="{{ route('shop') }}" class="alert-link">Tiếp tục mua sắm</a>
-    </div>
+@if(empty($cart))
+<div class="alert alert-info">
+    Giỏ hàng trống.
+    <a href="{{ route('shop') }}">Mua sắm ngay</a>
+</div>
+@else
 
-    {{-- CART WRAPPER --}}
-    <div id="cart-wrapper" class="{{ empty($cart) ? 'd-none' : '' }}">
+<div class="table-responsive">
+<table class="table align-middle">
+<thead class="table-light">
+<tr>
+<th>Sản phẩm</th>
+<th>Đơn giá</th>
+<th width="220">Biến thể</th>
+<th width="180" class="text-center">Số lượng</th>
+<th>Thành tiền</th>
+<th width="60"></th>
+</tr>
+</thead>
 
-        <div class="table-responsive">
-            <table class="table align-middle">
-                <thead class="table-light">
-                    <tr>
-                        <th>Sản phẩm</th>
-                        <th>Đơn giá</th>
-                        <th style="width:220px">Biến thể</th>
-                        <th class="text-center" style="width:180px">Số lượng</th>
-                        <th>Thành tiền</th>
-                        <th style="width:60px"></th>
-                    </tr>
-                </thead>
+<tbody>
+@foreach($cart as $item)
+<tr data-row="{{ $item['variant_id'] }}">
 
-                <tbody>
-                @foreach ($cart as $item)
-                    <tr data-row="{{ $item['variant_id'] }}">
-                        <td>
-                            <div class="d-flex align-items-center gap-3">
-                                <img src="{{ $item['image']
-                                        ? asset('storage/'.$item['image'])
-                                        : asset('images/no-image.png') }}"
-                                     width="64"
-                                     class="border rounded-2">
-                                <div>
-                                    <div class="fw-semibold">{{ $item['name'] }}</div>
-                                    <small class="text-muted">{{ $item['variant'] }}</small>
-                                </div>
-                            </div>
-                        </td>
+<td>
+<div class="d-flex gap-3 align-items-center">
+<img src="{{ $item['image'] ? asset('storage/'.$item['image']) : asset('images/no-image.png') }}"
+     width="64" class="border rounded">
+<div>
+<div class="fw-semibold">{{ $item['name'] }}</div>
+<small class="text-muted">{{ $item['variant'] }}</small>
+</div>
+</div>
+</td>
 
-                        <td>
-                            @if($item['is_on_sale'] && $item['original'])
-                                <div class="text-muted text-decoration-line-through small">
-                                    {{ number_format($item['original']) }}đ
-                                </div>
-                            @endif
-                            <div class="text-danger fw-semibold">
-                                {{ number_format($item['price']) }}đ
-                            </div>
-                        </td>
+<td class="text-danger fw-semibold">
+{{ number_format($item['price']) }}đ
+</td>
 
-                        <td>
-                            <select class="form-select form-select-sm js-change-variant"
-                                    data-id="{{ $item['variant_id'] }}">
-                                @foreach(
-                                    \App\Models\ProductVariant::where('product_id', $item['product_id'])->get()
-                                    as $variant
-                                )
-                                    <option value="{{ $variant->id }}"
-                                        @selected($variant->id == $item['variant_id'])>
-                                        {{ $variant->displayName() }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </td>
+{{-- VARIANT SELECT --}}
+<td>
+<select class="form-select form-select-sm js-change-variant"
+        data-old="{{ $item['variant_id'] }}">
 
-                        {{-- QTY --}}
-                        <td class="text-center">
-                            <div class="qty-box">
-                                <button type="button"
-                                        class="qty-btn js-minus"
-                                        data-id="{{ $item['variant_id'] }}">−</button>
+@foreach($item['variants'] as $variant)
+<option value="{{ $variant->id }}"
+        data-stock="{{ $variant->stock_quantity }}"
+        @selected($variant->id == $item['variant_id'])>
+    {{ $variant->attribute_value }} ({{ $variant->stock_quantity }})
+</option>
+@endforeach
 
-                                <input type="number"
-                                       class="qty-input js-qty-input"
-                                       value="{{ $item['quantity'] }}"
-                                       min="1"
-                                       data-id="{{ $item['variant_id'] }}"
-                                       data-price="{{ $item['price'] }}"
-                                       data-stock="{{ $item['stock'] }}">
+</select>
+</td>
 
-                                <button type="button"
-                                        class="qty-btn js-plus"
-                                        data-id="{{ $item['variant_id'] }}"
-                                        @disabled($item['quantity'] >= $item['stock'])>+</button>
-                            </div>
+{{-- QTY --}}
+<td class="text-center">
+<div class="qty-box">
+<button class="qty-btn js-minus" data-id="{{ $item['variant_id'] }}">−</button>
 
-                            <div class="small text-muted mt-1 stock-text"
-                                 data-id="{{ $item['variant_id'] }}">
-                                Còn {{ $item['stock'] - $item['quantity'] }} sản phẩm
-                            </div>
-                        </td>
+<input type="number"
+       class="qty-input js-qty"
+       value="{{ $item['quantity'] }}"
+       min="1"
+       data-id="{{ $item['variant_id'] }}"
+       data-price="{{ $item['price'] }}"
+       data-stock="{{ $item['stock'] }}">
 
-                        {{-- SUBTOTAL --}}
-                        <td class="fw-semibold text-danger">
-                            <span class="js-subtotal"
-                                  data-id="{{ $item['variant_id'] }}"
-                                  data-value="{{ $item['sub_total'] }}">
-                                {{ number_format($item['sub_total']) }}đ
-                            </span>
-                        </td>
+<button class="qty-btn js-plus"
+        data-id="{{ $item['variant_id'] }}"
+        @disabled($item['quantity'] >= $item['stock'])>+</button>
+</div>
 
-                        {{-- REMOVE --}}
-                        <td class="text-end">
-                            <form action="{{ route('cart.remove', $item['variant_id']) }}"
-                                  method="POST"
-                                  onsubmit="return confirm('Xóa sản phẩm này khỏi giỏ hàng?')">
-                                @csrf
-                                @method('DELETE')
-                                <button class="btn btn-outline-danger btn-sm">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                @endforeach
-                </tbody>
-            </table>
-        </div>
+<div class="small text-muted">
+Còn {{ $item['stock'] }}
+</div>
+</td>
 
-        {{-- TOTAL --}}
-        <div class="d-flex justify-content-end mt-4">
-            <div class="text-end">
-                <h5>
-                    Tổng cộng:
-                    <span class="text-primary fw-bold js-total"
-                          data-value="{{ $total }}">
-                        {{ number_format($total) }}đ
-                    </span>
-                </h5>
+<td class="fw-semibold text-danger">
+<span class="js-subtotal"
+      data-id="{{ $item['variant_id'] }}"
+      data-value="{{ $item['sub_total'] }}">
+{{ number_format($item['sub_total']) }}đ
+</span>
+</td>
 
-                <a href="{{ route('checkout.index') }}"
-                   class="btn btn-success mt-2 px-4">
-                    <i class="bi bi-credit-card"></i>
-                    Tiến hành đặt hàng
-                </a>
-            </div>
-        </div>
+<td class="text-end">
+<button class="btn btn-outline-danger btn-sm js-remove"
+        data-id="{{ $item['variant_id'] }}">
+<i class="bi bi-trash"></i>
+</button>
+</td>
 
-    </div>
+</tr>
+@endforeach
+</tbody>
+</table>
+</div>
+
+<div class="text-end mt-4">
+<h5>
+Tổng:
+<span class="text-primary js-total"
+      data-value="{{ $total }}">
+{{ number_format($total) }}đ
+</span>
+</h5>
+
+<a href="{{ route('checkout.index') }}" class="btn btn-success">
+Thanh toán
+</a>
+</div>
+
+@endif
 </div>
 
 <style>
-.qty-box{display:inline-flex;align-items:center;border:1px solid #ddd;border-radius:6px;overflow:hidden}
-.qty-btn{width:32px;height:32px;border:none;background:#f8f9fa;font-weight:bold;cursor:pointer}
-.qty-btn:disabled{opacity:.4;cursor:not-allowed}
-.qty-input{width:50px;height:32px;border:none;text-align:center;outline:none}
-.qty-input::-webkit-outer-spin-button,
-.qty-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-.qty-input{-moz-appearance:textfield}
+.qty-box{display:inline-flex;border:1px solid #ddd;border-radius:6px;overflow:hidden}
+.qty-btn{width:32px;height:32px;border:none;background:#f8f9fa}
+.qty-input{width:50px;text-align:center;border:none}
 </style>
 @endsection
-
 @push('scripts')
 <script>
-const formatPrice = n => new Intl.NumberFormat('vi-VN').format(n) + 'đ';
+const money = n => new Intl.NumberFormat('vi-VN').format(n)+'đ';
 
-// ===== HELPERS =====
 const recalcTotal = () => {
     let total = 0;
-    document.querySelectorAll('.js-subtotal').forEach(el => {
+    document.querySelectorAll('.js-subtotal').forEach(el=>{
         total += Number(el.dataset.value);
     });
-    const totalEl = document.querySelector('.js-total');
-    totalEl.dataset.value = total;
-    totalEl.innerText = formatPrice(total);
+    const t = document.querySelector('.js-total');
+    t.dataset.value = total;
+    t.innerText = money(total);
 };
 
-const checkEmptyCart = () => {
-    if (document.querySelectorAll('tbody tr').length === 0) {
-        document.getElementById('cart-wrapper').classList.add('d-none');
-        document.getElementById('cart-empty').classList.remove('d-none');
-    }
-};
-
-// ===== SYNC =====
-const syncQty = (id, qty) => {
-    return fetch('{{ route('cart.changeQty') }}', {
-        method: 'POST',
-        headers: {
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-            'Content-Type': 'application/json'
+const updateQty = (id, qty) => {
+    fetch("{{ route('cart.changeQty') }}",{
+        method:'POST',
+        headers:{
+            'X-CSRF-TOKEN':'{{ csrf_token() }}',
+            'Content-Type':'application/json'
         },
-        body: JSON.stringify({ variant_id: id, quantity: qty })
+        body:JSON.stringify({variant_id:id, quantity:qty})
     });
 };
 
-// ===== PLUS =====
-document.querySelectorAll('.js-plus').forEach(btn => {
-    btn.onclick = () => {
-        const id = btn.dataset.id;
-        const input = document.querySelector(`.js-qty-input[data-id="${id}"]`);
-        const stock = Number(input.dataset.stock);
-        let qty = Number(input.value || 0);
+document.addEventListener('click', e=>{
 
-        if (qty >= stock) {
-            alert('Vượt quá tồn kho');
-            return;
-        }
+// PLUS
+if(e.target.closest('.js-plus')){
+    const id = e.target.closest('.js-plus').dataset.id;
+    const input = document.querySelector(`.js-qty[data-id="${id}"]`);
+    let qty = +input.value;
+    const stock = +input.dataset.stock;
+    if(qty>=stock) return alert('Hết hàng');
 
-        qty++;
-        input.value = qty;
+    qty++;
+    input.value = qty;
+    updateQty(id, qty);
 
-        syncQty(id, qty).then(() => {
-            const price = Number(input.dataset.price);
-            const sub = document.querySelector(`.js-subtotal[data-id="${id}"]`);
-            sub.dataset.value = price * qty;
-            sub.innerText = formatPrice(price * qty);
-            recalcTotal();
-        });
-    };
+    const price = +input.dataset.price;
+    const sub = document.querySelector(`.js-subtotal[data-id="${id}"]`);
+    sub.dataset.value = price*qty;
+    sub.innerText = money(price*qty);
+    recalcTotal();
+}
+
+// MINUS
+if(e.target.closest('.js-minus')){
+    const id = e.target.closest('.js-minus').dataset.id;
+    const input = document.querySelector(`.js-qty[data-id="${id}"]`);
+    let qty = +input.value;
+
+    if(qty<=1){
+        if(!confirm('Xóa sản phẩm?')) return;
+        removeItem(id);
+        return;
+    }
+
+    qty--;
+    input.value = qty;
+    updateQty(id, qty);
+
+    const price = +input.dataset.price;
+    const sub = document.querySelector(`.js-subtotal[data-id="${id}"]`);
+    sub.dataset.value = price*qty;
+    sub.innerText = money(price*qty);
+    recalcTotal();
+}
+
+// REMOVE
+if(e.target.closest('.js-remove')){
+    const id = e.target.closest('.js-remove').dataset.id;
+    if(confirm('Xóa sản phẩm?')) removeItem(id);
+}
+
 });
 
-// ===== MINUS (HỎI XÓA KHI = 1) =====
-document.querySelectorAll('.js-minus').forEach(btn => {
-    btn.onclick = () => {
-        const id = btn.dataset.id;
-        const row = document.querySelector(`tr[data-row="${id}"]`);
-        const input = row.querySelector('.js-qty-input');
-        let qty = Number(input.value || 0);
+// REMOVE AJAX
+function removeItem(id){
+    fetch(`/cart/remove/${id}`,{
+        method:'DELETE',
+        headers:{'X-CSRF-TOKEN':'{{ csrf_token() }}'}
+    }).then(()=>{
+        document.querySelector(`tr[data-row="${id}"]`)?.remove();
+        recalcTotal();
+    });
+}
 
-        if (qty === 1) {
-            if (!confirm('Bạn có muốn xóa sản phẩm này khỏi giỏ hàng không?')) return;
+// CHANGE VARIANT
+document.querySelectorAll('.js-change-variant').forEach(select=>{
+    select.onchange = () => {
+        const oldId = select.dataset.old;
+        const newId = select.value;
 
-            fetch(`{{ route('cart.remove', ':id') }}`.replace(':id', id), {
-                method: 'POST',
-                headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-                body: new URLSearchParams({ _method: 'DELETE' })
-            }).then(() => {
-                row.remove();
-                recalcTotal();
-                checkEmptyCart();
-            });
-            return;
-        }
-
-        qty--;
-        input.value = qty;
-
-        syncQty(id, qty).then(() => {
-            const price = Number(input.dataset.price);
-            const sub = document.querySelector(`.js-subtotal[data-id="${id}"]`);
-            sub.dataset.value = price * qty;
-            sub.innerText = formatPrice(price * qty);
-            recalcTotal();
-        });
+        fetch("{{ route('cart.changeVariant') }}",{
+            method:'POST',
+            headers:{
+                'X-CSRF-TOKEN':'{{ csrf_token() }}',
+                'Content-Type':'application/json'
+            },
+            body:JSON.stringify({
+                old_variant_id: oldId,
+                new_variant_id: newId
+            })
+        }).then(()=> location.reload());
     };
-});
-
-// ===== INPUT HANDLING (FIX GIẬT 1 → 12) =====
-const debounce = {};
-
-document.querySelectorAll('.js-qty-input').forEach(input => {
-
-    // 👉 Khi đang gõ: CHO PHÉP RỖNG, KHÔNG ÉP 1
-    input.addEventListener('input', () => {
-        const id = input.dataset.id;
-        clearTimeout(debounce[id]);
-
-        debounce[id] = setTimeout(() => {
-
-            // nếu đang rỗng thì KHÔNG làm gì
-            if (input.value === '') return;
-
-            let qty = Number(input.value);
-            const stock = Number(input.dataset.stock);
-
-            if (qty > stock) {
-                qty = stock;
-                alert('Vượt quá tồn kho');
-            }
-
-            input.value = qty;
-
-            syncQty(id, qty).then(() => {
-                const price = Number(input.dataset.price);
-                const sub = document.querySelector(`.js-subtotal[data-id="${id}"]`);
-                sub.dataset.value = price * qty;
-                sub.innerText = formatPrice(price * qty);
-                recalcTotal();
-            });
-
-        }, 300);
-    });
-
-    // 👉 Khi blur (bấm ra ngoài): nếu rỗng → ép về 1
-    input.addEventListener('blur', () => {
-        const id = input.dataset.id;
-
-        if (input.value === '') {
-            input.value = 1;
-
-            syncQty(id, 1).then(() => {
-                const price = Number(input.dataset.price);
-                const sub = document.querySelector(`.js-subtotal[data-id="${id}"]`);
-                sub.dataset.value = price * 1;
-                sub.innerText = formatPrice(price * 1);
-                recalcTotal();
-            });
-        }
-    });
 });
 </script>
-
 @endpush
