@@ -23,7 +23,7 @@
         </li>
 
         <li>
-            <a class="dropdown-item" href="{{ route('profile.orders') }}">
+            <a class="dropdown-item" href="{{ route('orders.history') }}">
                 <i class="bi bi-box-seam"></i>
                 <span>Danh sách đơn hàng</span>
             </a>

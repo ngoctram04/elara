@@ -77,12 +77,12 @@
     </li>
 
     {{-- ORDERS --}}
-    <li>
-        <a href="#"
-           class="{{ request()->is('admin/orders*') ? 'active' : '' }}">
-            <i class="bi bi-cart"></i> Quản lý đơn hàng
-        </a>
-    </li>
+<li>
+    <a href="{{ route('admin.orders.index') }}"
+       class="{{ request()->is('admin/orders*') ? 'active' : '' }}">
+        <i class="bi bi-cart"></i> Quản lý đơn hàng
+    </a>
+</li>
 
     {{-- PROMOTIONS --}}
     <li>

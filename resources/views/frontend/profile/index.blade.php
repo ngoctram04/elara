@@ -22,7 +22,7 @@
         <aside class="profile-sidebar">
             <h6 class="sidebar-title">TÀI KHOẢN</h6>
 
-            <a href="{{ route('profile.orders') }}">
+            <a href="{{ route('orders.history') }}">
                 <i class="bi bi-box-seam"></i>
                 Đơn hàng của tôi
             </a>

@@ -82,4 +82,5 @@ class ShopController extends Controller
             'categories'
         ));
     }
+    
 }

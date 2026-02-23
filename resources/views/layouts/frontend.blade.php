@@ -113,7 +113,7 @@
         <a href="#">Tin tức</a>
         <a href="#">Tra cứu đơn hàng</a>
         @auth
-            <a href="{{ route('profile.orders') }}">Đơn hàng của tôi</a>
+            <a href="{{ route('orders.history') }}">Đơn hàng của tôi</a>
         @endauth
     </div>
 </nav>
