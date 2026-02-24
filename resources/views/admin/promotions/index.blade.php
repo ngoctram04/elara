@@ -10,7 +10,8 @@
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="fw-semibold mb-0">Danh sách khuyến mãi</h5>
 
-            <a href="{{ route('admin.promotions.choose') }}"
+            {{-- SỬA Ở ĐÂY: create thay vì choose --}}
+            <a href="{{ route('admin.promotions.create') }}"
                class="btn btn-primary btn-sm">
                 + Thêm khuyến mãi
             </a>
@@ -54,7 +55,7 @@
                             </span>
                         </td>
 
-                        {{-- DISCOUNT (ONLY %) --}}
+                        {{-- DISCOUNT --}}
                         <td>
                             <span class="fw-semibold text-danger">
                                 -{{ $promo->discount_value }}%
@@ -63,8 +64,8 @@
 
                         {{-- DATE --}}
                         <td>
-                            {{ $promo->start_date->format('d/m/Y') }}<br>
-                            → {{ $promo->end_date->format('d/m/Y') }}
+                            {{ \Carbon\Carbon::parse($promo->start_date)->format('d/m/Y') }}<br>
+                            → {{ \Carbon\Carbon::parse($promo->end_date)->format('d/m/Y') }}
                         </td>
 
                         {{-- ACTIVE STATUS --}}
@@ -76,19 +77,33 @@
 
                         {{-- TIME STATUS --}}
                         <td>
-                            <span class="badge bg-{{ $promo->time_status_color }}">
-                                {{ $promo->time_status_label }}
+                            @php
+                                $now = now();
+                                if ($now->lt($promo->start_date)) {
+                                    $color = 'secondary';
+                                    $label = 'Chưa bắt đầu';
+                                } elseif ($now->gt($promo->end_date)) {
+                                    $color = 'dark';
+                                    $label = 'Đã hết hạn';
+                                } else {
+                                    $color = 'success';
+                                    $label = 'Đang diễn ra';
+                                }
+                            @endphp
+
+                            <span class="badge bg-{{ $color }}">
+                                {{ $label }}
                             </span>
                         </td>
 
                         {{-- ACTION --}}
                         <td>
-                            <a href="{{ route('admin.promotions.edit', $promo) }}"
+                            <a href="{{ route('admin.promotions.edit', $promo->id) }}"
                                class="btn btn-warning btn-sm mb-1">
                                 Sửa
                             </a>
 
-                            <form action="{{ route('admin.promotions.toggle', $promo) }}"
+                            <form action="{{ route('admin.promotions.toggle', $promo->id) }}"
                                   method="POST"
                                   class="d-inline">
                                 @csrf

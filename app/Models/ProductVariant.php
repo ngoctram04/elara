@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Models\Promotion;
 
 class ProductVariant extends Model
@@ -14,22 +15,13 @@ class ProductVariant extends Model
     protected $fillable = [
         'product_id',
         'sku',
-
-        // Thuộc tính
         'attribute_name',
         'attribute_value',
-
-        // Giá bán
         'price',
         'original_price',
-
-        // 🔥 GIÁ VỐN (QUAN TRỌNG CHO LỢI NHUẬN)
         'cost_price',
-
-        // Kho
-        'stock',
+        'stock_quantity',
         'sold_quantity',
-
         'is_active',
     ];
 
@@ -37,7 +29,7 @@ class ProductVariant extends Model
         'price'          => 'float',
         'original_price' => 'float',
         'cost_price'     => 'float',
-        'stock'          => 'integer',
+        'stock_quantity' => 'integer',
         'sold_quantity'  => 'integer',
         'is_active'      => 'boolean',
     ];
@@ -51,9 +43,17 @@ class ProductVariant extends Model
         return $this->belongsTo(Product::class);
     }
 
+    // Tất cả ảnh biến thể
     public function images(): HasMany
     {
         return $this->hasMany(VariantImage::class, 'variant_id');
+    }
+
+    // Ảnh chính
+    public function mainImage(): HasOne
+    {
+        return $this->hasOne(VariantImage::class, 'variant_id')
+            ->where('is_main', 1);
     }
 
     public function promotionProducts(): HasMany
@@ -61,10 +61,19 @@ class ProductVariant extends Model
         return $this->hasMany(PromotionProduct::class, 'variant_id');
     }
 
-    // 🔥 Lịch sử nhập hàng
     public function stockImports(): HasMany
     {
         return $this->hasMany(StockImport::class, 'variant_id');
+    }
+
+    /* =====================================================
+        IMAGE ACCESSOR (QUAN TRỌNG)
+    ===================================================== */
+
+    // Dùng: $variant->image_path
+    public function getImagePathAttribute()
+    {
+        return optional($this->mainImage)->image_path;
     }
 
     /* =====================================================
@@ -73,7 +82,7 @@ class ProductVariant extends Model
 
     public function availableStock(): int
     {
-        return max(0, $this->stock - $this->sold_quantity);
+        return max(0, $this->stock_quantity - $this->sold_quantity);
     }
 
     public function isInStock(): bool
@@ -91,7 +100,7 @@ class ProductVariant extends Model
     }
 
     /* =====================================================
-        PROMOTION CORE
+        PROMOTION
     ===================================================== */
 
     public function activePromotion(): ?Promotion
@@ -107,9 +116,6 @@ class ProductVariant extends Model
             ->first();
     }
 
-    /**
-     * Giá sau khuyến mãi
-     */
     public function getFinalPriceAttribute(): float
     {
         $promotion = $this->activePromotion();
@@ -133,11 +139,6 @@ class ProductVariant extends Model
         return $this->activePromotion() !== null;
     }
 
-    public function isOnSale(): bool
-    {
-        return $this->is_on_sale;
-    }
-
     public function getDiscountAmountAttribute(): float
     {
         return max(0, $this->price - $this->final_price);
@@ -157,10 +158,9 @@ class ProductVariant extends Model
     }
 
     /* =====================================================
-        PROFIT (CHUẨN CHO DASHBOARD)
+        PROFIT
     ===================================================== */
 
-    // Lãi trên 1 sản phẩm
     public function getProfitPerItemAttribute(): float
     {
         return $this->final_price - $this->cost_price;

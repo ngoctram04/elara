@@ -13,7 +13,24 @@ class ShopController extends Controller
     public function index(Request $request)
     {
         /* ================= BASE QUERY ================= */
-        $query = Product::where('is_active', 1);
+        $query = Product::with(['mainImage', 'variants'])
+            ->where('is_active', 1);
+
+        /* ================= SEARCH ================= */
+        if ($request->filled('q')) {
+            $keyword = $request->q;
+
+            $query->where(function ($q) use ($keyword) {
+                $q->where('name', 'like', "%{$keyword}%")
+                    ->orWhere('slug', 'like', "%{$keyword}%")
+                    ->orWhereHas('brand', function ($b) use ($keyword) {
+                        $b->where('name', 'like', "%{$keyword}%");
+                    })
+                    ->orWhereHas('category', function ($c) use ($keyword) {
+                        $c->where('name', 'like', "%{$keyword}%");
+                    });
+            });
+        }
 
         /* ================= CATEGORY FILTER ================= */
         if ($request->filled('category')) {
@@ -55,21 +72,22 @@ class ShopController extends Controller
                 $query->orderByDesc('total_sold');
                 break;
 
-            default: // MỚI NHẤT
+            default: // mới nhất
                 $query->orderByDesc('created_at');
         }
 
+        /* ================= PAGINATION ================= */
         $products = $query->paginate(20)->withQueryString();
 
         /* ================= SIDEBAR DATA ================= */
 
-        // 👉 DANH MỤC CHA + CON
+        // Danh mục cha + con
         $categories = Category::whereNull('parent_id')
             ->with('children')
             ->orderBy('name')
             ->get();
 
-        // 👉 CHỈ BRAND CÓ SẢN PHẨM
+        // Brand có sản phẩm
         $brands = Brand::whereHas('products', function ($q) {
             $q->where('is_active', 1);
         })
@@ -82,5 +100,4 @@ class ShopController extends Controller
             'categories'
         ));
     }
-    
 }

@@ -97,43 +97,58 @@ Route::prefix('cart')->name('cart.')->group(function () {
 | CHECKOUT (LOGIN)
 |--------------------------------------------------------------------------
 */
+
 Route::middleware(['auth', 'check_active'])
-    ->prefix('checkout')
-    ->name('checkout.')
-    ->group(function () {
+->prefix('checkout')
+->name('checkout.')
+->group(function () {
 
-        Route::get('/', [CheckoutController::class, 'index'])
-            ->name('index');
+    Route::post('/buy-now', [CheckoutController::class,
+        'buyNow'
+    ])
+    ->name('buyNow');
 
-        Route::post('/', [CheckoutController::class, 'store'])
-            ->name('store');
+    Route::get('/', [CheckoutController::class, 'index'])
+        ->name('index');
 
-        Route::get('/success/{order}', [CheckoutController::class, 'success'])
-            ->name('success');
+    Route::post('/', [CheckoutController::class, 'store'])
+    ->name('store');
 
-        Route::post('/cancel/{id}', [CheckoutController::class, 'cancel'])
-            ->name('cancel');
-    });
+    Route::get('/success/{order}', [CheckoutController::class, 'success'])
+    ->name('success');
 
+    Route::post('/cancel/{id}', [CheckoutController::class, 'cancel'])
+    ->name('cancel');
+});
 
 /*
 |--------------------------------------------------------------------------
 | ORDER HISTORY (LOGIN)  ⭐ QUAN TRỌNG
 |--------------------------------------------------------------------------
 */
+
+
 Route::middleware(['auth', 'check_active'])
-    ->prefix('orders')
-    ->name('orders.')
-    ->group(function () {
+->prefix('orders')
+->name('orders.')
+->group(function () {
 
-        // Danh sách đơn của user
-        Route::get('/', [OrderController::class, 'index'])
-            ->name('history');
+    // Danh sách đơn (orders.history)
+    Route::get('/', [OrderController::class, 'index'])
+    ->name('history');
 
-        // Chi tiết đơn
-        Route::get('/{id}', [OrderController::class, 'show'])
-            ->name('show');
-    });
+    // Chi tiết đơn
+    Route::get('/{id}', [OrderController::class, 'show'])
+    ->name('show');
+
+    // Huỷ đơn
+    Route::put('/{id}/cancel', [OrderController::class, 'cancel'])
+    ->name('cancel');
+
+    // Mua lại
+    Route::post('/{id}/reorder', [OrderController::class, 'reorder'])
+        ->name('reorder');
+});
 
 
 /*
@@ -265,12 +280,37 @@ Route::prefix('admin')
     });
 
     /*
-        |--------------------------------------------------
-        | PROMOTIONS
-        |--------------------------------------------------
-        */
-    Route::resource('promotions', PromotionController::class)
-        ->except(['show']);
+|--------------------------------------------------
+| PROMOTIONS
+|--------------------------------------------------
+*/
+    Route::prefix('promotions')->name('promotions.')->group(function () {
+
+        // CRUD
+        Route::get('/', [PromotionController::class, 'index'])
+        ->name('index');
+
+        Route::get('/create', [PromotionController::class, 'create'])
+            ->name('create');
+
+        Route::post('/', [PromotionController::class, 'store'])
+        ->name('store');
+
+        Route::get('/{promotion}/edit', [PromotionController::class, 'edit'])
+        ->name('edit');
+
+        Route::put('/{promotion}', [PromotionController::class, 'update'])
+        ->name('update');
+
+        Route::delete('/{promotion}', [PromotionController::class, 'destroy'])
+        ->name('destroy');
+
+        // ⭐ QUAN TRỌNG – bật / tắt khuyến mãi
+        Route::patch(
+            '/{promotion}/toggle',
+            [PromotionController::class, 'toggle']
+        )->name('toggle');
+    });
 
     /*
         |--------------------------------------------------

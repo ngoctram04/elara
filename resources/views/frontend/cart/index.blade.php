@@ -12,7 +12,6 @@
 @if(empty($cart))
 
 <div class="cart-empty text-center py-5">
-    <img src="{{ asset('images/no-cart.png') }}" width="120" class="mb-3">
     <h5 class="mb-2">Giỏ hàng trống</h5>
     <a href="{{ route('shop') }}" class="btn btn-primary">
         Mua sắm ngay
@@ -61,15 +60,24 @@
 </div>
 </td>
 
-<td class="price">{{ number_format($item['price']) }}đ</td>
+<td class="price">
+@if(isset($item['original_price']) && $item['original_price'] > $item['price'])
+    <div class="text-muted text-decoration-line-through small">
+        {{ number_format($item['original_price']) }}đ
+    </div>
+@endif
 
+<div class="text-danger fw-semibold">
+    {{ number_format($item['price']) }}đ
+</div>
+</td>
 <td>
 <select class="form-select form-select-sm js-change-variant"
         data-old="{{ $item['variant_id'] }}">
 @foreach($item['variants'] as $variant)
 <option value="{{ $variant->id }}"
         data-stock="{{ $variant->stock_quantity }}"
-        data-price="{{ $variant->price }}"
+        data-price="{{ $variant->final_price ?? $variant->price }}"
         @selected($variant->id == $item['variant_id'])
         @disabled($variant->stock_quantity == 0)
         class="{{ $variant->stock_quantity == 0 ? 'text-muted' : '' }}">
@@ -303,7 +311,6 @@ function updateQty(id, qty){
         })
     });
 }
-
 /* ================= PLUS / MINUS ================= */
 document.addEventListener('click', e=>{
 
@@ -321,17 +328,40 @@ document.addEventListener('click', e=>{
         const stock = parseInt(input.dataset.stock);
         const price = parseInt(input.dataset.price);
 
+        /* ===== PLUS ===== */
         if(btn.classList.contains('js-plus')){
             if(qty >= stock){
                 alert('Chỉ còn ' + stock + ' sản phẩm');
                 return;
             }
             qty++;
-        }else{
-            if(qty <= 1) return;
+        }
+
+        /* ===== MINUS ===== */
+        else{
+
+            if(qty <= 1){
+
+                if(confirm('Số lượng đang là 1. Bạn có muốn xóa sản phẩm khỏi giỏ hàng?')){
+
+                    fetch(`/cart/remove/${id}`,{
+                        method:'DELETE',
+                        headers:{'X-CSRF-TOKEN':'{{ csrf_token() }}'}
+                    }).then(()=>{
+                        const row = document.querySelector(`tr[data-row="${id}"]`);
+                        if(row) row.remove();
+                        recalcTotal();
+                    });
+
+                }
+
+                return;
+            }
+
             qty--;
         }
 
+        /* ===== UPDATE UI ===== */
         input.value = qty;
         updateQty(id, qty);
 
@@ -391,7 +421,7 @@ document.addEventListener('change', e=>{
     }
 });
 
-/* ================= ĐỔI BIẾN THỂ (FULL UPDATE A+++++) ================= */
+/* ================= ĐỔI BIẾN THỂ (FULL – GỘP REALTIME) ================= */
 document.querySelectorAll('.js-change-variant').forEach(select=>{
     select.onchange = ()=>{
 
@@ -401,7 +431,7 @@ document.querySelectorAll('.js-change-variant').forEach(select=>{
 
         if(oldId == newId) return;
 
-        /* ===== CHẶN HẾT HÀNG ===== */
+        // ===== CHẶN HẾT HÀNG =====
         const option = select.options[select.selectedIndex];
         const stockCheck = parseInt(option.dataset.stock);
         if(stockCheck <= 0){
@@ -419,8 +449,8 @@ document.querySelectorAll('.js-change-variant').forEach(select=>{
                 'Content-Type':'application/json'
             },
             body:JSON.stringify({
-                old_variant_id:oldId,
-                new_variant_id:newId
+                old_variant_id: oldId,
+                new_variant_id: newId
             })
         })
         .then(res=>res.json())
@@ -428,46 +458,89 @@ document.querySelectorAll('.js-change-variant').forEach(select=>{
             row.style.opacity = 1;
 
             if(!res.success){
-                alert('Không thể đổi biến thể');
+                alert(res.message || 'Không thể đổi biến thể');
                 select.value = oldId;
                 return;
             }
 
             const price = parseInt(res.price);
             const stock = parseInt(res.stock);
-            const qty   = parseInt(res.quantity) || 1;
+            const qty   = parseInt(res.quantity);
+            const newIdServer = res.new_id;
 
-            /* ===== UPDATE ID ===== */
-            row.dataset.row = newId;
-            select.dataset.old = newId;
+            /* =====================================================
+               QUAN TRỌNG: NẾU VARIANT MỚI ĐÃ CÓ TRÊN BẢNG → GỘP
+            ====================================================== */
+            const existingRow = document.querySelector(
+                `tr[data-row="${newIdServer}"]`
+            );
+
+            if(existingRow && existingRow !== row){
+
+    const existingInput = existingRow.querySelector('.js-qty');
+    existingInput.value = qty;
+    existingInput.dataset.stock = stock;
+    existingInput.dataset.price = price;
+
+    const sub = existingRow.querySelector('.js-subtotal');
+    sub.dataset.value = price * qty;
+    sub.innerText = money(price * qty);
+
+    row.remove();
+    recalcTotal();
+    return;
+}
+
+            /* ================= UPDATE DÒNG HIỆN TẠI ================= */
+
+            // Update ID chuẩn theo server
+            row.dataset.row = newIdServer;
+            select.dataset.old = newIdServer;
 
             const input = row.querySelector('.js-qty');
             input.value = qty;
-            input.dataset.id = newId;
+            input.dataset.id = newIdServer;
             input.dataset.price = price;
             input.dataset.stock = stock;
 
-            row.querySelector('.js-plus').dataset.id = newId;
-            row.querySelector('.js-minus').dataset.id = newId;
-            row.querySelector('.js-remove').dataset.id = newId;
+            row.querySelector('.js-plus').dataset.id = newIdServer;
+            row.querySelector('.js-minus').dataset.id = newIdServer;
+            row.querySelector('.js-remove').dataset.id = newIdServer;
 
-            /* ===== UPDATE GIÁ ===== */
+            // Giá
             const priceCol = row.querySelector('.price');
-            if(priceCol) priceCol.innerText = money(price);
+if(priceCol){
 
-            /* ===== UPDATE SUBTOTAL ===== */
+    if(res.original_price && res.original_price > price){
+        priceCol.innerHTML = `
+            <div class="text-muted text-decoration-line-through small">
+                ${money(res.original_price)}
+            </div>
+            <div class="text-danger fw-semibold">
+                ${money(price)}
+            </div>
+        `;
+    }else{
+        priceCol.innerHTML = `
+            <div class="text-danger fw-semibold">
+                ${money(price)}
+            </div>
+        `;
+    }
+}
+            // Subtotal
             const sub = row.querySelector('.js-subtotal');
-            sub.dataset.id = newId;
+            sub.dataset.id = newIdServer;
             sub.dataset.value = price * qty;
             sub.innerText = money(price * qty);
 
-            /* ===== UPDATE TÊN BIẾN THỂ ===== */
+            // Tên biến thể
             const variantName = row.querySelector('.variant-name');
             if(variantName){
                 variantName.innerText = res.variant;
             }
 
-            /* ===== UPDATE TỒN KHO TEXT ===== */
+            // Stock text
             const stockText = row.querySelector('.js-stock-text');
             if(stockText){
                 if(stock <= 5){
@@ -478,7 +551,7 @@ document.querySelectorAll('.js-change-variant').forEach(select=>{
                 }
             }
 
-            /* ===== UPDATE ẢNH ===== */
+            // Ảnh
             const img = row.querySelector('.cart-img');
             if(img && res.image){
                 img.src = '/storage/' + res.image;

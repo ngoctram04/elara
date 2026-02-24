@@ -23,6 +23,7 @@ class Order extends Model
         'note',
         'payment_method',
         'payment_status',
+        'transaction_code', // dùng cho VNPay (nếu có)
     ];
 
     protected $casts = [
@@ -35,21 +36,22 @@ class Order extends Model
 
     /*
     |--------------------------------
-    | STATUS
+    | ORDER STATUS
     |--------------------------------
     */
-    const STATUS_PENDING    = 1;
-    const STATUS_PROCESSING = 2;
-    const STATUS_COMPLETED  = 3;
-    const STATUS_CANCELLED  = 4;
+    const STATUS_PENDING    = 1; // Chờ xử lý
+    const STATUS_PROCESSING = 2; // Đang giao
+    const STATUS_COMPLETED  = 3; // Hoàn thành
+    const STATUS_CANCELLED  = 4; // Đã huỷ
 
     /*
     |--------------------------------
-    | PAYMENT
+    | PAYMENT STATUS
     |--------------------------------
     */
-    const PAYMENT_UNPAID = 0;
-    const PAYMENT_PAID   = 1;
+    const PAYMENT_UNPAID = 0; // Chưa thanh toán
+    const PAYMENT_PAID   = 1; // Đã thanh toán
+    const PAYMENT_FAILED = 2; // Thanh toán thất bại
 
     /*
     |--------------------------------
@@ -73,7 +75,7 @@ class Order extends Model
 
     /*
     |--------------------------------
-    | ACCESSORS
+    | ACCESSORS - ORDER STATUS
     |--------------------------------
     */
     public function getStatusNameAttribute()
@@ -90,14 +92,19 @@ class Order extends Model
     public function getStatusBadgeAttribute()
     {
         return match ($this->status) {
-            self::STATUS_PENDING => 'warning',
+            self::STATUS_PENDING    => 'warning',
             self::STATUS_PROCESSING => 'primary',
-            self::STATUS_COMPLETED => 'success',
-            self::STATUS_CANCELLED => 'danger',
+            self::STATUS_COMPLETED  => 'success',
+            self::STATUS_CANCELLED  => 'danger',
             default => 'secondary',
         };
     }
 
+    /*
+    |--------------------------------
+    | ACCESSORS - PAYMENT
+    |--------------------------------
+    */
     public function getPaymentMethodNameAttribute()
     {
         return match ($this->payment_method) {
@@ -110,11 +117,47 @@ class Order extends Model
 
     public function getPaymentStatusNameAttribute()
     {
-        return $this->payment_status == self::PAYMENT_PAID
-            ? 'Đã thanh toán'
-            : 'Chưa thanh toán';
+        return match ($this->payment_status) {
+            self::PAYMENT_PAID   => 'Đã thanh toán',
+            self::PAYMENT_FAILED => 'Thanh toán thất bại',
+            default              => 'Chưa thanh toán',
+        };
     }
 
+    public function getPaymentStatusBadgeAttribute()
+    {
+        return match ($this->payment_status) {
+            self::PAYMENT_PAID   => 'success',
+            self::PAYMENT_FAILED => 'danger',
+            default              => 'secondary',
+        };
+    }
+
+    /*
+    |--------------------------------
+    | HELPERS
+    |--------------------------------
+    */
+
+    // Đã thanh toán chưa?
+    public function isPaid()
+    {
+        return $this->payment_status == self::PAYMENT_PAID;
+    }
+
+    // Thanh toán thất bại?
+    public function isPaymentFailed()
+    {
+        return $this->payment_status == self::PAYMENT_FAILED;
+    }
+
+    // Chưa thanh toán?
+    public function isUnpaid()
+    {
+        return $this->payment_status == self::PAYMENT_UNPAID;
+    }
+
+    // Tổng số lượng sản phẩm
     public function getTotalQuantityAttribute()
     {
         return $this->items->sum('quantity');
@@ -143,5 +186,15 @@ class Order extends Model
     public function scopeCancelled($query)
     {
         return $query->where('status', self::STATUS_CANCELLED);
+    }
+
+    public function scopePaid($query)
+    {
+        return $query->where('payment_status', self::PAYMENT_PAID);
+    }
+
+    public function scopeUnpaid($query)
+    {
+        return $query->where('payment_status', self::PAYMENT_UNPAID);
     }
 }

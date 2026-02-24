@@ -93,8 +93,14 @@
             @endauth
 
             <a href="{{ route('cart.index') }}" class="icon-btn">
-                <i class="bi bi-cart3"></i>
-            </a>
+    <i class="bi bi-cart3"></i>
+
+    @if($cartCount > 0)
+        <span class="cart-badge">
+            {{ $cartCount > 99 ? '99+' : $cartCount }}
+        </span>
+    @endif
+</a>
         </div>
     </div>
 </header>
@@ -111,7 +117,6 @@
 
         <a href="{{ route('shop', ['sort' => 'newest']) }}">Sản phẩm mới</a>
         <a href="#">Tin tức</a>
-        <a href="#">Tra cứu đơn hàng</a>
         @auth
             <a href="{{ route('orders.history') }}">Đơn hàng của tôi</a>
         @endauth

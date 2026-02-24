@@ -18,10 +18,9 @@ class ProductController extends Controller
             'images',
             'mainImage',
 
-            /* BIẾN THỂ CÒN HÀNG */
+            /* HIỂN THỊ TẤT CẢ BIẾN THỂ (kể cả hết hàng) */
             'variants' => function ($q) {
                 $q->where('is_active', 1)
-                    ->where('stock_quantity', '>', 0)
                     ->orderBy('id')
                     ->with('images');
             },
@@ -39,13 +38,14 @@ class ProductController extends Controller
             ->where('is_active', 1)
             ->firstOrFail();
 
-        /* Nếu sản phẩm không còn biến thể nào có hàng */
-        if ($product->variants->isEmpty()) {
-            abort(404);
-        }
+        // ❌ BỎ đoạn này (để vẫn xem được khi tất cả hết hàng)
+        // if ($product->variants->isEmpty()) {
+        //     abort(404);
+        // }
 
         /* =============================
-            SẢN PHẨM LIÊN QUAN
+           SẢN PHẨM LIÊN QUAN
+           (chỉ lấy sản phẩm còn hàng)
         ============================= */
         $relatedProducts = Product::with('mainImage')
             ->where('id', '!=', $product->id)
@@ -75,9 +75,10 @@ class ProductController extends Controller
             'images',
             'mainImage',
 
+            // HIỂN THỊ TẤT CẢ BIẾN THỂ
             'variants' => function ($q) {
                 $q->where('is_active', 1)
-                    ->where('stock_quantity', '>', 0)
+                    ->orderBy('id')
                     ->with('images');
             },
 

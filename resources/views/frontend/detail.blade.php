@@ -5,7 +5,10 @@
 @section('content')
 @php
     $hasVariants = $product->variants->count() > 0;
-    $defaultVariant = $hasVariants ? $product->variants->first() : null;
+
+    // Variant mặc định: ưu tiên còn hàng
+    $defaultVariant = $product->variants->firstWhere('stock_quantity', '>', 0)
+                        ?? $product->variants->first();
 @endphp
 
 <style>
@@ -13,7 +16,26 @@
 .thumb-img{width:100%;aspect-ratio:1/1;object-fit:contain;background:#fff;cursor:pointer;transition:.2s}
 .thumb-img:hover{border:2px solid #0d6efd}
 .thumb-img.active{border:2px solid #dc3545}
+
+.variant-btn{position:relative}
 .variant-btn.active{border:2px solid #dc3545}
+
+/* ===== Variant hết hàng ===== */
+.variant-out{
+    opacity:.5;
+    pointer-events:none;
+}
+.variant-out::after{
+    content:"Hết hàng";
+    position:absolute;
+    top:2px;
+    right:2px;
+    background:#dc3545;
+    color:#fff;
+    font-size:10px;
+    padding:2px 4px;
+    border-radius:3px;
+}
 </style>
 
 <div class="container py-4">
@@ -23,14 +45,12 @@
 <div class="col-md-2">
     <div class="d-flex flex-column gap-2 thumb-wrapper">
 
-        {{-- ảnh sản phẩm --}}
         @foreach($product->images as $img)
             <img src="{{ asset('storage/'.$img->image_path) }}"
                  class="img-thumbnail thumb-img"
                  data-image="{{ asset('storage/'.$img->image_path) }}">
         @endforeach
 
-        {{-- ảnh biến thể --}}
         @foreach($product->variants as $variant)
             @foreach($variant->images as $vImg)
                 <img src="{{ asset('storage/'.$vImg->image_path) }}"
@@ -85,15 +105,17 @@
 
                     $final = $variant->final_price ?? $variant->price;
                     $original = $variant->is_on_sale ? $variant->price : '';
+                    $outOfStock = $variant->stock_quantity <= 0;
                 @endphp
 
                 <button type="button"
-                        class="btn btn-outline-secondary variant-btn"
+                        class="btn btn-outline-secondary variant-btn {{ $outOfStock ? 'variant-out' : '' }}"
                         data-id="{{ $variant->id }}"
                         data-final="{{ $final }}"
                         data-original="{{ $original }}"
                         data-stock="{{ $variant->stock_quantity }}"
-                        data-image="{{ $variantImage ? asset('storage/'.$variantImage->image_path) : $fallback }}">
+                        data-image="{{ $variantImage ? asset('storage/'.$variantImage->image_path) : $fallback }}"
+                        {{ $outOfStock ? 'disabled' : '' }}>
 
                     @if($variantImage)
                         <img src="{{ asset('storage/'.$variantImage->image_path) }}"
@@ -157,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const addForm  = document.getElementById('add-to-cart-form');
     const addBtn   = addForm.querySelector('button');
 
-    // ================= THUMB CLICK =================
+    // ===== THUMB CLICK =====
     document.querySelectorAll('.thumb-img').forEach(img => {
         img.addEventListener('click', () => {
             document.querySelectorAll('.thumb-img')
@@ -174,8 +196,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // ================= VARIANT CLICK =================
-    document.querySelectorAll('.variant-btn').forEach(btn => {
+    // ===== VARIANT CLICK =====
+    document.querySelectorAll('.variant-btn:not(.variant-out)').forEach(btn => {
         btn.addEventListener('click', () => {
 
             document.querySelectorAll('.variant-btn')
@@ -186,7 +208,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const original = btn.dataset.original;
             const stock = parseInt(btn.dataset.stock);
 
-            // price
             document.getElementById('price-final').innerText =
                 new Intl.NumberFormat('vi-VN').format(final) + 'đ';
 
@@ -198,31 +219,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('price-original').style.display = 'none';
             }
 
-            // stock
             document.getElementById('stock-text').innerText =
                 'Còn ' + stock + ' sản phẩm';
 
             qtyInput.max = stock;
             if (qtyInput.value > stock) qtyInput.value = stock;
 
-            if (stock <= 0) {
-                qtyInput.value = 0;
-                addBtn.disabled = true;
-                addBtn.innerText = 'Hết hàng';
-            } else {
-                if (qtyInput.value == 0) qtyInput.value = 1;
-                addBtn.disabled = false;
-                addBtn.innerHTML = '<i class="bi bi-cart-plus"></i> Thêm vào giỏ';
-            }
+            addBtn.disabled = false;
+            addBtn.innerHTML = '<i class="bi bi-cart-plus"></i> Thêm vào giỏ';
 
             mainImg.src = btn.dataset.image;
             document.getElementById('variant_id').value = btn.dataset.id;
-
-            document.getElementById('variant-error').classList.add('d-none');
         });
     });
 
-    // ================= VALIDATE ADD =================
+    // ===== VALIDATE ADD =====
     addForm.addEventListener('submit', function(e){
         if(!document.getElementById('variant_id').value){
             e.preventDefault();
@@ -230,8 +241,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Auto chọn variant đầu
-    document.querySelector('.variant-btn')?.click();
+    // Auto chọn variant còn hàng đầu tiên
+    const firstAvailable = document.querySelector('.variant-btn:not(.variant-out)');
+    if(firstAvailable){
+        firstAvailable.click();
+    }else{
+        // nếu tất cả hết hàng
+        addBtn.disabled = true;
+        addBtn.innerText = 'Hết hàng';
+        document.getElementById('stock-text').innerText = 'Sản phẩm đã hết hàng';
+    }
+
 });
 </script>
 @endpush

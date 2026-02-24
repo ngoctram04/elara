@@ -7,12 +7,21 @@
 
 <x-breadcrumb :items="[
     ['label' => 'Danh mục', 'url' => route('shop')],
-    ['label' => 'Tất cả sản phẩm']
+    ['label' => request('q') ? 'Kết quả tìm kiếm' : 'Tất cả sản phẩm']
 ]" />
 
 {{-- PAGE BANNER --}}
-<section class="category-banner mb-3">
-    <h1 class="fw-bold text-uppercase">TẤT CẢ SẢN PHẨM</h1>
+<section class="category-banner mb-3 text-center">
+    @if(request('q'))
+        <h1 class="fw-bold">
+            Kết quả cho: "<span class="text-primary">{{ request('q') }}</span>"
+        </h1>
+        <div class="text-muted">
+            Tìm thấy {{ $products->total() }} sản phẩm
+        </div>
+    @else
+        <h1 class="fw-bold text-uppercase">TẤT CẢ SẢN PHẨM</h1>
+    @endif
 </section>
 
 <div class="container">
@@ -22,6 +31,11 @@
 <aside class="col-md-3 mb-4">
 
 <form method="GET" class="sidebar-box">
+
+    {{-- GIỮ TỪ KHÓA SEARCH --}}
+    @if(request('q'))
+        <input type="hidden" name="q" value="{{ request('q') }}">
+    @endif
 
     {{-- giữ sort + limit --}}
     <input type="hidden" name="sort" value="{{ request('sort') }}">
@@ -57,7 +71,6 @@
         </div>
     @endforeach
 
-
     {{-- PRICE --}}
     <div class="sidebar-section">
         <div class="sidebar-title">Khoảng giá</div>
@@ -79,7 +92,6 @@
             Trên 1.000.000đ
         </label>
     </div>
-
 
     {{-- BRAND --}}
     @if($brands->count())
@@ -103,7 +115,6 @@
 </form>
 
 </aside>
-
 
 
 {{-- ================= PRODUCTS ================= --}}
@@ -136,7 +147,6 @@
         </a>
     </div>
 
-
     <div class="toolbar-right">
         <form method="GET">
 
@@ -162,7 +172,6 @@
 </div>
 
 
-
 {{-- PRODUCT GRID --}}
 <div class="row g-4">
     @forelse($products as $product)
@@ -170,8 +179,17 @@
             @include('frontend.partials.product-card-category', ['product'=>$product])
         </div>
     @empty
-        <div class="col-12 text-center text-muted py-5">
-            Không có sản phẩm
+        <div class="col-12 text-center py-5">
+            <i class="bi bi-search fs-1 text-muted"></i>
+            <h5 class="mt-3">
+                Không tìm thấy sản phẩm
+                @if(request('q'))
+                    cho "<strong>{{ request('q') }}</strong>"
+                @endif
+            </h5>
+            <a href="{{ route('shop') }}" class="btn btn-outline-primary mt-3">
+                Xem tất cả sản phẩm
+            </a>
         </div>
     @endforelse
 </div>

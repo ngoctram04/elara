@@ -1,76 +1,84 @@
 @php
-    /**
-     * ✅ BIẾN THỂ ADD TO CART
-     * - LUÔN LẤY BIẾN THỂ ĐẦU TIÊN (THEO BACKEND ORDER)
-     */
-    $addVariant = $product->variants->first();
+    // Đảm bảo luôn có collection
+    $variants = $product->variants ?? collect();
 
-    /**
-     * ✅ BIẾN THỂ HIỂN THỊ GIÁ
-     * - LẤY GIÁ THẤP NHẤT
-     * - ƯU TIÊN final_price NẾU CÓ KHUYẾN MÃI
-     */
-    $priceVariant = $product->variants
+    // Variant còn hàng đầu tiên
+    $addVariant = $variants->first(fn ($v) => $v->stock_quantity > 0);
+
+    // Variant giá thấp nhất
+    $priceVariant = $variants
         ->sortBy(fn ($v) => $v->final_price ?? $v->price)
         ->first();
 
-    /**
-     * ✅ CHỈ CẦN 1 BIẾN THỂ SALE → HIỆN BADGE CHO SẢN PHẨM
-     */
-    $saleVariant = $product->variants->first(fn ($v) => $v->is_on_sale);
+    // Variant có khuyến mãi
+    $saleVariant = $variants->first(fn ($v) => $v->is_on_sale);
+
+    // Hết hàng toàn bộ
+    $outOfStock = !$addVariant;
+
+    // Ảnh chính an toàn
+    $imageUrl = $product->mainImage
+        ? asset('storage/' . $product->mainImage->image_path)
+        : asset('images/no-image.png');
 @endphp
 
-@if ($addVariant && $priceVariant)
+@if ($variants->isNotEmpty() && $priceVariant)
 <div class="category-card h-100 js-category-card"
      data-href="{{ route('products.show', $product->slug) }}">
 
-    {{-- ================= IMAGE ================= --}}
     <div class="category-image">
 
-        {{-- 🔥 BADGE SALE (THEO SẢN PHẨM) --}}
+        {{-- SALE --}}
         @if ($saleVariant)
             <span class="category-badge">
                 {{ $saleVariant->discount_label }}
             </span>
         @endif
 
-        {{-- IMAGE --}}
+        {{-- HẾT HÀNG --}}
+        @if ($outOfStock)
+            <span class="category-badge bg-secondary">
+                Hết hàng
+            </span>
+        @endif
+
         <img
-            src="{{ asset('storage/' . $product->mainImage->image_path) }}"
+            src="{{ $imageUrl }}"
             alt="{{ $product->name }}"
             loading="lazy"
         >
 
-        {{-- OVERLAY --}}
         <div class="category-overlay">
 
-            {{-- 👁 VIEW --}}
+            {{-- VIEW --}}
             <button
                 type="button"
-                class="category-icon left js-go-detail"
-                title="Xem nhanh">
+                class="category-icon left js-go-detail">
                 <i class="bi bi-eye"></i>
             </button>
 
-            {{-- ⚡ BUY --}}
-            <span class="category-buy js-go-detail">
+            {{-- BUY NOW --}}
+            <button
+                type="button"
+                class="category-buy btn-buy-now"
+                data-variant-id="{{ $addVariant?->id }}"
+                {{ $outOfStock ? 'disabled' : '' }}>
                 <i class="bi bi-lightning-charge-fill"></i>
                 Mua ngay
-            </span>
+            </button>
 
-            {{-- 🛒 ADD TO CART – BIẾN THỂ ĐẦU TIÊN --}}
+            {{-- ADD TO CART --}}
             <button
                 type="button"
                 class="category-icon right btn-add-to-cart"
-                data-variant-id="{{ $addVariant->id }}"
-                title="Thêm vào giỏ">
+                data-variant-id="{{ $addVariant?->id }}"
+                {{ $outOfStock ? 'disabled' : '' }}>
                 <i class="bi bi-cart-plus"></i>
             </button>
 
         </div>
     </div>
 
-    {{-- ================= INFO ================= --}}
     <div class="category-info">
 
         <div class="category-title js-go-detail">
@@ -82,26 +90,22 @@
             <span>Đã bán {{ $product->total_sold }}</span>
         </div>
 
-        {{-- ================= PRICE ================= --}}
         <div class="category-price">
-
-            {{-- GIÁ GỐC – CHỈ HIỆN KHI CÓ SALE --}}
             @if ($priceVariant->is_on_sale && $priceVariant->original_price)
                 <span class="old">
                     {{ number_format($priceVariant->original_price, 0, ',', '.') }}đ
                 </span>
             @endif
 
-            {{-- GIÁ HIỂN THỊ = GIÁ THẤP NHẤT --}}
             <span class="new">
                 {{ number_format($priceVariant->final_price ?? $priceVariant->price, 0, ',', '.') }}đ
             </span>
-
         </div>
 
     </div>
 </div>
 @endif
+
 <script>
 document.addEventListener('click', function (e) {
 
@@ -109,7 +113,13 @@ document.addEventListener('click', function (e) {
     const addBtn = e.target.closest('.btn-add-to-cart');
     if (addBtn) {
         e.preventDefault();
-        e.stopPropagation();
+        e.stopImmediatePropagation();
+
+        const variantId = addBtn.dataset.variantId;
+        if (!variantId) {
+            showCenterNotify('Sản phẩm đã hết hàng', 'error');
+            return;
+        }
 
         fetch("{{ route('cart.add') }}", {
             method: "POST",
@@ -119,7 +129,7 @@ document.addEventListener('click', function (e) {
                 "X-CSRF-TOKEN": "{{ csrf_token() }}"
             },
             body: new URLSearchParams({
-                variant_id: addBtn.dataset.variantId,
+                variant_id: variantId,
                 quantity: 1
             })
         })
@@ -130,30 +140,60 @@ document.addEventListener('click', function (e) {
                 return;
             }
 
-            addBtn.classList.add('text-success');
-            setTimeout(() => addBtn.classList.remove('text-success'), 600);
-            showCenterNotify('Đã thêm sản phẩm vào giỏ hàng');
-        })
-        .catch(() => {
-            showCenterNotify('Lỗi kết nối máy chủ', 'error');
+            showCenterNotify('Đã thêm vào giỏ hàng');
         });
 
         return;
     }
 
-    // VIEW / BUY
+    // BUY NOW
+    const buyBtn = e.target.closest('.btn-buy-now');
+    if (buyBtn) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+
+        const variantId = buyBtn.dataset.variantId;
+        if (!variantId) {
+            showCenterNotify('Sản phẩm đã hết hàng', 'error');
+            return;
+        }
+
+        fetch("{{ route('checkout.buyNow') }}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "application/json",
+                "X-CSRF-TOKEN": "{{ csrf_token() }}"
+            },
+            body: new URLSearchParams({
+                variant_id: variantId
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (!data.success) {
+                showCenterNotify(data.message || 'Không thể mua sản phẩm', 'error');
+                return;
+            }
+
+            window.location.href = data.redirect;
+        });
+
+        return;
+    }
+
+    // VIEW DETAIL
     const goDetail = e.target.closest('.js-go-detail');
     if (goDetail) {
-        const card = goDetail.closest('.js-category-card, .js-card');
+        const card = goDetail.closest('.js-category-card');
         if (card) window.location.href = card.dataset.href;
         return;
     }
 
     // CLICK CARD
-    const card = e.target.closest('.js-category-card, .js-card');
+    const card = e.target.closest('.js-category-card');
     if (card) {
         window.location.href = card.dataset.href;
     }
-
 });
 </script>

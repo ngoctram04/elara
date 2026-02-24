@@ -18,13 +18,15 @@ class CartController extends Controller
      */
     public function index()
     {
-        /* ======================================
-     * 1. SYNC DB -> SESSION (nếu login)
-     * ====================================== */
+        /* ======================================================
+     * 1. SYNC DB -> SESSION (nếu user đã đăng nhập)
+     * ====================================================== */
         if (Auth::check()) {
+
             $dbItems = Cart::where('user_id', Auth::id())->get();
 
             $sessionCart = [];
+
             foreach ($dbItems as $item) {
                 $sessionCart[$item->variant_id] = [
                     'variant_id' => $item->variant_id,
@@ -35,45 +37,47 @@ class CartController extends Controller
             session()->put('cart', $sessionCart);
         }
 
+        /* ======================================================
+     * 2. LẤY CART TỪ SESSION
+     * ====================================================== */
         $rawCart = session()->get('cart', []);
         $cart = [];
         $total = 0;
         $updatedSession = false;
 
-        /* ======================================
-     * 2. CHỈ LOAD DB KHI CART CÓ ITEM
-     * ====================================== */
+        /* ======================================================
+     * 3. LOAD VARIANTS (chỉ khi cart có item)
+     * ====================================================== */
         if (!empty($rawCart)) {
 
-            // Lấy tất cả variant trong cart
             $variantIds = collect($rawCart)->pluck('variant_id');
 
             $variants = ProductVariant::with([
                 'product.mainImage',
                 'product',
-                'images'
+                'images',
             ])
                 ->whereIn('id', $variantIds)
                 ->get()
                 ->keyBy('id');
 
-            // Load tất cả variants theo product (để dropdown đổi biến thể)
+            // Load tất cả variant theo product (để đổi biến thể)
             $productIds = $variants->pluck('product_id')->unique();
 
             $productVariantsGroup = ProductVariant::whereIn('product_id', $productIds)
                 ->get()
                 ->groupBy('product_id');
 
-            /* ======================================
-         * 3. BUILD CART
-         * ====================================== */
-            foreach ($rawCart as $item) {
+            /* ======================================================
+         * 4. BUILD CART DATA
+         * ====================================================== */
+            foreach ($rawCart as $variantId => $item) {
 
-                $variant = $variants[$item['variant_id']] ?? null;
+                $variant = $variants[$variantId] ?? null;
 
-                // Variant bị xóa
+                // Nếu variant đã bị xóa
                 if (!$variant) {
-                    unset($rawCart[$item['variant_id']]);
+                    unset($rawCart[$variantId]);
                     $updatedSession = true;
                     continue;
                 }
@@ -83,22 +87,31 @@ class CartController extends Controller
 
                 // Nếu tồn kho giảm
                 if ($quantity != $item['quantity']) {
-                    $rawCart[$variant->id]['quantity'] = $quantity;
+                    $rawCart[$variantId]['quantity'] = $quantity;
                     $updatedSession = true;
                 }
 
                 // Hết hàng
                 if ($quantity <= 0) {
-                    unset($rawCart[$variant->id]);
+                    unset($rawCart[$variantId]);
                     $updatedSession = true;
                     continue;
                 }
 
-                $price = $variant->price;
+                // Giá (ưu tiên giá khuyến mãi)
+                $price = $variant->final_price ?? $variant->price;
+                $originalPrice = $variant->price;
+
                 $subTotal = $price * $quantity;
                 $total += $subTotal;
 
                 $productVariants = $productVariantsGroup[$variant->product_id] ?? collect();
+
+                // Ảnh ưu tiên: variant -> product
+                $image =
+                    optional($variant->images->first())->image_path
+                    ?? optional($variant->product->mainImage)->image_path
+                    ?? null;
 
                 $cart[] = [
                     'variant_id' => $variant->id,
@@ -106,36 +119,37 @@ class CartController extends Controller
                     'slug'       => $variant->product->slug,
                     'name'       => $variant->product->name,
                     'variant'    => $variant->attribute_value,
-                    'price'      => $price,
-                    'quantity'   => $quantity,
-                    'sub_total'  => $subTotal,
-                    'stock'      => $stock,
-                    'variants'   => $productVariants,
 
-                    'image' => $variant->images->first()->image_path
-                        ?? $variant->product->mainImage->image_path
-                        ?? null,
+                    'price'          => $price,
+                    'original_price' => $originalPrice,
+
+                    'quantity'  => $quantity,
+                    'sub_total' => $subTotal,
+                    'stock'     => $stock,
+
+                    'variants' => $productVariants,
+                    'image'    => $image,
                 ];
             }
 
-            // Update lại session nếu có thay đổi
+            // Cập nhật lại session nếu có thay đổi
             if ($updatedSession) {
                 session()->put('cart', $rawCart);
             }
         }
 
-        /* ======================================
-     * 4. SẢN PHẨM GỢI Ý (LUÔN CÓ)
-     * ====================================== */
+        /* ======================================================
+     * 5. SẢN PHẨM GỢI Ý
+     * ====================================================== */
         $suggestProducts = Product::with('mainImage')
         ->where('is_active', 1)
         ->inRandomOrder()
             ->take(4)
             ->get();
 
-        /* ======================================
-     * 5. RETURN VIEW
-     * ====================================== */
+        /* ======================================================
+     * 6. RETURN VIEW
+     * ====================================================== */
         return view('frontend.cart.index', [
             'cart' => $cart,
             'total' => $total,
@@ -151,8 +165,10 @@ class CartController extends Controller
      */
     public function add(Request $request)
     {
-        $qty = $request->input('qty', $request->input('quantity'));
-
+        /* ==============================
+     * 1. LẤY SỐ LƯỢNG (tương thích mọi form)
+     * ============================== */
+        $qty = $request->input('qty', $request->input('quantity', 1));
         $request->merge(['qty' => $qty]);
 
         $request->validate([
@@ -160,50 +176,86 @@ class CartController extends Controller
             'qty'        => 'required|integer|min:1',
         ]);
 
-        $variant = ProductVariant::findOrFail($request->variant_id);
-        $qty = (int) $request->qty;
+        /* ==============================
+     * 2. ÉP KIỂU (QUAN TRỌNG – TRÁNH TRÙNG KEY)
+     * ============================== */
+        $variantId = (int) $request->variant_id;
+        $qty       = (int) $request->qty;
 
-        if ($variant->stock_quantity < $qty) {
-            return $this->responseError('Không đủ tồn kho', $request);
+        $variant = ProductVariant::findOrFail($variantId);
+
+        /* ==============================
+     * 3. KIỂM TRA TỒN KHO
+     * ============================== */
+        if ($variant->stock_quantity <= 0) {
+            return $this->responseError('Sản phẩm đã hết hàng', $request);
         }
 
+        /* ==============================
+     * 4. LẤY SESSION CART
+     * ============================== */
         $cart = session()->get('cart', []);
 
-        if (isset($cart[$variant->id])) {
+        // Đảm bảo key là integer
+        $cart = collect($cart)->mapWithKeys(function ($item) {
+            return [(int)$item['variant_id'] => [
+                'variant_id' => (int)$item['variant_id'],
+                'quantity'   => (int)$item['quantity']
+            ]];
+        })->toArray();
 
-            $newQty = $cart[$variant->id]['quantity'] + $qty;
+        /* ==============================
+     * 5. GỘP NẾU ĐÃ CÓ
+     * ============================== */
+        if (isset($cart[$variantId])) {
 
-            if ($variant->stock_quantity < $newQty) {
+            $newQty = $cart[$variantId]['quantity'] + $qty;
+
+            if ($newQty > $variant->stock_quantity) {
                 return $this->responseError('Vượt quá tồn kho', $request);
             }
 
-            $cart[$variant->id]['quantity'] = $newQty;
-
+            $cart[$variantId]['quantity'] = $newQty;
         } else {
 
-            $cart[$variant->id] = [
-                'variant_id' => $variant->id,
+            if ($qty > $variant->stock_quantity) {
+                return $this->responseError('Không đủ tồn kho', $request);
+            }
+
+            $cart[$variantId] = [
+                'variant_id' => $variantId,
                 'quantity'   => $qty,
             ];
         }
 
+        /* ==============================
+     * 6. LƯU SESSION
+     * ============================== */
         session()->put('cart', $cart);
 
-        // Sync DB
+        /* ==============================
+     * 7. SYNC DB (nếu login)
+     * ============================== */
         if (Auth::check()) {
             Cart::updateOrCreate(
                 [
                     'user_id'    => Auth::id(),
-                    'variant_id' => $variant->id,
+                    'variant_id' => $variantId,
                 ],
                 [
-                    'quantity' => $cart[$variant->id]['quantity']
+                    'quantity' => $cart[$variantId]['quantity']
                 ]
             );
         }
 
+        /* ==============================
+     * 8. ĐẾM TỔNG SỐ LƯỢNG
+     * ============================== */
         $cartCount = collect($cart)->sum('quantity');
 
+        /* ==============================
+     * 9. RESPONSE
+     * ============================== */
         if ($request->ajax() || $request->expectsJson()) {
             return response()->json([
                 'success'    => true,
@@ -269,24 +321,40 @@ class CartController extends Controller
 
         $cart = session()->get('cart', []);
 
+        /* ==========================
+       KIỂM TRA TỒN TẠI
+    ========================== */
         if (!isset($cart[$request->old_variant_id])) {
-            return response()->json(['success' => false], 404);
+            return response()->json([
+                'success' => false,
+                'message' => 'Sản phẩm không tồn tại trong giỏ'
+            ], 404);
         }
 
         $oldQty = $cart[$request->old_variant_id]['quantity'];
 
-        // Lấy variant mới
-        $variant = ProductVariant::findOrFail($request->new_variant_id);
+        /* ==========================
+       LOAD VARIANT
+    ========================== */
+        $variant = ProductVariant::with(['images', 'product.mainImage'])
+        ->findOrFail($request->new_variant_id);
 
-        /* ===== FIX QUAN TRỌNG =====
-       Không cho vượt tồn kho
-    */
+        if ($variant->stock_quantity <= 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Biến thể đã hết hàng'
+            ]);
+        }
+
+        /* ==========================
+       TÍNH SỐ LƯỢNG MỚI
+    ========================== */
         $qty = min($oldQty, $variant->stock_quantity);
 
         // Xóa variant cũ
         unset($cart[$request->old_variant_id]);
 
-        // Nếu variant mới đã tồn tại → cộng nhưng vẫn giới hạn stock
+        // Nếu variant mới đã tồn tại → gộp
         if (isset($cart[$request->new_variant_id])) {
             $qty = min(
                 $cart[$request->new_variant_id]['quantity'] + $qty,
@@ -294,6 +362,7 @@ class CartController extends Controller
             );
         }
 
+        // Lưu lại session
         $cart[$request->new_variant_id] = [
             'variant_id' => $request->new_variant_id,
             'quantity'   => $qty,
@@ -301,35 +370,48 @@ class CartController extends Controller
 
         session()->put('cart', $cart);
 
-        /* ===== SYNC DB ===== */
+        /* ==========================
+       SYNC DB
+    ========================== */
         if (Auth::check()) {
+
+            // Xóa variant cũ
             Cart::where('user_id', Auth::id())
                 ->where('variant_id', $request->old_variant_id)
                 ->delete();
 
+            // Cập nhật variant mới
             Cart::updateOrCreate(
                 [
-                    'user_id' => Auth::id(),
+                    'user_id'    => Auth::id(),
                     'variant_id' => $request->new_variant_id,
                 ],
-                ['quantity' => $qty]
+                [
+                    'quantity' => $qty
+                ]
             );
         }
-// Load ảnh
-$variant->load(['images', 'product.mainImage']);
 
-$image = $variant->images->first()->image_path
-    ?? $variant->product->mainImage->image_path
-    ?? null;
+        /* ==========================
+       DỮ LIỆU TRẢ VỀ AJAX
+    ========================== */
+        $image = $variant->images->first()->image_path
+            ?? $variant->product->mainImage->image_path
+            ?? null;
 
-return response()->json([
-    'success' => true,
-    'price'   => $variant->price,
-    'stock'   => $variant->stock_quantity,
-    'quantity'=> $qty,
-    'variant' => $variant->attribute_value,
-    'image'   => $image
-]);
+        $price = $variant->final_price ?? $variant->price;
+        $originalPrice = $variant->price;
+
+        return response()->json([
+            'success'        => true,
+            'new_id'         => $variant->id,          // quan trọng để update row
+            'price'          => $price,
+            'original_price' => $originalPrice,        // ⭐ để hiển thị giá gốc
+            'stock'          => $variant->stock_quantity,
+            'quantity'       => $qty,
+            'variant'        => $variant->attribute_value,
+            'image'          => $image
+        ]);
     }
 
 
