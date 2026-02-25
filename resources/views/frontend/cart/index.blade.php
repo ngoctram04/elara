@@ -26,6 +26,9 @@
 <table class="table align-middle cart-table mb-0">
 <thead>
 <tr>
+<th width="40">
+    <input type="checkbox" id="check-all">
+</th>
 <th>Sản phẩm</th>
 <th width="140">Đơn giá</th>
 <th width="150">Biến thể</th>
@@ -38,6 +41,12 @@
 <tbody>
 @foreach($cart as $item)
 <tr data-row="{{ $item['variant_id'] }}">
+
+<td>
+    <input type="checkbox"
+       class="js-check-item"
+       value="{{ $item['variant_id'] }}">
+</td>
 
 <td>
 <div class="d-flex gap-3 align-items-center">
@@ -140,44 +149,67 @@ data-id="{{ $item['variant_id'] }}">
 </table>
 </div>
 </div>
-
 {{-- TOTAL --}}
 <div class="cart-total-card shadow-sm rounded-3 mt-4 p-4 bg-white sticky-total">
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
 
-<div>
-<a href="{{ route('shop') }}" class="btn btn-outline-secondary mb-2">
-← Tiếp tục mua hàng
-</a>
+    {{-- LEFT --}}
+    <div class="d-flex align-items-center gap-3 flex-wrap">
 
-<div class="text-muted small">
-Tổng sản phẩm:
-<strong class="js-count">
-{{ collect($cart)->sum('quantity') }}
-</strong>
+        <a href="{{ route('shop') }}" class="btn btn-outline-secondary">
+            ← Tiếp tục mua hàng
+        </a>
+
+        <div class="text-muted small">
+            Tổng sản phẩm:
+            <strong class="js-count">
+                {{ collect($cart)->sum('quantity') }}
+            </strong>
+        </div>
+
+    </div>
+
+    {{-- RIGHT (Voucher + Total + Checkout) --}}
+    <div class="d-flex align-items-center gap-4 flex-wrap">
+
+        {{-- VOUCHER (nằm bên trái nút Thanh toán) --}}
+        <div class="text-end">
+            <button class="btn btn-outline-primary btn-sm"
+                data-bs-toggle="modal"
+                data-bs-target="#voucherModal">
+                🎟 Chọn mã
+            </button>
+
+            <div class="small text-success mt-1 d-none" id="voucher-applied"></div>
+        </div>
+
+        {{-- TOTAL --}}
+        <div class="text-end">
+            <div class="text-muted small">Tổng tiền</div>
+            <div class="total-price js-total"
+                 data-value="{{ $total }}">
+                {{ number_format($total) }}đ
+            </div>
+        </div>
+
+        {{-- CHECKOUT --}}
+        <form id="checkout-form"
+              action="{{ route('checkout.fromCart') }}"
+              method="POST"
+              class="d-flex align-items-center">
+            @csrf
+            <div id="selected-items"></div>
+            <input type="hidden" name="promotion_code" id="promotion-code-hidden">
+
+            <button class="btn btn-success btn-lg px-5 fw-bold">
+                Thanh toán
+            </button>
+        </form>
+
+    </div>
+
 </div>
 </div>
-
-<div class="text-end">
-<h4 class="mb-2">
-Tổng tiền:
-<span class="total-price js-total"
-data-value="{{ $total }}">
-{{ number_format($total) }}đ
-</span>
-</h4>
-
-<form action="{{ route('checkout.fromCart') }}" method="POST">
-    @csrf
-    <button class="btn btn-success btn-lg px-5 fw-bold">
-        Thanh toán
-    </button>
-</form>
-</div>
-
-</div>
-</div>
-
 @endif
 
 
@@ -223,7 +255,34 @@ data-value="{{ $total }}">
     flex-shrink:0;        /* không bị co khi flex */
     transition:0.2s;
 }
+.total-price{
+    color:#0d6efd;
+    font-size:26px;
+    font-weight:700;
+    white-space:nowrap;
+}
 
+#voucher-applied{
+    font-weight:500;
+}
+.voucher-mini{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    padding:8px 14px;
+    border:1px solid #dee2e6;
+    border-radius:8px;
+    background:#f8f9fa;
+    cursor:pointer;
+    font-size:14px;
+    transition:0.2s;
+}
+
+.voucher-mini:hover{
+    border-color:#0d6efd;
+    background:#eef5ff;
+    color:#0d6efd;
+}
 .cart-img:hover{
     transform:scale(1.05);
 }
@@ -273,7 +332,45 @@ select option:disabled{
 
 .suggest-img{height:180px;object-fit:cover;}
 </style>
+{{-- ================= MODAL VOUCHER ================= --}}
+<div class="modal fade" id="voucherModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
 
+            <div class="modal-header">
+                <h5 class="modal-title">Chọn voucher</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                @if(!empty($availablePromotions) && count($availablePromotions))
+                    @foreach($availablePromotions as $promo)
+                        <div class="voucher-item border rounded-3 p-3 mb-2"
+                             data-code="{{ $promo->code }}"
+                             style="cursor:pointer">
+
+                            <div class="fw-semibold text-danger">
+                                {{ $promo->name }}
+                            </div>
+
+                            <div class="small text-muted">
+                                Mã: {{ $promo->code }}
+                            </div>
+
+                        </div>
+                    @endforeach
+                @else
+                    <div class="text-muted text-center">
+                        Không có voucher khả dụng
+                    </div>
+                @endif
+
+            </div>
+
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('scripts')
@@ -282,23 +379,83 @@ const money = n => new Intl.NumberFormat('vi-VN').format(n) + 'đ';
 
 /* ================= TOTAL ================= */
 function recalcTotal(){
-    let total = 0, count = 0;
+    let total = 0;
+    let count = 0;
 
-    document.querySelectorAll('.js-subtotal').forEach(el=>{
-        total += Number(el.dataset.value || 0);
+    document.querySelectorAll('.js-check-item:checked').forEach(cb=>{
+        const id = cb.value;
+        const row = document.querySelector(`tr[data-row="${id}"]`);
+        if(!row) return;
+
+        const sub = row.querySelector('.js-subtotal');
+        const qty = row.querySelector('.js-qty');
+
+        total += Number(sub?.dataset.value || 0);
+        count += Number(qty?.value || 0);
     });
 
-    document.querySelectorAll('.js-qty').forEach(el=>{
-        count += Number(el.value || 0);
-    });
-
+    // ===== Cập nhật tổng tiền =====
     const totalEl = document.querySelector('.js-total');
-    if(totalEl) totalEl.innerText = money(total);
+    if(totalEl){
+        totalEl.innerText = money(total);
+        totalEl.dataset.value = total; // lưu tổng gốc (quan trọng cho voucher)
+    }
 
+    // ===== Cập nhật tổng sản phẩm =====
     const countEl = document.querySelector('.js-count');
-    if(countEl) countEl.innerText = count;
-}
+    if(countEl){
+        countEl.innerText = count;
+    }
 
+    // ===== RESET VOUCHER khi giỏ thay đổi =====
+    if(typeof appliedCode !== 'undefined' && appliedCode){
+
+        appliedCode = null;
+        originalTotal = null;
+
+        // Reset hiển thị voucher
+        const voucherText = document.getElementById('voucher-text');
+        if(voucherText){
+            voucherText.innerText = 'Chọn hoặc nhập mã';
+        }
+
+        // Ẩn dòng "đã áp dụng"
+        const appliedBox = document.getElementById('voucher-applied');
+        if(appliedBox){
+            appliedBox.classList.add('d-none');
+            appliedBox.innerText = '';
+        }
+
+        // Xóa mã gửi sang checkout
+        const hidden = document.getElementById('promotion-code-hidden');
+        if(hidden){
+            hidden.value = '';
+        }
+    }
+}
+/* ================= CHECK ALL ================= */
+document.getElementById('check-all')?.addEventListener('change', function(){
+    document.querySelectorAll('.js-check-item').forEach(cb=>{
+        cb.checked = this.checked;
+    });
+    recalcTotal();
+});
+/* ================= CHECK ITEM ================= */
+document.addEventListener('change', function(e){
+    if(e.target.classList.contains('js-check-item')){
+
+        const allItems = document.querySelectorAll('.js-check-item');
+        const checkedItems = document.querySelectorAll('.js-check-item:checked');
+        const checkAll = document.getElementById('check-all');
+
+        // Đồng bộ checkbox trên cùng
+        if(checkAll){
+            checkAll.checked = allItems.length === checkedItems.length;
+        }
+
+        recalcTotal();
+    }
+});
 /* ================= UPDATE QTY SERVER ================= */
 function updateQty(id, qty){
     fetch("{{ route('cart.changeQty') }}",{
@@ -498,6 +655,10 @@ document.querySelectorAll('.js-change-variant').forEach(select=>{
             // Update ID chuẩn theo server
             row.dataset.row = newIdServer;
             select.dataset.old = newIdServer;
+            const checkbox = row.querySelector('.js-check-item');
+if(checkbox){
+    checkbox.value = newIdServer;
+}
 
             const input = row.querySelector('.js-qty');
             input.value = qty;
@@ -562,6 +723,134 @@ if(priceCol){
             recalcTotal();
         });
     };
+});
+/* ================= SUBMIT CHECKED ITEMS ================= */
+document.getElementById('checkout-form')?.addEventListener('submit', function(e){
+
+    const container = document.getElementById('selected-items');
+    container.innerHTML = '';
+
+    const checked = document.querySelectorAll('.js-check-item:checked');
+
+    if(checked.length === 0){
+        e.preventDefault();
+        alert('Vui lòng chọn sản phẩm để thanh toán');
+        return;
+    }
+
+    checked.forEach(cb=>{
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'variant_ids[]';
+        input.value = cb.value;
+        container.appendChild(input);
+    });
+});
+/* ================= INIT ================= */
+document.addEventListener('DOMContentLoaded', function(){
+
+    // Mặc định không chọn gì
+    document.querySelectorAll('.js-check-item').forEach(cb=>{
+        cb.checked = false;
+    });
+
+    const checkAll = document.getElementById('check-all');
+    if(checkAll) checkAll.checked = false;
+
+    recalcTotal();
+});
+/* ================= VOUCHER ================= */
+
+let appliedCode = null;
+let originalTotal = null;
+
+function applyVoucher(code){
+
+    const totalEl = document.querySelector('.js-total');
+    if(!totalEl){
+        alert('Không tìm thấy tổng tiền');
+        return;
+    }
+
+    // Tổng gốc hiện tại (luôn lấy từ dataset)
+    const total = Number(totalEl.dataset.value || 0);
+
+    if(total <= 0){
+        alert('Vui lòng chọn sản phẩm trước khi áp dụng voucher');
+        return;
+    }
+
+    fetch("{{ route('cart.applyPromotion') }}",{
+        method:'POST',
+        headers:{
+            'X-CSRF-TOKEN':'{{ csrf_token() }}',
+            'Content-Type':'application/json'
+        },
+        body:JSON.stringify({
+            code: code,
+            total: total
+        })
+    })
+    .then(res => res.json())
+    .then(res => {
+
+        if(!res.success){
+            alert(res.message || 'Mã không hợp lệ');
+            return;
+        }
+
+        appliedCode = code;
+
+        // ===== QUAN TRỌNG =====
+        // Chỉ hiển thị tổng sau giảm
+        // KHÔNG ghi đè dataset.value (giữ tổng gốc)
+        totalEl.innerText = money(res.final_total);
+
+        // Hiển thị mã đã chọn
+        const voucherText = document.getElementById('voucher-text');
+        if(voucherText){
+            voucherText.innerText = code;
+        }
+
+        // Hiển thị thông tin giảm
+        const box = document.getElementById('voucher-applied');
+        if(box){
+            box.innerText = `Đã áp dụng: ${res.name} (-${money(res.discount)})`;
+            box.classList.remove('d-none');
+        }
+
+        // Lưu mã vào form checkout
+        const hidden = document.getElementById('promotion-code-hidden');
+        if(hidden){
+            hidden.value = code;
+        }
+
+        // Đóng modal
+        const modalEl = document.getElementById('voucherModal');
+        if(modalEl){
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            modal?.hide();
+        }
+    })
+    .catch(()=>{
+        alert('Có lỗi xảy ra, vui lòng thử lại');
+    });
+}
+/* ===== CLICK VOUCHER (ổn định cho modal) ===== */
+document.addEventListener('click', function(e){
+    const item = e.target.closest('.voucher-item');
+    if(item){
+        const code = item.dataset.code;
+        applyVoucher(code);
+    }
+});
+document.getElementById('btn-apply-voucher')?.addEventListener('click', ()=>{
+    const code = document.getElementById('voucher-code').value.trim();
+    if(!code){
+        alert('Nhập mã khuyến mãi');
+        return;
+    }
+    applyVoucher(code);
 });
 </script>
 @endpush

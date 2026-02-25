@@ -8,7 +8,7 @@ use App\Models\ProductVariant;
 use App\Models\Cart;
 use App\Models\Product;
 use Illuminate\Support\Facades\Auth;
-
+use App\Models\Promotion;
 class CartController extends Controller
 {
     /**
@@ -46,7 +46,7 @@ class CartController extends Controller
         $updatedSession = false;
 
         /* ======================================================
-     * 3. LOAD VARIANTS (chỉ khi cart có item)
+     * 3. LOAD VARIANTS
      * ====================================================== */
         if (!empty($rawCart)) {
 
@@ -75,7 +75,7 @@ class CartController extends Controller
 
                 $variant = $variants[$variantId] ?? null;
 
-                // Nếu variant đã bị xóa
+                // Variant bị xóa
                 if (!$variant) {
                     unset($rawCart[$variantId]);
                     $updatedSession = true;
@@ -98,7 +98,7 @@ class CartController extends Controller
                     continue;
                 }
 
-                // Giá (ưu tiên giá khuyến mãi)
+                // Giá
                 $price = $variant->final_price ?? $variant->price;
                 $originalPrice = $variant->price;
 
@@ -132,7 +132,7 @@ class CartController extends Controller
                 ];
             }
 
-            // Cập nhật lại session nếu có thay đổi
+            // Update session nếu có thay đổi
             if ($updatedSession) {
                 session()->put('cart', $rawCart);
             }
@@ -148,12 +148,29 @@ class CartController extends Controller
             ->get();
 
         /* ======================================================
-     * 6. RETURN VIEW
+     * 6. VOUCHER KHẢ DỤNG (QUAN TRỌNG)
+     * ====================================================== */
+        $availablePromotions = Promotion::where('is_active', 1)
+        ->where('type', 'order') // chỉ voucher đơn hàng
+        ->where(function ($q) {
+            $q->whereNull('start_date')
+            ->orWhere('start_date', '<=', now());
+        })
+            ->where(function ($q) {
+                $q->whereNull('end_date')
+                ->orWhere('end_date', '>=', now());
+            })
+            ->orderByDesc('discount_value')
+            ->get();
+
+        /* ======================================================
+     * 7. RETURN VIEW
      * ====================================================== */
         return view('frontend.cart.index', [
             'cart' => $cart,
             'total' => $total,
-            'suggestProducts' => $suggestProducts
+            'suggestProducts' => $suggestProducts,
+            'availablePromotions' => $availablePromotions, // ⭐ thêm dòng này
         ]);
     }
 
@@ -464,4 +481,106 @@ class CartController extends Controller
 
         return back()->withErrors(['qty' => $message]);
     }
+    /* ============================
+ * ÁP DỤNG VOUCHER
+ * ============================ */
+    public function applyPromotion(Request $request)
+    {
+        $request->validate([
+            'code'  => 'required|string',
+            'total' => 'required|numeric|min:0'
+        ]);
+
+        $promotion = Promotion::where('code',
+            $request->code
+        )
+        ->where('is_active', 1)
+            ->where('type', 'order')
+            ->where(function ($q) {
+                $q->whereNull('start_date')
+                ->orWhere('start_date', '<=', now());
+            })
+            ->where(function ($q) {
+                $q->whereNull('end_date')
+                    ->orWhere('end_date', '>=', now());
+            })
+            ->first();
+
+        // ===== Không tồn tại / hết hạn =====
+        if (!$promotion) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Mã không hợp lệ hoặc đã hết hạn'
+            ]);
+        }
+
+        /**
+         * ======================================
+         * CHẶN KHI HẾT LƯỢT (QUAN TRỌNG)
+         * ======================================
+         */
+        if (
+            $promotion->usage_limit !== null &&
+            $promotion->used_count >= $promotion->usage_limit
+        ) {
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Mã đã hết lượt sử dụng'
+            ]);
+        }
+
+        $total = (float) $request->total;
+
+        /* ===== Đơn tối thiểu ===== */
+        $minimum = (float) ($promotion->min_order_value ?? 0);
+
+        if ($minimum > 0 && $total < $minimum) {
+            $needMore = $minimum - $total;
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Đơn tối thiểu ' . number_format($minimum) . 'đ. '
+                . 'Mua thêm ' . number_format($needMore) . 'đ để áp dụng.'
+            ]);
+        }
+
+        /* ===== Tính giảm ===== */
+        $value = (float) $promotion->discount_value;
+
+        if ($promotion->discount_type === 'percent') {
+            $discount = $total * ($value / 100);
+        } else {
+            $discount = $value;
+        }
+
+        /* ===== Giảm tối đa ===== */
+        if (!empty($promotion->max_discount)) {
+            $discount = min($discount, $promotion->max_discount);
+        }
+
+        $discount = min($discount, $total);
+        $discount = round($discount);
+        $finalTotal = round($total - $discount);
+
+        /**
+         * ======================================
+         * LƯU SESSION ĐỂ CHECKOUT DÙNG
+         * ======================================
+         */
+        session([
+            'promotion_code'     => $promotion->code,
+            'promotion_discount' => $discount,
+            'promotion_name'     => $promotion->name,
+        ]);
+
+        return response()->json([
+            'success'     => true,
+            'name'        => $promotion->name,
+            'code'        => $promotion->code,
+            'discount'    => $discount,
+            'final_total' => $finalTotal
+        ]);
+    }
+   
 }

@@ -43,13 +43,11 @@ class ProductVariant extends Model
         return $this->belongsTo(Product::class);
     }
 
-    // Tất cả ảnh biến thể
     public function images(): HasMany
     {
         return $this->hasMany(VariantImage::class, 'variant_id');
     }
 
-    // Ảnh chính
     public function mainImage(): HasOne
     {
         return $this->hasOne(VariantImage::class, 'variant_id')
@@ -61,16 +59,28 @@ class ProductVariant extends Model
         return $this->hasMany(PromotionProduct::class, 'variant_id');
     }
 
+    // ⭐ Quan hệ trực tiếp promotion (dùng eager load)
+    public function promotions()
+    {
+        return $this->hasManyThrough(
+            Promotion::class,
+            PromotionProduct::class,
+            'variant_id',      // FK PromotionProduct
+            'id',              // FK Promotion
+            'id',              // local key variant
+            'promotion_id'     // local key PromotionProduct
+        );
+    }
+
     public function stockImports(): HasMany
     {
         return $this->hasMany(StockImport::class, 'variant_id');
     }
 
     /* =====================================================
-        IMAGE ACCESSOR (QUAN TRỌNG)
+        IMAGE
     ===================================================== */
 
-    // Dùng: $variant->image_path
     public function getImagePathAttribute()
     {
         return optional($this->mainImage)->image_path;
@@ -100,19 +110,29 @@ class ProductVariant extends Model
     }
 
     /* =====================================================
-        PROMOTION
+        PROMOTION (OPTIMIZED)
     ===================================================== */
 
     public function activePromotion(): ?Promotion
     {
-        return Promotion::query()
+        // Nếu đã eager load promotions → không query nữa
+        if ($this->relationLoaded('promotions')) {
+            return $this->promotions
+                ->where('type', 'product')
+                ->where('is_active', true)
+                ->where('start_date', '<=', now())
+                ->where('end_date', '>=', now())
+                ->sortByDesc('discount_value')
+                ->first();
+        }
+
+        // Nếu chưa load → query
+        return $this->promotions()
             ->where('type', 'product')
             ->where('is_active', true)
             ->where('start_date', '<=', now())
             ->where('end_date', '>=', now())
-            ->whereHas('promotionProducts', function ($q) {
-                $q->where('variant_id', $this->id);
-            })
+            ->orderByDesc('discount_value')
             ->first();
     }
 

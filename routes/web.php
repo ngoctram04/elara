@@ -79,16 +79,20 @@ Route::prefix('cart')->name('cart.')->group(function () {
     Route::post('/add', [CartController::class, 'add'])->name('add');
 
     Route::post('/change-qty', [CartController::class, 'changeQty'])
-        ->name('changeQty');
+    ->name('changeQty');
 
     Route::post('/change-variant', [CartController::class, 'changeVariant'])
-        ->name('changeVariant');
+    ->name('changeVariant');
 
     Route::delete('/remove/{variantId}', [CartController::class, 'remove'])
-        ->name('remove');
+    ->name('remove');
 
     Route::delete('/clear', [CartController::class, 'clear'])
-        ->name('clear');
+    ->name('clear');
+
+    // ⭐ THÊM Ở ĐÂY
+    Route::post('/apply-promotion', [CartController::class, 'applyPromotion'])
+    ->name('applyPromotion');
 });
 
 
@@ -304,30 +308,39 @@ Route::prefix('admin')
 */
     Route::prefix('promotions')->name('promotions.')->group(function () {
 
-        // CRUD
+        // List
         Route::get('/', [PromotionController::class, 'index'])
         ->name('index');
 
-        Route::get('/create', [PromotionController::class, 'create'])
-            ->name('create');
+        // ⭐ Trang chọn loại (thay cho create)
+        Route::get('/create', [PromotionController::class, 'chooseType'])
+        ->name('create');
 
+        // Form tạo theo loại
+        Route::get('/create-product', [PromotionController::class, 'createProduct'])
+        ->name('createProduct');
+
+        Route::get('/create-order', [PromotionController::class, 'createOrder'])
+        ->name('createOrder');
+
+        // Store
         Route::post('/', [PromotionController::class, 'store'])
         ->name('store');
 
+        // Edit
         Route::get('/{promotion}/edit', [PromotionController::class, 'edit'])
         ->name('edit');
 
         Route::put('/{promotion}', [PromotionController::class, 'update'])
         ->name('update');
 
+        // Toggle active
+        Route::patch('/{promotion}/toggle', [PromotionController::class, 'toggle'])
+        ->name('toggle');
+
+        // (Nếu có destroy)
         Route::delete('/{promotion}', [PromotionController::class, 'destroy'])
         ->name('destroy');
-
-        // ⭐ QUAN TRỌNG – bật / tắt khuyến mãi
-        Route::patch(
-            '/{promotion}/toggle',
-            [PromotionController::class, 'toggle']
-        )->name('toggle');
     });
 
     /*

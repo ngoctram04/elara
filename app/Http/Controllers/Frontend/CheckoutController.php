@@ -10,19 +10,20 @@ use App\Models\Cart;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\ProductVariant;
+use App\Models\Promotion;
 class CheckoutController extends Controller
 {
     /**
      * Trang checkout
      */
-
     public function index()
     {
+        $userId = Auth::id();
+
         /**
          * =================================
-         * ƯU TIÊN BUY NOW
+         * 1. BUY NOW
          * =================================
-         * Chỉ dùng khi session buy_now tồn tại
          */
         if (session()->has('buy_now')) {
 
@@ -33,11 +34,12 @@ class CheckoutController extends Controller
                 'mainImage'
             ])->find($buyNow['variant_id']);
 
-            // Nếu sản phẩm không còn → xóa session
             if (!$variant) {
                 session()->forget('buy_now');
                 return redirect()->route('cart.index');
             }
+
+            $price = $variant->final_price ?? $variant->price;
 
             $carts = collect([
                 (object)[
@@ -46,24 +48,73 @@ class CheckoutController extends Controller
                 ]
             ]);
 
-            $subtotal = $variant->price * $buyNow['quantity'];
+            $subtotal = $price * $buyNow['quantity'];
 
-            return view('frontend.checkout.index', compact('carts', 'subtotal'));
+            // ⭐ LẤY DISCOUNT TỪ SESSION
+            $discount = session('promotion_discount', 0);
+            $total = max(0, $subtotal - $discount);
+
+            return view('frontend.checkout.index', compact(
+                'carts',
+                'subtotal',
+                'discount',
+                'total'
+            ));
         }
 
         /**
          * =================================
-         * CHECKOUT TỪ GIỎ HÀNG
+         * 2. CHECKOUT TỪ CART
          * =================================
          */
+        if (session()->has('checkout_items')) {
 
+            $variantIds = session('checkout_items');
+
+            $carts = Cart::with([
+                'variant:id,product_id,attribute_name,attribute_value,price',
+                'variant.mainImage',
+                'variant.product:id,name'
+            ])
+                ->where('user_id', $userId)
+                ->whereIn('variant_id', $variantIds)
+                ->get();
+
+            if ($carts->isEmpty()) {
+                session()->forget('checkout_items');
+                return redirect()
+                    ->route('cart.index')
+                    ->with('error', 'Không có sản phẩm hợp lệ.');
+            }
+
+            $subtotal = $carts->sum(function ($cart) {
+                $price = $cart->variant->final_price ?? $cart->variant->price;
+                return $price * $cart->quantity;
+            });
+
+            $discount = session('promotion_discount', 0);
+            $total = max(0, $subtotal - $discount);
+
+            return view('frontend.checkout.index', compact(
+                'carts',
+                'subtotal',
+                'discount',
+                'total'
+            ));
+        }
+
+        /**
+         * =================================
+         * 3. FALLBACK (TOÀN BỘ GIỎ)
+         * =================================
+         */
         $carts = Cart::with([
             'variant:id,product_id,attribute_name,attribute_value,price',
             'variant.mainImage',
             'variant.product:id,name'
         ])
-            ->where('user_id', Auth::id())
-            ->get();
+        ->where('user_id', $userId)
+        ->get();
 
         if ($carts->isEmpty()) {
             return redirect()
@@ -72,14 +123,36 @@ class CheckoutController extends Controller
         }
 
         $subtotal = $carts->sum(function ($cart) {
-            return $cart->variant->price * $cart->quantity;
+            $price = $cart->variant->final_price ?? $cart->variant->price;
+            return $price * $cart->quantity;
         });
 
-        return view('frontend.checkout.index', compact('carts', 'subtotal'));
+        $discount = session('promotion_discount', 0);
+        $total = max(0, $subtotal - $discount);
+
+        return view('frontend.checkout.index', compact(
+            'carts',
+            'subtotal',
+            'discount',
+            'total'
+        ));
     }
-    public function fromCart()
+
+    public function fromCart(Request $request)
     {
         session()->forget('buy_now');
+
+        $variantIds = $request->variant_ids ?? [];
+
+        if (empty($variantIds)) {
+            return back()->with('error', 'Vui lòng chọn sản phẩm.');
+        }
+
+        session([
+            'checkout_items' => $variantIds,
+            'promotion_code' => $request->promotion_code // ⭐ QUAN TRỌNG
+        ]);
+
         return redirect()->route('checkout.index');
     }
     public function store(Request $request)
@@ -100,63 +173,69 @@ class CheckoutController extends Controller
             $subtotal = 0;
             $items = collect();
             $isBuyNow = false;
+            $variantIds = [];
 
             /**
              * =================================================
-             * XÁC ĐỊNH NGUỒN CHECKOUT
+             * 1. BUY NOW
              * =================================================
              */
-
-            // Nếu session buy_now tồn tại → dùng mua ngay
             if (session()->has('buy_now')) {
 
                 $buyNow = session('buy_now');
-
                 $variant = ProductVariant::find($buyNow['variant_id']);
 
-                // Nếu variant không tồn tại → bỏ session
                 if (!$variant) {
                     session()->forget('buy_now');
-                } else {
-                    $isBuyNow = true;
-
-                    if ($variant->stock_quantity < $buyNow['quantity']) {
-                        DB::rollBack();
-                        return back()->with('error', 'Sản phẩm không đủ tồn kho.');
-                    }
-
-                    $subtotal = $variant->price * $buyNow['quantity'];
-
-                    $items->push([
-                        'variant'  => $variant,
-                        'quantity' => $buyNow['quantity']
-                    ]);
+                    return back()->with('error', 'Sản phẩm không tồn tại.');
                 }
+
+                $isBuyNow = true;
+
+                if ($variant->stock_quantity < $buyNow['quantity']) {
+                    return back()->with('error', 'Sản phẩm không đủ tồn kho.');
+                }
+
+                $price = $variant->final_price ?? $variant->price;
+
+                $subtotal = $price * $buyNow['quantity'];
+
+                $items->push([
+                    'variant'  => $variant,
+                    'quantity' => $buyNow['quantity'],
+                    'price'    => $price
+                ]);
             }
 
             /**
              * =================================================
-             * NẾU KHÔNG PHẢI BUY NOW → LẤY TỪ GIỎ HÀNG
+             * 2. CHECKOUT TỪ CART
              * =================================================
              */
             if (!$isBuyNow) {
 
-                // Đảm bảo không dùng session cũ
                 session()->forget('buy_now');
+
+                $variantIds = session('checkout_items', []);
+
+                if (empty($variantIds)) {
+                    DB::rollBack();
+                    return back()->with('error', 'Vui lòng chọn sản phẩm để thanh toán.');
+                }
 
                 $carts = Cart::with('variant.product')
                 ->where('user_id', $userId)
+                    ->whereIn('variant_id', $variantIds)
                     ->get();
 
                 if ($carts->isEmpty()) {
                     DB::rollBack();
-                    return back()->with('error', 'Giỏ hàng trống.');
+                    return back()->with('error', 'Không có sản phẩm hợp lệ.');
                 }
 
                 foreach ($carts as $cart) {
 
                     $variant = $cart->variant;
-
                     if (!$variant) continue;
 
                     if ($variant->stock_quantity < $cart->quantity) {
@@ -167,25 +246,92 @@ class CheckoutController extends Controller
                         );
                     }
 
-                    $subtotal += $variant->price * $cart->quantity;
+                    $price = $variant->final_price ?? $variant->price;
+
+                    $subtotal += $price * $cart->quantity;
 
                     $items->push([
                         'variant'  => $variant,
-                        'quantity' => $cart->quantity
+                        'quantity' => $cart->quantity,
+                        'price'    => $price
                     ]);
                 }
             }
 
             /**
              * =================================================
-             * TẠO ORDER
+             * 3. ÁP DỤNG VOUCHER (CÓ GIỚI HẠN LƯỢT)
+             * =================================================
+             */
+            $discount = 0;
+            $promotionCode = $request->promotion_code ?? session('promotion_code');
+            $promotion = null;
+
+            if ($promotionCode) {
+
+                $promotion = Promotion::where('code', $promotionCode)
+                    ->where('is_active', 1)
+                    ->where('type', 'order')
+                    ->where(function ($q) {
+                        $q->whereNull('start_date')
+                        ->orWhere('start_date', '<=', now());
+                    })
+                    ->where(function ($q) {
+                        $q->whereNull('end_date')
+                        ->orWhere('end_date', '>=', now());
+                    })
+                    ->first();
+
+                if ($promotion) {
+
+                    // ===== Kiểm tra giới hạn lượt =====
+                    if (
+                        $promotion->usage_limit !== null &&
+                        $promotion->used_count >= $promotion->usage_limit
+                    ) {
+
+                        $promotionCode = null;
+                        $promotion = null;
+                    }
+                }
+
+                if ($promotion) {
+
+                    $minimum = (float) ($promotion->min_order_value ?? 0);
+
+                    if ($subtotal >= $minimum) {
+
+                        if ($promotion->discount_type === 'percent') {
+                            $discount = $subtotal * ($promotion->discount_value / 100);
+                        } else {
+                            $discount = $promotion->discount_value;
+                        }
+
+                        if (!empty($promotion->max_discount)) {
+                            $discount = min($discount, $promotion->max_discount);
+                        }
+
+                        $discount = min($discount, $subtotal);
+                    } else {
+                        $promotionCode = null;
+                        $promotion = null;
+                    }
+                }
+            }
+
+            $total = $subtotal - $discount;
+
+            /**
+             * =================================================
+             * 4. TẠO ORDER
              * =================================================
              */
             $order = Order::create([
                 'user_id'  => $userId,
-                'subtotal' => $subtotal,
-                'discount' => 0,
-                'total'    => $subtotal,
+                'subtotal' => round($subtotal),
+                'discount' => round($discount),
+                'total'    => round($total),
+                'promotion_code' => $promotionCode,
                 'status'   => Order::STATUS_PENDING,
 
                 'receiver_name'    => $request->receiver_name,
@@ -197,25 +343,30 @@ class CheckoutController extends Controller
                 'payment_status' => Order::PAYMENT_UNPAID,
             ]);
 
+            // ===== Tăng số lượt đã dùng =====
+            if ($promotion) {
+                $promotion->increment('used_count');
+            }
+
             /**
              * =================================================
-             * ORDER ITEMS + TRỪ KHO
+             * 5. ORDER ITEMS + TRỪ KHO
              * =================================================
              */
             foreach ($items as $item) {
 
                 $variant = $item['variant'];
-                $qty = $item['quantity'];
+                $qty     = $item['quantity'];
+                $price   = $item['price'];
 
                 OrderItem::create([
                     'order_id'   => $order->id,
                     'variant_id' => $variant->id,
-                    'price'      => $variant->price,
+                    'price'      => $price,
                     'cost_price' => $variant->cost_price,
                     'quantity'   => $qty,
                 ]);
 
-                // COD trừ kho ngay
                 if ($request->payment_method === 'cod') {
                     $variant->decrement('stock_quantity', $qty);
                 }
@@ -223,20 +374,28 @@ class CheckoutController extends Controller
 
             /**
              * =================================================
-             * DỌN DỮ LIỆU
+             * 6. DỌN SESSION + CART
              * =================================================
              */
-            if ($isBuyNow) {
-                session()->forget('buy_now');
-            } else {
-                Cart::where('user_id', $userId)->delete();
+            session()->forget([
+                'buy_now',
+                'checkout_items',
+                'promotion_code',
+                'promotion_discount',
+                'promotion_name'
+            ]);
+
+            if (!$isBuyNow && !empty($variantIds)) {
+                Cart::where('user_id', $userId)
+                    ->whereIn('variant_id', $variantIds)
+                    ->delete();
             }
 
             DB::commit();
 
             /**
              * =================================================
-             * REDIRECT
+             * 7. REDIRECT
              * =================================================
              */
             if ($request->payment_method === 'vnpay') {
@@ -253,8 +412,17 @@ class CheckoutController extends Controller
     
     public function buyNow(Request $request)
     {
+        $request->validate([
+            'variant_id' => 'required|exists:product_variants,id',
+            'quantity'   => 'nullable|integer|min:1'
+        ]);
+
         $variant = ProductVariant::findOrFail($request->variant_id);
 
+        // Lấy số lượng (mặc định = 1)
+        $qty = (int) ($request->quantity ?? 1);
+
+        // Hết hàng
         if ($variant->stock_quantity <= 0) {
             return response()->json([
                 'success' => false,
@@ -262,21 +430,45 @@ class CheckoutController extends Controller
             ]);
         }
 
-        // Xóa giỏ nếu cần (tránh nhầm)
-        session()->forget('buy_now');
+        // Vượt tồn kho
+        if ($qty > $variant->stock_quantity) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Số lượng vượt quá tồn kho'
+            ]);
+        }
 
+        /**
+         * ==============================
+         * DỌN SESSION CŨ (QUAN TRỌNG)
+         * ==============================
+         */
+        session()->forget([
+            'buy_now',
+            'checkout_items',     // tránh lẫn với cart
+            'promotion_code',     // tránh áp nhầm mã cũ
+            'promotion_discount',
+            'promotion_name'
+        ]);
+
+        /**
+         * ==============================
+         * LƯU BUY NOW
+         * ==============================
+         */
         session([
             'buy_now' => [
                 'variant_id' => $variant->id,
-                'quantity'   => 1
+                'quantity'   => $qty
             ]
         ]);
 
         return response()->json([
-            'success' => true,
+            'success'  => true,
             'redirect' => route('checkout.index')
         ]);
     }
+    
     /**
      * Tạo link thanh toán VNPay
      */

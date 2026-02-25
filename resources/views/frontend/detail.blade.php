@@ -145,7 +145,19 @@
 
 {{-- Title + Wishlist --}}
 
+{{-- TÊN SẢN PHẨM --}}
+    <h4 class="fw-bold mb-2">
+        {{ $product->name }}
+    </h4>
 
+    {{-- GIÁ --}}
+    <div class="mb-3">
+        <div id="price-original"
+             class="text-muted text-decoration-line-through"
+             style="display:none"></div>
+
+        <div id="price-final" class="fs-3 fw-bold text-danger"></div>
+    </div>
 <div class="mb-3">
     <div id="price-original"
          class="text-muted text-decoration-line-through"

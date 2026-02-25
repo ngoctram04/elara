@@ -21,8 +21,13 @@ class PromotionController extends Controller
     }
 
     /* =========================================================
-        CHOOSE TYPE
+        CREATE (Chọn loại)
     ========================================================= */
+    public function create()
+    {
+        return redirect()->route('admin.promotions.choose');
+    }
+
     public function chooseType()
     {
         return view('admin.promotions.choose');
@@ -34,7 +39,21 @@ class PromotionController extends Controller
     public function createProduct()
     {
         $products = Product::with('variants')->get();
-        return view('admin.promotions.create_product', compact('products'));
+
+        // Lấy variant đang có khuyến mãi active
+        $activeVariantIds = PromotionProduct::whereHas('promotion', function ($q) {
+            $q->where('type', 'product')
+                ->where('is_active', true)
+                ->where('start_date', '<=', now())
+                ->where('end_date', '>=', now());
+        })
+            ->pluck('variant_id')
+            ->toArray();
+
+        return view('admin.promotions.create_product', compact(
+            'products',
+            'activeVariantIds'
+        ));
     }
 
     /* =========================================================
@@ -57,7 +76,6 @@ class PromotionController extends Controller
             'start_date'     => 'required|date',
             'end_date'       => 'required|date|after_or_equal:start_date',
 
-            // ORDER ONLY
             'code' => [
                 'nullable',
                 'required_if:type,order',
@@ -79,6 +97,7 @@ class PromotionController extends Controller
             'usage_limit'     => 'nullable|integer|min:1',
         ]);
 
+        // Check trùng KM product
         if (
             $request->type === 'product'
             && $this->hasActiveProductConflict($request)
@@ -127,7 +146,7 @@ class PromotionController extends Controller
     }
 
     /* =========================================================
-        EDIT (CHUẨN – KHÔNG REDIRECT)
+        EDIT
     ========================================================= */
     public function edit(Promotion $promotion)
     {
@@ -136,10 +155,22 @@ class PromotionController extends Controller
             $products = Product::with('variants')->get();
             $selected = $promotion->promotionProducts;
 
+            // Variant đang KM (trừ chính promotion hiện tại)
+            $activeVariantIds = PromotionProduct::whereHas('promotion', function ($q) use ($promotion) {
+                $q->where('type', 'product')
+                    ->where('is_active', true)
+                    ->where('start_date', '<=', now())
+                    ->where('end_date', '>=', now())
+                    ->where('id', '!=', $promotion->id);
+            })
+                ->pluck('variant_id')
+                ->toArray();
+
             return view('admin.promotions.edit_product', compact(
                 'promotion',
                 'products',
-                'selected'
+                'selected',
+                'activeVariantIds'
             ));
         }
 
@@ -219,7 +250,7 @@ class PromotionController extends Controller
     }
 
     /* =========================================================
-        CHECK TRÙNG BIẾN THỂ ĐANG KHUYẾN MÃI
+        CHECK TRÙNG
     ========================================================= */
     private function hasActiveProductConflict(Request $request, Promotion $ignore = null): bool
     {
