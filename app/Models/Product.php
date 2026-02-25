@@ -166,5 +166,34 @@ class Product extends Model
 
         return $price;
     }
+    /* ======================
+    🔥 INVENTORY & SALES (QUAN TRỌNG)
+    - Luôn tính từ variants
+    - Tránh lệch dữ liệu
+====================== */
+
+    /**
+     * Tổng tồn kho = tổng stock của tất cả biến thể
+     */
+    public function getTotalStockAttribute(): int
+    {
+        if ($this->relationLoaded('variants')) {
+            return (int) $this->variants->sum('stock_quantity');
+        }
+
+        return (int) $this->variants()->sum('stock_quantity');
+    }
+
+    /**
+     * Tổng đã bán = tổng sold của tất cả biến thể
+     */
+    public function getTotalSoldAttribute(): int
+    {
+        if ($this->relationLoaded('variants')) {
+            return (int) $this->variants->sum('sold_quantity');
+        }
+
+        return (int) $this->variants()->sum('sold_quantity');
+    }
     
 }

@@ -23,7 +23,15 @@ class Order extends Model
         'note',
         'payment_method',
         'payment_status',
-        'transaction_code', // dùng cho VNPay (nếu có)
+        'transaction_code',
+
+        // Huỷ đơn
+        'cancel_reason',
+        'cancelled_by',            // admin | customer
+        'cancelled_by_user_id',
+
+        // Thời gian giao
+        'delivered_at',
     ];
 
     protected $casts = [
@@ -32,6 +40,7 @@ class Order extends Model
         'total' => 'integer',
         'status' => 'integer',
         'payment_status' => 'integer',
+        'delivered_at' => 'datetime',
     ];
 
     /*
@@ -39,9 +48,9 @@ class Order extends Model
     | ORDER STATUS
     |--------------------------------
     */
-    const STATUS_PENDING    = 1; // Chờ xử lý
+    const STATUS_PENDING    = 1; // Đang xử lý
     const STATUS_PROCESSING = 2; // Đang giao
-    const STATUS_COMPLETED  = 3; // Hoàn thành
+    const STATUS_COMPLETED  = 3; // Đã giao
     const STATUS_CANCELLED  = 4; // Đã huỷ
 
     /*
@@ -49,20 +58,29 @@ class Order extends Model
     | PAYMENT STATUS
     |--------------------------------
     */
-    const PAYMENT_UNPAID = 0; // Chưa thanh toán
-    const PAYMENT_PAID   = 1; // Đã thanh toán
-    const PAYMENT_FAILED = 2; // Thanh toán thất bại
-
+    const PAYMENT_UNPAID = 0;
+    const PAYMENT_PAID   = 1;
+    const PAYMENT_FAILED = 2;
+    const PAYMENT_REFUNDED = 3;
     /*
     |--------------------------------
     | RELATIONSHIPS
     |--------------------------------
     */
+
+    // Người đặt
     public function user()
     {
         return $this->belongsTo(User::class);
     }
 
+    // Người huỷ
+    public function cancelledByUser()
+    {
+        return $this->belongsTo(User::class, 'cancelled_by_user_id');
+    }
+
+    // Sản phẩm trong đơn
     public function items()
     {
         return $this->hasMany(OrderItem::class, 'order_id');
@@ -81,9 +99,9 @@ class Order extends Model
     public function getStatusNameAttribute()
     {
         return match ($this->status) {
-            self::STATUS_PENDING    => 'Chờ xử lý',
+            self::STATUS_PENDING    => 'Đang xử lý',
             self::STATUS_PROCESSING => 'Đang giao',
-            self::STATUS_COMPLETED  => 'Hoàn thành',
+            self::STATUS_COMPLETED  => 'Đã giao',
             self::STATUS_CANCELLED  => 'Đã huỷ',
             default => 'Không xác định',
         };
@@ -117,50 +135,87 @@ class Order extends Model
 
     public function getPaymentStatusNameAttribute()
     {
+        // COD: đã giao = đã thanh toán
+        if ($this->payment_method === 'cod') {
+            return $this->status == self::STATUS_COMPLETED
+                ? 'Đã thanh toán'
+                : 'Chưa thanh toán';
+        }
+
+        // VNPAY
         return match ($this->payment_status) {
-            self::PAYMENT_PAID   => 'Đã thanh toán',
-            self::PAYMENT_FAILED => 'Thanh toán thất bại',
-            default              => 'Chưa thanh toán',
+            self::PAYMENT_PAID     => 'Đã thanh toán',
+            self::PAYMENT_FAILED   => 'Thanh toán thất bại',
+            self::PAYMENT_REFUNDED => 'Đã hoàn tiền',
+            default                => 'Chưa thanh toán',
         };
     }
 
     public function getPaymentStatusBadgeAttribute()
     {
+        // COD
+        if ($this->payment_method === 'cod') {
+            return $this->status == self::STATUS_COMPLETED
+                ? 'success'
+                : 'secondary';
+        }
+
+        // VNPAY
         return match ($this->payment_status) {
-            self::PAYMENT_PAID   => 'success',
-            self::PAYMENT_FAILED => 'danger',
-            default              => 'secondary',
+            self::PAYMENT_PAID     => 'success',
+            self::PAYMENT_FAILED   => 'danger',
+            self::PAYMENT_REFUNDED => 'warning',
+            default                => 'secondary',
         };
     }
 
     /*
     |--------------------------------
-    | HELPERS
+    | HELPERS - ORDER LOGIC
     |--------------------------------
     */
 
-    // Đã thanh toán chưa?
-    public function isPaid()
+    // Có thể huỷ không?
+    public function canCancel()
     {
-        return $this->payment_status == self::PAYMENT_PAID;
+        return $this->status == self::STATUS_PENDING;
     }
 
-    // Thanh toán thất bại?
-    public function isPaymentFailed()
+    // Đã huỷ chưa?
+    public function isCancelled()
     {
-        return $this->payment_status == self::PAYMENT_FAILED;
+        return $this->status == self::STATUS_CANCELLED;
     }
 
-    // Chưa thanh toán?
-    public function isUnpaid()
+    // Đã giao chưa?
+    public function isCompleted()
     {
-        return $this->payment_status == self::PAYMENT_UNPAID;
+        return $this->status == self::STATUS_COMPLETED;
+    }
+
+    // Có thể chuyển trạng thái tiếp không? (Admin)
+    public function canMoveNext()
+    {
+        return in_array($this->status, [
+            self::STATUS_PENDING,
+            self::STATUS_PROCESSING
+        ]);
     }
 
     // Tổng số lượng sản phẩm
     public function getTotalQuantityAttribute()
     {
         return $this->items->sum('quantity');
+    }
+
+    // Hiển thị người huỷ
+    public function getCancelledByNameAttribute()
+    {
+        if (!$this->cancelled_by_user_id) {
+            return null;
+        }
+
+        return $this->cancelledByUser->name ?? null;
     }
 
     /*
@@ -196,5 +251,56 @@ class Order extends Model
     public function scopeUnpaid($query)
     {
         return $query->where('payment_status', self::PAYMENT_UNPAID);
+    }
+    protected static function booted()
+    {
+        static::updating(function ($order) {
+
+            // Kiểm tra status có thay đổi sang CANCELLED không
+            if (
+                $order->isDirty('status') &&
+                $order->status == self::STATUS_CANCELLED
+            ) {
+
+                // Load items nếu chưa load
+                $order->loadMissing('items.variant');
+
+                /*
+            |--------------------------------
+            | 1. HOÀN KHO
+            |--------------------------------
+            */
+                foreach ($order->items as $item) {
+                    if ($item->variant) {
+                        $item->variant->increment('stock_quantity', $item->quantity);
+                    }
+                }
+
+                /*
+            |--------------------------------
+            | 2. VNPAY → HOÀN TIỀN
+            |--------------------------------
+            */
+                if (
+                    $order->payment_method === 'vnpay' &&
+                    $order->payment_status == self::PAYMENT_PAID
+                ) {
+                    $order->payment_status = self::PAYMENT_REFUNDED;
+                }
+            }
+
+            /*
+        |--------------------------------
+        | 3. COD → Khi giao xong = đã thanh toán
+        |--------------------------------
+        */
+            if (
+                $order->payment_method === 'cod' &&
+                $order->isDirty('status') &&
+                $order->status == self::STATUS_COMPLETED
+            ) {
+                $order->payment_status = self::PAYMENT_PAID;
+            }
+        });
     }
 }

@@ -180,77 +180,111 @@
 
 @push('scripts')
 <script>
-/* Preview ảnh phụ */
-document.getElementById('sub_images').addEventListener('change', function () {
-    const wrapper = document.getElementById('image-wrapper');
-    wrapper.innerHTML = '';
+document.addEventListener('DOMContentLoaded', function () {
 
-    [...this.files].forEach(file => {
-        if (!file.type.startsWith('image/')) return;
+    /* =============================
+       Preview ảnh phụ
+    ============================= */
+    const subImagesInput = document.getElementById('sub_images');
+    const imageWrapper = document.getElementById('image-wrapper');
 
-        const reader = new FileReader();
-        reader.onload = e => {
-            wrapper.insertAdjacentHTML('beforeend', `
-                <div class="col-3 mb-2">
-                    <img src="${e.target.result}"
-                         class="img-thumbnail"
-                         style="height:90px;object-fit:cover">
-                </div>
-            `);
-        };
-        reader.readAsDataURL(file);
-    });
-});
+    if (subImagesInput) {
+        subImagesInput.addEventListener('change', function () {
+            imageWrapper.innerHTML = '';
 
-/* Variant */
-let variantIndex = 1;
+            Array.from(this.files).forEach(file => {
+                if (!file.type.startsWith('image/')) return;
 
-document.getElementById('btn-add-variant').addEventListener('click', () => {
-    document.getElementById('variant-wrapper').insertAdjacentHTML('beforeend', `
-        <div class="variant-item border rounded p-3 mb-3">
-            <div class="row g-2">
-                <div class="col-md-5">
-                    <input type="text"
-                           name="variants[${variantIndex}][attribute_value]"
-                           class="form-control"
-                           placeholder="Giá trị"
-                           required>
-                </div>
-
-                <div class="col-md-5">
-                    <input type="number"
-                           name="variants[${variantIndex}][price]"
-                           class="form-control"
-                           placeholder="Giá bán"
-                           min="0"
-                           required>
-                </div>
-
-                <div class="col-md-2">
-                    <input type="file"
-                           name="variants[${variantIndex}][image]"
-                           class="form-control"
-                           accept="image/*">
-                </div>
-            </div>
-
-            <small class="text-muted">
-                Tồn kho nhập tại màn hình Nhập hàng
-            </small>
-
-            <button type="button"
-                    class="btn btn-danger btn-sm mt-2 btn-remove-variant">
-                Xóa
-            </button>
-        </div>
-    `);
-    variantIndex++;
-});
-
-document.addEventListener('click', e => {
-    if (e.target.classList.contains('btn-remove-variant')) {
-        e.target.closest('.variant-item').remove();
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    imageWrapper.insertAdjacentHTML('beforeend', `
+                        <div class="col-3 mb-2">
+                            <img src="${e.target.result}"
+                                 class="img-thumbnail"
+                                 style="height:90px;object-fit:cover">
+                        </div>
+                    `);
+                };
+                reader.readAsDataURL(file);
+            });
+        });
     }
+
+
+    /* =============================
+       VARIANT
+    ============================= */
+
+    const btnAdd = document.getElementById('btn-add-variant');
+    const wrapper = document.getElementById('variant-wrapper');
+
+    // Đếm index theo số hiện tại
+    let variantIndex = wrapper.querySelectorAll('.variant-item').length;
+
+    // Chỉ bind 1 lần (tránh thêm 2 dòng)
+    if (btnAdd && !btnAdd.dataset.bound) {
+        btnAdd.dataset.bound = 'true';
+
+        btnAdd.addEventListener('click', function (e) {
+            e.preventDefault();
+
+            const html = `
+            <div class="variant-item border rounded p-3 mb-3">
+                <div class="row g-2">
+
+                    <div class="col-md-5">
+                        <input type="text"
+                               name="variants[${variantIndex}][attribute_value]"
+                               class="form-control"
+                               placeholder="Giá trị (VD: M, L, Đỏ)"
+                               required>
+                    </div>
+
+                    <div class="col-md-5">
+                        <input type="number"
+                               name="variants[${variantIndex}][price]"
+                               class="form-control"
+                               placeholder="Giá bán"
+                               min="0"
+                               required>
+                    </div>
+
+                    <div class="col-md-2">
+                        <input type="file"
+                               name="variants[${variantIndex}][image]"
+                               class="form-control"
+                               accept="image/*">
+                    </div>
+
+                </div>
+
+                <small class="text-muted">
+                    Tồn kho sẽ được nhập ở màn hình Nhập hàng
+                </small>
+
+                <button type="button"
+                        class="btn btn-danger btn-sm mt-2 btn-remove-variant">
+                    Xóa
+                </button>
+            </div>
+            `;
+
+            wrapper.insertAdjacentHTML('beforeend', html);
+            variantIndex++;
+        });
+    }
+
+
+    /* =============================
+       Xóa variant (event delegation)
+    ============================= */
+    wrapper.addEventListener('click', function (e) {
+        if (e.target.classList.contains('btn-remove-variant')) {
+            const item = e.target.closest('.variant-item');
+            if (item) item.remove();
+        }
+    });
+
 });
 </script>
 @endpush

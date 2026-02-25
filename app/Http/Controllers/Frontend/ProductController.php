@@ -16,6 +16,7 @@ class ProductController extends Controller
     public function show(string $slug)
     {
         $product = Product::with([
+
             /* ẢNH */
             'images',
             'mainImage',
@@ -39,6 +40,13 @@ class ProductController extends Controller
             ->where('slug', $slug)
             ->where('is_active', 1)
             ->firstOrFail();
+
+
+        /* =============================
+           TỔNG ĐÃ BÁN
+           (chỉ tính đơn đã giao)
+        ============================= */
+        $totalSold = $product->variants->sum('sold_quantity');
 
 
         /* =============================
@@ -77,7 +85,8 @@ class ProductController extends Controller
             'product',
             'relatedProducts',
             'favorites',
-            'favoritesCount'
+            'favoritesCount',
+            'totalSold'   // ← thêm biến này
         ));
     }
 

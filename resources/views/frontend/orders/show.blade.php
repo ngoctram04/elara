@@ -8,7 +8,8 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h4 class="fw-bold mb-0">Đơn hàng #{{ $order->id }}</h4>
 
-        @if($order->status == 1)
+        {{-- Chỉ cho huỷ khi pending --}}
+        @if($order->canCancel())
             <form action="{{ route('orders.cancel', $order->id) }}" method="POST"
                   onsubmit="return confirm('Bạn chắc chắn muốn huỷ đơn này?')">
                 @csrf
@@ -39,22 +40,51 @@
 
             <div class="col-md-4">
                 <p class="mb-1 text-muted">Trạng thái</p>
-                <span class="badge 
-                    @if($order->status == 1) bg-warning
-                    @elseif($order->status == 2) bg-info
-                    @elseif($order->status == 3) bg-success
-                    @else bg-danger
-                    @endif">
+                <span class="badge bg-{{ $order->status_badge }}">
                     {{ $order->status_name }}
                 </span>
+
+                {{-- Ngày giao --}}
+                @if($order->isCompleted() && $order->delivered_at)
+                    <br>
+                    <small class="text-muted">
+                        Đã giao: {{ $order->delivered_at->format('d/m/Y H:i') }}
+                    </small>
+                @endif
+
+                {{-- Nếu huỷ --}}
+                @if($order->isCancelled())
+                    <br>
+                    <small class="text-danger">
+                        Huỷ bởi:
+                        {{ $order->cancelled_by == 'admin' ? 'Admin' : 'Khách' }}
+                        @if($order->cancelled_by_name)
+                            ({{ $order->cancelled_by_name }})
+                        @endif
+                    </small>
+
+                    @if($order->cancel_reason)
+                        <br>
+                        <small class="text-muted">
+                            Lý do: {{ $order->cancel_reason }}
+                        </small>
+                    @endif
+                @endif
             </div>
 
             <div class="col-md-4">
-                <p class="mb-1 text-muted">Tổng tiền</p>
-                <b class="text-danger fs-5">
-                    {{ number_format($order->total) }}đ
-                </b>
-            </div>
+    <p class="mb-1 text-muted">Thanh toán</p>
+    <b>{{ $order->payment_method_name }}</b><br>
+
+    <span class="badge bg-{{ $order->payment_status_badge }}">
+        {{ $order->payment_status_name }}
+    </span>
+
+    <p class="mb-1 mt-2 text-muted">Tổng tiền</p>
+    <b class="text-danger fs-5">
+        {{ number_format($order->total) }}đ
+    </b>
+</div>
 
         </div>
     </div>
@@ -98,24 +128,23 @@
             <h6 class="fw-bold mb-3">Thông tin nhận hàng</h6>
 
             <p class="mb-1">
-                <b>Người nhận:</b> 
-                {{ $order->receiver_name ?? 'Chưa cập nhật' }}
+                <b>Người nhận:</b> {{ $order->receiver_name ?? 'Chưa cập nhật' }}
             </p>
 
             <p class="mb-1">
-                <b>SĐT:</b> 
-                {{ $order->receiver_phone ?? 'Chưa cập nhật' }}
+                <b>SĐT:</b> {{ $order->receiver_phone ?? 'Chưa cập nhật' }}
             </p>
 
             <p class="mb-1">
-                <b>Địa chỉ:</b> 
-                {{ $order->receiver_address ?? 'Chưa cập nhật' }}
+                <b>Địa chỉ:</b> {{ $order->receiver_address ?? 'Chưa cập nhật' }}
             </p>
 
             <p class="mb-0">
-                <b>Thanh toán:</b>
-                {{ $order->payment_method == 'cod' ? 'Thanh toán khi nhận hàng' : 'Chuyển khoản' }}
-            </p>
+    <b>Thanh toán:</b> {{ $order->payment_method_name }}
+    <span class="badge bg-{{ $order->payment_status_badge }} ms-2">
+        {{ $order->payment_status_name }}
+    </span>
+</p>
         </div>
     </div>
 
@@ -127,27 +156,35 @@
             <h6 class="fw-bold mb-3">Sản phẩm</h6>
 
             @foreach($order->items as $item)
+
+                @php
+                    $variant = $item->variant;
+                    $product = $variant->product ?? null;
+
+                    $image = optional($variant->mainImage)->image_path
+                        ?? optional($product->mainImage)->image_path;
+
+                    $imageUrl = $image
+                        ? asset('storage/'.$image)
+                        : asset('images/no-image.png');
+                @endphp
+
                 <div class="d-flex justify-content-between align-items-center border-bottom py-3">
 
                     <div class="d-flex align-items-center">
 
-                        {{-- ẢNH VARIANT --}}
-                        <img 
-                            src="{{ $item->variant->mainImage 
-                                    ? asset('storage/' . $item->variant->mainImage->image_path) 
-                                    : asset('images/no-image.png') }}"
-                            width="70"
-                            height="70"
-                            class="rounded me-3"
-                            style="object-fit:cover"
-                        >
+                        <img src="{{ $imageUrl }}"
+                             width="70"
+                             height="70"
+                             class="rounded me-3"
+                             style="object-fit:cover">
 
                         <div>
-                            <b>{{ $item->variant->product->name }}</b><br>
+                            <b>{{ $product->name ?? 'Sản phẩm' }}</b><br>
 
                             <small class="text-muted">
-                                {{ $item->variant->attribute_name }}:
-                                {{ $item->variant->attribute_value }}
+                                {{ $variant->attribute_name ?? '' }}:
+                                {{ $variant->attribute_value ?? '' }}
                                 × {{ $item->quantity }}
                             </small>
                         </div>
@@ -164,10 +201,29 @@
                 </div>
             @endforeach
 
-            {{-- Tổng --}}
-            <div class="d-flex justify-content-between mt-3 fs-5">
-                <b>Tổng cộng</b>
-                <b class="text-danger">{{ number_format($order->total) }}đ</b>
+
+            {{-- Tổng tiền --}}
+            <div class="text-end mt-3">
+
+                <div>
+                    Tạm tính:
+                    <strong>{{ number_format($order->subtotal) }}đ</strong>
+                </div>
+
+                @if($order->discount > 0)
+                    <div class="text-success">
+                        Giảm giá:
+                        - {{ number_format($order->discount) }}đ
+                    </div>
+                @endif
+
+                <div class="fs-5 mt-1">
+                    <b>Tổng cộng:</b>
+                    <b class="text-danger">
+                        {{ number_format($order->total) }}đ
+                    </b>
+                </div>
+
             </div>
 
         </div>

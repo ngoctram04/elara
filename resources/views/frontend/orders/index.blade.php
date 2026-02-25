@@ -18,13 +18,16 @@ body{background:#f5f6fa;}
     border-bottom:1px solid #f0f0f0;
     display:flex;
     justify-content:space-between;
+    align-items:center;
     font-size:14px;
 }
 
-.order-status{
-    font-weight:600;
-    color:#ee4d2d;
-}
+.order-status{font-weight:600;}
+
+.status-1{ color:#f39c12; }
+.status-2{ color:#3498db; }
+.status-3{ color:#2ecc71; }
+.status-4{ color:#e74c3c; }
 
 .order-item{
     display:flex;
@@ -33,9 +36,7 @@ body{background:#f5f6fa;}
     border-bottom:1px solid #f7f7f7;
 }
 
-.order-item:last-child{
-    border-bottom:none;
-}
+.order-item:last-child{border-bottom:none;}
 
 .order-img{
     width:70px;
@@ -45,15 +46,8 @@ body{background:#f5f6fa;}
     border:1px solid #eee;
 }
 
-.order-name{
-    font-weight:600;
-    margin-bottom:4px;
-}
-
-.order-variant{
-    font-size:13px;
-    color:#888;
-}
+.order-name{font-weight:600;margin-bottom:4px;}
+.order-variant{font-size:13px;color:#888;}
 
 .order-price{
     margin-left:auto;
@@ -81,17 +75,6 @@ body{background:#f5f6fa;}
     padding:6px 14px;
     margin-left:6px;
 }
-
-.btn-review{
-    background:#ee4d2d;
-    color:#fff;
-    border:none;
-}
-
-.btn-review:hover{
-    background:#d8431f;
-    color:#fff;
-}
 </style>
 
 <div class="container py-4">
@@ -102,28 +85,54 @@ body{background:#f5f6fa;}
 
 <div class="order-box">
 
-    {{-- HEADER --}}
+    {{-- ================= HEADER ================= --}}
     <div class="order-header">
         <div>
             Mã đơn: <b>#{{ $order->id }}</b> |
             {{ $order->created_at->format('d/m/Y H:i') }}
+
+            {{-- Ngày giao --}}
+            @if($order->isCompleted() && $order->delivered_at)
+                <br>
+                <small class="text-muted">
+                    Đã giao: {{ $order->delivered_at->format('d/m/Y H:i') }}
+                </small>
+            @endif
+
+            {{-- Nếu bị huỷ --}}
+            @if($order->isCancelled())
+    <br>
+    <small class="text-danger">
+        Huỷ bởi:
+        {{ $order->cancelled_by == 'admin' ? 'Admin' : 'Khách' }}
+        @if($order->cancelled_by_name)
+            ({{ $order->cancelled_by_name }})
+        @endif
+    </small>
+
+    @if($order->cancel_reason)
+        <br>
+        <small class="text-muted">
+            Lý do: {{ $order->cancel_reason }}
+        </small>
+    @endif
+@endif
         </div>
 
-        <div class="order-status">
+        <div class="order-status status-{{ $order->status }}">
             {{ $order->status_name }}
         </div>
     </div>
 
-    {{-- ITEMS --}}
+
+    {{-- ================= ITEMS ================= --}}
     @foreach($order->items as $item)
         @php
             $variant = $item->variant;
             $product = $variant->product ?? null;
 
-            $image = optional($variant->mainImage)->image_path;
-            if(!$image && $product && isset($product->mainImage)){
-                $image = optional($product->mainImage)->image_path;
-            }
+            $image = optional($variant->mainImage)->image_path
+                ?? optional($product->mainImage)->image_path;
 
             $imageUrl = $image
                 ? asset('storage/'.$image)
@@ -153,11 +162,19 @@ body{background:#f5f6fa;}
         </div>
     @endforeach
 
-    {{-- FOOTER --}}
+
+    {{-- ================= FOOTER ================= --}}
     <div class="order-footer">
 
         <div>
             Thanh toán: <b>{{ $order->payment_method_name }}</b>
+
+            @if($order->discount > 0)
+                <br>
+                <small class="text-success">
+                    Giảm: -{{ number_format($order->discount) }}đ
+                </small>
+            @endif
         </div>
 
         <div class="text-end">
@@ -174,28 +191,23 @@ body{background:#f5f6fa;}
                     Chi tiết
                 </a>
 
-                {{-- CHỜ XỬ LÝ -> HỦY --}}
-                @if($order->status == \App\Models\Order::STATUS_PENDING)
-                    <form action="{{ route('checkout.cancel',$order->id) }}"
+                {{-- Pending → Huỷ --}}
+                @if($order->canCancel())
+                    <form action="{{ route('orders.cancel',$order->id) }}"
                           method="POST"
                           style="display:inline;">
                         @csrf
+                        @method('PUT')
                         <button type="submit"
-                                class="btn btn-outline-danger btn-sm btn-action">
-                            Hủy đơn
+                                class="btn btn-outline-danger btn-sm btn-action"
+                                onclick="return confirm('Bạn chắc chắn muốn huỷ đơn?')">
+                            Huỷ đơn
                         </button>
                     </form>
                 @endif
 
-
-                {{-- HOÀN THÀNH hoặc ĐÃ HỦY -> MUA LẠI --}}
-                @if(
-                    in_array($order->status, [
-                        \App\Models\Order::STATUS_COMPLETED,
-                        \App\Models\Order::STATUS_CANCELLED
-                    ])
-                    && Route::has('orders.reorder')
-                )
+                {{-- Completed hoặc Cancelled → Mua lại --}}
+                @if($order->isCompleted() || $order->isCancelled())
                     <form action="{{ route('orders.reorder',$order->id) }}"
                           method="POST"
                           style="display:inline;">
@@ -205,18 +217,6 @@ body{background:#f5f6fa;}
                             Mua lại
                         </button>
                     </form>
-                @endif
-
-
-                {{-- CHỈ HOÀN THÀNH -> ĐÁNH GIÁ --}}
-                @if(
-                    $order->status == \App\Models\Order::STATUS_COMPLETED
-                    && Route::has('reviews.create')
-                )
-                    <a href="{{ route('reviews.create',$order->id) }}"
-                       class="btn btn-review btn-sm btn-action">
-                        Đánh giá
-                    </a>
                 @endif
 
             </div>
@@ -232,7 +232,9 @@ body{background:#f5f6fa;}
 </div>
 @endforelse
 
-{{ $orders->links() }}
+<div class="mt-3">
+    {{ $orders->links() }}
+</div>
 
 </div>
 @endsection

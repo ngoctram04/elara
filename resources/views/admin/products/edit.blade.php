@@ -221,3 +221,143 @@
 </div>
 </div>
 @endsection
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    /* ======================================
+        PREVIEW ẢNH PHỤ
+    ====================================== */
+    const subImagesInput = document.getElementById('sub_images');
+    const imageWrapper = document.getElementById('image-wrapper');
+
+    if (subImagesInput) {
+        subImagesInput.addEventListener('change', function () {
+            imageWrapper.innerHTML = '';
+
+            Array.from(this.files).forEach(file => {
+                if (!file.type.startsWith('image/')) return;
+
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    imageWrapper.insertAdjacentHTML('beforeend', `
+                        <div class="col-3 mb-2">
+                            <img src="${e.target.result}"
+                                 class="img-thumbnail"
+                                 style="height:90px;object-fit:cover">
+                        </div>
+                    `);
+                };
+                reader.readAsDataURL(file);
+            });
+        });
+    }
+
+
+    /* ======================================
+        VARIANT
+    ====================================== */
+
+    const wrapper = document.getElementById('variant-wrapper');
+    const btnAdd = document.getElementById('btn-add-variant');
+
+    // Index bắt đầu từ số variant hiện có
+    let variantIndex = wrapper.querySelectorAll('.variant-item').length;
+
+    // Chống bind nhiều lần
+    if (btnAdd && !btnAdd.dataset.bound) {
+        btnAdd.dataset.bound = "true";
+
+        btnAdd.addEventListener('click', function () {
+
+            const html = `
+            <div class="variant-item border rounded p-3 mb-3">
+
+                <div class="row g-2">
+
+                    <div class="col-md-4">
+                        <input type="text"
+                               name="variants[${variantIndex}][attribute_value]"
+                               class="form-control"
+                               placeholder="Giá trị"
+                               required>
+                    </div>
+
+                    <div class="col-md-3">
+                        <input type="number"
+                               name="variants[${variantIndex}][price]"
+                               class="form-control"
+                               placeholder="Giá bán"
+                               min="0"
+                               required>
+                    </div>
+
+                    <div class="col-md-3">
+                        <input type="text"
+                               class="form-control bg-light"
+                               value="Tồn: 0"
+                               readonly>
+                    </div>
+
+                    <div class="col-md-2">
+                        <input type="file"
+                               name="variants[${variantIndex}][image]"
+                               class="form-control variant-image-input"
+                               accept="image/*">
+                        <img class="img-thumbnail mt-2 variant-preview d-none"
+                             style="height:70px">
+                    </div>
+
+                </div>
+
+                <small class="text-muted">
+                    Tồn kho chỉ thay đổi tại màn hình Nhập hàng
+                </small>
+
+                <button type="button"
+                        class="btn btn-danger btn-sm mt-2 btn-remove-variant">
+                    Xóa
+                </button>
+
+            </div>
+            `;
+
+            wrapper.insertAdjacentHTML('beforeend', html);
+            variantIndex++;
+        });
+    }
+
+
+    /* ======================================
+        XOÁ VARIANT
+    ====================================== */
+    wrapper.addEventListener('click', function (e) {
+        if (e.target.classList.contains('btn-remove-variant')) {
+            e.target.closest('.variant-item').remove();
+        }
+    });
+
+
+    /* ======================================
+        PREVIEW ẢNH VARIANT
+    ====================================== */
+    document.addEventListener('change', function (e) {
+        if (e.target.classList.contains('variant-image-input')) {
+            const file = e.target.files[0];
+            if (!file || !file.type.startsWith('image/')) return;
+
+            const preview = e.target.closest('.variant-item')
+                                    .querySelector('.variant-preview');
+
+            const reader = new FileReader();
+            reader.onload = function (ev) {
+                preview.src = ev.target.result;
+                preview.classList.remove('d-none');
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+});
+</script>
+@endpush

@@ -86,7 +86,37 @@
 .wishlist-detail-btn.animate i{
     transform:scale(1.35);
 }
+/* ===== Wishlist + Sold nằm ngang ===== */
+.product-meta{
+    display:flex;
+    align-items:center;
+    gap:24px;
+    margin-top:6px;
+}
 
+/* từng item */
+.wishlist-inline,
+.sold-inline{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:15px;
+    color:#555;
+    white-space:nowrap;
+}
+
+/* icon */
+.wishlist-inline i,
+.sold-inline i{
+    font-size:18px;
+    line-height:1;
+}
+
+/* số nổi bật */
+.sold-inline strong{
+    font-weight:600;
+    color:#333;
+}
 /* ===== Wishlist text dưới nút giỏ ===== */
 .wishlist-inline{
     cursor:pointer;
@@ -239,14 +269,27 @@
             : number_format($favoritesCount,0,',','.'))
         : 0;
 @endphp
+<div class="product-meta">
 
-<div class="wishlist-inline btn-wishlist"
-     data-product-id="{{ $product->id }}">
-    <i class="bi {{ $isFavorited ? 'bi-heart-fill text-danger' : 'bi-heart text-danger' }}"></i>
-    <span>
-        {{ $isFavorited ? 'Đã thích' : 'Yêu thích' }}
-        (<span id="wishlist-count">{{ $displayFavoriteCount }}</span>)
-    </span>
+    {{-- Wishlist --}}
+    <div class="meta-item btn-wishlist"
+         data-product-id="{{ $product->id }}">
+        <i class="bi {{ $isFavorited ? 'bi-heart-fill text-danger' : 'bi-heart text-danger' }}"></i>
+        <span>
+            {{ $isFavorited ? 'Đã thích' : 'Yêu thích' }}
+            (<span id="wishlist-count">{{ $displayFavoriteCount }}</span>)
+        </span>
+    </div>
+
+    {{-- Đã bán --}}
+    <div class="meta-item">
+        <i class="bi bi-bag-check text-success"></i>
+        <span>
+            Đã bán:
+            <strong>{{ number_format($totalSold,0,',','.') }}</strong>
+        </span>
+    </div>
+
 </div>
 
 </div>
@@ -376,6 +419,32 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('stock-text').innerText = 'Sản phẩm đã hết hàng';
     }
 
+});
+/* =====================
+   THUMB CLICK
+===================== */
+document.querySelectorAll('.thumb-img').forEach(img => {
+    img.addEventListener('click', function () {
+
+        // đổi ảnh chính
+        document.getElementById('main-image').src = this.dataset.image;
+
+        // active border
+        document.querySelectorAll('.thumb-img')
+            .forEach(i => i.classList.remove('active'));
+        this.classList.add('active');
+
+        // Nếu thumbnail thuộc variant → active luôn variant
+        const variantId = this.dataset.variant;
+        if (variantId) {
+            const variantBtn = document.querySelector(
+                '.variant-btn[data-id="' + variantId + '"]'
+            );
+            if (variantBtn && !variantBtn.classList.contains('variant-out')) {
+                variantBtn.click();
+            }
+        }
+    });
 });
 </script>
 

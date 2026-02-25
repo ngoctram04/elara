@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     /* ==================================================
-        SIDEBAR TOGGLE (CODE CỦA BẠN – GIỮ NGUYÊN)
+        SIDEBAR TOGGLE
     ================================================== */
     const toggleBtn = document.getElementById('toggleSidebar');
     const sidebar   = document.getElementById('sidebar');
@@ -34,8 +34,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+
     /* ==================================================
-        THÊM ẢNH PHỤ SẢN PHẨM (+ Thêm hình ảnh)
+        THÊM ẢNH PHỤ SẢN PHẨM
     ================================================== */
     const btnAddImage = document.getElementById('btn-add-image');
     const imageWrapper = document.getElementById('image-wrapper');
@@ -58,75 +59,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    /* ==================================================
-        THÊM / XOÁ BIẾN THỂ
-    ================================================== */
-    const btnAddVariant = document.getElementById('btn-add-variant');
-    const variantWrapper = document.getElementById('variant-wrapper');
-
-    let variantIndex = variantWrapper
-        ? variantWrapper.children.length
-        : 0;
-
-    if (btnAddVariant && variantWrapper) {
-        btnAddVariant.addEventListener('click', () => {
-            variantWrapper.insertAdjacentHTML('beforeend', `
-                <div class="variant-item border rounded p-3 mb-3">
-                    <div class="row g-2">
-                        <div class="col-md-4">
-                            <input type="text"
-                                   name="variants[${variantIndex}][attribute_value]"
-                                   class="form-control"
-                                   placeholder="VD: 500ml">
-                            <input type="hidden"
-                                   name="variants[${variantIndex}][attribute_name]"
-                                   value="Dung tích">
-                        </div>
-
-                        <div class="col-md-3">
-                            <input type="number"
-                                   name="variants[${variantIndex}][price]"
-                                   class="form-control"
-                                   placeholder="Giá">
-                        </div>
-
-                        <div class="col-md-3">
-                            <input type="number"
-                                   name="variants[${variantIndex}][stock]"
-                                   class="form-control"
-                                   placeholder="Số lượng">
-                        </div>
-
-                        <div class="col-md-2">
-                            <input type="file"
-                                   name="variants[${variantIndex}][image]"
-                                   class="form-control">
-                        </div>
-                    </div>
-
-                    <button type="button"
-                            class="btn btn-danger btn-sm mt-2 btn-remove-variant">
-                        Xóa biến thể
-                    </button>
-                </div>
-            `);
-
-            variantIndex++;
-        });
-    }
 
     /* ==================================================
-        EVENT DELEGATION (XOÁ ẢNH / XOÁ BIẾN THỂ)
+        EVENT DELEGATION (XOÁ ẢNH)
     ================================================== */
     document.addEventListener('click', (e) => {
         if (e.target.classList.contains('btn-remove-image')) {
             e.target.closest('div').remove();
         }
-
-        if (e.target.classList.contains('btn-remove-variant')) {
-            e.target.closest('.variant-item').remove();
-        }
     });
 
 });
-

@@ -367,9 +367,8 @@ class CheckoutController extends Controller
                     'quantity'   => $qty,
                 ]);
 
-                if ($request->payment_method === 'cod') {
-                    $variant->decrement('stock_quantity', $qty);
-                }
+                // ⭐ LUÔN TRỪ KHO khi tạo đơn (status = 1)
+                $variant->decrement('stock_quantity', $qty);
             }
 
             /**
@@ -583,12 +582,6 @@ class CheckoutController extends Controller
                 // Tránh xử lý lại nếu đã thanh toán trước đó
                 if ($order->payment_status != Order::PAYMENT_PAID) {
 
-                    foreach ($order->items as $item) {
-                        if ($item->variant) {
-                            $item->variant->decrement('stock_quantity', $item->quantity);
-                        }
-                    }
-
                     $order->update([
                         'payment_status'   => Order::PAYMENT_PAID,
                         'payment_method'   => 'vnpay',
@@ -644,7 +637,7 @@ class CheckoutController extends Controller
     public function cancel($id)
     {
         $order = Order::with('items.variant')
-            ->where('id', $id)
+        ->where('id', $id)
             ->where('user_id', Auth::id())
             ->firstOrFail();
 
@@ -655,12 +648,24 @@ class CheckoutController extends Controller
         DB::beginTransaction();
 
         try {
+            // Hoàn kho
             foreach ($order->items as $item) {
                 $item->variant->increment('stock_quantity', $item->quantity);
             }
 
+            // Xử lý trạng thái thanh toán
+            $paymentStatus = $order->payment_status;
+
+            if (
+                $order->payment_method === 'vnpay' &&
+                $order->payment_status == Order::PAYMENT_PAID
+            ) {
+                $paymentStatus = Order::PAYMENT_REFUNDED;
+            }
+
             $order->update([
-                'status' => Order::STATUS_CANCELLED
+                'status' => Order::STATUS_CANCELLED,
+                'payment_status' => $paymentStatus
             ]);
 
             DB::commit();

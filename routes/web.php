@@ -287,18 +287,22 @@ Route::prefix('admin')
     Route::prefix('orders')->name('orders.')->group(function () {
 
         // Danh sách đơn
-        Route::get('/', [AdminOrderController::class,
-            'index'
-        ])
-            ->name('index');
+        Route::get('/', [AdminOrderController::class, 'index'])
+        ->name('index');
 
         // Chi tiết đơn
-        Route::get('/{id}', [AdminOrderController::class, 'show'])
+        Route::get('/{id}', [AdminOrderController::class,
+            'show'
+        ])
         ->name('show');
 
         // Cập nhật trạng thái
         Route::post('/update-status/{id}', [AdminOrderController::class, 'updateStatus'])
         ->name('updateStatus');
+
+        // ===== THÊM DÒNG NÀY =====
+        Route::post('/cancel/{id}', [AdminOrderController::class, 'cancel'])
+        ->name('cancel');
     });
 
     /*

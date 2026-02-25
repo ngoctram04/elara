@@ -6,18 +6,31 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Pagination\Paginator;
+
 use App\Models\Category;
 use App\Models\Cart;
 use App\Models\Wishlist;
 
 class AppServiceProvider extends ServiceProvider
 {
+    /**
+     * Bootstrap any application services.
+     */
     public function boot(): void
     {
         /**
-         * ===============================
+         * =======================================
+         * FIX PAGINATION (Bootstrap 5)
+         * =======================================
+         */
+        Paginator::useBootstrapFive();
+
+
+        /**
+         * =======================================
          * SHARE MEGA MENU CATEGORIES
-         * ===============================
+         * =======================================
          */
         View::composer('components.mega-menu', function ($view) {
 
@@ -36,10 +49,10 @@ class AppServiceProvider extends ServiceProvider
 
 
         /**
-         * ===============================
+         * =======================================
          * SHARE GLOBAL DATA (FRONTEND)
          * cartCount + favorites
-         * ===============================
+         * =======================================
          */
         View::composer('*', function ($view) {
 
@@ -50,17 +63,17 @@ class AppServiceProvider extends ServiceProvider
 
                 $userId = Auth::id();
 
-                // CART COUNT
+                // Tổng số lượng trong cart
                 $cartCount = Cart::where('user_id', $userId)
                     ->sum('quantity');
 
-                // WISHLIST (QUAN TRỌNG)
+                // Danh sách product đã yêu thích
                 $favorites = Wishlist::where('user_id', $userId)
                     ->pluck('product_id')
-                    ->map(fn($id) => (int) $id) // ép kiểu int
+                    ->map(fn($id) => (int) $id)
                     ->toArray();
             } else {
-                // Guest cart (session)
+                // Cart của khách (session)
                 $cart = Session::get('cart', []);
                 $cartCount = collect($cart)->sum('quantity');
             }
