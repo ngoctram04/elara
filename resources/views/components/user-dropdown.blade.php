@@ -30,11 +30,11 @@
         </li>
 
         <li>
-            <a class="dropdown-item" href="{{ route('profile.address') }}">
-                <i class="bi bi-geo-alt"></i>
-                <span>Danh sách địa chỉ</span>
-            </a>
-        </li>
+    <a class="dropdown-item" href="{{ route('wishlist.index') }}">
+        <i class="bi bi-heart"></i>
+        <span>Danh sách yêu thích</span>
+    </a>
+</li>
 
         <li><hr class="dropdown-divider"></li>
 

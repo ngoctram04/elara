@@ -14,7 +14,7 @@ use App\Http\Controllers\Frontend\CategoryController as FrontendCategoryControll
 use App\Http\Controllers\Frontend\CartController;
 use App\Http\Controllers\Frontend\CheckoutController;
 use App\Http\Controllers\Frontend\OrderController;
-
+use App\Http\Controllers\Frontend\WishlistController;
 /*
 |--------------------------------------------------------------------------
 | USER PROFILE
@@ -97,19 +97,20 @@ Route::prefix('cart')->name('cart.')->group(function () {
 | CHECKOUT (LOGIN)
 |--------------------------------------------------------------------------
 */
-
 Route::middleware(['auth', 'check_active'])
 ->prefix('checkout')
 ->name('checkout.')
 ->group(function () {
 
-    Route::post('/buy-now', [CheckoutController::class,
-        'buyNow'
-    ])
-    ->name('buyNow');
+    Route::post('/buy-now', [CheckoutController::class, 'buyNow'])
+        ->name('buyNow');
+
+    // ⭐ THÊM DÒNG NÀY
+    Route::post('/from-cart', [CheckoutController::class, 'fromCart'])
+    ->name('fromCart');
 
     Route::get('/', [CheckoutController::class, 'index'])
-        ->name('index');
+    ->name('index');
 
     Route::post('/', [CheckoutController::class, 'store'])
     ->name('store');
@@ -148,9 +149,26 @@ Route::middleware(['auth', 'check_active'])
     // Mua lại
     Route::post('/{id}/reorder', [OrderController::class, 'reorder'])
         ->name('reorder');
+        
 });
 
+/*
+|------------------------------------------------------------------
+| WISHLIST (LOGIN)
+|------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'check_active'])
+->prefix('wishlist')
+    ->name('wishlist.')
+    ->group(function () {
 
+        Route::get('/', [WishlistController::class, 'index'])
+        ->name('index');
+
+        // BỎ {product}
+        Route::post('/toggle', [WishlistController::class, 'toggle'])
+        ->name('toggle');
+    });
 /*
 |--------------------------------------------------------------------------
 | USER PROFILE

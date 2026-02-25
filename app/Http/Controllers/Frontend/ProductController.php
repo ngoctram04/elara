@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Frontend;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Models\Wishlist;
+use Illuminate\Support\Facades\Auth;
 
 class ProductController extends Controller
 {
@@ -18,7 +20,7 @@ class ProductController extends Controller
             'images',
             'mainImage',
 
-            /* HIỂN THỊ TẤT CẢ BIẾN THỂ (kể cả hết hàng) */
+            /* BIẾN THỂ */
             'variants' => function ($q) {
                 $q->where('is_active', 1)
                     ->orderBy('id')
@@ -38,14 +40,25 @@ class ProductController extends Controller
             ->where('is_active', 1)
             ->firstOrFail();
 
-        // ❌ BỎ đoạn này (để vẫn xem được khi tất cả hết hàng)
-        // if ($product->variants->isEmpty()) {
-        //     abort(404);
-        // }
+
+        /* =============================
+           WISHLIST
+        ============================= */
+
+        // Các sản phẩm user đã thích
+        $favorites = [];
+        if (Auth::check()) {
+            $favorites = Wishlist::where('user_id', Auth::id())
+                ->pluck('product_id')
+                ->toArray();
+        }
+
+        // Tổng số lượt thích của sản phẩm này
+        $favoritesCount = Wishlist::where('product_id', $product->id)->count();
+
 
         /* =============================
            SẢN PHẨM LIÊN QUAN
-           (chỉ lấy sản phẩm còn hàng)
         ============================= */
         $relatedProducts = Product::with('mainImage')
             ->where('id', '!=', $product->id)
@@ -59,9 +72,12 @@ class ProductController extends Controller
             ->limit(8)
             ->get();
 
+
         return view('frontend.detail', compact(
             'product',
-            'relatedProducts'
+            'relatedProducts',
+            'favorites',
+            'favoritesCount'
         ));
     }
 
@@ -75,7 +91,6 @@ class ProductController extends Controller
             'images',
             'mainImage',
 
-            // HIỂN THỊ TẤT CẢ BIẾN THỂ
             'variants' => function ($q) {
                 $q->where('is_active', 1)
                     ->orderBy('id')

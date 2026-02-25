@@ -167,10 +167,12 @@ data-value="{{ $total }}">
 </span>
 </h4>
 
-<a href="{{ route('checkout.index') }}"
-class="btn btn-success btn-lg px-5 fw-bold">
-Thanh toán
-</a>
+<form action="{{ route('checkout.fromCart') }}" method="POST">
+    @csrf
+    <button class="btn btn-success btn-lg px-5 fw-bold">
+        Thanh toán
+    </button>
+</form>
 </div>
 
 </div>

@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use App\Models\Category;
 use App\Models\Cart;
+use App\Models\Wishlist;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -36,26 +37,38 @@ class AppServiceProvider extends ServiceProvider
 
         /**
          * ===============================
-         * SHARE CART COUNT (HEADER)
+         * SHARE GLOBAL DATA (FRONTEND)
+         * cartCount + favorites
          * ===============================
-         * Dùng cho toàn bộ frontend
          */
         View::composer('*', function ($view) {
 
             $cartCount = 0;
+            $favorites = [];
 
-            // Nếu đã đăng nhập → lấy từ database
             if (Auth::check()) {
-                $cartCount = Cart::where('user_id', Auth::id())
+
+                $userId = Auth::id();
+
+                // CART COUNT
+                $cartCount = Cart::where('user_id', $userId)
                     ->sum('quantity');
-            }
-            // Nếu chưa đăng nhập → lấy từ session
-            else {
+
+                // WISHLIST (QUAN TRỌNG)
+                $favorites = Wishlist::where('user_id', $userId)
+                    ->pluck('product_id')
+                    ->map(fn($id) => (int) $id) // ép kiểu int
+                    ->toArray();
+            } else {
+                // Guest cart (session)
                 $cart = Session::get('cart', []);
                 $cartCount = collect($cart)->sum('quantity');
             }
 
-            $view->with('cartCount', $cartCount);
+            $view->with([
+                'cartCount' => $cartCount,
+                'favorites' => $favorites
+            ]);
         });
     }
 }

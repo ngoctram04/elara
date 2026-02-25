@@ -19,9 +19,10 @@ class CheckoutController extends Controller
     public function index()
     {
         /**
-         * ==============================
-         * BUY NOW
-         * ==============================
+         * =================================
+         * ƯU TIÊN BUY NOW
+         * =================================
+         * Chỉ dùng khi session buy_now tồn tại
          */
         if (session()->has('buy_now')) {
 
@@ -30,7 +31,13 @@ class CheckoutController extends Controller
             $variant = ProductVariant::with([
                 'product:id,name',
                 'mainImage'
-            ])->findOrFail($buyNow['variant_id']);
+            ])->find($buyNow['variant_id']);
+
+            // Nếu sản phẩm không còn → xóa session
+            if (!$variant) {
+                session()->forget('buy_now');
+                return redirect()->route('cart.index');
+            }
 
             $carts = collect([
                 (object)[
@@ -41,15 +48,13 @@ class CheckoutController extends Controller
 
             $subtotal = $variant->price * $buyNow['quantity'];
 
-            // ❌ KHÔNG xóa session ở đây
-
             return view('frontend.checkout.index', compact('carts', 'subtotal'));
         }
 
         /**
-         * ==============================
+         * =================================
          * CHECKOUT TỪ GIỎ HÀNG
-         * ==============================
+         * =================================
          */
 
         $carts = Cart::with([
@@ -72,7 +77,11 @@ class CheckoutController extends Controller
 
         return view('frontend.checkout.index', compact('carts', 'subtotal'));
     }
-
+    public function fromCart()
+    {
+        session()->forget('buy_now');
+        return redirect()->route('checkout.index');
+    }
     public function store(Request $request)
     {
         $request->validate([
@@ -93,36 +102,47 @@ class CheckoutController extends Controller
             $isBuyNow = false;
 
             /**
-             * ==============================
-             * BUY NOW
-             * ==============================
+             * =================================================
+             * XÁC ĐỊNH NGUỒN CHECKOUT
+             * =================================================
              */
+
+            // Nếu session buy_now tồn tại → dùng mua ngay
             if (session()->has('buy_now')) {
 
-                $isBuyNow = true;
                 $buyNow = session('buy_now');
 
-                $variant = ProductVariant::findOrFail($buyNow['variant_id']);
+                $variant = ProductVariant::find($buyNow['variant_id']);
 
-                if ($variant->stock_quantity < $buyNow['quantity']) {
-                    DB::rollBack();
-                    return back()->with('error', 'Sản phẩm không đủ tồn kho.');
+                // Nếu variant không tồn tại → bỏ session
+                if (!$variant) {
+                    session()->forget('buy_now');
+                } else {
+                    $isBuyNow = true;
+
+                    if ($variant->stock_quantity < $buyNow['quantity']) {
+                        DB::rollBack();
+                        return back()->with('error', 'Sản phẩm không đủ tồn kho.');
+                    }
+
+                    $subtotal = $variant->price * $buyNow['quantity'];
+
+                    $items->push([
+                        'variant'  => $variant,
+                        'quantity' => $buyNow['quantity']
+                    ]);
                 }
-
-                $subtotal = $variant->price * $buyNow['quantity'];
-
-                $items->push([
-                    'variant'  => $variant,
-                    'quantity' => $buyNow['quantity']
-                ]);
             }
 
             /**
-             * ==============================
-             * GIỎ HÀNG
-             * ==============================
+             * =================================================
+             * NẾU KHÔNG PHẢI BUY NOW → LẤY TỪ GIỎ HÀNG
+             * =================================================
              */
-            else {
+            if (!$isBuyNow) {
+
+                // Đảm bảo không dùng session cũ
+                session()->forget('buy_now');
 
                 $carts = Cart::with('variant.product')
                 ->where('user_id', $userId)
@@ -136,6 +156,8 @@ class CheckoutController extends Controller
                 foreach ($carts as $cart) {
 
                     $variant = $cart->variant;
+
+                    if (!$variant) continue;
 
                     if ($variant->stock_quantity < $cart->quantity) {
                         DB::rollBack();
@@ -155,9 +177,9 @@ class CheckoutController extends Controller
             }
 
             /**
-             * ==============================
+             * =================================================
              * TẠO ORDER
-             * ==============================
+             * =================================================
              */
             $order = Order::create([
                 'user_id'  => $userId,
@@ -176,9 +198,9 @@ class CheckoutController extends Controller
             ]);
 
             /**
-             * ==============================
-             * ORDER ITEMS
-             * ==============================
+             * =================================================
+             * ORDER ITEMS + TRỪ KHO
+             * =================================================
              */
             foreach ($items as $item) {
 
@@ -200,12 +222,12 @@ class CheckoutController extends Controller
             }
 
             /**
-             * ==============================
+             * =================================================
              * DỌN DỮ LIỆU
-             * ==============================
+             * =================================================
              */
             if ($isBuyNow) {
-                session()->forget('buy_now'); // ✔ xóa ở đây mới đúng
+                session()->forget('buy_now');
             } else {
                 Cart::where('user_id', $userId)->delete();
             }
@@ -213,9 +235,9 @@ class CheckoutController extends Controller
             DB::commit();
 
             /**
-             * ==============================
+             * =================================================
              * REDIRECT
-             * ==============================
+             * =================================================
              */
             if ($request->payment_method === 'vnpay') {
                 return $this->createVNPay($order);
@@ -228,7 +250,33 @@ class CheckoutController extends Controller
             return back()->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
         }
     }
+    
+    public function buyNow(Request $request)
+    {
+        $variant = ProductVariant::findOrFail($request->variant_id);
 
+        if ($variant->stock_quantity <= 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Sản phẩm đã hết hàng'
+            ]);
+        }
+
+        // Xóa giỏ nếu cần (tránh nhầm)
+        session()->forget('buy_now');
+
+        session([
+            'buy_now' => [
+                'variant_id' => $variant->id,
+                'quantity'   => 1
+            ]
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'redirect' => route('checkout.index')
+        ]);
+    }
     /**
      * Tạo link thanh toán VNPay
      */
@@ -430,29 +478,5 @@ class CheckoutController extends Controller
             DB::rollBack();
             return back()->with('error', 'Huỷ đơn thất bại.');
         }
-    }
-    public function buyNow(Request $request)
-    {
-        $variant = ProductVariant::findOrFail($request->variant_id);
-
-        if ($variant->stock_quantity <= 0) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Sản phẩm đã hết hàng'
-            ]);
-        }
-
-        // Lưu session mua ngay
-        session([
-            'buy_now' => [
-                'variant_id' => $variant->id,
-                'quantity'   => 1
-            ]
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'redirect' => route('checkout.index')
-        ]);
     }
 }
