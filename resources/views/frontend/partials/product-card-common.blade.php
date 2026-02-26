@@ -94,9 +94,32 @@ $isFavorited = in_array($product->id, $favorites ?? []);
         </div>
 
         <div class="fs-meta">
-            <span>⭐⭐⭐⭐⭐ (5.0)</span>
-            <span>Đã bán {{ $product->total_sold }}</span>
-        </div>
+
+    {{-- Hiển thị sao trung bình --}}
+    @if ($product->reviews_count > 0)
+        @php
+            $avg = round($product->reviews_avg_rating, 1);
+            $full = floor($avg);
+            $half = ($avg - $full) >= 0.5;
+        @endphp
+
+        <span class="rating-stars">
+            @for ($i = 1; $i <= 5; $i++)
+                @if ($i <= $full)
+                    <i class="bi bi-star-fill text-warning"></i>
+                @elseif ($i == $full + 1 && $half)
+                    <i class="bi bi-star-half text-warning"></i>
+                @else
+                    <i class="bi bi-star text-warning"></i>
+                @endif
+            @endfor
+
+            <small>({{ $avg }})</small>
+        </span>
+    @endif
+
+    <span>Đã bán {{ $product->total_sold }}</span>
+</div>
 
         <div class="fs-price">
             @if ($priceVariant->is_on_sale && $priceVariant->original_price)
@@ -118,6 +141,10 @@ $isFavorited = in_array($product->id, $favorites ?? []);
 @endif
 
 <style>
+    .rating-stars i{
+    font-size:14px;
+    margin-right:1px;
+}
 /* Nút wishlist */
 .wishlist-btn{
     position:absolute;

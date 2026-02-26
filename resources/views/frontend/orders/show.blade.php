@@ -130,7 +130,6 @@
     </div>
 </div>
 
-
 {{-- ================= DANH SÁCH SẢN PHẨM ================= --}}
 <div class="card shadow-sm border-0">
     <div class="card-body">
@@ -151,37 +150,106 @@
                     : asset('images/no-image.png');
             @endphp
 
-            <div class="d-flex justify-content-between align-items-center border-bottom py-3">
+            <div class="border-bottom py-3">
 
-                <div class="d-flex align-items-center">
-                    <img src="{{ $imageUrl }}"
-                         width="70"
-                         height="70"
-                         class="rounded me-3"
-                         style="object-fit:cover">
+                {{-- ===== THÔNG TIN SẢN PHẨM ===== --}}
+                <div class="d-flex justify-content-between align-items-center">
 
-                    <div>
-                        <b>{{ $product->name }}</b><br>
-                        <small class="text-muted">
-                            {{ $variant->attribute_name }}:
-                            {{ $variant->attribute_value }}
-                            × {{ $item->quantity }}
-                        </small>
+                    <div class="d-flex align-items-center">
+                        <img src="{{ $imageUrl }}"
+                             width="70"
+                             height="70"
+                             class="rounded me-3"
+                             style="object-fit:cover">
+
+                        <div>
+                            <b>{{ $product->name }}</b><br>
+                            <small class="text-muted">
+                                {{ $variant->attribute_name }}:
+                                {{ $variant->attribute_value }}
+                                × {{ $item->quantity }}
+                            </small>
+                        </div>
                     </div>
+
+                    <div class="text-end">
+                        <div>{{ number_format($item->price) }}đ</div>
+                        <b class="text-danger">
+                            {{ number_format($item->price * $item->quantity) }}đ
+                        </b>
+                    </div>
+
                 </div>
 
-                <div class="text-end">
-                    <div>{{ number_format($item->price) }}đ</div>
-                    <b class="text-danger">
-                        {{ number_format($item->price * $item->quantity) }}đ
-                    </b>
-                </div>
+                {{-- ================= REVIEW ================= --}}
+                @if($order->status == 3)
+                    <div class="mt-3 ms-5">
+
+                        @if(!$item->review)
+                            {{-- Chưa đánh giá --}}
+                            <a href="{{ route('reviews.create', $item->id) }}"
+                               class="btn btn-warning btn-sm">
+                                Đánh giá sản phẩm
+                            </a>
+
+                        @else
+                            {{-- Đã đánh giá --}}
+                            <div class="border rounded p-3 bg-light">
+
+                                {{-- ⭐ Rating --}}
+                                <div class="text-warning mb-1" style="font-size:18px;">
+    @for($i = 1; $i <= 5; $i++)
+        @if($i <= $item->review->rating)
+            ★
+        @else
+            ☆
+        @endif
+    @endfor
+
+    <span class="text-dark ms-2" style="font-size:14px;">
+        ({{ number_format($item->review->rating, 1) }})
+    </span>
+</div>
+
+                                {{-- Comment --}}
+                                @if($item->review->comment)
+                                    <div class="mb-2">
+                                        {{ $item->review->comment }}
+                                    </div>
+                                @endif
+
+                                {{-- Media --}}
+                                @if($item->review->media->count())
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        @foreach($item->review->media as $media)
+
+                                            @if($media->file_type == 'image')
+                                                <img src="{{ asset('storage/'.$media->file_path) }}"
+                                                     width="80"
+                                                     height="80"
+                                                     style="object-fit:cover;border-radius:6px">
+                                            @else
+                                                <video width="120" controls style="border-radius:6px">
+                                                    <source src="{{ asset('storage/'.$media->file_path) }}">
+                                                </video>
+                                            @endif
+
+                                        @endforeach
+                                    </div>
+                                @endif
+
+                            </div>
+                        @endif
+
+                    </div>
+                @endif
 
             </div>
+
         @endforeach
 
 
-        {{-- Tổng tiền --}}
+        {{-- ================= TỔNG TIỀN ================= --}}
         <div class="text-end mt-3">
 
             <div>

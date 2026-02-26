@@ -13,7 +13,13 @@ class ShopController extends Controller
     public function index(Request $request)
     {
         /* ================= BASE QUERY ================= */
-        $query = Product::with(['mainImage', 'variants'])
+        $query = Product::with([
+            'mainImage',
+            'variants',
+            'brand'
+        ])
+            ->withAvg('reviews', 'rating')   // ⭐ trung bình
+            ->withCount('reviews')           // ⭐ số lượt đánh giá
             ->where('is_active', 1);
 
         /* ================= SEARCH ================= */
@@ -48,8 +54,6 @@ class ShopController extends Controller
 
                 '1000+' =>
                 $query->where('min_price', '>=', 1000000),
-
-                default => null,
             };
         }
 
@@ -72,7 +76,7 @@ class ShopController extends Controller
                 $query->orderByDesc('total_sold');
                 break;
 
-            default: // mới nhất
+            default:
                 $query->orderByDesc('created_at');
         }
 
@@ -81,13 +85,11 @@ class ShopController extends Controller
 
         /* ================= SIDEBAR DATA ================= */
 
-        // Danh mục cha + con
         $categories = Category::whereNull('parent_id')
             ->with('children')
             ->orderBy('name')
             ->get();
 
-        // Brand có sản phẩm
         $brands = Brand::whereHas('products', function ($q) {
             $q->where('is_active', 1);
         })

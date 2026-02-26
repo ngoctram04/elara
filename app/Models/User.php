@@ -45,4 +45,8 @@ class User extends Authenticatable implements MustVerifyEmail
             'is_active'         => 'boolean',
         ];
     }
+    public function reviews()
+    {
+        return $this->hasMany(Review::class);
+    }
 }

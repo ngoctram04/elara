@@ -15,27 +15,49 @@ class ProductController extends Controller
      */
     public function show(string $slug)
     {
+        $userId = Auth::id();
+
         $product = Product::with([
 
-            /* ẢNH */
+            /* =============================
+               ẢNH
+            ============================= */
             'images',
             'mainImage',
 
-            /* BIẾN THỂ */
+            /* =============================
+               BIẾN THỂ
+            ============================= */
             'variants' => function ($q) {
                 $q->where('is_active', 1)
                     ->orderBy('id')
                     ->with('images');
             },
 
-            /* THÔNG TIN */
+            /* =============================
+               THÔNG TIN
+            ============================= */
             'category',
             'brand',
 
-            /* KHUYẾN MÃI */
+            /* =============================
+               KHUYẾN MÃI
+            ============================= */
             'promotions' => function ($q) {
                 $q->where('is_active', 1);
             },
+
+            /* =============================
+               ⭐ REVIEWS (ĐÃ BỎ LIKE)
+            ============================= */
+            'reviews' => function ($q) {
+                $q->latest()
+                    ->with([
+                    'user:id,name,avatar',
+                        'media'
+                    ]);
+            }
+
         ])
             ->where('slug', $slug)
             ->where('is_active', 1)
@@ -43,8 +65,19 @@ class ProductController extends Controller
 
 
         /* =============================
+           BIẾN REVIEW
+        ============================= */
+        $reviews = $product->reviews;
+
+        $reviewsCount = $reviews->count();
+
+        $avgRating = $reviewsCount > 0
+            ? round($reviews->avg('rating'), 1)
+            : 0;
+
+
+        /* =============================
            TỔNG ĐÃ BÁN
-           (chỉ tính đơn đã giao)
         ============================= */
         $totalSold = $product->variants->sum('sold_quantity');
 
@@ -52,16 +85,13 @@ class ProductController extends Controller
         /* =============================
            WISHLIST
         ============================= */
-
-        // Các sản phẩm user đã thích
         $favorites = [];
-        if (Auth::check()) {
-            $favorites = Wishlist::where('user_id', Auth::id())
+        if ($userId) {
+            $favorites = Wishlist::where('user_id', $userId)
                 ->pluck('product_id')
                 ->toArray();
         }
 
-        // Tổng số lượt thích của sản phẩm này
         $favoritesCount = Wishlist::where('product_id', $product->id)->count();
 
 
@@ -83,16 +113,19 @@ class ProductController extends Controller
 
         return view('frontend.detail', compact(
             'product',
+            'reviews',
+            'reviewsCount',
+            'avgRating',
             'relatedProducts',
             'favorites',
             'favoritesCount',
-            'totalSold'   // ← thêm biến này
+            'totalSold'
         ));
     }
 
 
     /**
-     * Xem nhanh – dùng cho modal AJAX
+     * Quick view (AJAX)
      */
     public function quickView(int $id)
     {

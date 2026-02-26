@@ -120,40 +120,57 @@ body{background:#f5f6fa;}
 
 
     {{-- ITEMS --}}
-    @foreach($order->items as $item)
-        @php
-            $variant = $item->variant;
-            $product = $variant->product ?? null;
+    {{-- ITEMS --}}
+@foreach($order->items as $item)
+    @php
+        $variant = $item->variant;
+        $product = $variant->product ?? null;
 
-            $image = optional($variant->mainImage)->image_path
-                ?? optional($product->mainImage)->image_path;
+        $image = optional($variant->mainImage)->image_path
+            ?? optional($product->mainImage)->image_path;
 
-            $imageUrl = $image
-                ? asset('storage/'.$image)
-                : asset('images/no-image.png');
-        @endphp
+        $imageUrl = $image
+            ? asset('storage/'.$image)
+            : asset('images/no-image.png');
+    @endphp
 
-        <div class="order-item">
+    <div class="order-item">
 
-            <img src="{{ $imageUrl }}" class="order-img">
+        <img src="{{ $imageUrl }}" class="order-img">
 
-            <div style="flex:1">
-                <div class="order-name">
-                    {{ $product->name ?? 'Sản phẩm' }}
-                </div>
-
-                <div class="order-variant">
-                    {{ $variant->attribute_value ?? '' }}
-                    x{{ $item->quantity }}
-                </div>
+        <div style="flex:1">
+            <div class="order-name">
+                {{ $product->name ?? 'Sản phẩm' }}
             </div>
 
-            <div class="order-price">
-                {{ number_format($item->price) }}đ
+            <div class="order-variant">
+                {{ $variant->attribute_value ?? '' }}
+                x{{ $item->quantity }}
             </div>
 
+            {{-- ===== ĐÁNH GIÁ ===== --}}
+            @if($order->status == 3)
+
+                @if(!$item->review)
+                    <a href="{{ route('reviews.create', $item->id) }}"
+                       class="btn btn-warning btn-sm mt-2">
+                        Đánh giá
+                    </a>
+                @else
+                    <span class="badge bg-success mt-2">
+                        Đã đánh giá
+                    </span>
+                @endif
+
+            @endif
         </div>
-    @endforeach
+
+        <div class="order-price">
+            {{ number_format($item->price) }}đ
+        </div>
+
+    </div>
+@endforeach
 
 
     {{-- FOOTER --}}

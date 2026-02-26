@@ -195,5 +195,8 @@ class Product extends Model
 
         return (int) $this->variants()->sum('sold_quantity');
     }
-    
+    public function reviews()
+    {
+        return $this->hasMany(Review::class);
+    }
 }

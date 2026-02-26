@@ -130,6 +130,74 @@
 .wishlist-inline i{
     font-size:18px;
 }
+/* ===== REVIEW CARD ===== */
+.review-card{
+    background:#fff;
+    border-radius:12px;
+    border:1px solid #eee;
+    padding:16px;
+    margin-bottom:16px;
+    transition:.2s;
+}
+
+.review-card:hover{
+    box-shadow:0 6px 18px rgba(0,0,0,.06);
+}
+
+/* Header */
+.review-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:6px;
+}
+
+.review-user{
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+
+.review-avatar{
+    width:38px;
+    height:38px;
+    border-radius:50%;
+    background:#f3f4f6;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:600;
+    color:#555;
+    font-size:14px;
+}
+
+/* Stars */
+.review-stars{
+    color:#f59e0b;
+    font-size:15px;
+}
+
+/* Content */
+.review-content{
+    margin-top:6px;
+    font-size:15px;
+    color:#333;
+    line-height:1.5;
+}
+
+/* Media */
+.review-media img{
+    width:80px;
+    height:80px;
+    object-fit:cover;
+    border-radius:8px;
+    border:1px solid #eee;
+}
+
+.review-media video{
+    width:120px;
+    border-radius:8px;
+}
 </style>
 <div class="container py-4">
 <div class="row g-4">
@@ -303,7 +371,86 @@
         {!! nl2br(e($product->description)) !!}
     </div>
 </div>
+{{-- ================= REVIEW ================= --}}
+<div class="mt-5">
+    <h5 class="fw-bold mb-3">
+        Đánh giá sản phẩm ({{ $product->reviews->count() }})
+    </h5>
 
+    @forelse($product->reviews as $review)
+
+    <div class="review-card border rounded p-3 mb-3 bg-white">
+
+        {{-- Header --}}
+        <div class="d-flex align-items-start">
+
+            {{-- Avatar --}}
+            <img
+                src="{{ $review->user->avatar 
+                        ? asset('storage/'.$review->user->avatar) 
+                        : asset('images/avatar-default.png') }}"
+                class="review-avatar me-3"
+                alt="avatar">
+
+            {{-- User info --}}
+            <div class="flex-grow-1">
+
+                {{-- Name + time --}}
+                <div class="d-flex justify-content-between">
+                    <div class="fw-semibold">
+                        {{ $review->user->name }}
+                    </div>
+
+                    <small class="text-muted">
+                        {{ $review->created_at->format('d/m/Y H:i') }}
+                    </small>
+                </div>
+
+                {{-- Stars --}}
+                <div class="review-stars text-warning mb-1">
+    {!! str_repeat('★', (int)$review->rating) !!}
+    {!! str_repeat('☆', 5 - (int)$review->rating) !!}
+    <span class="text-muted ms-1">
+        ({{ number_format($review->rating, 1) }})
+    </span>
+</div>
+
+            </div>
+        </div>
+
+        {{-- Comment --}}
+        @if($review->comment)
+            <div class="mt-2 review-content">
+                {{ $review->comment }}
+            </div>
+        @endif
+
+        {{-- Media --}}
+        @if($review->media->count())
+            <div class="review-media mt-2 d-flex gap-2 flex-wrap">
+                @foreach($review->media as $m)
+                    @if($m->file_type == 'image')
+                        <img src="{{ asset('storage/'.$m->file_path) }}"
+                             class="review-img">
+                    @else
+                        <video class="review-video" controls>
+                            <source src="{{ asset('storage/'.$m->file_path) }}">
+                        </video>
+                    @endif
+                @endforeach
+            </div>
+        @endif
+
+    </div>
+
+    @empty
+        <div class="text-muted">
+            Chưa có đánh giá nào cho sản phẩm này.
+        </div>
+    @endforelse
+</div>
+
+</div>
 </div>
 @endsection
 
@@ -489,6 +636,7 @@ if (form) {
         });
     });
 }
+
 </script>
 
 @endpush

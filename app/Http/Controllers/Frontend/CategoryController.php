@@ -13,20 +13,16 @@ class CategoryController extends Controller
     public function show(Request $request, string $slug)
     {
         /* ==================================================
-        | CATEGORY HIỆN TẠI (DÙNG SLUG – KHÔNG DÙNG ID)
+        | CATEGORY HIỆN TẠI
         ================================================== */
         $category = Category::where('slug', $slug)->firstOrFail();
 
         /* ==================================================
-        | CATEGORY IDS DÙNG CHO QUERY
-        | - CHA  → lấy cha + toàn bộ con
-        | - CON  → chỉ lấy chính nó
+        | CATEGORY IDS
         ================================================== */
         if ($category->parent_id) {
-            // Category con
             $categoryIds = [$category->id];
         } else {
-            // Category cha
             $categoryIds = $category->children()
                 ->pluck('id')
                 ->push($category->id)
@@ -34,9 +30,17 @@ class CategoryController extends Controller
         }
 
         /* ==================================================
-        | BASE PRODUCT QUERY
+        | BASE PRODUCT QUERY (QUAN TRỌNG)
         ================================================== */
-        $query = Product::whereIn('category_id', $categoryIds);
+        $query = Product::with([
+            'variants',
+            'mainImage',
+            'brand'
+        ])
+            ->withAvg('reviews', 'rating')   // ⭐ trung bình
+            ->withCount('reviews')           // ⭐ số lượt đánh giá
+            ->whereIn('category_id', $categoryIds)
+            ->where('is_active', true);
 
         /* ==================================================
         | PRICE FILTER
@@ -44,15 +48,13 @@ class CategoryController extends Controller
         if ($request->filled('price')) {
             match ($request->price) {
                 '0-500' =>
-                $query->whereBetween('min_price', [0, 500_000]),
+                $query->whereBetween('min_price', [0, 500000]),
 
                 '500-1000' =>
-                $query->whereBetween('min_price', [500_000, 1_000_000]),
+                $query->whereBetween('min_price', [500000, 1000000]),
 
                 '1000+' =>
-                $query->where('min_price', '>=', 1_000_000),
-
-                default => null,
+                $query->where('min_price', '>=', 1000000),
             };
         }
 
@@ -67,30 +69,26 @@ class CategoryController extends Controller
         | SORT
         ================================================== */
         match ($request->sort) {
-            'price_asc'  => $query->orderBy('min_price', 'asc'),
-            'price_desc' => $query->orderBy('min_price', 'desc'),
-            'newest'     => $query->orderByDesc('created_at'),
-            default      => $query->orderByDesc('total_sold'), // 🔥 bán chạy
+            'price_asc'  => $query->orderBy('min_price'),
+            'price_desc' => $query->orderByDesc('min_price'),
+            'newest'     => $query->latest(),
+            default      => $query->orderByDesc('total_sold'),
         };
 
         /* ==================================================
         | PAGINATE
         ================================================== */
-        $products = $query
-            ->paginate(20)
-            ->withQueryString();
+        $products = $query->paginate(20)->withQueryString();
 
         /* ==================================================
         | SIDEBAR DATA
         ================================================== */
 
-        // Category accordion (cha + con)
         $allCategories = Category::parents()
             ->with('children')
             ->orderBy('name')
             ->get();
 
-        // 🔥 Brand chỉ lấy những brand CÓ sản phẩm trong category hiện tại
         $brands = Brand::whereHas('products', function ($q) use ($categoryIds) {
             $q->whereIn('category_id', $categoryIds);
         })

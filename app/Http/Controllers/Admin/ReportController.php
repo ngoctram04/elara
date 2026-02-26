@@ -6,105 +6,212 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
-
+use Carbon\Carbon;
 class ReportController extends Controller
 {
-    /*
-    =====================================
-    TRANG BÁO CÁO
-    =====================================
-    */
+
     public function index(Request $request)
     {
         $data = $this->getReportData($request);
 
+        // ===== KPI chính =====
+        $data['revenue'] = $data['finance']->revenue;
+        $data['profit'] = $data['finance']->profit;
+
+        // Biên lợi nhuận %
+        $data['margin'] = $data['finance']->revenue > 0
+            ? ($data['finance']->profit / $data['finance']->revenue) * 100
+            : 0;
+
+        // Tổng đơn hoàn thành
+        $data['totalOrders'] = $data['orderStats']->completed ?? 0;
+
+        // AOV
+        $data['averageOrder'] = $data['totalOrders'] > 0
+        ? $data['revenue'] / $data['totalOrders']
+        : 0;
+
+        // Tổng phí ship
+        $data['totalShipping'] = $data['finance']->shipping_total ?? 0;
+
+        // Tổng vốn đã bán
+        $data['totalCost'] = $data['finance']->cost ?? 0;
+
+        // Giá trị tồn kho
+        $data['inventoryValue'] = $data['inventory']->total_value ?? 0;
+
+        // ===== Tổng vốn nhập (thêm để fix lỗi) =====
+        $data['totalImport'] = DB::table('stock_imports')
+        ->sum(DB::raw('quantity * cost_price'));
+
         return view('admin.reports.index', $data);
     }
-
     /*
     =====================================
-    XUẤT PDF
+    KHOẢNG THỜI GIAN
     =====================================
     */
-    public function exportPdf(Request $request)
+    private function getDateRange(Request $request)
     {
-        $data = $this->getReportData($request);
+        $from = $request->from
+        ? Carbon::parse($request->from)->startOfDay()
+        : now()->startOfMonth();
 
-        $pdf = Pdf::loadView('admin.reports.pdf', $data)
-            ->setPaper('a4', 'portrait');
+        $to = $request->to
+            ? Carbon::parse($request->to)->endOfDay()
+            : now()->endOfDay();
 
-        return $pdf->download('bao-cao-' . $data['from'] . '-den-' . $data['to'] . '.pdf');
+        return [
+            'from' => $from,
+            'to' => $to,
+            'from_date' => $from->format('Y-m-d'),
+            'to_date' => $to->format('Y-m-d'),
+        ];
     }
 
     /*
     =====================================
-    HÀM LẤY DỮ LIỆU (DÙNG CHUNG)
+    HÀM CHÍNH
     =====================================
     */
     private function getReportData(Request $request)
     {
-        // Khoảng thời gian chuẩn
-        $from = $request->from
-            ? $request->from . ' 00:00:00'
-            : now()->startOfMonth();
-
-        $to = $request->to
-            ? $request->to . ' 23:59:59'
-            : now();
+        $range = $this->getDateRange($request);
+        $from = $range['from'];
+        $to = $range['to'];
 
         /*
-        =====================================
-        1. TÀI CHÍNH
-        =====================================
-        */
-        $finance = DB::table('orders as o')
-            ->join('order_items as oi', 'oi.order_id', '=', 'o.id')
-            ->where('o.status', 3)
-            ->whereBetween('o.created_at', [$from, $to])
-            ->selectRaw('
-                COALESCE(SUM(o.total),0) as revenue,
-                COALESCE(SUM(o.shipping_fee),0) as shipping_total,
-                COALESCE(SUM(o.discount),0) as discount_total,
-                COALESCE(SUM(oi.quantity * oi.cost_price),0) as cost,
-                COALESCE(SUM(o.total) - SUM(oi.quantity * oi.cost_price),0) as profit
-            ')
-            ->first();
-
-        /*
-        =====================================
-        2. THỐNG KÊ ĐƠN
-        =====================================
-        */
-        $orderStats = DB::table('orders')
-            ->whereBetween('created_at', [$from, $to])
-            ->selectRaw('
-                SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) as pending,
-                SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) as shipping,
-                SUM(CASE WHEN status = 3 THEN 1 ELSE 0 END) as completed,
-                SUM(CASE WHEN status = 4 THEN 1 ELSE 0 END) as cancelled
-            ')
-            ->first();
-
-        /*
-        =====================================
-        3. DOANH THU NGÀY
-        =====================================
-        */
-        $dailyRevenue = DB::table('orders')
+    =====================================
+    1. TÀI CHÍNH
+    =====================================
+    */
+        $revenue = DB::table('orders')
             ->where('status', 3)
             ->whereBetween('created_at', [$from, $to])
+            ->sum('total');
+
+        $shippingTotal = DB::table('orders')
+            ->where('status', 3)
+            ->whereBetween('created_at', [$from, $to])
+            ->sum('shipping_fee');
+
+        $discountTotal = DB::table('orders')
+        ->where('status', 3)
+        ->whereBetween('created_at', [$from, $to])
+            ->sum('discount');
+
+        $cost = DB::table('order_items as oi')
+            ->join('orders as o', 'o.id', '=', 'oi.order_id')
+            ->where('o.status', 3)
+            ->whereBetween('o.created_at', [$from, $to])
+            ->sum(DB::raw('oi.quantity * oi.cost_price'));
+
+        $finance = (object)[
+                'revenue' => $revenue,
+                'cost' => $cost,
+                'profit' => $revenue - $cost,
+                'shipping_total' => $shippingTotal,
+                'discount_total' => $discountTotal
+            ];
+
+        /*
+    =====================================
+    2. TĂNG TRƯỞNG
+    =====================================
+    */
+        $days = $from->diffInDays($to) + 1;
+
+        $prevFrom = (clone $from)->subDays($days);
+        $prevTo = (clone $from)->subSecond();
+
+        $previousRevenue = DB::table('orders')
+        ->where('status', 3)
+            ->whereBetween('created_at', [$prevFrom,
+                $prevTo
+            ])
+            ->sum('total');
+
+        $growth = $previousRevenue > 0
+            ? (($revenue - $previousRevenue) / $previousRevenue) * 100
+            : 0;
+
+        /*
+    =====================================
+    3. THỐNG KÊ ĐƠN
+    =====================================
+    */
+        $orderStats = DB::table('orders')
+        ->whereBetween('created_at', [$from, $to])
+        ->selectRaw('
+            COUNT(*) as total,
+            SUM(status = 1) as pending,
+            SUM(status = 2) as shipping,
+            SUM(status = 3) as completed,
+            SUM(status = 4) as cancelled
+        ')
+        ->first();
+
+        $cancelRate = $orderStats->total > 0
+            ? ($orderStats->cancelled / $orderStats->total) * 100
+            : 0;
+
+        /*
+    =====================================
+    4. THỜI GIAN XỬ LÝ TB
+    =====================================
+    */
+        $avgProcessingTime = DB::table('orders')
+            ->where('status', 3)
+            ->whereNotNull('delivered_at')
+            ->whereBetween('created_at', [$from, $to])
+            ->selectRaw('AVG(TIMESTAMPDIFF(HOUR, created_at, delivered_at)) as hours')
+            ->value('hours');
+
+        /*
+    =====================================
+    5. DOANH THU THEO THỜI GIAN
+    =====================================
+    */
+        $dailyRevenue = DB::table('orders')
+            ->where('status', 3)
+            ->whereBetween('created_at', [$from,
+                $to
+            ])
             ->selectRaw('DATE(created_at) as date, SUM(total) as revenue')
             ->groupBy('date')
             ->orderBy('date')
             ->get();
 
+        $weeklyRevenue = DB::table('orders')
+        ->where('status', 3)
+        ->whereBetween('created_at', [$from, $to])
+            ->selectRaw('YEARWEEK(created_at) as week, SUM(total) as revenue')
+            ->groupBy('week')
+            ->orderBy('week')
+            ->get();
+
+        $monthlyRevenue = DB::table('orders')
+        ->where('status', 3)
+        ->whereBetween('created_at', [$from, $to])
+            ->selectRaw('DATE_FORMAT(created_at,"%Y-%m") as month, SUM(total) as revenue')
+            ->groupBy('month')
+            ->orderBy('month')
+            ->get();
+
+        $yearlyRevenue = DB::table('orders')
+        ->where('status', 3)
+        ->selectRaw('YEAR(created_at) as year, SUM(total) as revenue')
+        ->groupBy('year')
+        ->orderBy('year')
+            ->get();
+
         /*
-        =====================================
-        4. TOP BÁN CHẠY
-        =====================================
-        */
+    =====================================
+    6. TOP SẢN PHẨM (có lợi nhuận)
+    =====================================
+    */
         $topProducts = DB::table('order_items as oi')
-            ->join('orders as o', 'o.id', '=', 'oi.order_id')
+        ->join('orders as o', 'o.id', '=', 'oi.order_id')
             ->join('product_variants as pv', 'pv.id', '=', 'oi.variant_id')
             ->join('products as p', 'p.id', '=', 'pv.product_id')
             ->where('o.status', 3)
@@ -112,65 +219,69 @@ class ReportController extends Controller
             ->select(
                 'p.name',
                 DB::raw('SUM(oi.quantity) as total_sold'),
-                DB::raw('SUM(oi.quantity * oi.price) as revenue')
+                DB::raw('SUM(oi.quantity * oi.price) as revenue'),
+                DB::raw('SUM(oi.quantity * (oi.price - oi.cost_price)) as profit')
             )
-            ->groupBy('p.name')
+            ->groupBy('p.id', 'p.name')
             ->orderByDesc('total_sold')
             ->limit(10)
             ->get();
 
         /*
-        =====================================
-        5. TOP LỢI NHUẬN
-        =====================================
-        */
-        $topProfitProducts = DB::table('order_items as oi')
-            ->join('orders as o', 'o.id', '=', 'oi.order_id')
-            ->join('product_variants as pv', 'pv.id', '=', 'oi.variant_id')
-            ->join('products as p', 'p.id', '=', 'pv.product_id')
-            ->where('o.status', 3)
-            ->whereBetween('o.created_at', [$from, $to])
+    =====================================
+    7 → 11 (giữ nguyên)
+    =====================================
+    */
+        $slowMoving = DB::table('product_variants as pv')
+        ->join('products as p', 'p.id', '=', 'pv.product_id')
+            ->leftJoin('order_items as oi', 'oi.variant_id', '=',
+                'pv.id'
+            )
             ->select(
                 'p.name',
-                DB::raw('SUM((oi.price - oi.cost_price) * oi.quantity) as profit')
+                'pv.stock_quantity',
+                DB::raw('MAX(oi.created_at) as last_sold')
             )
-            ->groupBy('p.name')
-            ->orderByDesc('profit')
+            ->groupBy('pv.id', 'p.name', 'pv.stock_quantity')
+            ->orderByRaw('MAX(oi.created_at) IS NULL DESC')
+            ->orderByRaw('MAX(oi.created_at) ASC')
             ->limit(10)
             ->get();
 
-        /*
-        =====================================
-        6. TỒN KHO
-        =====================================
-        */
+        $mostViewed = DB::table('wishlists as w')
+        ->join('products as p', 'p.id', '=', 'w.product_id')
+        ->select(
+            'p.name',
+            DB::raw('COUNT(w.id) as total_wishlist')
+        )
+        ->groupBy('p.id', 'p.name')
+            ->orderByDesc('total_wishlist')
+            ->limit(10)
+            ->get();
+
+        $topCustomers = DB::table('orders')
+        ->join('users', 'users.id', '=', 'orders.user_id')
+            ->where('orders.status', 3)
+            ->whereBetween('orders.created_at', [$from, $to])
+            ->select(
+                'users.name',
+                DB::raw('COUNT(*) as orders'),
+                DB::raw('SUM(total) as spending')
+            )
+            ->groupBy('users.id', 'users.name')
+            ->orderByDesc('spending')
+            ->limit(10)
+            ->get();
+
         $inventory = DB::table('product_variants')
             ->selectRaw('
-                SUM(stock_quantity) as total_qty,
-                SUM(stock_quantity * cost_price) as total_value
-            ')
+            SUM(stock_quantity) as total_qty,
+            SUM(stock_quantity * cost_price) as total_value
+        ')
             ->first();
 
-        /*
-        =====================================
-        7. NHẬP HÀNG
-        =====================================
-        */
-        $importCost = DB::table('stock_imports')
-            ->whereBetween('created_at', [$from, $to])
-            ->selectRaw('
-                SUM(quantity) as total_qty,
-                SUM(quantity * cost_price) as total_cost
-            ')
-            ->first();
-
-        /*
-        =====================================
-        8. SẮP HẾT
-        =====================================
-        */
         $lowStock = DB::table('product_variants as pv')
-            ->join('products as p', 'p.id', '=', 'pv.product_id')
+        ->join('products as p', 'p.id', '=', 'pv.product_id')
             ->where('pv.stock_quantity', '<=', 5)
             ->select('p.name', 'pv.attribute_value', 'pv.stock_quantity')
             ->orderBy('pv.stock_quantity')
@@ -178,19 +289,192 @@ class ReportController extends Controller
             ->get();
 
         return [
-            'from' => date('Y-m-d', strtotime($from)),
-            'to' => date('Y-m-d', strtotime($to)),
+            'from' => $range['from_date'],
+            'to' => $range['to_date'],
 
             'finance' => $finance,
+            'growth' => $growth,
+
             'orderStats' => $orderStats,
+            'cancelRate' => $cancelRate,
+            'avgProcessingTime' => $avgProcessingTime,
+
             'dailyRevenue' => $dailyRevenue,
+            'weeklyRevenue' => $weeklyRevenue,
+            'monthlyRevenue' => $monthlyRevenue,
+            'yearlyRevenue' => $yearlyRevenue,
 
             'topProducts' => $topProducts,
-            'topProfitProducts' => $topProfitProducts,
+            'topCustomers' => $topCustomers,
+
+            'slowMoving' => $slowMoving,
+            'mostViewed' => $mostViewed,
 
             'inventory' => $inventory,
-            'importCost' => $importCost,
             'lowStock' => $lowStock
         ];
     }
+
+    /*
+    =====================================
+    EXPORT PDF
+    =====================================
+    */
+    public function exportPdf(Request $request)
+    {
+        // Lấy toàn bộ dữ liệu báo cáo
+        $data = $this->getReportData($request);
+
+        // Nhận ảnh biểu đồ từ Chart.js (base64)
+        $data['chartImage'] = $request->input('chart_image');
+
+        // Load view PDF
+        $pdf = Pdf::loadView('admin.reports.pdf', $data)
+        ->setPaper('a4', 'portrait');
+
+        // Tên file
+        $fileName = "bao-cao-{$data['from']}-den-{$data['to']}.pdf";
+
+        return $pdf->download($fileName);
+    }
+    public function products(Request $request)
+    {
+        $range = $this->getDateRange($request);
+        $keyword = $request->keyword;
+
+        $query = DB::table('order_items as oi')
+        ->join('orders as o', 'o.id', '=', 'oi.order_id')
+        ->join('product_variants as pv', 'pv.id', '=', 'oi.variant_id')
+        ->join('products as p', 'p.id', '=', 'pv.product_id')
+        ->where('o.status', 3)
+        ->whereBetween('o.created_at', [$range['from'], $range['to']])
+        ->select(
+            'p.name',
+            DB::raw('SUM(oi.quantity) as total_sold'),
+            DB::raw('SUM(oi.quantity * oi.price) as revenue')
+        )
+            ->groupBy('p.id', 'p.name')
+            ->orderByDesc('total_sold');
+
+        // Tìm kiếm
+        if ($keyword) {
+            $query->where('p.name', 'like', "%{$keyword}%");
+        }
+
+        $products = $query->paginate(20)->withQueryString();
+
+        return view('admin.reports.products', [
+            'products' => $products,
+            'from' => $range['from_date'],
+            'to' => $range['to_date'],
+            'keyword' => $keyword
+        ]);
+    }
+
+    public function customers(Request $request)
+    {
+        $range = $this->getDateRange($request);
+        $keyword = $request->keyword;
+
+        $query = DB::table('orders')
+            ->join('users', 'users.id', '=', 'orders.user_id')
+            ->where('orders.status', 3)
+            ->whereBetween('orders.created_at', [$range['from'], $range['to']])
+            ->select(
+                'users.name',
+                DB::raw('COUNT(*) as orders'),
+                DB::raw('SUM(total) as spending')
+            )
+            ->groupBy('users.id', 'users.name')
+            ->orderByDesc('spending');
+
+        if ($keyword) {
+            $query->where('users.name', 'like', "%{$keyword}%");
+        }
+
+        $customers = $query->paginate(20)->withQueryString();
+
+        return view('admin.reports.customers', [
+                'customers' => $customers,
+                'from' => $range['from_date'],
+                'to' => $range['to_date'],
+                'keyword' => $keyword
+            ]);
+    }
+
+    public function slowProducts(Request $request)
+    {
+        $keyword = $request->keyword;
+
+        $query = DB::table('product_variants as pv')
+        ->join('products as p', 'p.id', '=', 'pv.product_id')
+        ->leftJoin('order_items as oi', 'oi.variant_id', '=', 'pv.id')
+            ->select(
+                'p.name',
+                'pv.stock_quantity',
+                DB::raw('MAX(oi.created_at) as last_sold')
+            )
+            ->groupBy('pv.id', 'p.name', 'pv.stock_quantity')
+            ->orderByRaw('MAX(oi.created_at) IS NULL DESC')
+            ->orderByRaw('MAX(oi.created_at) ASC');
+
+        if ($keyword) {
+            $query->where('p.name', 'like', "%{$keyword}%");
+        }
+
+        $products = $query->paginate(20)->withQueryString();
+
+        return view('admin.reports.slow_products', [
+            'products' => $products,
+            'keyword' => $keyword
+        ]);
+    }
+
+    public function lowStock(Request $request)
+    {
+        $keyword = $request->keyword;
+
+        $query = DB::table('product_variants as pv')
+        ->join('products as p', 'p.id', '=', 'pv.product_id')
+        ->where('pv.stock_quantity', '<=', 5)
+            ->select('p.name', 'pv.attribute_value', 'pv.stock_quantity')
+            ->orderBy('pv.stock_quantity');
+
+        if ($keyword) {
+            $query->where('p.name', 'like', "%{$keyword}%");
+        }
+
+        $products = $query->paginate(20)->withQueryString();
+
+        return view('admin.reports.low_stock', [
+            'products' => $products,
+            'keyword' => $keyword
+        ]);
+    }
+
+    public function wishlist(Request $request)
+    {
+        $keyword = $request->keyword;
+
+        $query = DB::table('wishlists as w')
+        ->join('products as p', 'p.id', '=', 'w.product_id')
+        ->select(
+            'p.name',
+            DB::raw('COUNT(w.id) as total_wishlist')
+        )
+            ->groupBy('p.id', 'p.name')
+            ->orderByDesc('total_wishlist');
+
+        if ($keyword) {
+            $query->where('p.name', 'like', "%{$keyword}%");
+        }
+
+        $products = $query->paginate(20)->withQueryString();
+
+        return view('admin.reports.wishlist', [
+            'products' => $products,
+            'keyword' => $keyword
+        ]);
+    }
+    
 }

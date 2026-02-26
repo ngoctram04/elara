@@ -19,11 +19,17 @@ class WishlistController extends Controller
     {
         $userId = Auth::id();
 
-        // Load đầy đủ để tránh N+1
+        // Load đầy đủ + rating
         $wishlists = Wishlist::with([
-            'product.brand',
-            'product.mainImage',
-            'product.variants'
+            'product' => function ($q) {
+                $q->with([
+                    'brand',
+                    'mainImage',
+                    'variants'
+                ])
+                    ->withAvg('reviews', 'rating')   // ⭐ trung bình
+                    ->withCount('reviews');          // ⭐ số lượt
+            }
         ])
             ->where('user_id', $userId)
             ->latest()

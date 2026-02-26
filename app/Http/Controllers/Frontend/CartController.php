@@ -139,11 +139,17 @@ class CartController extends Controller
         }
 
         /* ======================================================
-     * 5. SẢN PHẨM GỢI Ý
-     * ====================================================== */
-        $suggestProducts = Product::with('mainImage')
-        ->where('is_active', 1)
-        ->inRandomOrder()
+ * 5. SẢN PHẨM GỢI Ý (có rating)
+ * ====================================================== */
+        $suggestProducts = Product::with([
+            'mainImage',
+            'variants',
+            'brand'
+        ])
+            ->withAvg('reviews', 'rating')   // ⭐ trung bình
+            ->withCount('reviews')           // ⭐ số lượt đánh giá
+            ->where('is_active', 1)
+            ->inRandomOrder()
             ->take(4)
             ->get();
 

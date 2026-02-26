@@ -15,6 +15,8 @@ use App\Http\Controllers\Frontend\CartController;
 use App\Http\Controllers\Frontend\CheckoutController;
 use App\Http\Controllers\Frontend\OrderController;
 use App\Http\Controllers\Frontend\WishlistController;
+use App\Http\Controllers\Frontend\ReviewController;
+use App\Http\Controllers\Frontend\ReviewLikeController;
 /*
 |--------------------------------------------------------------------------
 | USER PROFILE
@@ -219,17 +221,44 @@ Route::prefix('admin')
         | DASHBOARD
         |--------------------------------------------------
         */
-
-
     /*
 |--------------------------------------------------
 | REPORTS - THỐNG KÊ
 |--------------------------------------------------
 */
+
+    // Dashboard
     Route::get('/reports', [ReportController::class, 'index'])
-    ->name('reports.index');
-    Route::get('/reports/export', [ReportController::class, 'exportPdf'])
-    ->name('reports.export');
+        ->name('reports.index');
+
+    // Xuất PDF
+    Route::post('/reports/export-pdf', [ReportController::class, 'exportPdf'])
+        ->name('reports.exportPdf');
+
+
+    // ===== Trang chi tiết báo cáo =====
+
+    // Top sản phẩm
+    Route::get('/reports/products', [ReportController::class, 'products'])
+    ->name('reports.products');
+
+    // Top khách hàng
+    Route::get('/reports/customers', [ReportController::class, 'customers'])
+        ->name('reports.customers');
+
+    // Sản phẩm tồn lâu
+    Route::get('/reports/slow-products', [ReportController::class, 'slowProducts'])
+        ->name('reports.slowProducts');
+
+    // Sản phẩm sắp hết hàng
+    Route::get('/reports/low-stock', [ReportController::class, 'lowStock'])
+        ->name('reports.lowStock');
+
+    // ⭐ Sản phẩm được yêu thích
+    Route::get('/reports/wishlist', [ReportController::class, 'wishlist'])
+        ->name('reports.wishlist');
+
+    
     /*
         |--------------------------------------------------
         | PROFILE
@@ -370,6 +399,24 @@ Route::prefix('admin')
     Route::get('/stock-import/history', [StockImportController::class, 'history'])
     ->name('stock.history');
 });
+/*
+|------------------------------------------------------------------
+| REVIEWS (LOGIN)
+|------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'check_active'])
+->prefix('reviews')
+->name('reviews.')
+->group(function () {
+
+    Route::get('/{orderItem}', [ReviewController::class, 'create'])
+    ->name('create');
+
+    Route::post('/{orderItem}', [ReviewController::class, 'store'])
+    ->name('store');
+
+});
+
 
 /*
 |--------------------------------------------------------------------------

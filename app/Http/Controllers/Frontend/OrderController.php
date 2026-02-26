@@ -16,31 +16,53 @@ class OrderController extends Controller
     public function index()
     {
         $orders = Order::with([
+            // Sản phẩm
             'items.variant.product',
+
+            // Ảnh variant
             'items.variant.mainImage',
+
+            // ⭐ Review của từng item
+            'items.review',
+
+            // Người huỷ (nếu có)
             'cancelledByUser'
         ])
-            ->where('user_id', Auth::id())
-            ->latest()
-            ->paginate(10);
+        ->where('user_id', Auth::id())
+        ->latest()
+        ->paginate(10);
 
         return view('frontend.orders.index', compact('orders'));
     }
 
-
-    /**
-     * Chi tiết đơn
-     */
     public function show($id)
     {
         $order = Order::with([
+            // =========================
+            // SẢN PHẨM
+            // =========================
             'items.variant.product',
+
+            // Ảnh chính variant
             'items.variant.mainImage',
+
+            // =========================
+            // REVIEW
+            // =========================
+            // Review của từng item
+            'items.review',
+
+            // Media của review (ảnh/video)
+            'items.review.media',
+
+            // =========================
+            // THÔNG TIN KHÁC
+            // =========================
             'cancelledByUser'
         ])
-            ->where('id', $id)
-            ->where('user_id', Auth::id())
-            ->firstOrFail();
+        ->where('id', $id)
+        ->where('user_id', Auth::id())
+        ->firstOrFail();
 
         return view('frontend.orders.show', compact('order'));
     }

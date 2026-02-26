@@ -58,4 +58,8 @@ class OrderItem extends Model
     {
         return $this->price * $this->quantity;
     }
+    public function review()
+    {
+        return $this->hasOne(Review::class);
+    }
 }

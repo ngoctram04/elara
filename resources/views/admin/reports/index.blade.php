@@ -1,7 +1,6 @@
 @extends('layouts.admin')
 
 @section('content')
-
 <div class="container-fluid">
 
 {{-- HEADER --}}
@@ -9,313 +8,316 @@
     <div>
         <h4 class="fw-semibold mb-0">
             <i class="bi bi-bar-chart text-primary me-2"></i>
-            Báo cáo & Thống kê chi tiết
+            Dashboard Báo Cáo
         </h4>
-        <small class="text-muted">
-            Phân tích hoạt động kinh doanh theo thời gian
-        </small>
+        <small class="text-muted">Phân tích hoạt động kinh doanh</small>
     </div>
 
-    {{-- Xuất PDF --}}
-    <a href="{{ route('admin.reports.export', ['from'=>$from,'to'=>$to]) }}"
-       class="btn btn-danger">
-        <i class="bi bi-file-earmark-pdf"></i> Xuất PDF
-    </a>
+    <form method="POST" action="{{ route('admin.reports.exportPdf') }}" id="exportForm">
+        @csrf
+        <input type="hidden" name="from" value="{{ $from }}">
+        <input type="hidden" name="to" value="{{ $to }}">
+        <input type="hidden" name="chart_image" id="chart_image">
+
+        <button type="button" onclick="exportPdf()" class="btn btn-danger">
+            Xuất PDF
+        </button>
+    </form>
 </div>
 
 
 {{-- FILTER --}}
-<div class="card border-0 shadow-sm mb-4">
-    <div class="card-body">
-        <form method="GET" action="{{ route('admin.reports.index') }}" class="row g-3 align-items-end">
-
-            <div class="col-md-3">
-                <label class="form-label">Từ ngày</label>
-                <input type="date" name="from" class="form-control" value="{{ $from }}">
-            </div>
-
-            <div class="col-md-3">
-                <label class="form-label">Đến ngày</label>
-                <input type="date" name="to" class="form-control" value="{{ $to }}">
-            </div>
-
-            <div class="col-md-2">
-                <button class="btn btn-primary w-100">
-                    <i class="bi bi-search"></i> Xem báo cáo
-                </button>
-            </div>
-
-        </form>
+<div class="card shadow-sm mb-4">
+<div class="card-body">
+<form method="GET" action="{{ route('admin.reports.index') }}" class="row g-3">
+    <div class="col-md-3">
+        <label>Từ ngày</label>
+        <input type="date" name="from" class="form-control" value="{{ $from }}">
     </div>
+
+    <div class="col-md-3">
+        <label>Đến ngày</label>
+        <input type="date" name="to" class="form-control" value="{{ $to }}">
+    </div>
+
+    <div class="col-md-2 d-flex align-items-end">
+        <button class="btn btn-primary w-100">Xem</button>
+    </div>
+</form>
+</div>
 </div>
 
 
-{{-- =======================
-1. TÀI CHÍNH
-======================= --}}
+{{-- KPI HÀNG 1: HIỆU QUẢ --}}
 <div class="row mb-4">
 
-@php
-$finance = $finance ?? (object)[];
-$inventory = $inventory ?? (object)[];
-@endphp
-
-<div class="col-md-2">
-    <div class="card border-0 shadow-sm">
-        <div class="card-body">
-            <small class="text-muted">Doanh thu</small>
-            <h6 class="fw-bold text-primary mb-0">
-                {{ number_format($finance->revenue ?? 0) }} đ
-            </h6>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <small class="text-muted">Doanh thu</small>
+                <h5 class="text-primary fw-bold">
+                    {{ number_format($revenue) }} đ
+                </h5>
+            </div>
         </div>
     </div>
-</div>
 
-<div class="col-md-2">
-    <div class="card border-0 shadow-sm">
-        <div class="card-body">
-            <small class="text-muted">Giá vốn</small>
-            <h6 class="fw-bold text-danger mb-0">
-                {{ number_format($finance->cost ?? 0) }} đ
-            </h6>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <small class="text-muted">Lợi nhuận</small>
+                <h5 class="text-success fw-bold">
+                    {{ number_format($profit) }} đ
+                </h5>
+            </div>
         </div>
     </div>
-</div>
 
-<div class="col-md-2">
-    <div class="card border-0 shadow-sm">
-        <div class="card-body">
-            <small class="text-muted">Lợi nhuận</small>
-            <h6 class="fw-bold {{ ($finance->profit ?? 0) >= 0 ? 'text-success' : 'text-danger' }}">
-                {{ number_format($finance->profit ?? 0) }} đ
-            </h6>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <small class="text-muted">Đơn thành công</small>
+                <h5 class="fw-bold">
+                    {{ number_format($totalOrders) }}
+                </h5>
+            </div>
         </div>
     </div>
-</div>
-
-<div class="col-md-2">
-    <div class="card border-0 shadow-sm">
-        <div class="card-body">
-            <small class="text-muted">Phí vận chuyển</small>
-            <h6 class="fw-bold text-secondary mb-0">
-                {{ number_format($finance->shipping_total ?? 0) }} đ
-            </h6>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <small class="text-muted">Tỷ lệ huỷ</small>
+                <h5 class="text-danger fw-bold">
+                    {{ number_format($cancelRate,1) }}%
+                </h5>
+            </div>
         </div>
     </div>
-</div>
-
-<div class="col-md-2">
-    <div class="card border-0 shadow-sm">
-        <div class="card-body">
-            <small class="text-muted">Giảm giá</small>
-            <h6 class="fw-bold text-warning mb-0">
-                {{ number_format($finance->discount_total ?? 0) }} đ
-            </h6>
-        </div>
-    </div>
-</div>
-
-<div class="col-md-2">
-    <div class="card border-0 shadow-sm">
-        <div class="card-body">
-            <small class="text-muted">Giá trị tồn kho</small>
-            <h6 class="fw-bold text-info mb-0">
-                {{ number_format($inventory->total_value ?? 0) }} đ
-            </h6>
-        </div>
-    </div>
-</div>
 
 </div>
 
-
-{{-- =======================
-2. BIỂU ĐỒ
-======================= --}}
-<div class="card border-0 shadow-sm mb-4">
-    <div class="card-body">
-        <h5 class="fw-semibold mb-3">
-            <i class="bi bi-graph-up text-success me-2"></i>
-            Doanh thu theo ngày
-        </h5>
-
-        <canvas id="revenueChart" height="80"></canvas>
-    </div>
-</div>
-
-
-{{-- =======================
-3. ĐƠN HÀNG
-======================= --}}
-@php
-$orderStats = $orderStats ?? (object)[];
-@endphp
-
+{{-- KPI HÀNG 2: DÒNG TIỀN --}}
 <div class="row mb-4">
 
-<div class="col-md-3">
-    <div class="card border-0 shadow-sm text-center">
-        <div class="card-body">
-            <small class="text-muted">Đang xử lý</small>
-            <h5 class="fw-bold text-warning">{{ $orderStats->pending ?? 0 }}</h5>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <small class="text-muted">Tổng vốn đã bán</small>
+                <h5 class="fw-bold">
+                    {{ number_format($totalCost) }} đ
+                </h5>
+            </div>
         </div>
     </div>
-</div>
 
-<div class="col-md-3">
-    <div class="card border-0 shadow-sm text-center">
-        <div class="card-body">
-            <small class="text-muted">Đang giao</small>
-            <h5 class="fw-bold text-primary">{{ $orderStats->shipping ?? 0 }}</h5>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <small class="text-muted">Tổng phí vận chuyển</small>
+                <h5 class="fw-bold">
+                    {{ number_format($totalShipping) }} đ
+                </h5>
+            </div>
         </div>
     </div>
-</div>
 
-<div class="col-md-3">
-    <div class="card border-0 shadow-sm text-center">
-        <div class="card-body">
-            <small class="text-muted">Đã giao</small>
-            <h5 class="fw-bold text-success">{{ $orderStats->completed ?? 0 }}</h5>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <small class="text-muted">Giá trị tồn kho</small>
+                <h5 class="fw-bold">
+                    {{ number_format($inventoryValue) }} đ
+                </h5>
+            </div>
         </div>
     </div>
-</div>
-
-<div class="col-md-3">
-    <div class="card border-0 shadow-sm text-center">
-        <div class="card-body">
-            <small class="text-muted">Đã huỷ</small>
-            <h5 class="fw-bold text-danger">{{ $orderStats->cancelled ?? 0 }}</h5>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <small class="text-muted">Tổng vốn nhập</small>
+                <h5 class="fw-bold">
+                    {{ number_format($totalImport) }} đ
+                </h5>
+            </div>
         </div>
     </div>
-</div>
 
 </div>
 
 
-{{-- =======================
-4. TOP SẢN PHẨM
-======================= --}}
+{{-- BIỂU ĐỒ --}}
+<div class="card shadow-sm mb-4">
+<div class="card-body">
+<h6>Doanh thu theo ngày</h6>
+<canvas id="revenueChart" height="80"></canvas>
+</div>
+</div>
+
+
+{{-- TOP SẢN PHẨM & TỒN --}}
 <div class="row mb-4">
 
-{{-- Top bán --}}
 <div class="col-md-6">
-    <div class="card border-0 shadow-sm">
-        <div class="card-body">
-            <h5 class="fw-semibold mb-3">Top bán chạy</h5>
+<div class="card shadow-sm">
+<div class="card-body">
 
-            <table class="table table-sm table-bordered">
-                <thead class="table-light">
-                <tr>
-                    <th>Sản phẩm</th>
-                    <th class="text-center">SL</th>
-                    <th class="text-end">Doanh thu</th>
-                </tr>
-                </thead>
-                <tbody>
-                @foreach($topProducts as $p)
-                    <tr>
-                        <td>{{ $p->name }}</td>
-                        <td class="text-center">{{ $p->total_sold }}</td>
-                        <td class="text-end">{{ number_format($p->revenue) }} đ</td>
-                    </tr>
-                @endforeach
-                </tbody>
-            </table>
-        </div>
-    </div>
+<div class="d-flex justify-content-between mb-2">
+<h6 class="mb-0">Top bán chạy</h6>
+<a href="{{ route('admin.reports.products', ['from'=>$from,'to'=>$to]) }}" class="small">Xem tất cả</a>
 </div>
 
-{{-- Top lợi nhuận --}}
+<table class="table table-sm">
+@forelse($topProducts as $p)
+<tr>
+<td>{{ $p->name }}</td>
+<td class="text-end">{{ $p->total_sold }}</td>
+</tr>
+@empty
+<tr><td class="text-center text-muted">Không có dữ liệu</td></tr>
+@endforelse
+</table>
+
+</div>
+</div>
+</div>
+
+
 <div class="col-md-6">
-    <div class="card border-0 shadow-sm">
-        <div class="card-body">
-            <h5 class="fw-semibold mb-3">Top lợi nhuận</h5>
+<div class="card shadow-sm">
+<div class="card-body">
 
-            <table class="table table-sm table-bordered">
-                <thead class="table-light">
-                <tr>
-                    <th>Sản phẩm</th>
-                    <th class="text-end">Lợi nhuận</th>
-                </tr>
-                </thead>
-                <tbody>
-                @foreach($topProfitProducts as $p)
-                    <tr>
-                        <td>{{ $p->name }}</td>
-                        <td class="text-end text-success fw-semibold">
-                            {{ number_format($p->profit) }} đ
-                        </td>
-                    </tr>
-                @endforeach
-                </tbody>
-            </table>
-        </div>
-    </div>
+<div class="d-flex justify-content-between mb-2">
+<h6 class="mb-0">Sản phẩm tồn lâu</h6>
+<a href="{{ route('admin.reports.slowProducts') }}" class="small">Xem tất cả</a>
+</div>
+
+<table class="table table-sm">
+@forelse($slowMoving as $p)
+<tr>
+<td>{{ $p->name }}</td>
+<td class="text-center">{{ $p->stock_quantity }}</td>
+<td class="text-muted text-end">
+{{ $p->last_sold ? \Carbon\Carbon::parse($p->last_sold)->format('d/m/Y') : 'Chưa bán' }}
+</td>
+</tr>
+@empty
+<tr><td class="text-center text-muted">Không có dữ liệu</td></tr>
+@endforelse
+</table>
+
+</div>
+</div>
 </div>
 
 </div>
 
 
-{{-- =======================
-5. SẮP HẾT
-======================= --}}
-<div class="card border-0 shadow-sm">
-    <div class="card-body">
-        <h5 class="fw-semibold mb-3">Sản phẩm sắp hết</h5>
+{{-- KHÁCH HÀNG --}}
+<div class="row mb-4">
 
-        <table class="table table-sm table-bordered">
-            <thead class="table-light">
-            <tr>
-                <th>Sản phẩm</th>
-                <th>Biến thể</th>
-                <th class="text-center">Tồn</th>
-            </tr>
-            </thead>
-            <tbody>
-            @foreach($lowStock as $item)
-                <tr>
-                    <td>{{ $item->name }}</td>
-                    <td>{{ $item->attribute_value }}</td>
-                    <td class="text-center text-danger fw-bold">
-                        {{ $item->stock_quantity }}
-                    </td>
-                </tr>
-            @endforeach
-            </tbody>
-        </table>
-    </div>
+<div class="col-md-6">
+<div class="card shadow-sm">
+<div class="card-body">
+
+<div class="d-flex justify-content-between mb-2">
+    <h6 class="mb-0">Sản phẩm được quan tâm</h6>
+    <a href="{{ route('admin.reports.wishlist') }}" class="small">
+        Xem tất cả
+    </a>
+</div>
+
+<table class="table table-sm">
+@forelse($mostViewed as $p)
+<tr>
+<td>{{ $p->name }}</td>
+<td class="text-end">{{ $p->total_wishlist }}</td>
+</tr>
+@empty
+<tr><td class="text-center text-muted">Không có dữ liệu</td></tr>
+@endforelse
+</table>
+
+</div>
+</div>
+</div>
+
+
+<div class="col-md-6">
+<div class="card shadow-sm">
+<div class="card-body">
+
+<div class="d-flex justify-content-between mb-2">
+<h6 class="mb-0">Top khách hàng</h6>
+<a href="{{ route('admin.reports.customers') }}" class="small">Xem tất cả</a>
+</div>
+
+<table class="table table-sm">
+@forelse($topCustomers as $c)
+<tr>
+<td>{{ $c->name }}</td>
+<td class="text-end">{{ number_format($c->spending) }} đ</td>
+</tr>
+@empty
+<tr><td class="text-center text-muted">Không có dữ liệu</td></tr>
+@endforelse
+</table>
+
+</div>
+</div>
 </div>
 
 </div>
 
 
-{{-- =======================
-CHART JS
-======================= --}}
+{{-- LOW STOCK --}}
+<div class="card shadow-sm">
+<div class="card-body">
+
+<div class="d-flex justify-content-between mb-2">
+<h6 class="mb-0">Sắp hết hàng</h6>
+<a href="{{ route('admin.reports.lowStock') }}" class="small">Xem tất cả</a>
+</div>
+
+<table class="table table-sm">
+@forelse($lowStock as $item)
+<tr>
+<td>{{ $item->name }}</td>
+<td>{{ $item->attribute_value }}</td>
+<td class="text-danger text-center">{{ $item->stock_quantity }}</td>
+</tr>
+@empty
+<tr><td class="text-center text-muted">Không có dữ liệu</td></tr>
+@endforelse
+</table>
+
+</div>
+</div>
+</div>
+
+
+{{-- CHART + EXPORT --}}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-const ctx = document.getElementById('revenueChart');
-
-const labels = @json($dailyRevenue->pluck('date'));
-const data = @json($dailyRevenue->pluck('revenue'));
-
-new Chart(ctx, {
+let revenueChart = new Chart(document.getElementById('revenueChart'), {
     type: 'line',
     data: {
-        labels: labels,
+        labels: @json($dailyRevenue->pluck('date')),
         datasets: [{
             label: 'Doanh thu',
-            data: data,
-            tension: 0.3
+            data: @json($dailyRevenue->pluck('revenue')),
+            tension: 0.3,
+            borderWidth: 2,
+            fill: false
         }]
-    },
-    options: {
-        responsive: true,
-        plugins: {
-            legend: { display: true }
-        }
     }
 });
+
+function exportPdf() {
+    const img = revenueChart.toBase64Image();
+    document.getElementById('chart_image').value = img;
+    document.getElementById('exportForm').submit();
+}
 </script>
 
 @endsection
