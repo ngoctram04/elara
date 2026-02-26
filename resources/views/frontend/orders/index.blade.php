@@ -83,15 +83,20 @@ body{background:#f5f6fa;}
 
 @forelse($orders as $order)
 
+@php
+    // Tổng khách phải trả (ưu tiên grand_total)
+    $payAmount = $order->grand_total
+        ?? ($order->total + ($order->shipping_fee ?? 0));
+@endphp
+
 <div class="order-box">
 
-    {{-- ================= HEADER ================= --}}
+    {{-- HEADER --}}
     <div class="order-header">
         <div>
             Mã đơn: <b>#{{ $order->id }}</b> |
             {{ $order->created_at->format('d/m/Y H:i') }}
 
-            {{-- Ngày giao --}}
             @if($order->isCompleted() && $order->delivered_at)
                 <br>
                 <small class="text-muted">
@@ -99,24 +104,13 @@ body{background:#f5f6fa;}
                 </small>
             @endif
 
-            {{-- Nếu bị huỷ --}}
             @if($order->isCancelled())
-    <br>
-    <small class="text-danger">
-        Huỷ bởi:
-        {{ $order->cancelled_by == 'admin' ? 'Admin' : 'Khách' }}
-        @if($order->cancelled_by_name)
-            ({{ $order->cancelled_by_name }})
-        @endif
-    </small>
-
-    @if($order->cancel_reason)
-        <br>
-        <small class="text-muted">
-            Lý do: {{ $order->cancel_reason }}
-        </small>
-    @endif
-@endif
+                <br>
+                <small class="text-danger">
+                    Huỷ bởi:
+                    {{ $order->cancelled_by == 'admin' ? 'Admin' : 'Khách' }}
+                </small>
+            @endif
         </div>
 
         <div class="order-status status-{{ $order->status }}">
@@ -125,7 +119,7 @@ body{background:#f5f6fa;}
     </div>
 
 
-    {{-- ================= ITEMS ================= --}}
+    {{-- ITEMS --}}
     @foreach($order->items as $item)
         @php
             $variant = $item->variant;
@@ -149,7 +143,6 @@ body{background:#f5f6fa;}
                 </div>
 
                 <div class="order-variant">
-                    {{ $variant->attribute_name ?? '' }}
                     {{ $variant->attribute_value ?? '' }}
                     x{{ $item->quantity }}
                 </div>
@@ -163,7 +156,7 @@ body{background:#f5f6fa;}
     @endforeach
 
 
-    {{-- ================= FOOTER ================= --}}
+    {{-- FOOTER --}}
     <div class="order-footer">
 
         <div>
@@ -175,38 +168,41 @@ body{background:#f5f6fa;}
                     Giảm: -{{ number_format($order->discount) }}đ
                 </small>
             @endif
+
+            @if($order->shipping_fee > 0)
+                <br>
+                <small class="text-muted">
+                    Phí ship: {{ number_format($order->shipping_fee) }}đ
+                </small>
+            @endif
         </div>
 
         <div class="text-end">
-            Tổng tiền:
+            Tổng thanh toán:
             <span class="order-total">
-                {{ number_format($order->total) }}đ
+                {{ number_format($payAmount) }}đ
             </span>
 
             <div class="mt-2">
 
-                {{-- Chi tiết --}}
                 <a href="{{ route('orders.show',$order->id) }}"
                    class="btn btn-outline-secondary btn-sm btn-action">
                     Chi tiết
                 </a>
 
-                {{-- Pending → Huỷ --}}
                 @if($order->canCancel())
                     <form action="{{ route('orders.cancel',$order->id) }}"
-                          method="POST"
-                          style="display:inline;">
-                        @csrf
-                        @method('PUT')
-                        <button type="submit"
-                                class="btn btn-outline-danger btn-sm btn-action"
-                                onclick="return confirm('Bạn chắc chắn muốn huỷ đơn?')">
-                            Huỷ đơn
-                        </button>
-                    </form>
+      method="POST"
+      class="d-inline cancel-form">
+    @csrf
+    @method('PUT')
+    <button type="button"
+            class="btn btn-outline-danger btn-sm btn-action btn-cancel">
+        Huỷ đơn
+    </button>
+</form>
                 @endif
 
-                {{-- Completed hoặc Cancelled → Mua lại --}}
                 @if($order->isCompleted() || $order->isCancelled())
                     <form action="{{ route('orders.reorder',$order->id) }}"
                           method="POST"
@@ -238,3 +234,59 @@ body{background:#f5f6fa;}
 
 </div>
 @endsection
+@push('scripts')
+
+{{-- SweetAlert --}}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+// Xác nhận huỷ đơn
+document.querySelectorAll('.btn-cancel').forEach(function(button){
+    button.addEventListener('click', function () {
+
+        let form = this.closest('.cancel-form');
+
+        Swal.fire({
+            title: 'Bạn muốn huỷ đơn?',
+            text: 'Đơn hàng sẽ được huỷ và không thể khôi phục!',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Huỷ đơn',
+            cancelButtonText: 'Không',
+            confirmButtonColor: '#e74c3c',
+            cancelButtonColor: '#6c757d',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                form.submit();
+            }
+        });
+
+    });
+});
+</script>
+
+{{-- Thông báo sau khi huỷ --}}
+@if(session('success'))
+<script>
+Swal.fire({
+    icon: 'success',
+    title: 'Thành công',
+    text: '{{ session('success') }}',
+    confirmButtonColor: '#3085d6'
+});
+</script>
+@endif
+
+@if(session('error'))
+<script>
+Swal.fire({
+    icon: 'error',
+    title: 'Lỗi',
+    text: '{{ session('error') }}',
+    confirmButtonColor: '#d33'
+});
+</script>
+@endif
+
+@endpush

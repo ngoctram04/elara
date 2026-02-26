@@ -191,32 +191,62 @@ document.addEventListener('click', function (e) {
 
 
     /* ========= ADD TO CART ========= */
-    const addBtn = e.target.closest('.btn-add-to-cart');
-    if (addBtn) {
-        e.preventDefault();
-        e.stopImmediatePropagation();
+const addBtn = e.target.closest('.btn-add-to-cart');
+if (addBtn) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
 
-        const variantId = addBtn.dataset.variantId;
-        if (!variantId) {
-            showCenterNotify('Sản phẩm đã hết hàng', 'error');
-            return;
-        }
+    const variantId = addBtn.dataset.variantId;
 
-        fetch("{{ route('cart.add') }}", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-                "Accept": "application/json",
-                "X-CSRF-TOKEN": "{{ csrf_token() }}"
-            },
-            body: new URLSearchParams({
-                variant_id: variantId,
-                quantity: 1
-            })
-        });
-
+    // Hết hàng
+    if (!variantId) {
+        showCenterNotify('Sản phẩm đã hết hàng', 'error');
         return;
     }
+
+    fetch("{{ route('cart.add') }}", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Accept": "application/json",
+            "X-CSRF-TOKEN": "{{ csrf_token() }}"
+        },
+        body: new URLSearchParams({
+            variant_id: variantId,
+            quantity: 1
+        })
+    })
+    .then(async res => {
+        // Nếu server lỗi (500, 419, 422...) vẫn cố đọc JSON
+        const data = await res.json().catch(() => null);
+
+        if (!res.ok || !data) {
+            throw new Error('Server error');
+        }
+
+        return data;
+    })
+    .then(data => {
+        if (data.success) {
+            // Thông báo thành công
+            showCenterNotify(data.message || 'Đã thêm vào giỏ hàng', 'success');
+
+            // Cập nhật badge giỏ nếu có
+            if (data.cart_count !== undefined) {
+                const badge = document.querySelector('.cart-count');
+                if (badge) badge.innerText = data.cart_count;
+            }
+
+        } else {
+            showCenterNotify(data.message || 'Không thể thêm vào giỏ', 'error');
+        }
+    })
+    .catch(() => {
+        showCenterNotify('Có lỗi hệ thống, vui lòng thử lại', 'error');
+    });
+
+    return;
+}
 
 
     /* ========= BUY NOW ========= */

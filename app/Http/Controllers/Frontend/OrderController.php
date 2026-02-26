@@ -18,7 +18,7 @@ class OrderController extends Controller
         $orders = Order::with([
             'items.variant.product',
             'items.variant.mainImage',
-            'cancelledByUser' // NEW
+            'cancelledByUser'
         ])
             ->where('user_id', Auth::id())
             ->latest()
@@ -36,7 +36,7 @@ class OrderController extends Controller
         $order = Order::with([
             'items.variant.product',
             'items.variant.mainImage',
-            'cancelledByUser' // NEW
+            'cancelledByUser'
         ])
             ->where('id', $id)
             ->where('user_id', Auth::id())
@@ -47,12 +47,11 @@ class OrderController extends Controller
 
 
     /**
-     * Huỷ đơn hàng (chỉ khi status = 1)
+     * Huỷ đơn hàng (chỉ khi status = pending)
      */
     public function cancel($id)
     {
-        $order = Order::with('items.variant')
-        ->where('id', $id)
+        $order = Order::where('id', $id)
             ->where('user_id', Auth::id())
             ->firstOrFail();
 
@@ -65,19 +64,23 @@ class OrderController extends Controller
 
         try {
 
-            // ================= HOÀN TỒN KHO =================
-            foreach ($order->items as $item) {
-                if ($item->variant) {
-                    $item->variant->increment(
-                        'stock_quantity',
-                        $item->quantity
-                    );
-                }
+            // ================= XỬ LÝ THANH TOÁN =================
+            $paymentStatus = $order->payment_status;
+
+            // Nếu đã thanh toán VNPay → chuyển hoàn tiền
+            if (
+                $order->payment_method === 'vnpay' &&
+                $order->payment_status == Order::PAYMENT_PAID
+            ) {
+                $paymentStatus = Order::PAYMENT_REFUNDED;
             }
 
             // ================= CẬP NHẬT ĐƠN =================
+            // Không hoàn kho ở đây!
+            // Model Order sẽ tự hoàn kho khi status = CANCELLED
             $order->update([
                 'status' => Order::STATUS_CANCELLED,
+                'payment_status' => $paymentStatus,
                 'cancelled_by' => 'customer',
                 'cancelled_by_user_id' => Auth::id(),
                 'cancelled_at' => now()
@@ -95,7 +98,6 @@ class OrderController extends Controller
             return back()->with('error', 'Huỷ đơn thất bại.');
         }
     }
-
 
     /**
      * Mua lại đơn (Reorder)
@@ -117,10 +119,12 @@ class OrderController extends Controller
 
                 $variant = $item->variant;
 
+                // Bỏ qua nếu không còn hàng
                 if (!$variant || $variant->stock_quantity <= 0) {
                     continue;
                 }
 
+                // Không vượt quá tồn kho
                 $quantity = min($item->quantity, $variant->stock_quantity);
 
                 $cart = Cart::where('user_id', $userId)
@@ -151,7 +155,9 @@ class OrderController extends Controller
                 ->route('cart.index')
                 ->with('success', 'Đã thêm sản phẩm vào giỏ hàng!');
         } catch (\Exception $e) {
+
             DB::rollBack();
+
             return back()->with('error', 'Mua lại thất bại.');
         }
     }

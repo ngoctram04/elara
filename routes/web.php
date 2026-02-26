@@ -36,7 +36,7 @@ use App\Http\Controllers\Admin\PromotionController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\StockImportController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
-
+use App\Http\Controllers\Admin\ReportController;
 /*
 |--------------------------------------------------------------------------
 | FRONTEND – PUBLIC
@@ -45,7 +45,6 @@ use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 
 // Home
 Route::get('/', [HomeController::class, 'index'])->name('home');
-
 // Shop
 Route::get('/products', [ShopController::class, 'index'])->name('shop');
 
@@ -118,6 +117,8 @@ Route::middleware(['auth', 'check_active'])
 
     Route::post('/', [CheckoutController::class, 'store'])
     ->name('store');
+    Route::post('/calculate-shipping', [CheckoutController::class, 'calculateShippingAjax'])
+    ->name('calculateShipping');
 
     Route::get('/success/{order}', [CheckoutController::class, 'success'])
     ->name('success');
@@ -218,9 +219,17 @@ Route::prefix('admin')
         | DASHBOARD
         |--------------------------------------------------
         */
-    Route::get('/dashboard', [DashboardController::class, 'index'])
-        ->name('dashboard');
 
+
+    /*
+|--------------------------------------------------
+| REPORTS - THỐNG KÊ
+|--------------------------------------------------
+*/
+    Route::get('/reports', [ReportController::class, 'index'])
+    ->name('reports.index');
+    Route::get('/reports/export', [ReportController::class, 'exportPdf'])
+    ->name('reports.export');
     /*
         |--------------------------------------------------
         | PROFILE

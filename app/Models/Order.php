@@ -13,14 +13,26 @@ class Order extends Model
 
     protected $fillable = [
         'user_id',
+
+        // Tiền
         'subtotal',
         'discount',
-        'total',
+        'shipping_fee',   // ⭐ thêm
+        'total',           // doanh thu (không gồm ship)
+        'grand_total',     // ⭐ thêm (khách trả)
+
+        'promotion_code',
+
+        // Trạng thái
         'status',
+
+        // Người nhận
         'receiver_name',
         'receiver_phone',
         'receiver_address',
         'note',
+
+        // Thanh toán
         'payment_method',
         'payment_status',
         'transaction_code',
@@ -37,7 +49,9 @@ class Order extends Model
     protected $casts = [
         'subtotal' => 'integer',
         'discount' => 'integer',
+        'shipping_fee' => 'integer',   // thêm
         'total' => 'integer',
+        'grand_total' => 'integer',    // thêm
         'status' => 'integer',
         'payment_status' => 'integer',
         'delivered_at' => 'datetime',

@@ -29,12 +29,6 @@
         </div>
         <ul class="sidebar-menu">
 
-    <li>
-        <a href="{{ route('admin.dashboard') }}"
-           class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
-            <i class="bi bi-speedometer2"></i> Tổng quan
-        </a>
-    </li>
 
     {{-- USERS --}}
     <li>
@@ -94,11 +88,11 @@
 
     {{-- STATISTICS --}}
     <li>
-        <a href="#"
-           class="{{ request()->is('admin/statistics*') ? 'active' : '' }}">
-            <i class="bi bi-bar-chart"></i> Thống kê
-        </a>
-    </li>
+    <a href="{{ route('admin.reports.index') }}"
+       class="{{ request()->is('admin/reports*') ? 'active' : '' }}">
+        <i class="bi bi-bar-chart"></i> Thống kê
+    </a>
+</li>
 
 </ul>
 

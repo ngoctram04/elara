@@ -194,7 +194,7 @@ class CartController extends Controller
         ]);
 
         /* ==============================
-     * 2. ÉP KIỂU (QUAN TRỌNG – TRÁNH TRÙNG KEY)
+     * 2. ÉP KIỂU
      * ============================== */
         $variantId = (int) $request->variant_id;
         $qty       = (int) $request->qty;
@@ -205,7 +205,7 @@ class CartController extends Controller
      * 3. KIỂM TRA TỒN KHO
      * ============================== */
         if ($variant->stock_quantity <= 0) {
-            return $this->responseError('Sản phẩm đã hết hàng', $request);
+            return $this->jsonError('Sản phẩm đã hết hàng');
         }
 
         /* ==============================
@@ -213,7 +213,7 @@ class CartController extends Controller
      * ============================== */
         $cart = session()->get('cart', []);
 
-        // Đảm bảo key là integer
+        // Chuẩn hóa key = variant_id (int)
         $cart = collect($cart)->mapWithKeys(function ($item) {
             return [(int)$item['variant_id'] => [
                 'variant_id' => (int)$item['variant_id'],
@@ -222,28 +222,19 @@ class CartController extends Controller
         })->toArray();
 
         /* ==============================
-     * 5. GỘP NẾU ĐÃ CÓ
+     * 5. THÊM / GỘP SẢN PHẨM
      * ============================== */
-        if (isset($cart[$variantId])) {
+        $currentQty = $cart[$variantId]['quantity'] ?? 0;
+        $newQty = $currentQty + $qty;
 
-            $newQty = $cart[$variantId]['quantity'] + $qty;
-
-            if ($newQty > $variant->stock_quantity) {
-                return $this->responseError('Vượt quá tồn kho', $request);
-            }
-
-            $cart[$variantId]['quantity'] = $newQty;
-        } else {
-
-            if ($qty > $variant->stock_quantity) {
-                return $this->responseError('Không đủ tồn kho', $request);
-            }
-
-            $cart[$variantId] = [
-                'variant_id' => $variantId,
-                'quantity'   => $qty,
-            ];
+        if ($newQty > $variant->stock_quantity) {
+            return $this->jsonError('Vượt quá tồn kho');
         }
+
+        $cart[$variantId] = [
+            'variant_id' => $variantId,
+            'quantity'   => $newQty,
+        ];
 
         /* ==============================
      * 6. LƯU SESSION
@@ -251,7 +242,7 @@ class CartController extends Controller
         session()->put('cart', $cart);
 
         /* ==============================
-     * 7. SYNC DB (nếu login)
+     * 7. SYNC DB (nếu đăng nhập)
      * ============================== */
         if (Auth::check()) {
             Cart::updateOrCreate(
@@ -260,7 +251,7 @@ class CartController extends Controller
                     'variant_id' => $variantId,
                 ],
                 [
-                    'quantity' => $cart[$variantId]['quantity']
+                    'quantity' => $newQty
                 ]
             );
         }
@@ -271,12 +262,12 @@ class CartController extends Controller
         $cartCount = collect($cart)->sum('quantity');
 
         /* ==============================
-     * 9. RESPONSE
+     * 9. RESPONSE (LUÔN JSON cho AJAX)
      * ============================== */
         if ($request->ajax() || $request->expectsJson()) {
             return response()->json([
                 'success'    => true,
-                'message'    => 'Đã thêm vào giỏ hàng',
+                'message'    => 'Đã thêm sản phẩm vào giỏ hàng',
                 'cart_count' => $cartCount
             ]);
         }
@@ -472,11 +463,11 @@ class CartController extends Controller
 
     protected function responseError(string $message, Request $request)
     {
-        if ($request->expectsJson()) {
+        if ($request->ajax() || $request->expectsJson()) {
             return response()->json([
                 'success' => false,
                 'message' => $message
-            ], 422);
+            ]);
         }
 
         return back()->withErrors(['qty' => $message]);
@@ -582,5 +573,11 @@ class CartController extends Controller
             'final_total' => $finalTotal
         ]);
     }
-   
+    protected function jsonError(string $message)
+    {
+        return response()->json([
+            'success' => false,
+            'message' => $message
+        ]);
+    }
 }

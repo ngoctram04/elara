@@ -446,6 +446,49 @@ document.querySelectorAll('.thumb-img').forEach(img => {
         }
     });
 });
+/* =====================
+   ADD TO CART (DETAIL PAGE)
+===================== */
+const form = document.getElementById('add-to-cart-form');
+
+if (form) {
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(form);
+
+        fetch("{{ route('cart.add') }}", {
+            method: "POST",
+            headers: {
+                "Accept": "application/json",
+                "X-CSRF-TOKEN": "{{ csrf_token() }}"
+            },
+            body: formData
+        })
+        .then(async res => {
+            const data = await res.json().catch(() => null);
+            if (!res.ok || !data) throw new Error();
+            return data;
+        })
+        .then(data => {
+            if (data.success) {
+                // Thông báo
+                showCenterNotify(data.message || 'Đã thêm vào giỏ hàng', 'success');
+
+                // Cập nhật badge giỏ nếu có
+                if (data.cart_count !== undefined) {
+                    const badge = document.querySelector('.cart-count');
+                    if (badge) badge.innerText = data.cart_count;
+                }
+            } else {
+                showCenterNotify(data.message || 'Không thể thêm vào giỏ', 'error');
+            }
+        })
+        .catch(() => {
+            showCenterNotify('Có lỗi hệ thống, vui lòng thử lại', 'error');
+        });
+    });
+}
 </script>
 
 @endpush

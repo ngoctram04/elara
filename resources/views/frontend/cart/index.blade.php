@@ -145,9 +145,22 @@ data-id="{{ $item['variant_id'] }}">
 
 </tr>
 @endforeach
+
 </tbody>
 </table>
 </div>
+</div>
+<!-- Confirm Delete -->
+<div id="confirm-delete-box" class="confirm-box d-none">
+    <div class="confirm-content">
+        <div class="mb-3 fw-semibold">
+            Bạn có muốn xóa sản phẩm này?
+        </div>
+        <div class="d-flex justify-content-center gap-2">
+            <button class="btn btn-danger btn-sm" id="confirm-delete-yes">Xóa</button>
+            <button class="btn btn-secondary btn-sm" id="confirm-delete-no">Hủy</button>
+        </div>
+    </div>
 </div>
 {{-- TOTAL --}}
 <div class="cart-total-card shadow-sm rounded-3 mt-4 p-4 bg-white sticky-total">
@@ -331,6 +344,31 @@ select option:disabled{
 .sticky-total{position:sticky;bottom:10px;}
 
 .suggest-img{height:180px;object-fit:cover;}
+.confirm-box{
+    position: fixed;
+    top:0;
+    left:0;
+    right:0;
+    bottom:0;
+    background: rgba(0,0,0,0.4);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:9999;
+}
+
+.confirm-content{
+    background:#fff;
+    padding:20px 25px;
+    border-radius:10px;
+    box-shadow:0 10px 25px rgba(0,0,0,0.2);
+    text-align:center;
+    min-width:260px;
+}
+
+.d-none{
+    display:none !important;
+}
 </style>
 {{-- ================= MODAL VOUCHER ================= --}}
 <div class="modal fade" id="voucherModal" tabindex="-1">
@@ -490,7 +528,7 @@ document.addEventListener('click', e=>{
         /* ===== PLUS ===== */
         if(btn.classList.contains('js-plus')){
             if(qty >= stock){
-                alert('Chỉ còn ' + stock + ' sản phẩm');
+                showCenterNotify('Chỉ còn ' + stock + ' sản phẩm', 'error');
                 return;
             }
             qty++;
@@ -498,25 +536,13 @@ document.addEventListener('click', e=>{
 
         /* ===== MINUS ===== */
         else{
-
             if(qty <= 1){
-
-                if(confirm('Số lượng đang là 1. Bạn có muốn xóa sản phẩm khỏi giỏ hàng?')){
-
-                    fetch(`/cart/remove/${id}`,{
-                        method:'DELETE',
-                        headers:{'X-CSRF-TOKEN':'{{ csrf_token() }}'}
-                    }).then(()=>{
-                        const row = document.querySelector(`tr[data-row="${id}"]`);
-                        if(row) row.remove();
-                        recalcTotal();
-                    });
-
-                }
-
+                // Hiện confirm custom
+                removeId = id;
+                document.getElementById('confirm-delete-box')
+                    .classList.remove('d-none');
                 return;
             }
-
             qty--;
         }
 
@@ -531,21 +557,57 @@ document.addEventListener('click', e=>{
         recalcTotal();
     }
 
-    /* ================= REMOVE ================= */
-    const remove = e.target.closest('.js-remove');
-    if(remove){
-        const id = remove.dataset.id;
-        if(!confirm('Xóa sản phẩm?')) return;
+});
+/* ================= REMOVE (Confirm Box chuẩn) ================= */
+let removeId = null;
+
+// Click icon thùng rác
+document.addEventListener('click', function(e){
+
+    const removeBtn = e.target.closest('.js-remove');
+    if(removeBtn){
+        removeId = removeBtn.dataset.id;
+        document.getElementById('confirm-delete-box')
+            .classList.remove('d-none');
+        return;
+    }
+
+    // Hủy
+    if(e.target.id === 'confirm-delete-no'){
+        document.getElementById('confirm-delete-box')
+            .classList.add('d-none');
+        removeId = null;
+        return;
+    }
+
+    // Đồng ý xóa
+    if(e.target.id === 'confirm-delete-yes' && removeId){
+
+        const id = removeId;
+
+        document.getElementById('confirm-delete-box')
+            .classList.add('d-none');
+
+        showCenterNotify('Đang xóa sản phẩm...', 'info');
 
         fetch(`/cart/remove/${id}`,{
             method:'DELETE',
             headers:{'X-CSRF-TOKEN':'{{ csrf_token() }}'}
-        }).then(()=>{
+        })
+        .then(()=>{
             const row = document.querySelector(`tr[data-row="${id}"]`);
             if(row) row.remove();
+
+            showCenterNotify('Đã xóa sản phẩm', 'success');
             recalcTotal();
+        })
+        .catch(()=>{
+            showCenterNotify('Không thể xóa sản phẩm', 'error');
         });
+
+        removeId = null;
     }
+
 });
 
 /* ================= NHẬP TAY ================= */
@@ -566,7 +628,7 @@ document.addEventListener('change', e=>{
 
         if(qty > stock){
             qty = stock;
-            alert('Chỉ còn ' + stock + ' sản phẩm');
+            showCenterNotify('Chỉ còn ' + stock + ' sản phẩm', 'error');
         }
 
         input.value = qty;
@@ -594,7 +656,7 @@ document.querySelectorAll('.js-change-variant').forEach(select=>{
         const option = select.options[select.selectedIndex];
         const stockCheck = parseInt(option.dataset.stock);
         if(stockCheck <= 0){
-            alert('Biến thể này đã hết hàng');
+            showCenterNotify('Biến thể này đã hết hàng', 'error');
             select.value = oldId;
             return;
         }
@@ -617,7 +679,7 @@ document.querySelectorAll('.js-change-variant').forEach(select=>{
             row.style.opacity = 1;
 
             if(!res.success){
-                alert(res.message || 'Không thể đổi biến thể');
+                showCenterNotify(res.message || 'Không thể đổi biến thể', 'error');
                 select.value = oldId;
                 return;
             }
@@ -734,7 +796,7 @@ document.getElementById('checkout-form')?.addEventListener('submit', function(e)
 
     if(checked.length === 0){
         e.preventDefault();
-        alert('Vui lòng chọn sản phẩm để thanh toán');
+        showCenterNotify('Vui lòng chọn sản phẩm để thanh toán', 'error');
         return;
     }
 
@@ -768,7 +830,7 @@ function applyVoucher(code){
 
     const totalEl = document.querySelector('.js-total');
     if(!totalEl){
-        alert('Không tìm thấy tổng tiền');
+        showCenterNotify('Không tìm thấy tổng tiền', 'error');
         return;
     }
 
@@ -776,7 +838,7 @@ function applyVoucher(code){
     const total = Number(totalEl.dataset.value || 0);
 
     if(total <= 0){
-        alert('Vui lòng chọn sản phẩm trước khi áp dụng voucher');
+        showCenterNotify('Vui lòng chọn sản phẩm trước khi áp dụng voucher', 'error');
         return;
     }
 
@@ -795,7 +857,7 @@ function applyVoucher(code){
     .then(res => {
 
         if(!res.success){
-            alert(res.message || 'Mã không hợp lệ');
+            showCenterNotify(res.message || 'Mã không hợp lệ', 'error');
             return;
         }
 
@@ -833,7 +895,7 @@ function applyVoucher(code){
         }
     })
     .catch(()=>{
-        alert('Có lỗi xảy ra, vui lòng thử lại');
+        showCenterNotify('Có lỗi xảy ra, vui lòng thử lại', 'error');
     });
 }
 /* ===== CLICK VOUCHER (ổn định cho modal) ===== */
@@ -846,10 +908,12 @@ document.addEventListener('click', function(e){
 });
 document.getElementById('btn-apply-voucher')?.addEventListener('click', ()=>{
     const code = document.getElementById('voucher-code').value.trim();
+
     if(!code){
-        alert('Nhập mã khuyến mãi');
+        showCenterNotify('Vui lòng nhập mã khuyến mãi', 'error');
         return;
     }
+
     applyVoucher(code);
 });
 </script>

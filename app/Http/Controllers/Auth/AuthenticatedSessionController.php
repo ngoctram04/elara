@@ -74,9 +74,9 @@ class AuthenticatedSessionController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        // Admin → dashboard
+
         if ($user->role === 'admin') {
-            return redirect()->route('admin.dashboard');
+            return redirect()->route('admin.reports.index');
         }
 
         // User thường → LUÔN về trang chủ "/"

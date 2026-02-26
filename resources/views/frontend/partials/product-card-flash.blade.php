@@ -183,29 +183,52 @@ document.addEventListener('click', function (e) {
         return;
     }
 
-    /* ========= ADD TO CART ========= */
-    const addBtn = e.target.closest('.btn-add-to-cart');
-    if (addBtn) {
-        e.preventDefault();
-        e.stopImmediatePropagation();
+/* ========= ADD TO CART ========= */
+const addBtn = e.target.closest('.btn-add-to-cart');
+if (addBtn) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
 
-        const variantId = addBtn.dataset.variantId;
+    const variantId = addBtn.dataset.variantId;
 
-        fetch("{{ route('cart.add') }}", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-                "Accept": "application/json",
-                "X-CSRF-TOKEN": "{{ csrf_token() }}"
-            },
-            body: new URLSearchParams({
-                variant_id: variantId,
-                quantity: 1
-            })
-        });
-
+    if (!variantId) {
+        showCenterNotify('Sản phẩm đã hết hàng', 'error');
         return;
     }
+
+    fetch("{{ route('cart.add') }}", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Accept": "application/json",
+            "X-CSRF-TOKEN": "{{ csrf_token() }}"
+        },
+        body: new URLSearchParams({
+            variant_id: variantId,
+            quantity: 1
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            showCenterNotify(data.message, 'success');
+
+            // Cập nhật badge giỏ nếu có
+            const badge = document.querySelector('.cart-count');
+            if (badge && data.cart_count !== undefined) {
+                badge.innerText = data.cart_count;
+            }
+
+        } else {
+            showCenterNotify(data.message || 'Không thể thêm vào giỏ', 'error');
+        }
+    })
+    .catch(() => {
+        showCenterNotify('Có lỗi xảy ra', 'error');
+    });
+
+    return;
+}
 
     /* ========= BUY NOW ========= */
     const buyBtn = e.target.closest('.btn-buy-now');

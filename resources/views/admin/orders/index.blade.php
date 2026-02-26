@@ -110,9 +110,9 @@
                         </td>
 
                         {{-- Tổng --}}
-                        <td class="fw-bold text-danger">
-                            {{ number_format($order->total) }}đ
-                        </td>
+                       <td class="fw-bold text-danger">
+    {{ number_format($order->grand_total) }}đ
+</td>
 
                         {{-- Thanh toán (logic chuẩn từ Model) --}}
                         <td>
