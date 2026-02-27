@@ -14,15 +14,13 @@
 </section>
 
 <div class="container">
-
-
     <div class="row">
 
         {{-- ================= SIDEBAR ================= --}}
         <aside class="col-md-3 mb-4">
             <form method="GET" class="sidebar-box">
 
-                {{-- giữ sort --}}
+                {{-- giữ sort + limit --}}
                 <input type="hidden" name="sort" value="{{ request('sort') }}">
                 <input type="hidden" name="limit" value="{{ request('limit', 20) }}">
 
@@ -96,36 +94,52 @@
         {{-- ================= PRODUCTS ================= --}}
         <section class="col-md-9">
 
-            {{-- ===== TOOLBAR (SORT + LIMIT) ===== --}}
+            {{-- ===== TOOLBAR ===== --}}
             <div class="product-toolbar mb-4">
 
                 <div class="toolbar-left">
                     <span class="toolbar-label">Sắp xếp:</span>
 
+                    {{-- Bán chạy --}}
                     <a href="{{ request()->fullUrlWithQuery(['sort'=>null]) }}"
                        class="toolbar-btn {{ !request('sort') ? 'active' : '' }}">
                         Bán chạy
                     </a>
 
+                    {{-- Mới nhất --}}
                     <a href="{{ request()->fullUrlWithQuery(['sort'=>'newest']) }}"
                        class="toolbar-btn {{ request('sort')==='newest' ? 'active' : '' }}">
                         Mới nhất
                     </a>
 
+                    {{-- Giá tăng --}}
                     <a href="{{ request()->fullUrlWithQuery(['sort'=>'price_asc']) }}"
                        class="toolbar-btn {{ request('sort')==='price_asc' ? 'active' : '' }}">
                         Giá ↑
                     </a>
 
+                    {{-- Giá giảm --}}
                     <a href="{{ request()->fullUrlWithQuery(['sort'=>'price_desc']) }}"
                        class="toolbar-btn {{ request('sort')==='price_desc' ? 'active' : '' }}">
                         Giá ↓
                     </a>
+
+                    {{-- Đánh giá cao --}}
+                    <a href="{{ request()->fullUrlWithQuery(['sort'=>'rating']) }}"
+                       class="toolbar-btn {{ request('sort')==='rating' ? 'active' : '' }}">
+                        Đánh giá cao
+                    </a>
+
+                    {{-- Đang giảm giá --}}
+                    <a href="{{ request()->fullUrlWithQuery(['sort'=>'discount']) }}"
+                       class="toolbar-btn {{ request('sort')==='discount' ? 'active' : '' }}">
+                        Đang giảm giá
+                    </a>
                 </div>
 
+                {{-- LIMIT --}}
                 <div class="toolbar-right">
                     <form method="GET">
-                        {{-- giữ filter --}}
                         @foreach(request()->except('limit') as $key=>$value)
                             @if(is_array($value))
                                 @foreach($value as $v)
@@ -176,6 +190,7 @@ document.querySelectorAll('.accordion-header').forEach(btn=>{
         btn.closest('.accordion-item').classList.toggle('active')
     })
 })
+
 document.querySelectorAll('.sidebar-box input').forEach(i=>{
     i.addEventListener('change',()=>i.form.submit())
 })

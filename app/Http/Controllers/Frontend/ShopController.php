@@ -7,12 +7,15 @@ use App\Models\Product;
 use App\Models\Brand;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class ShopController extends Controller
 {
     public function index(Request $request)
     {
-        /* ================= BASE QUERY ================= */
+        /* ==================================================
+        | BASE QUERY
+        ================================================== */
         $query = Product::with([
             'mainImage',
             'variants',
@@ -22,7 +25,9 @@ class ShopController extends Controller
             ->withCount('reviews')           // ⭐ số lượt đánh giá
             ->where('is_active', 1);
 
-        /* ================= SEARCH ================= */
+        /* ==================================================
+        | SEARCH
+        ================================================== */
         if ($request->filled('q')) {
             $keyword = $request->q;
 
@@ -38,12 +43,16 @@ class ShopController extends Controller
             });
         }
 
-        /* ================= CATEGORY FILTER ================= */
+        /* ==================================================
+        | CATEGORY FILTER
+        ================================================== */
         if ($request->filled('category')) {
             $query->where('category_id', $request->category);
         }
 
-        /* ================= PRICE FILTER ================= */
+        /* ==================================================
+        | PRICE FILTER
+        ================================================== */
         if ($request->filled('price')) {
             match ($request->price) {
                 '0-500' =>
@@ -57,34 +66,83 @@ class ShopController extends Controller
             };
         }
 
-        /* ================= BRAND FILTER ================= */
-        if ($request->filled('brands')) {
+        /* ==================================================
+        | BRAND FILTER
+        ================================================== */
+        if ($request->filled('brands') && is_array($request->brands)) {
             $query->whereIn('brand_id', $request->brands);
         }
 
-        /* ================= SORT ================= */
-        switch ($request->sort) {
+        /* ==================================================
+        | SORT
+        ================================================== */
+        $sort = $request->sort;
+
+        switch ($sort) {
+
+                // Giá thấp → cao
             case 'price_asc':
                 $query->orderBy('min_price', 'asc');
                 break;
 
+                // Giá cao → thấp
             case 'price_desc':
                 $query->orderBy('min_price', 'desc');
                 break;
 
+                // Bán chạy
             case 'bestseller':
                 $query->orderByDesc('total_sold');
                 break;
 
+                // Đánh giá cao
+            case 'rating':
+                $query->orderByDesc('reviews_avg_rating');
+                break;
+
+                // Đang giảm giá
+            case 'discount':
+
+                $now = Carbon::now();
+
+                $query->where(function ($q) use ($now) {
+
+                    // Giảm trực tiếp trên variant
+                    $q->whereHas('variants', function ($sub) {
+                        $sub->whereNotNull('original_price')
+                            ->whereColumn('original_price', '>', 'price');
+                    });
+
+                    // Hoặc có promotion product
+                    $q->orWhereHas('promotions', function ($sub) use ($now) {
+                        $sub->where('type', 'product')
+                            ->where('is_active', 1)
+                            ->where('start_date', '<=', $now)
+                            ->where('end_date', '>=', $now);
+                    });
+                });
+
+                // sắp theo bán chạy trong nhóm giảm giá
+                $query->orderByDesc('total_sold');
+                break;
+
+                // Mặc định: Mới nhất
             default:
                 $query->orderByDesc('created_at');
         }
 
-        /* ================= PAGINATION ================= */
-        $products = $query->paginate(20)->withQueryString();
+        /* ==================================================
+        | PAGINATION
+        ================================================== */
+        $limit = $request->limit ?? 20;
 
-        /* ================= SIDEBAR DATA ================= */
+        $products = $query
+            ->paginate($limit)
+            ->withQueryString();
 
+        /* ==================================================
+        | SIDEBAR DATA
+        ================================================== */
         $categories = Category::whereNull('parent_id')
             ->with('children')
             ->orderBy('name')
@@ -96,6 +154,9 @@ class ShopController extends Controller
             ->orderBy('name')
             ->get();
 
+        /* ==================================================
+        | VIEW
+        ================================================== */
         return view('frontend.shop.index', compact(
             'products',
             'brands',

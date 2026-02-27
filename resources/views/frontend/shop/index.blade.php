@@ -126,27 +126,45 @@
     <div class="toolbar-left">
         <span class="toolbar-label">Sắp xếp:</span>
 
-        <a href="{{ request()->fullUrlWithQuery(['sort'=>null]) }}"
-           class="toolbar-btn {{ !request('sort') ? 'active' : '' }}">
+        {{-- Bán chạy --}}
+        <a href="{{ request()->fullUrlWithQuery(['sort'=>'bestseller']) }}"
+           class="toolbar-btn {{ request('sort')=='bestseller' ? 'active' : '' }}">
             Bán chạy
         </a>
 
+        {{-- Mới nhất --}}
         <a href="{{ request()->fullUrlWithQuery(['sort'=>'newest']) }}"
-           class="toolbar-btn {{ request('sort')=='newest' ? 'active' : '' }}">
+           class="toolbar-btn {{ request('sort')=='newest' || !request('sort') ? 'active' : '' }}">
             Mới nhất
         </a>
 
+        {{-- Giá thấp → cao --}}
         <a href="{{ request()->fullUrlWithQuery(['sort'=>'price_asc']) }}"
            class="toolbar-btn {{ request('sort')=='price_asc' ? 'active' : '' }}">
             Giá ↑
         </a>
 
+        {{-- Giá cao → thấp --}}
         <a href="{{ request()->fullUrlWithQuery(['sort'=>'price_desc']) }}"
            class="toolbar-btn {{ request('sort')=='price_desc' ? 'active' : '' }}">
             Giá ↓
         </a>
+
+        {{-- Đánh giá cao --}}
+        <a href="{{ request()->fullUrlWithQuery(['sort'=>'rating']) }}"
+           class="toolbar-btn {{ request('sort')=='rating' ? 'active' : '' }}">
+            Đánh giá cao
+        </a>
+
+        {{-- Đang giảm giá --}}
+        <a href="{{ request()->fullUrlWithQuery(['sort'=>'discount']) }}"
+           class="toolbar-btn {{ request('sort')=='discount' ? 'active' : '' }}">
+            Đang giảm giá
+        </a>
+
     </div>
 
+    {{-- LIMIT --}}
     <div class="toolbar-right">
         <form method="GET">
 
@@ -170,7 +188,6 @@
     </div>
 
 </div>
-
 
 {{-- PRODUCT GRID --}}
 <div class="row g-4">

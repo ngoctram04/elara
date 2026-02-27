@@ -198,6 +198,37 @@
     width:120px;
     border-radius:8px;
 }
+/* ===== LIGHTBOX STYLE ===== */
+#media-lightbox{
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background:rgba(0,0,0,0.85);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:9999;
+}
+
+#media-lightbox img,
+#media-lightbox video{
+    max-width:90%;
+    max-height:90%;
+    border-radius:10px;
+    box-shadow:0 10px 30px rgba(0,0,0,.4);
+}
+
+#lightbox-close{
+    position:absolute;
+    top:20px;
+    right:30px;
+    font-size:40px;
+    color:#fff;
+    cursor:pointer;
+    font-weight:bold;
+}
 </style>
 <div class="container py-4">
 <div class="row g-4">
@@ -377,14 +408,14 @@
         Đánh giá sản phẩm ({{ $product->reviews->count() }})
     </h5>
 
-    @forelse($product->reviews as $review)
+    @foreach($product->reviews as $index => $review)
 
-    <div class="review-card border rounded p-3 mb-3 bg-white">
+    <div class="review-card border rounded p-3 mb-3 bg-white review-item"
+         style="{{ $index >= 2 ? 'display:none;' : '' }}">
 
         {{-- Header --}}
         <div class="d-flex align-items-start">
 
-            {{-- Avatar --}}
             <img
                 src="{{ $review->user->avatar 
                         ? asset('storage/'.$review->user->avatar) 
@@ -392,10 +423,8 @@
                 class="review-avatar me-3"
                 alt="avatar">
 
-            {{-- User info --}}
             <div class="flex-grow-1">
 
-                {{-- Name + time --}}
                 <div class="d-flex justify-content-between">
                     <div class="fw-semibold">
                         {{ $review->user->name }}
@@ -408,12 +437,12 @@
 
                 {{-- Stars --}}
                 <div class="review-stars text-warning mb-1">
-    {!! str_repeat('★', (int)$review->rating) !!}
-    {!! str_repeat('☆', 5 - (int)$review->rating) !!}
-    <span class="text-muted ms-1">
-        ({{ number_format($review->rating, 1) }})
-    </span>
-</div>
+                    {!! str_repeat('★', (int)$review->rating) !!}
+                    {!! str_repeat('☆', 5 - (int)$review->rating) !!}
+                    <span class="text-muted ms-1">
+                        ({{ number_format($review->rating, 1) }})
+                    </span>
+                </div>
 
             </div>
         </div>
@@ -430,10 +459,9 @@
             <div class="review-media mt-2 d-flex gap-2 flex-wrap">
                 @foreach($review->media as $m)
                     @if($m->file_type == 'image')
-                        <img src="{{ asset('storage/'.$m->file_path) }}"
-                             class="review-img">
+                        <img src="{{ asset('storage/'.$m->file_path) }}">
                     @else
-                        <video class="review-video" controls>
+                        <video controls>
                             <source src="{{ asset('storage/'.$m->file_path) }}">
                         </video>
                     @endif
@@ -443,14 +471,27 @@
 
     </div>
 
-    @empty
-        <div class="text-muted">
-            Chưa có đánh giá nào cho sản phẩm này.
-        </div>
-    @endforelse
+@endforeach
+@if($product->reviews->count() > 2)
+    <div class="text-center mt-3">
+        <button id="load-more-reviews" class="btn btn-outline-primary">
+            Xem thêm đánh giá
+        </button>
+    </div>
+@endif
 </div>
 
 </div>
+</div>
+<!-- ===== LIGHTBOX ===== -->
+<div id="media-lightbox" style="display:none;">
+    <span id="lightbox-close">&times;</span>
+
+    <img id="lightbox-img" style="display:none;">
+    
+    <video id="lightbox-video" controls style="display:none;">
+        <source id="lightbox-video-src">
+    </video>
 </div>
 @endsection
 
@@ -636,7 +677,72 @@ if (form) {
         });
     });
 }
+/* =====================
+   LOAD MORE REVIEWS
+===================== */
+const loadMoreBtn = document.getElementById('load-more-reviews');
 
+if (loadMoreBtn) {
+    loadMoreBtn.addEventListener('click', function () {
+        document.querySelectorAll('.review-item')
+            .forEach(item => item.style.display = 'block');
+
+        this.style.display = 'none';
+    });
+}
+/* =====================
+   LIGHTBOX IMAGE/VIDEO
+===================== */
+const lightbox = document.getElementById('media-lightbox');
+const lightImg = document.getElementById('lightbox-img');
+const lightVideo = document.getElementById('lightbox-video');
+const lightVideoSrc = document.getElementById('lightbox-video-src');
+const closeBtn = document.getElementById('lightbox-close');
+
+// Mở ảnh
+document.querySelectorAll('.review-media img').forEach(img => {
+    img.style.cursor = 'pointer';
+    img.addEventListener('click', function(){
+        lightbox.style.display = 'flex';
+        lightImg.src = this.src;
+        lightImg.style.display = 'block';
+        lightVideo.style.display = 'none';
+    });
+});
+
+// Mở video
+document.querySelectorAll('.review-media video').forEach(video => {
+    video.style.cursor = 'pointer';
+    video.addEventListener('click', function(){
+        lightbox.style.display = 'flex';
+        lightVideoSrc.src = this.querySelector('source').src;
+        lightVideo.load();
+        lightVideo.style.display = 'block';
+        lightImg.style.display = 'none';
+    });
+});
+
+// Đóng
+function closeLightbox(){
+    lightbox.style.display = 'none';
+    lightVideo.pause();
+}
+
+closeBtn.addEventListener('click', closeLightbox);
+
+// Click nền để đóng
+lightbox.addEventListener('click', function(e){
+    if(e.target === lightbox){
+        closeLightbox();
+    }
+});
+
+// ESC để đóng
+document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape'){
+        closeLightbox();
+    }
+});
 </script>
 
 @endpush

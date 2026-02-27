@@ -7,6 +7,8 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\Brand;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class CategoryController extends Controller
 {
@@ -18,7 +20,7 @@ class CategoryController extends Controller
         $category = Category::where('slug', $slug)->firstOrFail();
 
         /* ==================================================
-        | CATEGORY IDS
+        | CATEGORY IDS (cha → lấy cả con)
         ================================================== */
         if ($category->parent_id) {
             $categoryIds = [$category->id];
@@ -30,15 +32,15 @@ class CategoryController extends Controller
         }
 
         /* ==================================================
-        | BASE PRODUCT QUERY (QUAN TRỌNG)
+        | BASE PRODUCT QUERY
         ================================================== */
         $query = Product::with([
             'variants',
             'mainImage',
             'brand'
         ])
-            ->withAvg('reviews', 'rating')   // ⭐ trung bình
-            ->withCount('reviews')           // ⭐ số lượt đánh giá
+            ->withAvg('reviews', 'rating')   // sao trung bình
+            ->withCount('reviews')           // số review
             ->whereIn('category_id', $categoryIds)
             ->where('is_active', true);
 
@@ -68,29 +70,83 @@ class CategoryController extends Controller
         /* ==================================================
         | SORT
         ================================================== */
-        match ($request->sort) {
-            'price_asc'  => $query->orderBy('min_price'),
-            'price_desc' => $query->orderByDesc('min_price'),
-            'newest'     => $query->latest(),
-            default      => $query->orderByDesc('total_sold'),
-        };
+        $sort = $request->sort;
+
+        switch ($sort) {
+
+                // Giá thấp → cao
+            case 'price_asc':
+                $query->orderBy('min_price');
+                break;
+
+                // Giá cao → thấp
+            case 'price_desc':
+                $query->orderByDesc('min_price');
+                break;
+
+                // Mới nhất
+            case 'newest':
+                $query->latest();
+                break;
+
+                // Đánh giá cao
+            case 'rating':
+                $query->orderByDesc('reviews_avg_rating');
+                break;
+
+                // Sản phẩm đang giảm giá
+            case 'discount':
+
+                $now = Carbon::now();
+
+                $query->where(function ($q) use ($now) {
+
+                    // Giảm trực tiếp trên variant
+                    $q->whereHas('variants', function ($sub) {
+                        $sub->whereNotNull('original_price')
+                            ->whereColumn('original_price', '>', 'price');
+                    });
+
+                    // Hoặc có promotion product đang active
+                    $q->orWhereHas('promotions', function ($sub) use ($now) {
+                        $sub->where('type', 'product')
+                            ->where('is_active', 1)
+                            ->where('start_date', '<=', $now)
+                            ->where('end_date', '>=', $now);
+                    });
+                });
+
+                // ưu tiên sản phẩm giảm nhiều bán chạy
+                $query->orderByDesc('total_sold');
+
+                break;
+
+                // Mặc định: bán chạy
+            default:
+                $query->orderByDesc('total_sold');
+                break;
+        }
 
         /* ==================================================
         | PAGINATE
         ================================================== */
-        $products = $query->paginate(20)->withQueryString();
+        $limit = $request->limit ?? 20;
+
+        $products = $query
+            ->paginate($limit)
+            ->withQueryString();
 
         /* ==================================================
         | SIDEBAR DATA
         ================================================== */
-
         $allCategories = Category::parents()
             ->with('children')
             ->orderBy('name')
             ->get();
 
         $brands = Brand::whereHas('products', function ($q) use ($categoryIds) {
-            $q->whereIn('category_id', $categoryIds);
+            $q->whereIn('category_id', $categoryIds)
+                ->where('is_active', true);
         })
             ->orderBy('name')
             ->get();
