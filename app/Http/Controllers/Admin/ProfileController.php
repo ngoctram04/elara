@@ -11,77 +11,111 @@ use Illuminate\Support\Facades\Storage;
 
 class ProfileController extends Controller
 {
+    // ==============================
     // XEM THÔNG TIN
+    // ==============================
     public function show()
     {
-        return view('admin.profile.show', [
-            'admin' => Auth::user()
-        ]);
+        $admin = Auth::user();
+
+        if (!$admin instanceof User) {
+            abort(403, 'Không xác định được người dùng');
+        }
+
+        return view('admin.profile.show', compact('admin'));
     }
 
+    // ==============================
     // FORM CHỈNH SỬA
+    // ==============================
     public function edit()
     {
-        return view('admin.profile.edit', [
-            'admin' => Auth::user()
-        ]);
+        $admin = Auth::user();
+
+        if (!$admin instanceof User) {
+            abort(403, 'Không xác định được người dùng');
+        }
+
+        return view('admin.profile.edit', compact('admin'));
     }
 
+    // ==============================
     // CẬP NHẬT
+    // ==============================
     public function update(Request $request)
     {
-        $admin = User::findOrFail(Auth::id());
+        $admin = Auth::user();
 
-        // ✅ VALIDATION
+        if (!$admin instanceof User) {
+            return back()->with('error',
+                'Phiên đăng nhập không hợp lệ.'
+            );
+        }
+
+        // ===== VALIDATION =====
         $validated = $request->validate([
             'name'  => 'required|string|max:255',
             'phone' => 'nullable|string|max:15',
 
-            // email chỉ để hiển thị
-            'email' => 'required|email|max:255',
+            'date_of_birth' => 'nullable|date|before:today',
+            'gender' => 'nullable|in:male,female,other',
 
-            // 🔐 đổi mật khẩu
             'current_password' => 'required_with:password',
             'password' => 'nullable|string|min:8|confirmed',
 
-            'avatar' => 'nullable|image|mimes:jpg,jpeg,png|max:5120',
+            'avatar' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ], [
-            'current_password.required_with' => 'Vui lòng nhập mật khẩu hiện tại',
+            'name.required' => 'Vui lòng nhập họ tên',
             'password.min' => 'Mật khẩu mới phải ít nhất 8 ký tự',
             'password.confirmed' => 'Xác nhận mật khẩu không khớp',
+            'current_password.required_with' => 'Vui lòng nhập mật khẩu hiện tại',
+            'date_of_birth.before' => 'Ngày sinh phải nhỏ hơn hôm nay',
+            'gender.in' => 'Giới tính không hợp lệ',
+            'avatar.image' => 'File phải là hình ảnh',
+            'avatar.mimes' => 'Chỉ chấp nhận JPG, PNG hoặc WEBP',
+            'avatar.max' => 'Ảnh tối đa 2MB',
         ]);
 
-        $changed = false;
+        // ===== CẬP NHẬT THÔNG TIN CƠ BẢN =====
+        $admin->fill([
+            'name'          => $validated['name'],
+            'phone'         => $validated['phone'] ?? null,
+            'date_of_birth' => $validated['date_of_birth'] ?? null,
+            'gender'        => $validated['gender'] ?? null,
+        ]);
 
-        /* ========= HỌ TÊN ========= */
-        if ($admin->name !== $validated['name']) {
-            $admin->name = $validated['name'];
-            $changed = true;
-        }
+        // Kiểm tra thay đổi thật sự
+        $changed = $admin->isDirty();
 
-        /* ========= SỐ ĐIỆN THOẠI ========= */
-        if ($admin->phone !== $validated['phone']) {
-            $admin->phone = $validated['phone'];
-            $changed = true;
-        }
-
-        /* ========= ĐỔI MẬT KHẨU ========= */
+        // ===== ĐỔI MẬT KHẨU =====
         if ($request->filled('password')) {
 
-            // ❌ mật khẩu cũ sai
+            // Sai mật khẩu hiện tại
             if (!Hash::check($request->current_password, $admin->password)) {
-                return back()->withErrors([
-                    'current_password' => 'Mật khẩu hiện tại không đúng'
-                ]);
+                return back()
+                    ->withErrors([
+                        'current_password' => 'Mật khẩu hiện tại không đúng.'
+                    ])
+                    ->withInput();
+            }
+
+            // Trùng mật khẩu cũ
+            if (Hash::check($validated['password'], $admin->password)) {
+                return back()
+                    ->withErrors([
+                        'password' => 'Mật khẩu mới không được trùng mật khẩu cũ.'
+                    ])
+                    ->withInput();
             }
 
             $admin->password = Hash::make($validated['password']);
             $changed = true;
         }
 
-        /* ========= AVATAR ========= */
+        // ===== AVATAR =====
         if ($request->hasFile('avatar')) {
-            if ($admin->avatar) {
+
+            if ($admin->avatar && Storage::disk('public')->exists($admin->avatar)) {
                 Storage::disk('public')->delete($admin->avatar);
             }
 
@@ -89,15 +123,16 @@ class ProfileController extends Controller
             $changed = true;
         }
 
-        /* ========= KHÔNG CÓ GÌ THAY ĐỔI ========= */
+        // ===== KHÔNG CÓ THAY ĐỔI =====
         if (!$changed) {
-            return back()->with('info', 'Không có thay đổi nào được cập nhật.');
+            return back()->with('info', 'Không có thay đổi nào.');
         }
 
+        // ===== LƯU =====
         $admin->save();
 
         return redirect()
-            ->route('admin.profile.show')
-            ->with('success', 'Cập nhật thông tin cá nhân thành công.');
+        ->route('admin.profile.edit')
+        ->with('success', 'Cập nhật thông tin thành công.');
     }
 }

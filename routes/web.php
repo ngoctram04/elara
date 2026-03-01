@@ -16,7 +16,7 @@ use App\Http\Controllers\Frontend\CheckoutController;
 use App\Http\Controllers\Frontend\OrderController;
 use App\Http\Controllers\Frontend\WishlistController;
 use App\Http\Controllers\Frontend\ReviewController;
-use App\Http\Controllers\Frontend\ReviewLikeController;
+use App\Http\Controllers\Frontend\AddressController;
 /*
 |--------------------------------------------------------------------------
 | USER PROFILE
@@ -29,7 +29,6 @@ use App\Http\Controllers\ProfileController;
 | ADMIN CONTROLLERS
 |--------------------------------------------------------------------------
 */
-use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\BrandController;
@@ -127,6 +126,16 @@ Route::middleware(['auth', 'check_active'])
 
     Route::post('/cancel/{id}', [CheckoutController::class, 'cancel'])
     ->name('cancel');
+});
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/profile/addresses', [AddressController::class, 'index'])->name('addresses.index');
+    Route::post('/profile/addresses', [AddressController::class, 'store'])->name('addresses.store');
+    Route::post('/profile/addresses/{id}/default', [AddressController::class, 'setDefault'])->name('addresses.default');
+    Route::delete('/profile/addresses/{id}', [AddressController::class, 'destroy'])->name('addresses.destroy');
+    Route::put('/addresses/{id}', [AddressController::class, 'update'])
+    ->name('addresses.update');
+    Route::get('/membership', [ProfileController::class, 'membership'])
+    ->name('membership');
 });
 
 /*

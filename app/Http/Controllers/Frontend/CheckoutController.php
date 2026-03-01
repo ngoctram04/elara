@@ -12,6 +12,7 @@ use App\Models\OrderItem;
 use App\Models\ProductVariant;
 use App\Models\Promotion;
 use Illuminate\Support\Facades\Log;
+use App\Models\UserAddress;
 class CheckoutController extends Controller
 {
     /**
@@ -20,6 +21,7 @@ class CheckoutController extends Controller
     public function index()
     {
         $userId = Auth::id();
+        $user = Auth::user();
 
         $carts = collect();
         $subtotal = 0;
@@ -88,7 +90,7 @@ class CheckoutController extends Controller
 
         /**
          * =================================
-         * 3. FALLBACK (TOÀN BỘ GIỎ)
+         * 3. TOÀN BỘ GIỎ
          * =================================
          */
         else {
@@ -115,27 +117,106 @@ class CheckoutController extends Controller
 
         /**
          * =================================
-         * 4. DISCOUNT + TOTAL
+         * 4. PROMOTION
          * =================================
          */
         $discount = session('promotion_discount', 0);
 
-        // Doanh thu (không gồm ship)
-        $total = max(0, $subtotal - $discount);
+        // Total trước sinh nhật (QUAN TRỌNG)
+        $totalBeforeBirthday = max(0, $subtotal - $discount);
 
         /**
          * =================================
-         * 5. SHIPPING (CHƯA CÓ ĐỊA CHỈ)
+         * 5. BIRTHDAY DISCOUNT (preview)
+         * =================================
+         */
+        $birthdayDiscount = 0;
+
+        if ($user) {
+            $birthdayDiscount = $this->getBirthdayBenefit($user, $totalBeforeBirthday);
+        }
+
+        // Lưu để Blade hiển thị
+        session()->put('birthday_discount', $birthdayDiscount);
+
+        // Total sau sinh nhật
+        $total = max(0, $totalBeforeBirthday - $birthdayDiscount);
+
+        /**
+         * =================================
+         * 6. ĐỊA CHỈ
+         * =================================
+         */
+        $addresses = UserAddress::where('user_id', $userId)
+            ->orderByDesc('is_default')
+            ->get();
+
+        $defaultAddress = $addresses->first();
+
+        /**
+         * =================================
+         * 7. SHIPPING
+         * Freeship xét theo total TRƯỚC sinh nhật
          * =================================
          */
         $shippingFee = 0;
 
-        // Tổng khách sẽ trả (tạm thời)
+        if ($defaultAddress) {
+
+            $province = mb_strtolower($defaultAddress->province);
+
+            // Ship theo khu vực
+            if ($province === 'vĩnh long') {
+                $shippingFee = 15000;
+            } else {
+
+                $mienTay = [
+                    'cần thơ',
+                    'bến tre',
+                    'trà vinh',
+                    'sóc trăng',
+                    'hậu giang',
+                    'đồng tháp',
+                    'an giang',
+                    'kiên giang',
+                    'cà mau',
+                    'bạc liêu',
+                    'tiền giang'
+                ];
+
+                $shippingFee = 35000;
+
+                foreach ($mienTay as $t) {
+                    if (str_contains($province, $t)) {
+                        $shippingFee = 25000;
+                        break;
+                    }
+                }
+            }
+
+            // Ưu đãi theo hạng (xét TRƯỚC sinh nhật)
+            if ($user) {
+
+                if ($user->member_level === 'gold' && $totalBeforeBirthday >= 300000) {
+                    $shippingFee = 0;
+                }
+
+                if ($user->member_level === 'diamond') {
+                    $shippingFee = 0;
+                }
+            }
+        }
+
+        /**
+         * =================================
+         * 8. GRAND TOTAL
+         * =================================
+         */
         $grandTotal = $total + $shippingFee;
 
         /**
          * =================================
-         * 6. VIEW
+         * 9. VIEW
          * =================================
          */
         return view('frontend.checkout.index', compact(
@@ -144,7 +225,9 @@ class CheckoutController extends Controller
             'discount',
             'total',
             'shippingFee',
-            'grandTotal'
+            'grandTotal',
+            'addresses',
+            'defaultAddress'
         ));
     }
 
@@ -168,17 +251,29 @@ class CheckoutController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'receiver_name'   => 'required|string|max:255',
-            'receiver_phone'  => 'required|string|max:20',
-            'address_detail'  => 'required|string|max:255',
-            'province'        => 'required|string|max:100',
-            'payment_method'  => 'required|in:cod,vnpay',
+            'address_id'     => 'required|exists:user_addresses,id',
+            'payment_method' => 'required|in:cod,vnpay',
         ]);
 
-        $userId = Auth::id();
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $userId = $user->id;
 
-        // Ghép địa chỉ đầy đủ
-        $fullAddress = $request->address_detail . ', ' . $request->province;
+        // =================================================
+        // 1. LẤY ĐỊA CHỈ
+        // =================================================
+        $address = UserAddress::where('id', $request->address_id)
+            ->where('user_id', $userId)
+            ->first();
+
+        if (!$address) {
+            return back()->with('error', 'Địa chỉ không hợp lệ.');
+        }
+
+        $fullAddress = $address->address_detail . ', ' .
+            $address->ward . ', ' .
+            $address->district . ', ' .
+            $address->province;
 
         DB::beginTransaction();
 
@@ -189,11 +284,9 @@ class CheckoutController extends Controller
             $isBuyNow = false;
             $variantIds = [];
 
-            /*
-        =================================================
-        1. BUY NOW
-        =================================================
-        */
+            // =================================================
+            // 2. BUY NOW
+            // =================================================
             if (session()->has('buy_now')) {
 
                 $buyNow = session('buy_now');
@@ -220,11 +313,9 @@ class CheckoutController extends Controller
                 ]);
             }
 
-            /*
-        =================================================
-        2. CHECKOUT TỪ CART
-        =================================================
-        */
+            // =================================================
+            // 3. CHECKOUT TỪ CART
+            // =================================================
             if (!$isBuyNow) {
 
                 session()->forget('buy_now');
@@ -232,7 +323,7 @@ class CheckoutController extends Controller
 
                 if (empty($variantIds)) {
                     DB::rollBack();
-                    return back()->with('error', 'Vui lòng chọn sản phẩm để thanh toán.');
+                    return back()->with('error', 'Vui lòng chọn sản phẩm.');
                 }
 
                 $carts = Cart::with('variant.product')
@@ -269,11 +360,9 @@ class CheckoutController extends Controller
                 }
             }
 
-            /*
-        =================================================
-        3. VALIDATE PROMOTION (KHÔNG TIN SESSION)
-        =================================================
-        */
+            // =================================================
+            // 4. PROMOTION
+            // =================================================
             $discount = 0;
             $promotionCode = $request->promotion_code ?? session('promotion_code');
             $promotion = null;
@@ -293,15 +382,12 @@ class CheckoutController extends Controller
                     })
                     ->first();
 
-                if ($promotion) {
-
-                    // Kiểm tra giới hạn lượt
-                    if (
-                        $promotion->usage_limit !== null &&
-                        $promotion->used_count >= $promotion->usage_limit
-                    ) {
-                        $promotion = null;
-                    }
+                if (
+                    $promotion &&
+                    $promotion->usage_limit !== null &&
+                    $promotion->used_count >= $promotion->usage_limit
+                ) {
+                    $promotion = null;
                 }
 
                 if ($promotion) {
@@ -316,7 +402,7 @@ class CheckoutController extends Controller
                             $discount = $promotion->discount_value;
                         }
 
-                        if (!empty($promotion->max_discount)) {
+                        if ($promotion->max_discount) {
                             $discount = min($discount, $promotion->max_discount);
                         }
 
@@ -327,44 +413,74 @@ class CheckoutController extends Controller
                 }
             }
 
-            // Doanh thu (không gồm ship)
-            $total = max(0, $subtotal - $discount);
-
-            /*
-        =================================================
-        4. SHIPPING (KHÔNG TÍNH VÀO DOANH THU)
-        =================================================
-        */
-            $shippingFee = $this->calculateShippingFee(
-                $request->province,
-                $total
+            // =================================================
+            // 5. TÍNH TOTAL SAU PROMOTION
+            // =================================================
+            $total = max(0,
+                $subtotal - $discount
             );
 
-            // Tổng khách phải trả
+            // =================================================
+            // 6. TOTAL TRƯỚC SINH NHẬT
+            // =================================================
+            $totalBeforeBirthday = max(0, $subtotal - $discount);
+
+            // =================================================
+            // 7. SHIPPING (xét theo total trước sinh nhật)
+            // =================================================
+            $shippingFee = $this->calculateShippingFee(
+                    $address->province,
+                    $totalBeforeBirthday
+                );
+
+            // Membership rule
+            if ($user->member_level === 'gold' && $totalBeforeBirthday >= 300000) {
+                $shippingFee = 0;
+            }
+
+            if ($user->member_level === 'diamond') {
+                $shippingFee = 0;
+            }
+
+            // =================================================
+            // 8. BIRTHDAY DISCOUNT (giảm tiền, KHÔNG ảnh hưởng freeship)
+            // =================================================
+            $birthdayDiscount = $this->getBirthdayBenefit($user, $totalBeforeBirthday);
+
+            $total = max(
+                0,
+                $totalBeforeBirthday - $birthdayDiscount
+            );
+
+            if ($birthdayDiscount > 0) {
+                session()->put('birthday_discount', $birthdayDiscount);
+
+                // đánh dấu đã dùng năm nay
+                $user->birthday_discount_year = now()->year;
+                $user->save();
+            }
+
+            // =================================================
+            // 7. GRAND TOTAL
+            // =================================================
             $grandTotal = $total + $shippingFee;
 
-            /*
-        =================================================
-        5. TẠO ORDER
-        =================================================
-        */
+            // =================================================
+            // 8. CREATE ORDER
+            // =================================================
             $order = Order::create([
                 'user_id'       => $userId,
                 'subtotal'      => round($subtotal),
-                'discount'      => round($discount),
+                'discount'      => round($discount + $birthdayDiscount),
                 'shipping_fee'  => round($shippingFee),
-
-                // Doanh thu (để thống kê lợi nhuận)
                 'total'         => round($total),
-
-                // Khách phải trả
                 'grand_total'   => round($grandTotal),
 
                 'promotion_code' => $promotion ? $promotionCode : null,
                 'status'         => Order::STATUS_PENDING,
 
-                'receiver_name'    => $request->receiver_name,
-                'receiver_phone'   => $request->receiver_phone,
+                'receiver_name'    => $address->receiver_name,
+                'receiver_phone'   => $address->phone,
                 'receiver_address' => $fullAddress,
                 'note'             => $request->note,
 
@@ -372,39 +488,31 @@ class CheckoutController extends Controller
                 'payment_status' => Order::PAYMENT_UNPAID,
             ]);
 
-            // Tăng số lượt dùng
             if ($promotion) {
                 $promotion->increment('used_count');
             }
 
-            /*
-        =================================================
-        6. ORDER ITEMS + TRỪ KHO
-        =================================================
-        */
+            // =================================================
+            // 9. ORDER ITEMS + TRỪ KHO
+            // =================================================
             foreach ($items as $item) {
 
                 $variant = $item['variant'];
-                $qty     = $item['quantity'];
-                $price   = $item['price'];
 
                 OrderItem::create([
                     'order_id'   => $order->id,
                     'variant_id' => $variant->id,
-                    'price'      => $price,
+                    'price'      => $item['price'],
                     'cost_price' => $variant->cost_price,
-                    'quantity'   => $qty,
+                    'quantity'   => $item['quantity'],
                 ]);
 
-                // Trừ kho
-                $variant->decrement('stock_quantity', $qty);
+                $variant->decrement('stock_quantity', $item['quantity']);
             }
 
-            /*
-        =================================================
-        7. DỌN SESSION + CART
-        =================================================
-        */
+            // =================================================
+            // 10. CLEAR SESSION + CART
+            // =================================================
             session()->forget([
                 'buy_now',
                 'checkout_items',
@@ -421,11 +529,9 @@ class CheckoutController extends Controller
 
             DB::commit();
 
-            /*
-        =================================================
-        8. REDIRECT
-        =================================================
-        */
+            // =================================================
+            // 11. REDIRECT
+            // =================================================
             if ($request->payment_method === 'vnpay') {
                 return $this->createVNPay($order);
             }
@@ -436,6 +542,28 @@ class CheckoutController extends Controller
             DB::rollBack();
             return back()->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
         }
+    }
+    private function getBirthdayBenefit($user, $amount)
+    {
+        if (!$user->date_of_birth) return 0;
+
+        $today = now();
+        $birthday = \Carbon\Carbon::parse($user->date_of_birth);
+
+        // Chỉ trong tháng sinh
+        if ($today->month != $birthday->month) return 0;
+
+        // Mỗi năm 1 lần
+        if ($user->birthday_discount_year == $today->year) return 0;
+
+        $percent = match ($user->member_level) {
+            'silver' => 5,
+            'gold' => 10,
+            'diamond' => 15,
+            default => 0
+        };
+
+        return ($amount * $percent) / 100;
     }
     
     public function buyNow(Request $request)
@@ -716,8 +844,6 @@ class CheckoutController extends Controller
 
     private function calculateShippingFee($province, $amount)
     {
-        if ($amount >= 500000) return 0;
-
         $province = mb_strtolower(trim($province));
 
         if ($province === 'vĩnh long') return 15000;

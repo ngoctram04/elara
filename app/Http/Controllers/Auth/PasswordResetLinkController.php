@@ -11,7 +11,7 @@ use Illuminate\View\View;
 class PasswordResetLinkController extends Controller
 {
     /**
-     * Display the password reset link request view.
+     * Hiển thị form quên mật khẩu
      */
     public function create(): View
     {
@@ -19,26 +19,32 @@ class PasswordResetLinkController extends Controller
     }
 
     /**
-     * Handle an incoming password reset link request.
-     *
-     * @throws \Illuminate\Validation\ValidationException
+     * Gửi link đặt lại mật khẩu
      */
     public function store(Request $request): RedirectResponse
     {
+        // ================= VALIDATE =================
         $request->validate([
             'email' => ['required', 'email'],
+        ], [
+            'email.required' => 'Vui lòng nhập email',
+            'email.email' => 'Email không hợp lệ',
         ]);
 
-        // We will send the password reset link to this user. Once we have attempted
-        // to send the link, we will examine the response then see the message we
-        // need to show to the user. Finally, we'll send out a proper response.
+        // ================= GỬI LINK =================
         $status = Password::sendResetLink(
             $request->only('email')
         );
 
-        return $status == Password::RESET_LINK_SENT
-                    ? back()->with('status', __($status))
-                    : back()->withInput($request->only('email'))
-                        ->withErrors(['email' => __($status)]);
+        // ================= THÀNH CÔNG =================
+        if ($status === Password::RESET_LINK_SENT) {
+            return back()
+                ->with('success', 'Link đặt lại mật khẩu đã được gửi. Vui lòng kiểm tra email của bạn.');
+        }
+
+        // ================= EMAIL KHÔNG TỒN TẠI =================
+        return back()
+            ->withInput($request->only('email'))
+            ->with('error', 'Email này không tồn tại trong hệ thống.');
     }
 }

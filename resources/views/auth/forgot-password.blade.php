@@ -1,16 +1,16 @@
 <x-guest-layout>
+
     <div class="max-w-md mx-auto bg-white p-8 rounded-2xl shadow-lg border border-blue-100">
-        <!-- Thông báo -->
+
+        <h2 class="text-2xl font-bold text-center text-blue-500 mb-4">
+            Quên mật khẩu
+        </h2>
+
+        <!-- Mô tả -->
         <div class="mb-4 text-sm text-gray-600">
             Quên mật khẩu? Không sao cả.  
-            Vui lòng nhập địa chỉ email của bạn, chúng tôi sẽ gửi một liên kết giúp bạn đặt lại mật khẩu mới.
+            Nhập địa chỉ email của bạn, chúng tôi sẽ gửi liên kết để bạn đặt lại mật khẩu.
         </div>
-
-        <!-- Session Status -->
-        <x-auth-session-status
-            class="mb-4 text-blue-500 text-sm"
-            :status="session('status')"
-        />
 
         <form method="POST" action="{{ route('password.email') }}">
             @csrf
@@ -39,5 +39,33 @@
                 </x-primary-button>
             </div>
         </form>
+
     </div>
+
+    {{-- ===== TOAST HIỂN THỊ LỖI VALIDATION ===== --}}
+    @if ($errors->any())
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                showToast(@json($errors->first()), 'error');
+            });
+        </script>
+    @endif
+
+    {{-- Thành công hoặc lỗi từ controller --}}
+    @if(session('success'))
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                showToast(@json(session('success')), 'success');
+            });
+        </script>
+    @endif
+
+    @if(session('error'))
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                showToast(@json(session('error')), 'error');
+            });
+        </script>
+    @endif
+
 </x-guest-layout>

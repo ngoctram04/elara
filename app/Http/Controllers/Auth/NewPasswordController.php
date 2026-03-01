@@ -16,29 +16,33 @@ use Illuminate\View\View;
 class NewPasswordController extends Controller
 {
     /**
-     * Display the password reset view.
+     * Hiển thị form đặt lại mật khẩu
      */
     public function create(Request $request): View
     {
-        return view('auth.reset-password', ['request' => $request]);
+        return view('auth.reset-password', [
+            'request' => $request
+        ]);
     }
 
     /**
-     * Handle an incoming new password request.
-     *
-     * @throws \Illuminate\Validation\ValidationException
+     * Xử lý đặt lại mật khẩu
      */
     public function store(Request $request): RedirectResponse
     {
+        // ================= VALIDATE =================
         $request->validate([
             'token' => ['required'],
             'email' => ['required', 'email'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+        ], [
+            'email.required' => 'Vui lòng nhập email',
+            'email.email' => 'Email không hợp lệ',
+            'password.required' => 'Vui lòng nhập mật khẩu mới',
+            'password.confirmed' => 'Xác nhận mật khẩu không khớp',
         ]);
 
-        // Here we will attempt to reset the user's password. If it is successful we
-        // will update the password on an actual user model and persist it to the
-        // database. Otherwise we will parse the error and return the response.
+        // ================= RESET PASSWORD =================
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function (User $user) use ($request) {
@@ -51,12 +55,15 @@ class NewPasswordController extends Controller
             }
         );
 
-        // If the password was successfully reset, we will redirect the user back to
-        // the application's home authenticated view. If there is an error we can
-        // redirect them back to where they came from with their error message.
-        return $status == Password::PASSWORD_RESET
-                    ? redirect()->route('login')->with('status', __($status))
-                    : back()->withInput($request->only('email'))
-                        ->withErrors(['email' => __($status)]);
+        // ================= THÀNH CÔNG =================
+        if ($status === Password::PASSWORD_RESET) {
+            return redirect()->route('login')
+                ->with('success', 'Mật khẩu đã được đặt lại thành công. Vui lòng đăng nhập.');
+        }
+
+        // ================= THẤT BẠI =================
+        return back()
+            ->withInput($request->only('email'))
+            ->with('error', 'Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.');
     }
 }

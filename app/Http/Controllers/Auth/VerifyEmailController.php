@@ -5,37 +5,52 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Auth\Events\Verified;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\URL;
 
 class VerifyEmailController extends Controller
 {
     /**
-     * Verify email KHÔNG CẦN LOGIN
+     * Xác thực email (không cần đăng nhập)
      */
     public function __invoke(Request $request, $id, $hash): RedirectResponse
     {
-        $user = User::findOrFail($id);
+        // ================= KIỂM TRA LINK HỢP LỆ =================
+        if (! URL::hasValidSignature($request)) {
+            return redirect()
+                ->route('login')
+                ->with('error', 'Link xác thực không hợp lệ hoặc đã hết hạn.');
+        }
 
-        // 🔐 Check hash email
+        // ================= TÌM USER =================
+        $user = User::find($id);
+
+        if (! $user) {
+            return redirect()
+                ->route('login')
+                ->with('error', 'Tài khoản không tồn tại.');
+        }
+
+        // ================= KIỂM TRA HASH EMAIL =================
         if (! hash_equals(
             sha1($user->getEmailForVerification()),
             (string) $hash
         )) {
-            abort(403);
+            return redirect()
+                ->route('login')
+                ->with('error', 'Xác thực email không hợp lệ.');
         }
 
-        // ✅ Verify nếu chưa verify
+        // ================= XÁC THỰC EMAIL =================
         if (! $user->hasVerifiedEmail()) {
             $user->markEmailAsVerified();
             event(new Verified($user));
         }
 
-        // 🔐 Đảm bảo không còn login
-        Auth::logout();
-
-        return redirect()->route('login')
-            ->with('verified', true);
+        // ================= REDIRECT LOGIN + TOAST =================
+        return redirect()
+            ->route('login')
+            ->with('success', 'Xác thực email thành công! Vui lòng đăng nhập.');
     }
 }

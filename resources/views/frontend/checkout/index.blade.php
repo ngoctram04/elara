@@ -78,59 +78,79 @@ $total = $total ?? max($subtotal - $discount, 0);
 
 <div class="col-lg-7">
 
-<div class="checkout-card p-4 mb-3">
-<h6 class="fw-bold mb-3">Thông tin nhận hàng</h6>
+    {{-- ĐỊA CHỈ NHẬN HÀNG --}}
+    <div class="checkout-card p-4 mb-3">
+        <h6 class="fw-bold mb-3">Địa chỉ nhận hàng</h6>
 
-<input name="receiver_name"
-class="form-control mb-2"
-placeholder="Họ và tên"
-value="{{ auth()->user()->name ?? '' }}"
-required>
+        @if($defaultAddress)
 
-<input name="receiver_phone"
-class="form-control mb-2"
-placeholder="Số điện thoại"
-value="{{ auth()->user()->phone ?? '' }}"
-required>
+        <div class="d-flex justify-content-between align-items-start">
 
-<input name="address_detail"
-class="form-control mb-2"
-placeholder="Số nhà, đường, phường..."
-required>
+            <div id="selected-address-info">
+                <div class="fw-semibold">
+                    {{ $defaultAddress->receiver_name }}
+                    ({{ $defaultAddress->phone }})
+                    <span class="badge bg-success ms-2">Mặc định</span>
+                </div>
 
-{{-- Nhập tỉnh tự do --}} <input name="province"
-id="province"
-class="form-control"
-placeholder="Nhập tỉnh / thành (VD: Vĩnh Long, TP HCM, Hà Nội...)"
-required>
+                <div class="text-muted small mt-1">
+                    {{ $defaultAddress->address_detail }},
+                    {{ $defaultAddress->ward }},
+                    {{ $defaultAddress->district }},
+                    {{ $defaultAddress->province }}
+                </div>
+            </div>
 
-</div>
+            <a href="#" class="text-primary"
+               data-bs-toggle="modal"
+               data-bs-target="#changeAddressModal">
+                Thay đổi
+            </a>
+        </div>
 
-<div class="checkout-card p-4 mb-3">
-<h6 class="fw-bold mb-3">Phương thức thanh toán</h6>
+        {{-- gửi về server --}}
+        <input type="hidden"
+               name="address_id"
+               id="selected-address-id"
+               value="{{ $defaultAddress->id }}">
 
-<label class="payment-option active d-flex align-items-center">
-<input type="radio" name="payment_method" value="cod" checked>
-<div class="ms-2">
-<strong>Thanh toán khi nhận hàng (COD)</strong>
-</div>
-</label>
+        @else
+        <div class="alert alert-warning">
+            Bạn chưa có địa chỉ.
+            <a href="{{ route('addresses.index') }}">Thêm địa chỉ</a>
+        </div>
+        @endif
+    </div>
 
-<label class="payment-option d-flex align-items-center">
-<input type="radio" name="payment_method" value="vnpay">
-<div class="ms-2">
-<strong>Thanh toán VNPay</strong>
-</div>
-</label>
-</div>
 
-<div class="checkout-card p-4">
-<h6 class="fw-bold mb-2">Ghi chú</h6>
-<textarea name="note"
-class="form-control"
-rows="3"
-placeholder="Ghi chú (tuỳ chọn)"></textarea>
-</div>
+    {{-- PHƯƠNG THỨC THANH TOÁN --}}
+    <div class="checkout-card p-4 mb-3">
+        <h6 class="fw-bold mb-3">Phương thức thanh toán</h6>
+
+        <label class="payment-option active d-flex align-items-center">
+            <input type="radio" name="payment_method" value="cod" checked>
+            <div class="ms-2">
+                <strong>Thanh toán khi nhận hàng (COD)</strong>
+            </div>
+        </label>
+
+        <label class="payment-option d-flex align-items-center">
+            <input type="radio" name="payment_method" value="vnpay">
+            <div class="ms-2">
+                <strong>Thanh toán VNPay</strong>
+            </div>
+        </label>
+    </div>
+
+
+    {{-- GHI CHÚ --}}
+    <div class="checkout-card p-4">
+        <h6 class="fw-bold mb-2">Ghi chú</h6>
+        <textarea name="note"
+                  class="form-control"
+                  rows="3"
+                  placeholder="Ghi chú (tuỳ chọn)"></textarea>
+    </div>
 
 </div>
 
@@ -140,6 +160,7 @@ placeholder="Ghi chú (tuỳ chọn)"></textarea>
 <div class="checkout-card p-4 order-sticky">
 
 <h6 class="fw-bold mb-3">Đơn hàng của bạn</h6>
+
 
 @foreach($carts as $cart)
 @php
@@ -177,17 +198,42 @@ $imageUrl = $image ? asset('storage/'.$image) : asset('images/no-image.png');
 <span>{{ number_format($subtotal) }}đ</span>
 </div>
 
-@if($discount > 0)
+@php
+    $promotionDiscount = $discount ?? 0;
+    $birthdayDiscount = session('birthday_discount', 0);
+    $totalDiscount = $promotionDiscount + $birthdayDiscount;
+@endphp
 
+@if($totalDiscount > 0)
 <div class="d-flex justify-content-between text-success mb-1">
-<span>Giảm giá</span>
-<span>-{{ number_format($discount) }}đ</span>
+    <span>Ưu đãi sinh nhật</span>
+    <span>-{{ number_format($totalDiscount) }}đ</span>
 </div>
 @endif
 
+@php
+    $memberLevel = auth()->user()->member_level ?? 'bronze';
+
+    if ($shippingFee > 0) {
+        $shippingText = number_format($shippingFee).'đ';
+    } else {
+        if ($memberLevel === 'diamond') {
+            $shippingText = 'Miễn phí (Hạng Kim Cương)';
+        }
+        elseif ($memberLevel === 'gold' && $total >= 300000) {
+            $shippingText = 'Miễn phí (Hạng Vàng)';
+        }
+        else {
+            $shippingText = 'Miễn phí';
+        }
+    }
+@endphp
+
 <div class="d-flex justify-content-between mb-1">
 <span>Phí vận chuyển</span>
-<span id="shipping-fee">Nhập tỉnh để tính</span>
+<span id="shipping-fee">
+    {{ $shippingText }}
+</span>
 </div>
 
 <hr>
@@ -195,7 +241,7 @@ $imageUrl = $image ? asset('storage/'.$image) : asset('images/no-image.png');
 <div class="d-flex justify-content-between align-items-center mb-2">
 <span class="fw-bold">Tổng thanh toán</span>
 <span class="order-total" id="grand-total">
-{{ number_format($total) }}đ
+{{ number_format($grandTotal) }}đ
 </span>
 </div>
 
@@ -207,62 +253,184 @@ $imageUrl = $image ? asset('storage/'.$image) : asset('images/no-image.png');
 </div>
 
 </div>
-</form>
+<div class="modal fade" id="changeAddressModal">
+<div class="modal-dialog">
+<div class="modal-content">
+
+<div class="modal-header">
+    <h6 class="modal-title">Chọn địa chỉ nhận hàng</h6>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
 </div>
 
+<div class="modal-body">
+
+@foreach($addresses as $address)
+<div class="border rounded p-2 mb-2 address-option"
+     data-id="{{ $address->id }}"
+     data-name="{{ $address->receiver_name }}"
+     data-phone="{{ $address->phone }}"
+     data-province="{{ $address->province }}"
+     data-full="{{ $address->address_detail }}, {{ $address->ward }}, {{ $address->district }}, {{ $address->province }}"
+     style="cursor:pointer;">
+
+    <div class="fw-semibold">
+        {{ $address->receiver_name }} ({{ $address->phone }})
+        @if($address->is_default)
+            <span class="badge bg-success">Mặc định</span>
+        @endif
+    </div>
+
+    <div class="text-muted small">
+        {{ $address->address_detail }},
+        {{ $address->ward }},
+        {{ $address->district }},
+        {{ $address->province }}
+    </div>
+</div>
+@endforeach
+
+</div>
+
+</div>
+</div>
+</div>
+</form>
+</div>
 <script>
-// chọn payment
+const memberLevel = "{{ auth()->user()->member_level ?? 'bronze' }}";
+</script>
+<script>
+// =============================
+// 1. CHỌN PAYMENT
+// =============================
 document.querySelectorAll('.payment-option').forEach(option=>{
-option.addEventListener('click',()=>{
-document.querySelectorAll('.payment-option').forEach(o=>o.classList.remove('active'));
-option.classList.add('active');
-option.querySelector('input').checked = true;
-});
+    option.addEventListener('click',()=>{
+        document.querySelectorAll('.payment-option')
+            .forEach(o=>o.classList.remove('active'));
+
+        option.classList.add('active');
+        option.querySelector('input').checked = true;
+    });
 });
 
-// ===== TÍNH SHIP REALTIME =====
-const provinceInput = document.getElementById('province');
+
+// =============================
+// 2. BIẾN GIÁ TRỊ
+// =============================
 const subtotal = {{ $subtotal }};
-const discount = {{ $discount }};
+const promotionDiscount = {{ $discount }};
+const birthdayDiscount = {{ session('birthday_discount', 0) }};
+
+// QUAN TRỌNG: dùng total từ server
 const totalWithoutShip = {{ $total }};
 
-provinceInput.addEventListener('blur', function(){
+let serverShipping = {{ $shippingFee }};
 
-let province = this.value.trim().toLowerCase();
-if(!province) return;
 
-let shipping = 35000;
+// =============================
+// 3. HÀM TÍNH SHIP
+// =============================
+function calculateShipping(province){
 
-// Free ship
-if(subtotal >= 500000){
-shipping = 0;
+    province = province.toLowerCase();
+    let shipping = 35000;
+
+    // 1. Ship theo khu vực
+    if(province.includes('vĩnh long')){
+        shipping = 15000;
+    }
+    else{
+        const mienTay = [
+            'cần thơ','bến tre','trà vinh','sóc trăng',
+            'hậu giang','đồng tháp','an giang','kiên giang',
+            'cà mau','bạc liêu','tiền giang'
+        ];
+
+        for(let t of mienTay){
+            if(province.includes(t)){
+                shipping = 25000;
+                break;
+            }
+        }
+    }
+
+    // 2. Freeship theo hạng (DỰA TRÊN TOTAL TỪ SERVER)
+    elseif ($memberLevel === 'gold' && ($subtotal - $promotionDiscount) >= 300000)
+        shipping = 0;
+    }
+
+    if(memberLevel === 'diamond'){
+        shipping = 0;
+    }
+
+    // 3. Tính tổng
+    let grandTotal = totalWithoutShip + shipping;
+
+    // 4. Hiển thị
+    let shippingText = shipping === 0
+        ? 'Miễn phí'
+        : new Intl.NumberFormat('vi-VN').format(shipping) + 'đ';
+
+    document.getElementById('shipping-fee').innerText = shippingText;
+
+    document.getElementById('grand-total').innerText =
+        new Intl.NumberFormat('vi-VN').format(grandTotal) + 'đ';
 }
-else if(province.includes('vĩnh long')){
-shipping = 15000;
-}
-else{
-const mienTay = [
-'cần thơ','bến tre','trà vinh','sóc trăng',
-'hậu giang','đồng tháp','an giang','kiên giang',
-'cà mau','bạc liêu','tiền giang'
-];
 
-for(let t of mienTay){
-if(province.includes(t)){
-shipping = 25000;
-break;
-}
-}
-}
 
-let grandTotal = totalWithoutShip + shipping;
+// =============================
+// 4. CHỌN ĐỊA CHỈ TRONG MODAL
+// =============================
+document.querySelectorAll('.address-option').forEach(item=>{
+    item.addEventListener('click', function(){
 
-document.getElementById('shipping-fee').innerText =
-new Intl.NumberFormat('vi-VN').format(shipping) + 'đ';
+        let id = this.dataset.id;
+        let name = this.dataset.name;
+        let phone = this.dataset.phone;
+        let full = this.dataset.full;
+        let province = this.dataset.province;
 
-document.getElementById('grand-total').innerText =
-new Intl.NumberFormat('vi-VN').format(grandTotal) + 'đ';
+        // cập nhật hidden input
+        document.getElementById('selected-address-id').value = id;
 
+        // cập nhật hiển thị
+        document.getElementById('selected-address-info').innerHTML = `
+            <div class="fw-semibold">
+                ${name} (${phone})
+            </div>
+            <div class="text-muted small mt-1">
+                ${full}
+            </div>
+        `;
+
+        // tính lại ship
+        calculateShipping(province);
+
+        // đóng modal
+        let modal = bootstrap.Modal.getInstance(
+            document.getElementById('changeAddressModal')
+        );
+        modal.hide();
+    });
+});
+
+
+// =============================
+// 5. TÍNH SHIP NGAY KHI LOAD
+// =============================
+window.addEventListener('load', function(){
+
+    // lấy address đang được chọn (mặc định)
+    let selectedId = document.getElementById('selected-address-id').value;
+
+    let defaultAddress = document.querySelector(
+        `.address-option[data-id="${selectedId}"]`
+    );
+
+    if(defaultAddress){
+        let province = defaultAddress.dataset.province;
+        calculateShipping(province);
+    }
 });
 </script>
 

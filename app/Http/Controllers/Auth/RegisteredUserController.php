@@ -5,62 +5,72 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class RegisteredUserController extends Controller
 {
-    /**
-     * Hiển thị form đăng ký
-     */
     public function create(): View
     {
         return view('auth.register');
     }
 
-    /**
-     * Xử lý đăng ký
-     */
     public function store(Request $request): RedirectResponse
     {
-        // ✅ VALIDATION
-        $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email'],
-            'phone' => ['nullable', 'string', 'max:20'],
-            'avatar' => ['nullable', 'image', 'mimes:jpg,jpeg,png'],
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+        $validated = $request->validate([
+            'name'          => ['required', 'string', 'max:255'],
+
+            'email' => [
+                'required',
+                'string',
+                'lowercase',
+                'email:rfc,dns',
+                'max:255',
+                Rule::unique('users', 'email') // ← chuẩn nhất
+            ],
+
+            'phone'         => ['nullable', 'string', 'max:20'],
+            'date_of_birth' => ['nullable', 'date', 'before:today'],
+            'gender'        => ['nullable', 'in:male,female,other'],
+            'avatar'        => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'password'      => ['required', 'confirmed', Rules\Password::defaults()],
+        ], [
+            'name.required'      => 'Vui lòng nhập họ tên',
+
+            'email.required'     => 'Vui lòng nhập email',
+            'email.email'        => 'Email không hợp lệ',
+            'email.unique'       => 'Email này đã được đăng ký',
+
+            'password.required'  => 'Vui lòng nhập mật khẩu',
+            'password.confirmed' => 'Xác nhận mật khẩu không khớp',
         ]);
 
-        // ✅ LƯU AVATAR (NẾU CÓ)
+        // Lưu avatar
         $avatarPath = null;
         if ($request->hasFile('avatar')) {
             $avatarPath = $request->file('avatar')->store('avatars', 'public');
         }
 
-        // ✅ TẠO USER (KHÔNG LOGIN)
+        // Tạo user
         $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'phone' => $request->phone,
-            'avatar' => $avatarPath,
-            'password' => Hash::make($request->password),
-            'role' => 'customer',
+            'name'          => $validated['name'],
+            'email'         => $validated['email'],
+            'phone'         => $validated['phone'] ?? null,
+            'avatar'        => $avatarPath,
+            'date_of_birth' => $validated['date_of_birth'] ?? null,
+            'gender'        => $validated['gender'] ?? null,
+            'password'      => Hash::make($validated['password']),
+            'role'          => 'customer',
         ]);
 
-        // ✅ GỬI EMAIL XÁC THỰC
         event(new Registered($user));
 
-        // ❌ KHÔNG login
-        // ❌ KHÔNG redirect home
-
-        // ✅ VỀ TRANG LOGIN
-        return redirect()->route('login')->with(
-            'status',
-            'Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản.'
-        );
+        return redirect()
+            ->route('login')
+            ->with('success', 'Đăng ký thành công! Vui lòng kiểm tra email để kích hoạt tài khoản.');
     }
 }

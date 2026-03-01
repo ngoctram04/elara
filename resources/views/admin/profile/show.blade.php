@@ -61,31 +61,72 @@
         <hr class="my-4">
 
         {{-- THÔNG TIN CHI TIẾT --}}
-        <div class="row g-3">
+<div class="row g-3">
 
-            <div class="col-md-6">
-                <div class="border rounded p-3 h-100">
-                    <div class="text-muted small mb-1">
-                        <i class="bi bi-telephone"></i> Số điện thoại
-                    </div>
-                    <div class="fw-semibold">
-                        {{ $admin->phone ?? 'Chưa cập nhật' }}
-                    </div>
-                </div>
+    {{-- SĐT --}}
+    <div class="col-md-6">
+        <div class="border rounded p-3 h-100">
+            <div class="text-muted small mb-1">
+                <i class="bi bi-telephone"></i> Số điện thoại
             </div>
-
-            <div class="col-md-6">
-                <div class="border rounded p-3 h-100">
-                    <div class="text-muted small mb-1">
-                        <i class="bi bi-calendar-event"></i> Ngày tạo tài khoản
-                    </div>
-                    <div class="fw-semibold">
-                        {{ $admin->created_at->format('d/m/Y') }}
-                    </div>
-                </div>
+            <div class="fw-semibold">
+                {{ $admin->phone ?? 'Chưa cập nhật' }}
             </div>
-
         </div>
+    </div>
+
+    {{-- Ngày tạo --}}
+    <div class="col-md-6">
+        <div class="border rounded p-3 h-100">
+            <div class="text-muted small mb-1">
+                <i class="bi bi-calendar-event"></i> Ngày tạo tài khoản
+            </div>
+            <div class="fw-semibold">
+                {{ $admin->created_at->format('d/m/Y') }}
+            </div>
+        </div>
+    </div>
+
+    {{-- Ngày sinh --}}
+    <div class="col-md-6">
+        <div class="border rounded p-3 h-100">
+            <div class="text-muted small mb-1">
+                <i class="bi bi-cake"></i> Ngày sinh
+            </div>
+            <div class="fw-semibold">
+                @if($admin->date_of_birth)
+                    {{ \Carbon\Carbon::parse($admin->date_of_birth)->format('d/m/Y') }}
+                    <span class="text-muted">
+                        ({{ \Carbon\Carbon::parse($admin->date_of_birth)->age }} tuổi)
+                    </span>
+                @else
+                    Chưa cập nhật
+                @endif
+            </div>
+        </div>
+    </div>
+
+    {{-- Giới tính --}}
+    <div class="col-md-6">
+        <div class="border rounded p-3 h-100">
+            <div class="text-muted small mb-1">
+                <i class="bi bi-gender-ambiguous"></i> Giới tính
+            </div>
+            <div class="fw-semibold">
+                @if($admin->gender == 'male')
+                    Nam
+                @elseif($admin->gender == 'female')
+                    Nữ
+                @elseif($admin->gender == 'other')
+                    Khác
+                @else
+                    Chưa cập nhật
+                @endif
+            </div>
+        </div>
+    </div>
+
+</div>
 
     </div>
 </div>

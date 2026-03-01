@@ -117,7 +117,7 @@ class OrderController extends Controller
             'status' => 'required|integer'
         ]);
 
-        $order = Order::with('items.variant')->findOrFail($id);
+        $order = Order::with(['items.variant', 'user'])->findOrFail($id);
 
         $oldStatus = $order->status;
         $newStatus = (int) $request->status;
@@ -145,12 +145,13 @@ class OrderController extends Controller
         try {
 
             /*
-            |-----------------------------------------
-            | Khi chuyển sang ĐÃ GIAO (3)
-            | → cộng số lượng đã bán
-            |-----------------------------------------
-            */
+        |-----------------------------------------
+        | Khi chuyển sang ĐÃ GIAO (3)
+        |-----------------------------------------
+        */
             if ($newStatus == Order::STATUS_COMPLETED) {
+
+                // 1. Cộng số lượng đã bán
                 foreach ($order->items as $item) {
                     if ($item->variant) {
                         $item->variant->increment('sold_quantity', $item->quantity);
@@ -158,6 +159,57 @@ class OrderController extends Controller
                 }
 
                 $order->delivered_at = now();
+
+                /*
+            |-----------------------------------------
+            | 2. CỘNG ĐIỂM THÀNH VIÊN
+            |-----------------------------------------
+            */
+                $user = $order->user;
+
+                if ($user) {
+
+                    // Quy đổi: 1.000đ = 1 điểm
+                    $points = floor($order->grand_total / 1000);
+
+                    // Cộng điểm
+                    $user->loyalty_points += $points;
+
+                    // Cộng tổng chi tiêu
+                    $user->total_spent += $order->grand_total;
+
+                    /*
+                |-----------------------------------------
+                | 3. XÉT HẠNG THÀNH VIÊN
+                |-----------------------------------------
+                */
+                    if ($user->total_spent >= 10000000) {
+                        $user->member_level = 'diamond';
+                    } elseif ($user->total_spent >= 3000000) {
+                        $user->member_level = 'gold';
+                    } elseif ($user->total_spent >= 1000000
+                    ) {
+                        $user->member_level = 'silver';
+                    } else {
+                        $user->member_level = 'bronze';
+                    }
+
+                    $user->save();
+
+                    /*
+                |-----------------------------------------
+                | 4. LƯU LỊCH SỬ ĐIỂM
+                |-----------------------------------------
+                */
+                    DB::table('user_point_histories')->insert([
+                        'user_id' => $user->id,
+                        'points' => $points,
+                        'type' => 'earn',
+                        'description' => 'Tích điểm từ đơn #' . $order->id,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ]);
+                }
             }
 
             $order->status = $newStatus;
