@@ -14,35 +14,97 @@ class ReportController extends Controller
     {
         $data = $this->getReportData($request);
 
-        // ===== KPI chính =====
-        $data['revenue'] = $data['finance']->revenue;
-        $data['profit'] = $data['finance']->profit;
+        /*
+    =====================================
+    KPI CHÍNH
+    =====================================
+    */
+
+        // Doanh thu khách thanh toán
+        $data['revenue'] = $data['finance']->revenue ?? 0;
+
+        // Lợi nhuận thực (đã trừ vốn + ship shop trả)
+        $data['profit'] = $data['finance']->profit ?? 0;
 
         // Biên lợi nhuận %
-        $data['margin'] = $data['finance']->revenue > 0
-            ? ($data['finance']->profit / $data['finance']->revenue) * 100
+        $data['margin'] = $data['revenue'] > 0
+        ? ($data['profit'] / $data['revenue']) * 100
             : 0;
+
+
+        /*
+    =====================================
+    ĐƠN HÀNG
+    =====================================
+    */
 
         // Tổng đơn hoàn thành
         $data['totalOrders'] = $data['orderStats']->completed ?? 0;
 
-        // AOV
+        // Tỷ lệ huỷ (để Blade không lỗi)
+        $data['cancelRate'] = $data['cancelRate'] ?? 0;
+
+        // Giá trị đơn trung bình (AOV)
         $data['averageOrder'] = $data['totalOrders'] > 0
         ? $data['revenue'] / $data['totalOrders']
         : 0;
 
-        // Tổng phí ship
-        $data['totalShipping'] = $data['finance']->shipping_total ?? 0;
 
-        // Tổng vốn đã bán
+        /*
+    =====================================
+    SHIPPING (QUAN TRỌNG)
+    =====================================
+    */
+
+        // Khách trả phí ship
+        $data['shippingCollected'] = $data['finance']->shipping_total ?? 0;
+
+        // Shop phải trả cho đơn vị vận chuyển
+        $data['shippingPaid'] = $data['finance']->shipping_cost_total ?? 0;
+
+        // Chi phí freeship shop chịu
+        $data['freeShippingLoss'] = max(
+            0,
+            $data['shippingPaid'] - $data['shippingCollected']
+        );
+
+        // Lãi / lỗ vận chuyển (âm = lỗ)
+        $data['shippingProfit'] =
+        $data['shippingCollected'] - $data['shippingPaid'];
+
+
+        /*
+    =====================================
+    CHI PHÍ
+    =====================================
+    */
+
+        // Tổng vốn hàng đã bán
         $data['totalCost'] = $data['finance']->cost ?? 0;
 
-        // Giá trị tồn kho
+        // Tổng giảm giá (voucher + sinh nhật)
+        $data['totalDiscount'] = $data['finance']->discount_total ?? 0;
+
+
+        /*
+    =====================================
+    KHO
+    =====================================
+    */
+
+        // Giá trị tồn kho hiện tại
         $data['inventoryValue'] = $data['inventory']->total_value ?? 0;
 
-        // ===== Tổng vốn nhập (thêm để fix lỗi) =====
+        // Tổng vốn nhập (toàn thời gian)
         $data['totalImport'] = DB::table('stock_imports')
         ->sum(DB::raw('quantity * cost_price'));
+
+
+        /*
+    =====================================
+    TRẢ VIEW
+    =====================================
+    */
 
         return view('admin.reports.index', $data);
     }
@@ -81,39 +143,60 @@ class ReportController extends Controller
         $to = $range['to'];
 
         /*
-    =====================================
-    1. TÀI CHÍNH
-    =====================================
-    */
+    /*
+=====================================
+1. TÀI CHÍNH (chuẩn ecommerce)
+=====================================
+*/
+
+        // Doanh thu khách trả
         $revenue = DB::table('orders')
             ->where('status', 3)
             ->whereBetween('created_at', [$from, $to])
             ->sum('total');
 
+        // Khách trả phí ship
         $shippingTotal = DB::table('orders')
-            ->where('status', 3)
-            ->whereBetween('created_at', [$from, $to])
-            ->sum('shipping_fee');
+        ->where('status', 3)
+        ->whereBetween('created_at', [$from, $to])
+        ->sum('shipping_fee');
 
+        // Shop phải trả cho đơn vị vận chuyển
+        $shippingCostTotal = DB::table('orders')
+        ->where('status', 3)
+        ->whereBetween('created_at', [$from, $to])
+        ->sum('shipping_cost');
+
+        // Tổng giảm giá
         $discountTotal = DB::table('orders')
         ->where('status', 3)
         ->whereBetween('created_at', [$from, $to])
-            ->sum('discount');
+        ->sum('discount');
 
+        // Giá vốn
         $cost = DB::table('order_items as oi')
-            ->join('orders as o', 'o.id', '=', 'oi.order_id')
-            ->where('o.status', 3)
-            ->whereBetween('o.created_at', [$from, $to])
-            ->sum(DB::raw('oi.quantity * oi.cost_price'));
+        ->join('orders as o', 'o.id', '=', 'oi.order_id')
+        ->where('o.status', 3)
+        ->whereBetween('o.created_at', [$from, $to])
+        ->sum(DB::raw('oi.quantity * oi.cost_price'));
+
+        /*
+Lợi nhuận thực:
+Doanh thu - giá vốn - phí ship shop chịu
+*/
+        $profit = $revenue - $cost - $shippingCostTotal;
 
         $finance = (object)[
                 'revenue' => $revenue,
                 'cost' => $cost,
-                'profit' => $revenue - $cost,
-                'shipping_total' => $shippingTotal,
+                'profit' => $profit,
+
+                // Ship
+                'shipping_total' => $shippingTotal,        // khách trả
+                'shipping_cost_total' => $shippingCostTotal, // shop trả
+
                 'discount_total' => $discountTotal
             ];
-
         /*
     =====================================
     2. TĂNG TRƯỞNG

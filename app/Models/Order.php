@@ -13,45 +13,36 @@ class Order extends Model
 
     protected $fillable = [
         'user_id',
-
-        // Tiền
         'subtotal',
         'discount',
-        'shipping_fee',   // ⭐ thêm
-        'total',           // doanh thu (không gồm ship)
-        'grand_total',     // ⭐ thêm (khách trả)
-
+        'voucher_discount',     // thêm
+        'birthday_discount',    // thêm
+        'shipping_fee',
+        'total',
+        'grand_total',
         'promotion_code',
-
-        // Trạng thái
         'status',
-
-        // Người nhận
         'receiver_name',
         'receiver_phone',
         'receiver_address',
         'note',
-
-        // Thanh toán
         'payment_method',
         'payment_status',
         'transaction_code',
-
-        // Huỷ đơn
         'cancel_reason',
-        'cancelled_by',            // admin | customer
+        'cancelled_by',
         'cancelled_by_user_id',
-
-        // Thời gian giao
         'delivered_at',
     ];
 
     protected $casts = [
         'subtotal' => 'integer',
         'discount' => 'integer',
-        'shipping_fee' => 'integer',   // thêm
+        'voucher_discount' => 'integer',
+        'birthday_discount' => 'integer',
+        'shipping_fee' => 'integer',
         'total' => 'integer',
-        'grand_total' => 'integer',    // thêm
+        'grand_total' => 'integer',
         'status' => 'integer',
         'payment_status' => 'integer',
         'delivered_at' => 'datetime',
@@ -316,5 +307,24 @@ class Order extends Model
                 $order->payment_status = self::PAYMENT_PAID;
             }
         });
+    }
+    // Nếu đơn cũ chưa tách, coi toàn bộ discount là voucher
+    public function getVoucherDiscountAttribute($value)
+    {
+        if ($value > 0) {
+            return $value;
+        }
+
+        // đơn cũ
+        if ($this->discount > 0 && $this->birthday_discount == 0) {
+            return $this->discount;
+        }
+
+        return 0;
+    }
+
+    public function getBirthdayDiscountAttribute($value)
+    {
+        return $value ?? 0;
     }
 }

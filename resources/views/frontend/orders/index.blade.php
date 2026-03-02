@@ -178,13 +178,22 @@ body{background:#f5f6fa;}
 
         <div>
             Thanh toán: <b>{{ $order->payment_method_name }}</b>
+{{-- Sinh nhật --}}
+@if($order->birthday_discount > 0)
+    <div class="text-success">
+        Ưu đãi sinh nhật:
+        -{{ number_format($order->birthday_discount) }}đ
+    </div>
+@endif
+            {{-- Voucher --}}
+@if($order->voucher_discount > 0)
+    <div class="text-success">
+        Voucher:
+        -{{ number_format($order->voucher_discount) }}đ
+    </div>
+@endif
 
-            @if($order->discount > 0)
-                <br>
-                <small class="text-success">
-                    Giảm: -{{ number_format($order->discount) }}đ
-                </small>
-            @endif
+
 
             @if($order->shipping_fee > 0)
                 <br>

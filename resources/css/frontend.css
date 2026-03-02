@@ -504,3 +504,145 @@ body {
 .icon-btn {
     position: relative;
 }
+/* =====================================================
+   SEARCH DROPDOWN – FULL VERSION
+===================================================== */
+
+/* Đảm bảo search nổi trên menu */
+.search-pill {
+    position: relative;
+    z-index: 5000;
+}
+
+/* ================= DROPDOWN BOX ================= */
+.search-suggest-box {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+
+    /* RỘNG HƠN INPUT (giống Shopee/Youtube) */
+    width: 800px;
+    max-width: 90vw;
+
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid #eee;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, .12);
+    z-index: 9999;
+
+    max-height: 420px;
+    overflow-y: auto;
+    display: none;
+    padding: 6px 0;
+}
+
+/* ================= SUGGEST ITEM ================= */
+.search-suggest-item {
+    padding: 12px 18px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: background .2s;
+}
+
+.search-suggest-item:hover {
+    background: #f3f6f9;
+}
+
+/* ================= HISTORY ITEM ================= */
+.search-history-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: background .2s;
+}
+
+.search-history-item:hover {
+    background: #f3f6f9;
+}
+
+/* bên trái: icon + text */
+.history-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #333;
+}
+
+.history-left i {
+    font-size: 16px;
+    color: #888;
+}
+
+/* nút X bên phải */
+.history-delete {
+    font-size: 18px;
+    color: #bbb;
+    cursor: pointer;
+    transition: color .2s;
+}
+
+.history-delete:hover {
+    color: #e74c3c;
+}
+
+/* ================= SCROLL BAR (đẹp hơn) ================= */
+.search-suggest-box::-webkit-scrollbar {
+    width: 6px;
+}
+
+.search-suggest-box::-webkit-scrollbar-thumb {
+    background: #ddd;
+    border-radius: 6px;
+}
+/* ================= SEARCH RESULT BANNER ================= */
+
+.search-result-banner {
+    background: linear-gradient(135deg, #7ec8ea, #9bd6f0);
+    border-radius: 18px;
+    padding: 22px 30px;
+}
+
+.search-result-content {
+    text-align: center;
+}
+
+.result-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.result-title i {
+    font-size: 18px;
+}
+
+.keyword {
+    background: rgba(255, 255, 255, 0.8);
+    color: #0d6efd;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-weight: 700;
+    max-width: 600px;
+    display: inline-block;
+}
+
+.result-count {
+    margin-top: 6px;
+    font-size: 14px;
+    color: rgba(0, 0, 0, 0.6);
+}
+
+.all-product-title {
+    color: #fff;
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: 1px;
+}

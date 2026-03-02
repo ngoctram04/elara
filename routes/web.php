@@ -48,7 +48,11 @@ use App\Http\Controllers\Admin\ReportController;
 Route::get('/', [HomeController::class, 'index'])->name('home');
 // Shop
 Route::get('/products', [ShopController::class, 'index'])->name('shop');
-
+// Search autocomplete
+Route::get('/search/suggest', [ShopController::class, 'suggest'])
+    ->name('search.suggest');
+Route::get('/search/history', [ShopController::class, 'history']);
+Route::post('/search/history/delete', [ShopController::class, 'deleteHistory']);
 // Category
 Route::get('/category/{slug}', [FrontendCategoryController::class, 'show'])
     ->name('category.show');

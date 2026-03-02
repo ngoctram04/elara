@@ -68,8 +68,8 @@ body{background:#f5f6fa;}
 <input type="hidden" name="promotion_code" value="{{ session('promotion_code') }}">
 
 @php
-$discount = $discount ?? session('promotion_discount', 0);
-$total = $total ?? max($subtotal - $discount, 0);
+$discount = $discount ?? 0;
+$birthdayDiscount = $birthdayDiscount ?? 0;
 @endphp
 
 <div class="row g-4">
@@ -199,17 +199,23 @@ $imageUrl = $image ? asset('storage/'.$image) : asset('images/no-image.png');
 </div>
 
 @php
-    $promotionDiscount = $discount ?? 0;
-    $birthdayDiscount = session('birthday_discount', 0);
-    $totalDiscount = $promotionDiscount + $birthdayDiscount;
+$promotionDiscount = $discount ?? 0;
+$birthdayDiscount = $birthdayDiscount ?? 0; // dùng từ controller
+$totalDiscount = $promotionDiscount + $birthdayDiscount;
 @endphp
-
-@if($totalDiscount > 0)
+@if($birthdayDiscount > 0)
 <div class="d-flex justify-content-between text-success mb-1">
     <span>Ưu đãi sinh nhật</span>
-    <span>-{{ number_format($totalDiscount) }}đ</span>
+    <span>-{{ number_format($birthdayDiscount) }}đ</span>
 </div>
 @endif
+@if($discount > 0)
+<div class="d-flex justify-content-between text-success mb-1">
+    <span>Giảm mã khuyến mãi</span>
+    <span>-{{ number_format($discount) }}đ</span>
+</div>
+@endif
+
 
 @php
     $memberLevel = auth()->user()->member_level ?? 'bronze';
@@ -319,7 +325,7 @@ document.querySelectorAll('.payment-option').forEach(option=>{
 // =============================
 const subtotal = {{ $subtotal }};
 const promotionDiscount = {{ $discount }};
-const birthdayDiscount = {{ session('birthday_discount', 0) }};
+const birthdayDiscount = {{ $birthdayDiscount }};
 
 // QUAN TRỌNG: dùng total từ server
 const totalWithoutShip = {{ $total }};
@@ -355,13 +361,13 @@ function calculateShipping(province){
     }
 
     // 2. Freeship theo hạng (DỰA TRÊN TOTAL TỪ SERVER)
-    elseif ($memberLevel === 'gold' && ($subtotal - $promotionDiscount) >= 300000)
-        shipping = 0;
-    }
-
-    if(memberLevel === 'diamond'){
-        shipping = 0;
-    }
+    // 2. Freeship theo hạng
+if(memberLevel === 'diamond'){
+    shipping = 0;
+}
+else if(memberLevel === 'gold' && totalWithoutShip >= 300000){
+    shipping = 0;
+}
 
     // 3. Tính tổng
     let grandTotal = totalWithoutShip + shipping;

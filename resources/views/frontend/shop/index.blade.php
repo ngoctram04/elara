@@ -11,16 +11,29 @@
 ]" />
 
 {{-- PAGE BANNER --}}
-<section class="category-banner mb-3 text-center">
+@php
+use Illuminate\Support\Str;
+@endphp
+
+<section class="search-result-banner mb-4">
     @if(request('q'))
-        <h1 class="fw-bold">
-            Kết quả cho: "<span class="text-primary">{{ request('q') }}</span>"
-        </h1>
-        <div class="text-muted">
-            Tìm thấy {{ $products->total() }} sản phẩm
+        <div class="search-result-content">
+            <div class="result-title">
+                <i class="bi bi-search"></i>
+                Kết quả cho:
+                <span class="keyword">
+                    "{{ Str::limit(request('q'), 50) }}"
+                </span>
+            </div>
+
+            <div class="result-count">
+                {{ $products->total() }} sản phẩm được tìm thấy
+            </div>
         </div>
     @else
-        <h1 class="fw-bold text-uppercase">TẤT CẢ SẢN PHẨM</h1>
+        <div class="search-result-content">
+            <h2 class="all-product-title">TẤT CẢ SẢN PHẨM</h2>
+        </div>
     @endif
 </section>
 

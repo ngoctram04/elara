@@ -9,6 +9,7 @@ use App\Models\Cart;
 use App\Models\Product;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Promotion;
+use Carbon\Carbon;
 class CartController extends Controller
 {
     /**
@@ -61,7 +62,6 @@ class CartController extends Controller
                 ->get()
                 ->keyBy('id');
 
-            // Load tất cả variant theo product (để đổi biến thể)
             $productIds = $variants->pluck('product_id')->unique();
 
             $productVariantsGroup = ProductVariant::whereIn('product_id', $productIds)
@@ -85,7 +85,7 @@ class CartController extends Controller
                 $stock = $variant->stock_quantity;
                 $quantity = min($item['quantity'], $stock);
 
-                // Nếu tồn kho giảm
+                // Nếu tồn kho thay đổi
                 if ($quantity != $item['quantity']) {
                     $rawCart[$variantId]['quantity'] = $quantity;
                     $updatedSession = true;
@@ -98,7 +98,6 @@ class CartController extends Controller
                     continue;
                 }
 
-                // Giá
                 $price = $variant->final_price ?? $variant->price;
                 $originalPrice = $variant->price;
 
@@ -107,7 +106,6 @@ class CartController extends Controller
 
                 $productVariants = $productVariantsGroup[$variant->product_id] ?? collect();
 
-                // Ảnh ưu tiên: variant -> product
                 $image =
                     optional($variant->images->first())->image_path
                     ?? optional($variant->product->mainImage)->image_path
@@ -132,32 +130,76 @@ class CartController extends Controller
                 ];
             }
 
-            // Update session nếu có thay đổi
+            // Cập nhật lại session nếu có thay đổi
             if ($updatedSession) {
                 session()->put('cart', $rawCart);
             }
         }
 
         /* ======================================================
- * 5. SẢN PHẨM GỢI Ý (có rating)
- * ====================================================== */
+     * 5. VOUCHER (lấy từ session)
+     * ====================================================== */
+        $promotionDiscount = session('promotion_discount', 0);
+
+        // Tổng sau voucher
+        $totalAfterPromotion = max(0, $total - $promotionDiscount);
+
+        /* ======================================================
+     * 6. BIRTHDAY BENEFIT
+     * ====================================================== */
+        $birthdayDiscount = 0;
+        $birthdayPercent = 0;
+
+        $user = Auth::user();
+
+        if ($user && $user->date_of_birth) {
+
+            $today = now();
+            $birthday = \Carbon\Carbon::parse($user->date_of_birth);
+
+            // Chỉ áp dụng trong tháng sinh nhật và chưa dùng năm nay
+            if (
+                $today->format('m-d') == $birthday->format('m-d') &&
+                $user->birthday_discount_year != $today->year
+            ) {
+
+                $birthdayPercent = match ($user->member_level) {
+                    'silver' => 5,
+                    'gold' => 10,
+                    'diamond' => 15,
+                    default => 0
+                };
+
+                $birthdayDiscount = round($totalAfterPromotion * $birthdayPercent / 100);
+            }
+        }
+
+        // Lưu session để Checkout dùng
+        session()->put('birthday_discount', $birthdayDiscount);
+
+        // Tổng cuối cùng
+        $finalTotal = max(0, $totalAfterPromotion - $birthdayDiscount);
+
+        /* ======================================================
+     * 7. SẢN PHẨM GỢI Ý
+     * ====================================================== */
         $suggestProducts = Product::with([
             'mainImage',
             'variants',
             'brand'
         ])
-            ->withAvg('reviews', 'rating')   // ⭐ trung bình
-            ->withCount('reviews')           // ⭐ số lượt đánh giá
+            ->withAvg('reviews', 'rating')
+            ->withCount('reviews')
             ->where('is_active', 1)
             ->inRandomOrder()
             ->take(4)
             ->get();
 
         /* ======================================================
-     * 6. VOUCHER KHẢ DỤNG (QUAN TRỌNG)
+     * 8. VOUCHER KHẢ DỤNG
      * ====================================================== */
         $availablePromotions = Promotion::where('is_active', 1)
-        ->where('type', 'order') // chỉ voucher đơn hàng
+        ->where('type', 'order')
         ->where(function ($q) {
             $q->whereNull('start_date')
             ->orWhere('start_date', '<=', now());
@@ -170,13 +212,17 @@ class CartController extends Controller
             ->get();
 
         /* ======================================================
-     * 7. RETURN VIEW
+     * 9. RETURN VIEW
      * ====================================================== */
         return view('frontend.cart.index', [
             'cart' => $cart,
             'total' => $total,
+            'promotionDiscount' => $promotionDiscount,
+            'birthdayDiscount' => $birthdayDiscount,
+            'birthdayPercent' => $birthdayPercent,
+            'finalTotal' => $finalTotal,
             'suggestProducts' => $suggestProducts,
-            'availablePromotions' => $availablePromotions, // ⭐ thêm dòng này
+            'availablePromotions' => $availablePromotions,
         ]);
     }
 
@@ -586,4 +632,40 @@ class CartController extends Controller
             'message' => $message
         ]);
     }
+    private function getBirthdayBenefit($user, $amount)
+    {
+        // 1. Không có ngày sinh
+        if (!$user || !$user->date_of_birth) {
+            return 0;
+        }
+
+        $today = now();
+        $birthday = Carbon::parse($user->date_of_birth);
+
+        // 2. Chỉ áp dụng đúng ngày sinh (ngày + tháng)
+        if ($today->format('m-d') !== $birthday->format('m-d')) {
+            return 0;
+        }
+
+        // 3. Đã dùng ưu đãi trong năm nay
+        if ($user->birthday_discount_year == $today->year) {
+            return 0;
+        }
+
+        // 4. Xác định % theo hạng thành viên
+        $percent = match ($user->member_level) {
+            'silver'  => 5,
+            'gold'    => 10,
+            'diamond' => 15,
+            default   => 0, // bronze hoặc null
+        };
+
+        if ($percent <= 0) {
+            return 0;
+        }
+
+        // 5. Tính tiền giảm
+        return round(($amount * $percent) / 100);
+    }
+    
 }

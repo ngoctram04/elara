@@ -73,7 +73,6 @@
         </div>
     </div>
 
-
     <div class="col-md-3">
         <div class="card shadow-sm border-0">
             <div class="card-body">
@@ -84,6 +83,7 @@
             </div>
         </div>
     </div>
+
     <div class="col-md-3">
         <div class="card shadow-sm border-0">
             <div class="card-body">
@@ -96,10 +96,10 @@
     </div>
 
 </div>
-
 {{-- KPI HÀNG 2: DÒNG TIỀN --}}
 <div class="row mb-4">
 
+    {{-- Giá vốn --}}
     <div class="col-md-3">
         <div class="card shadow-sm border-0">
             <div class="card-body">
@@ -111,17 +111,60 @@
         </div>
     </div>
 
+    {{-- Ship khách trả --}}
+    <div class="col-md-2">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <small class="text-muted">Ship khách trả</small>
+                <h6 class="fw-bold">
+                    {{ number_format($shippingCollected) }} đ
+                </h6>
+            </div>
+        </div>
+    </div>
+
+    {{-- Ship shop trả --}}
+    <div class="col-md-2">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <small class="text-muted">Ship shop trả</small>
+                <h6 class="text-danger fw-bold">
+                    {{ number_format($shippingPaid) }} đ
+                </h6>
+            </div>
+        </div>
+    </div>
+
+    {{-- Chi phí freeship --}}
+    <div class="col-md-2">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <small class="text-muted">Chi phí freeship</small>
+                <h6 class="text-warning fw-bold">
+                    {{ number_format($freeShippingLoss) }} đ
+                </h6>
+            </div>
+        </div>
+    </div>
+
+    {{-- Lãi / lỗ vận chuyển --}}
     <div class="col-md-3">
         <div class="card shadow-sm border-0">
             <div class="card-body">
-                <small class="text-muted">Tổng phí vận chuyển</small>
-                <h5 class="fw-bold">
-                    {{ number_format($totalShipping) }} đ
+                <small class="text-muted">Lãi / lỗ vận chuyển</small>
+                <h5 class="fw-bold {{ $shippingProfit < 0 ? 'text-danger' : 'text-success' }}">
+                    {{ number_format($shippingProfit) }} đ
                 </h5>
             </div>
         </div>
     </div>
 
+</div>
+
+{{-- HÀNG KPI PHỤ --}}
+<div class="row mb-4">
+
+    {{-- Giá trị tồn kho --}}
     <div class="col-md-3">
         <div class="card shadow-sm border-0">
             <div class="card-body">
@@ -132,6 +175,8 @@
             </div>
         </div>
     </div>
+
+    {{-- Tổng vốn nhập --}}
     <div class="col-md-3">
         <div class="card shadow-sm border-0">
             <div class="card-body">

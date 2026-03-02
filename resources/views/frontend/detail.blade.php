@@ -479,6 +479,30 @@
         </button>
     </div>
 @endif
+{{-- ================= SẢN PHẨM LIÊN QUAN ================= --}}
+@if(!empty($relatedProducts) && $relatedProducts->count())
+<div class="mt-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0">Sản phẩm tương tự</h5>
+        <a href="{{ route('shop', ['category' => $product->category_id]) }}"
+           class="text-decoration-none small">
+            Xem thêm →
+        </a>
+    </div>
+
+    <div class="row g-3">
+        @foreach($relatedProducts as $item)
+            <div class="col-6 col-md-3">
+                @include('frontend.partials.product-card-category', [
+                    'product' => $item
+                ])
+            </div>
+        @endforeach
+    </div>
+
+</div>
+@endif
 </div>
 
 </div>
@@ -499,62 +523,6 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-
-    /* =====================
-       WISHLIST
-    ===================== */
-    document.querySelectorAll('.btn-wishlist').forEach(btn => {
-        btn.addEventListener('click', function(e){
-            e.preventDefault();
-
-            const productId = this.dataset.productId;
-
-            fetch("{{ route('wishlist.toggle') }}", {
-    method: "POST",
-    headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Accept": "application/json",
-        "X-CSRF-TOKEN": "{{ csrf_token() }}"
-    },
-    body: new URLSearchParams({
-        product_id: productId
-    })
-})
-            .then(res => res.json())
-            .then(data => {
-                if(!data.success){
-                    showCenterNotify(data.message || 'Vui lòng đăng nhập', 'error');
-                    return;
-                }
-
-                // ===== Update tất cả nút wishlist trên trang =====
-                document.querySelectorAll('.btn-wishlist').forEach(el => {
-
-                    const icon = el.querySelector('i');
-
-                    // animation nếu là nút tròn
-                    el.classList.add('animate');
-                    setTimeout(()=>el.classList.remove('animate'), 200);
-
-                    if(data.favorited){
-                        icon.classList.remove('bi-heart');
-                        icon.classList.add('bi-heart-fill','text-danger');
-                        el.classList.add('active');
-                    }else{
-                        icon.classList.remove('bi-heart-fill');
-                        icon.classList.add('bi-heart','text-danger');
-                        el.classList.remove('active');
-                    }
-                });
-
-                // ===== Update số lượt thích =====
-                const countEl = document.getElementById('wishlist-count');
-                if(countEl){
-                    countEl.innerText = data.count;
-                }
-            });
-        });
-    });
 
 
     /* =====================

@@ -45,6 +45,30 @@
 .progress-bar{
     border-radius:20px;
 }
+.member-hover{
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+}
+
+.member-hover-box{
+    position: absolute;
+    top: 110%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.1);
+    padding: 10px 12px;
+    font-size: 13px;
+    width: 200px;
+    display: none;
+    z-index: 10;
+}
+
+.member-hover:hover .member-hover-box{
+    display: block;
+}
 </style>
 @php
 $level = $user->member_level ?? 'bronze';
@@ -75,6 +99,22 @@ $colors = [
     'silver' => '#6c757d',
     'gold' => '#f1c40f',
     'diamond' => '#0d6efd',
+];
+$benefits = [
+    'bronze' => [
+        'Không có ưu đãi'
+    ],
+    'silver' => [
+        'Giảm 5% vào ngày sinh nhật'
+    ],
+    'gold' => [
+        'Miễn phí vận chuyển đơn trên 300.000đ',
+        'Giảm 10% vào ngày sinh nhật'
+    ],
+    'diamond' => [
+        'Miễn phí vận chuyển mọi đơn',
+        'Giảm 15% vào ngày sinh nhật'
+    ],
 ];
 
 /*
@@ -131,11 +171,26 @@ if ($nextLevel) {
 </div>
 @endif
 
-<div class="mt-2">
+<div class="mt-2 member-hover">
+
     <span class="member-badge px-3 py-1"
           style="background: {{ $colors[$level] }}20; color: {{ $colors[$level] }};">
         Hạng {{ $levelNames[$level] }}
+        <i class="bi bi-info-circle ms-1"></i>
     </span>
+
+    <div class="member-hover-box text-start">
+        <div class="fw-semibold mb-1">
+            Quyền lợi hạng {{ $levelNames[$level] }}
+        </div>
+
+        <ul class="mb-0 ps-3">
+            @foreach($benefits[$level] as $b)
+                <li>{{ $b }}</li>
+            @endforeach
+        </ul>
+    </div>
+
 </div>
 
 <div class="mt-2 fw-semibold">

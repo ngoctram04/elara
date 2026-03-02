@@ -197,14 +197,49 @@ data-id="{{ $item['variant_id'] }}">
         </div>
 
         {{-- TOTAL --}}
-        <div class="text-end">
-            <div class="text-muted small">Tổng tiền</div>
-            <div class="total-price js-total"
-                 data-value="{{ $total }}">
-                {{ number_format($total) }}đ
-            </div>
-        </div>
+        <div class="text-end" style="min-width:220px">
 
+    {{-- ================= SUMMARY ================= --}}
+<div class="summary-box">
+
+    {{-- Tổng tiền hàng --}}
+    <div class="d-flex justify-content-between small">
+        <span>Tổng tiền hàng</span>
+        <span id="summary-subtotal" data-value="0">0đ</span>
+    </div>
+
+    {{-- Giảm giá (voucher) --}}
+    <div id="summary-voucher-row"
+         class="d-flex justify-content-between small text-success d-none">
+        <span>Giảm giá voucher</span>
+        <span id="summary-voucher" data-value="0">-0đ</span>
+    </div>
+
+    {{-- Giảm giá sinh nhật --}}
+    <div id="summary-birthday-row"
+         class="d-flex justify-content-between small text-danger d-none">
+        <span>Ưu đãi sinh nhật</span>
+        <span id="summary-birthday" data-percent="{{ $birthdayPercent ?? 0 }}">-0đ</span>
+    </div>
+
+    {{-- Tổng tiết kiệm --}}
+    <div id="summary-saving-row"
+         class="d-flex justify-content-between small text-danger d-none">
+        <span>Tiết kiệm</span>
+        <span id="summary-saving">-0đ</span>
+    </div>
+
+    <hr class="my-2">
+
+    {{-- Tổng thanh toán --}}
+    <div class="d-flex justify-content-between fw-bold">
+        <span>Tổng thanh toán</span>
+        <span class="total-price js-total" data-value="0">0đ</span>
+    </div>
+
+</div>
+
+</div>
         {{-- CHECKOUT --}}
         <form id="checkout-form"
               action="{{ route('checkout.fromCart') }}"
@@ -415,9 +450,8 @@ select option:disabled{
 <script>
 const money = n => new Intl.NumberFormat('vi-VN').format(n) + 'đ';
 
-/* ================= TOTAL ================= */
 function recalcTotal(){
-    let total = 0;
+    let subtotal = 0;
     let count = 0;
 
     document.querySelectorAll('.js-check-item:checked').forEach(cb=>{
@@ -428,49 +462,71 @@ function recalcTotal(){
         const sub = row.querySelector('.js-subtotal');
         const qty = row.querySelector('.js-qty');
 
-        total += Number(sub?.dataset.value || 0);
+        subtotal += Number(sub?.dataset.value || 0);
         count += Number(qty?.value || 0);
     });
 
-    // ===== Cập nhật tổng tiền =====
-    const totalEl = document.querySelector('.js-total');
-    if(totalEl){
-        totalEl.innerText = money(total);
-        totalEl.dataset.value = total; // lưu tổng gốc (quan trọng cho voucher)
-    }
-
-    // ===== Cập nhật tổng sản phẩm =====
+    // ===== Cập nhật số lượng =====
     const countEl = document.querySelector('.js-count');
-    if(countEl){
-        countEl.innerText = count;
+    if(countEl) countEl.innerText = count;
+
+    // ===== SUMMARY =====
+    const subEl = document.getElementById('summary-subtotal');
+    const voucherRow = document.getElementById('summary-voucher-row');
+    const voucherEl = document.getElementById('summary-voucher');
+    const bdRow = document.getElementById('summary-birthday-row');
+    const bdEl = document.getElementById('summary-birthday');
+
+    if(subEl){
+        subEl.innerText = money(subtotal);
+        subEl.dataset.value = subtotal;
     }
 
-    // ===== RESET VOUCHER khi giỏ thay đổi =====
-    if(typeof appliedCode !== 'undefined' && appliedCode){
+    // ===== Voucher =====
+let voucher = appliedCode ? Number(voucherEl?.dataset.value || 0) : 0;
 
-        appliedCode = null;
-        originalTotal = null;
-
-        // Reset hiển thị voucher
-        const voucherText = document.getElementById('voucher-text');
-        if(voucherText){
-            voucherText.innerText = 'Chọn hoặc nhập mã';
-        }
-
-        // Ẩn dòng "đã áp dụng"
-        const appliedBox = document.getElementById('voucher-applied');
-        if(appliedBox){
-            appliedBox.classList.add('d-none');
-            appliedBox.innerText = '';
-        }
-
-        // Xóa mã gửi sang checkout
-        const hidden = document.getElementById('promotion-code-hidden');
-        if(hidden){
-            hidden.value = '';
-        }
-    }
+if(voucher > 0 && subtotal > 0){
+    voucherRow?.classList.remove('d-none');
+}else{
+    voucherRow?.classList.add('d-none');
+    voucher = 0;
 }
+
+// ===== Birthday =====
+let percent = Number(bdEl?.dataset.percent || 0);
+let birthday = Math.round(subtotal * percent / 100);
+
+if(birthday > 0 && subtotal > 0){
+    bdRow?.classList.remove('d-none');
+    bdEl.innerText = '-' + money(birthday);
+}else{
+    bdRow?.classList.add('d-none');
+    birthday = 0;
+}
+
+// ===== Saving (Shopee style) =====
+const savingRow = document.getElementById('summary-saving-row');
+const savingEl = document.getElementById('summary-saving');
+
+const saving = voucher + birthday;
+
+if(saving > 0){
+    savingRow?.classList.remove('d-none');
+    savingEl.innerText = '-' + money(saving);
+}else{
+    savingRow?.classList.add('d-none');
+}
+
+// ===== FINAL TOTAL =====
+const finalTotal = Math.max(0, subtotal - saving);
+
+const totalEl = document.querySelector('.js-total');
+if(totalEl){
+    totalEl.innerText = money(finalTotal);
+    totalEl.dataset.value = subtotal; // giữ subtotal gốc
+}
+}
+
 /* ================= CHECK ALL ================= */
 document.getElementById('check-all')?.addEventListener('change', function(){
     document.querySelectorAll('.js-check-item').forEach(cb=>{
@@ -528,7 +584,7 @@ document.addEventListener('click', e=>{
         /* ===== PLUS ===== */
         if(btn.classList.contains('js-plus')){
             if(qty >= stock){
-                showCenterNotify('Chỉ còn ' + stock + ' sản phẩm', 'error');
+                showToast('Chỉ còn ' + stock + ' sản phẩm', 'error');
                 return;
             }
             qty++;
@@ -588,22 +644,41 @@ document.addEventListener('click', function(e){
         document.getElementById('confirm-delete-box')
             .classList.add('d-none');
 
-        showCenterNotify('Đang xóa sản phẩm...', 'info');
+        showToast('Đang xóa sản phẩm...', 'info');
 
-        fetch(`/cart/remove/${id}`,{
-            method:'DELETE',
-            headers:{'X-CSRF-TOKEN':'{{ csrf_token() }}'}
-        })
-        .then(()=>{
-            const row = document.querySelector(`tr[data-row="${id}"]`);
-            if(row) row.remove();
+        fetch(`/cart/remove/${id}`, {
+    method: 'DELETE',
+    headers: {
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+        'Accept': 'application/json'
+    }
+})
+.then(res => {
+    if (!res.ok) throw new Error('Delete failed');
+    return res.json().catch(() => ({}));
+})
+.then(() => {
+    const row = document.querySelector(`tr[data-row="${id}"]`);
+    if (row) row.remove();
 
-            showCenterNotify('Đã xóa sản phẩm', 'success');
-            recalcTotal();
-        })
-        .catch(()=>{
-            showCenterNotify('Không thể xóa sản phẩm', 'error');
-        });
+    showToast('Đã xóa sản phẩm', 'success');
+
+    // ===== KIỂM TRA GIỎ CÒN KHÔNG =====
+    const remainingRows = document.querySelectorAll('tbody tr');
+
+    if (remainingRows.length === 0) {
+        // Reload để Blade hiển thị "Giỏ hàng trống"
+        setTimeout(() => {
+            location.reload();
+        }, 500);
+        return;
+    }
+
+    recalcTotal();
+})
+.catch(() => {
+    showToast('Không thể xóa sản phẩm', 'error');
+});
 
         removeId = null;
     }
@@ -628,7 +703,7 @@ document.addEventListener('change', e=>{
 
         if(qty > stock){
             qty = stock;
-            showCenterNotify('Chỉ còn ' + stock + ' sản phẩm', 'error');
+            showToast('Chỉ còn ' + stock + ' sản phẩm', 'error');
         }
 
         input.value = qty;
@@ -656,7 +731,7 @@ document.querySelectorAll('.js-change-variant').forEach(select=>{
         const option = select.options[select.selectedIndex];
         const stockCheck = parseInt(option.dataset.stock);
         if(stockCheck <= 0){
-            showCenterNotify('Biến thể này đã hết hàng', 'error');
+            showToast('Biến thể này đã hết hàng', 'error');
             select.value = oldId;
             return;
         }
@@ -679,7 +754,7 @@ document.querySelectorAll('.js-change-variant').forEach(select=>{
             row.style.opacity = 1;
 
             if(!res.success){
-                showCenterNotify(res.message || 'Không thể đổi biến thể', 'error');
+                showToast(res.message || 'Không thể đổi biến thể', 'error');
                 select.value = oldId;
                 return;
             }
@@ -796,7 +871,7 @@ document.getElementById('checkout-form')?.addEventListener('submit', function(e)
 
     if(checked.length === 0){
         e.preventDefault();
-        showCenterNotify('Vui lòng chọn sản phẩm để thanh toán', 'error');
+        showToast('Vui lòng chọn sản phẩm để thanh toán', 'error');
         return;
     }
 
@@ -830,15 +905,14 @@ function applyVoucher(code){
 
     const totalEl = document.querySelector('.js-total');
     if(!totalEl){
-        showCenterNotify('Không tìm thấy tổng tiền', 'error');
+        showToast('Không tìm thấy tổng tiền', 'error');
         return;
     }
 
-    // Tổng gốc hiện tại (luôn lấy từ dataset)
     const total = Number(totalEl.dataset.value || 0);
 
     if(total <= 0){
-        showCenterNotify('Vui lòng chọn sản phẩm trước khi áp dụng voucher', 'error');
+        showToast('Vui lòng chọn sản phẩm trước khi áp dụng voucher', 'error');
         return;
     }
 
@@ -857,31 +931,42 @@ function applyVoucher(code){
     .then(res => {
 
         if(!res.success){
-            showCenterNotify(res.message || 'Mã không hợp lệ', 'error');
+            showToast(res.message || 'Mã không hợp lệ', 'error');
             return;
         }
 
         appliedCode = code;
 
-        // ===== QUAN TRỌNG =====
-        // Chỉ hiển thị tổng sau giảm
-        // KHÔNG ghi đè dataset.value (giữ tổng gốc)
+        // Hiển thị tổng sau giảm (UI)
         totalEl.innerText = money(res.final_total);
 
-        // Hiển thị mã đã chọn
+        // ===== QUAN TRỌNG: LƯU VOUCHER CHO recalcTotal =====
+        const voucherEl = document.getElementById('summary-voucher');
+        const voucherRow = document.getElementById('summary-voucher-row');
+
+        if(voucherEl){
+            voucherEl.dataset.value = res.discount;
+            voucherEl.innerText = '-' + money(res.discount);
+        }
+
+        if(voucherRow){
+            voucherRow.classList.remove('d-none');
+        }
+
+        // Hiển thị mã
         const voucherText = document.getElementById('voucher-text');
         if(voucherText){
             voucherText.innerText = code;
         }
 
-        // Hiển thị thông tin giảm
+        // Box thông báo
         const box = document.getElementById('voucher-applied');
         if(box){
             box.innerText = `Đã áp dụng: ${res.name} (-${money(res.discount)})`;
             box.classList.remove('d-none');
         }
 
-        // Lưu mã vào form checkout
+        // Lưu vào form checkout
         const hidden = document.getElementById('promotion-code-hidden');
         if(hidden){
             hidden.value = code;
@@ -893,9 +978,12 @@ function applyVoucher(code){
             const modal = bootstrap.Modal.getInstance(modalEl);
             modal?.hide();
         }
+
+        // Tính lại tổng chuẩn (voucher + birthday)
+        recalcTotal();
     })
     .catch(()=>{
-        showCenterNotify('Có lỗi xảy ra, vui lòng thử lại', 'error');
+        showToast('Có lỗi xảy ra, vui lòng thử lại', 'error');
     });
 }
 /* ===== CLICK VOUCHER (ổn định cho modal) ===== */
@@ -910,11 +998,15 @@ document.getElementById('btn-apply-voucher')?.addEventListener('click', ()=>{
     const code = document.getElementById('voucher-code').value.trim();
 
     if(!code){
-        showCenterNotify('Vui lòng nhập mã khuyến mãi', 'error');
+        showToast('Vui lòng nhập mã khuyến mãi', 'error');
         return;
     }
 
     applyVoucher(code);
+});
+// ===== TỰ RELOAD NẾU CART BỊ THAY ĐỔI TỪ NƠI KHÁC =====
+window.addEventListener('cartUpdated', function () {
+    location.reload();
 });
 </script>
 @endpush

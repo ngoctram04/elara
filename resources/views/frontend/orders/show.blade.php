@@ -252,31 +252,40 @@
         {{-- ================= TỔNG TIỀN ================= --}}
         <div class="text-end mt-3">
 
-            <div>
-                Tạm tính:
-                <strong>{{ number_format($order->subtotal) }}đ</strong>
-            </div>
+    <div>
+        Tạm tính:
+        <strong>{{ number_format($order->subtotal) }}đ</strong>
+    </div>
 
-            @if($order->discount > 0)
-                <div class="text-success">
-                    Giảm giá:
-                    - {{ number_format($order->discount) }}đ
-                </div>
-            @endif
-
-            <div>
-                Phí vận chuyển:
-                <strong>{{ number_format($order->shipping_fee) }}đ</strong>
-            </div>
-
-            <div class="fs-5 mt-1">
-                <b>Tổng thanh toán:</b>
-                <b class="text-danger">
-                    {{ number_format($order->grand_total) }}đ
-                </b>
-            </div>
-
+    {{-- Voucher --}}
+    @if($order->voucher_discount > 0)
+        <div class="text-success">
+            Voucher:
+            - {{ number_format($order->voucher_discount) }}đ
         </div>
+    @endif
+
+    {{-- Sinh nhật --}}
+    @if($order->birthday_discount > 0)
+        <div class="text-success">
+            Ưu đãi sinh nhật:
+            - {{ number_format($order->birthday_discount) }}đ
+        </div>
+    @endif
+
+    <div>
+        Phí vận chuyển:
+        <strong>{{ number_format($order->shipping_fee) }}đ</strong>
+    </div>
+
+    <div class="fs-5 mt-1">
+        <b>Tổng thanh toán:</b>
+        <b class="text-danger">
+            {{ number_format($order->grand_total) }}đ
+        </b>
+    </div>
+
+</div>
 
     </div>
 </div>

@@ -6,11 +6,20 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Category;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class HomeController extends Controller
 {
     public function index()
     {
+        /* =====================================================
+            🔒 Nếu là ADMIN → chuyển về admin dashboard
+        ===================================================== */
+        if (Auth::check() && Auth::user()->role === 'admin') {
+            // Route admin chính của bạn
+            return redirect()->route('admin.reports.index');
+        }
+
         $now = Carbon::now();
 
         /* ===============================
@@ -24,8 +33,8 @@ class HomeController extends Controller
             ⭐ SẢN PHẨM NỔI BẬT
         =============================== */
         $featuredProducts = Product::with(['mainImage', 'brand'])
-            ->withAvg('reviews', 'rating')     // ⭐ trung bình sao
-            ->withCount('reviews')             // ⭐ số lượt đánh giá
+            ->withAvg('reviews', 'rating')
+            ->withCount('reviews')
             ->where('is_active', true)
             ->where('is_featured', true)
             ->latest()
