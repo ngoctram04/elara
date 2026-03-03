@@ -7,76 +7,84 @@
     <div class="card-body">
 
         {{-- HEADER --}}
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="fw-semibold mb-0">Danh sách khuyến mãi</h5>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5 class="fw-bold mb-0">
+                <i class="bi bi-megaphone me-2"></i> Quản lý khuyến mãi
+            </h5>
 
-            {{-- SỬA Ở ĐÂY: create thay vì choose --}}
-            <a href="{{ route('admin.promotions.create') }}"
-               class="btn btn-primary btn-sm">
-                + Thêm khuyến mãi
-            </a>
+            <div>
+                <a href="{{ route('admin.promotions.create') }}"
+                   class="btn btn-primary btn-sm me-2">
+                    <i class="bi bi-plus-circle"></i> Thêm khuyến mãi
+                </a>
+
+                <a href="{{ route('admin.promotions.createReward') }}"
+                   class="btn btn-success btn-sm">
+                    <i class="bi bi-gift"></i> Voucher đổi điểm
+                </a>
+            </div>
         </div>
 
-        {{-- TABLE --}}
-        <div class="table-responsive">
-            <table class="table table-hover align-middle">
-                <thead class="table-light">
+        {{-- ================= KHUYẾN MÃI THƯỜNG ================= --}}
+        <h6 class="fw-semibold mb-3 text-primary">
+            <i class="bi bi-tag"></i> Khuyến mãi hệ thống
+        </h6>
+
+        <div class="table-responsive mb-5">
+            <table class="table table-hover align-middle border">
+                <thead class="table-light text-center">
                     <tr>
-                        <th>#</th>
+                        <th width="60">#</th>
                         <th>Tên</th>
-                        <th>Loại</th>
-                        <th>Giảm</th>
-                        <th>Thời gian</th>
-                        <th>Trạng thái</th>
-                        <th>Tình trạng</th>
-                        <th width="160">Hành động</th>
+                        <th width="120">Loại</th>
+                        <th width="100">Giảm</th>
+                        <th width="180">Thời gian</th>
+                        <th width="120">Trạng thái</th>
+                        <th width="130">Tình trạng</th>
+                        <th width="150">Hành động</th>
                     </tr>
                 </thead>
 
                 <tbody>
                 @forelse ($promotions as $promo)
                     <tr>
-                        <td>{{ $promo->id }}</td>
+                        <td class="text-center">{{ $promo->id }}</td>
 
-                        {{-- NAME --}}
                         <td>
-                            <strong>{{ $promo->name }}</strong><br>
-                            @if ($promo->type === 'order' && $promo->code)
-                                <span class="badge bg-info">
+                            <strong>{{ $promo->name }}</strong>
+                            @if ($promo->code)
+                                <br>
+                                <span class="badge bg-info mt-1">
                                     {{ $promo->code }}
                                 </span>
                             @endif
                         </td>
 
-                        {{-- TYPE --}}
-                        <td>
+                        <td class="text-center">
                             <span class="badge bg-secondary">
                                 {{ $promo->type === 'order' ? 'Đơn hàng' : 'Sản phẩm' }}
                             </span>
                         </td>
 
-                        {{-- DISCOUNT --}}
-                        <td>
-                            <span class="fw-semibold text-danger">
-                                -{{ $promo->discount_value }}%
-                            </span>
+                        <td class="text-center text-danger fw-semibold">
+                            -{{ $promo->discount_value }}
+                            {{ $promo->discount_type === 'percent' ? '%' : 'đ' }}
                         </td>
 
-                        {{-- DATE --}}
-                        <td>
-                            {{ \Carbon\Carbon::parse($promo->start_date)->format('d/m/Y') }}<br>
-                            → {{ \Carbon\Carbon::parse($promo->end_date)->format('d/m/Y') }}
+                        <td class="small text-center">
+                            {{ \Carbon\Carbon::parse($promo->start_date)->format('d/m/Y') }}
+                            <br>
+                            →
+                            {{ \Carbon\Carbon::parse($promo->end_date)->format('d/m/Y') }}
                         </td>
 
-                        {{-- ACTIVE STATUS --}}
-                        <td>
+                        <td class="text-center">
                             <span class="badge {{ $promo->is_active ? 'bg-success' : 'bg-danger' }}">
                                 {{ $promo->is_active ? 'Đang bật' : 'Đã tắt' }}
                             </span>
                         </td>
 
-                        {{-- TIME STATUS --}}
-                        <td>
+                        <td class="text-center">
                             @php
                                 $now = now();
                                 if ($now->lt($promo->start_date)) {
@@ -96,11 +104,10 @@
                             </span>
                         </td>
 
-                        {{-- ACTION --}}
-                        <td>
+                        <td class="text-center">
                             <a href="{{ route('admin.promotions.edit', $promo->id) }}"
                                class="btn btn-warning btn-sm mb-1">
-                                Sửa
+                                <i class="bi bi-pencil-square"></i>
                             </a>
 
                             <form action="{{ route('admin.promotions.toggle', $promo->id) }}"
@@ -116,18 +123,67 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="8" class="text-center text-muted">
-                            Chưa có khuyến mãi nào
+                        <td colspan="8" class="text-center text-muted py-4">
+                            <i class="bi bi-inbox"></i>
+                            <br> Chưa có khuyến mãi nào
                         </td>
                     </tr>
                 @endforelse
                 </tbody>
             </table>
+
+            <div class="mt-3">
+                {{ $promotions->links() }}
+            </div>
         </div>
 
-        {{-- PAGINATION --}}
-        <div class="mt-3">
-            {{ $promotions->links() }}
+        {{-- ================= VOUCHER ĐỔI ĐIỂM ================= --}}
+        <h6 class="fw-semibold mb-3 text-success">
+            <i class="bi bi-gift"></i> Voucher đổi điểm
+        </h6>
+
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle">
+                <thead class="table-light text-center">
+                    <tr>
+                        <th width="60">#</th>
+                        <th>Tên</th>
+                        <th width="150">Điểm cần</th>
+                        <th width="120">Giảm</th>
+                        <th width="120">Hiệu lực</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                @forelse ($rewards as $reward)
+                    <tr>
+                        <td class="text-center">{{ $reward->id }}</td>
+                        <td>{{ $reward->title }}</td>
+                        <td class="text-center text-primary fw-semibold">
+                            {{ number_format($reward->points_required) }} điểm
+                        </td>
+                        <td class="text-center text-danger">
+                            -{{ $reward->discount_value }}
+                            {{ $reward->discount_type === 'percent' ? '%' : 'đ' }}
+                        </td>
+                        <td class="text-center">
+                            {{ $reward->valid_days }} ngày
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">
+                            <i class="bi bi-inbox"></i>
+                            <br> Chưa có voucher đổi điểm
+                        </td>
+                    </tr>
+                @endforelse
+                </tbody>
+            </table>
+
+            <div class="mt-3">
+                {{ $rewards->links() }}
+            </div>
         </div>
 
     </div>

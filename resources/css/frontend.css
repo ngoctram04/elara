@@ -138,9 +138,12 @@ body {
 /* ================= MEGA MENU – FIX DỨT ĐIỂM ================= */
 .nav-box {
     position: relative;
+    z-index: 900;
+}
+.header-box {
+    position: relative;
     z-index: 1000;
 }
-
 .nav-category {
     position: relative;
 }
@@ -511,9 +514,7 @@ body {
 /* Đảm bảo search nổi trên menu */
 .search-pill {
     position: relative;
-    z-index: 5000;
 }
-
 /* ================= DROPDOWN BOX ================= */
 .search-suggest-box {
     position: absolute;

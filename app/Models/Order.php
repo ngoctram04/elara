@@ -4,7 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-
+use Illuminate\Support\Facades\Mail;
+use App\Mail\OrderCreatedMail;
+use App\Mail\OrderCompletedMail;
 class Order extends Model
 {
     use HasFactory;
@@ -259,33 +261,57 @@ class Order extends Model
     }
     protected static function booted()
     {
+
+
+        /*
+    |--------------------------------------------------------------------------
+    | 2. KHI UPDATE ĐƠN
+    |--------------------------------------------------------------------------
+    */
         static::updating(function ($order) {
 
-            // Kiểm tra status có thay đổi sang CANCELLED không
+            /*
+        |--------------------------------------------------------------------------
+        | 2.1 GIAO THÀNH CÔNG → GỬI MAIL HOÀN TẤT
+        |--------------------------------------------------------------------------
+        */
+            if (
+                $order->isDirty('status') &&
+                $order->status == self::STATUS_COMPLETED
+            ) {
+
+                $order->loadMissing('user');
+
+                if ($order->user && $order->user->email) {
+                    Mail::to($order->user->email)
+                        ->send(new OrderCompletedMail($order));
+                }
+            }
+
+
+            /*
+        |--------------------------------------------------------------------------
+        | 2.2 HUỶ ĐƠN → HOÀN KHO + HOÀN TIỀN
+        |--------------------------------------------------------------------------
+        */
             if (
                 $order->isDirty('status') &&
                 $order->status == self::STATUS_CANCELLED
             ) {
 
-                // Load items nếu chưa load
                 $order->loadMissing('items.variant');
 
-                /*
-            |--------------------------------
-            | 1. HOÀN KHO
-            |--------------------------------
-            */
+                // Hoàn kho
                 foreach ($order->items as $item) {
                     if ($item->variant) {
-                        $item->variant->increment('stock_quantity', $item->quantity);
+                        $item->variant->increment(
+                            'stock_quantity',
+                            $item->quantity
+                        );
                     }
                 }
 
-                /*
-            |--------------------------------
-            | 2. VNPAY → HOÀN TIỀN
-            |--------------------------------
-            */
+                // VNPAY → hoàn tiền
                 if (
                     $order->payment_method === 'vnpay' &&
                     $order->payment_status == self::PAYMENT_PAID
@@ -294,10 +320,11 @@ class Order extends Model
                 }
             }
 
+
             /*
-        |--------------------------------
-        | 3. COD → Khi giao xong = đã thanh toán
-        |--------------------------------
+        |--------------------------------------------------------------------------
+        | 2.3 COD → Khi giao xong = đã thanh toán
+        |--------------------------------------------------------------------------
         */
             if (
                 $order->payment_method === 'cod' &&

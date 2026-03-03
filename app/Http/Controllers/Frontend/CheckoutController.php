@@ -14,6 +14,8 @@ use App\Models\Promotion;
 use Illuminate\Support\Facades\Log;
 use App\Models\UserAddress;
 use App\Models\User;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\OrderCreatedMail;
 class CheckoutController extends Controller
 {
     /**
@@ -570,6 +572,14 @@ class CheckoutController extends Controller
 
                 $variant->decrement('stock_quantity', $item['quantity']);
             }
+            // ==================================================
+            // 10.5 SEND MAIL (SAU KHI ĐÃ CÓ ORDER ITEMS)
+            // ==================================================
+            $order->load('items.variant.product.images', 'user');
+
+            // Gửi cho khách
+            Mail::to($order->user->email)
+            ->send(new \App\Mail\OrderCreatedMail($order));
 
             // ==================================================
             // 11. CLEAR SESSION

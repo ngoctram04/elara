@@ -311,7 +311,12 @@ data-id="{{ $item['variant_id'] }}">
 }
 
 #voucher-applied{
-    font-weight:500;
+    max-width: 280px;          /* chỉnh theo layout của bạn */
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;     /* tối đa 2 dòng */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 .voucher-mini{
     display:flex;
@@ -404,14 +409,25 @@ select option:disabled{
 .d-none{
     display:none !important;
 }
+.voucher-item:hover{
+    border-color:#0d6efd;
+    background:#f8fbff;
+}
+.voucher-item.border-primary{
+    border-width:2px !important;
+}
+.best-badge{
+    font-size:11px;
+    margin-top:4px;
+}
 </style>
 {{-- ================= MODAL VOUCHER ================= --}}
 <div class="modal fade" id="voucherModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+        <div class="modal-content border-0 shadow">
 
             <div class="modal-header">
-                <h5 class="modal-title">Chọn voucher</h5>
+                <h5 class="modal-title fw-bold">Chọn voucher</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
 
@@ -419,22 +435,44 @@ select option:disabled{
 
                 @if(!empty($availablePromotions) && count($availablePromotions))
                     @foreach($availablePromotions as $promo)
-                        <div class="voucher-item border rounded-3 p-3 mb-2"
+
+                        <div class="voucher-item border rounded-3 p-3 mb-3"
                              data-code="{{ $promo->code }}"
-                             style="cursor:pointer">
+                             data-type="{{ $promo->discount_type }}"
+                             data-value="{{ $promo->discount_value }}"
+                             data-min="{{ $promo->min_order_value ?? 0 }}"
+                             data-max="{{ $promo->max_discount ?? 0 }}"
+                             style="cursor:pointer; transition:0.2s;">
 
-                            <div class="fw-semibold text-danger">
-                                {{ $promo->name }}
-                            </div>
+                            <div class="d-flex justify-content-between align-items-start">
 
-                            <div class="small text-muted">
-                                Mã: {{ $promo->code }}
+                                <div>
+                                    <div class="fw-semibold text-danger">
+                                        {{ $promo->name }}
+                                    </div>
+
+                                    <div class="small text-muted">
+                                        Mã: {{ $promo->code }}
+                                    </div>
+
+                                    @if(!empty($promo->min_order_value))
+                                        <div class="small text-muted">
+                                            Đơn tối thiểu: {{ number_format($promo->min_order_value) }}đ
+                                        </div>
+                                    @endif
+                                </div>
+
+                                {{-- Preview giảm bao nhiêu --}}
+                                <div class="text-end small fw-semibold discount-preview text-success">
+                                </div>
+
                             </div>
 
                         </div>
+
                     @endforeach
                 @else
-                    <div class="text-muted text-center">
+                    <div class="text-muted text-center py-3">
                         Không có voucher khả dụng
                     </div>
                 @endif
@@ -1008,5 +1046,105 @@ document.getElementById('btn-apply-voucher')?.addEventListener('click', ()=>{
 window.addEventListener('cartUpdated', function () {
     location.reload();
 });
+/* ================= VOUCHER SORT THEO GIẢM NHIỀU NHẤT ================= */
+
+function getCheckedSubtotal(){
+    let subtotal = 0;
+
+    document.querySelectorAll('.js-check-item:checked').forEach(cb=>{
+        const row = document.querySelector(`tr[data-row="${cb.value}"]`);
+        const sub = row?.querySelector('.js-subtotal');
+        subtotal += Number(sub?.dataset.value || 0);
+    });
+
+    return subtotal;
+}
+
+function calculateDiscount(voucher, subtotal){
+
+    const type = voucher.dataset.type;
+    const value = Number(voucher.dataset.value || 0);
+    const min = Number(voucher.dataset.min || 0);
+    const max = Number(voucher.dataset.max || 0);
+
+    if(subtotal < min) return 0;
+
+    let discount = 0;
+
+    if(type === 'percent'){
+        discount = subtotal * value / 100;
+        if(max > 0){
+            discount = Math.min(discount, max);
+        }
+    }else{
+        discount = value;
+    }
+
+    return Math.round(discount);
+}
+document.getElementById('voucherModal')
+?.addEventListener('show.bs.modal', function(){
+
+    const subtotal = getCheckedSubtotal();
+
+    if(subtotal <= 0){
+        showToast('Vui lòng chọn sản phẩm trước', 'error');
+        return;
+    }
+
+    const container = this.querySelector('.modal-body');
+    const vouchers = Array.from(container.querySelectorAll('.voucher-item'));
+
+    // ===== RESET toàn bộ trước =====
+    vouchers.forEach(v => {
+        v.classList.remove('border-primary');
+        v.style.background = '';
+        const oldBadge = v.querySelector('.best-badge');
+        if(oldBadge) oldBadge.remove();
+    });
+
+    // ===== TÍNH GIẢM =====
+    vouchers.forEach(voucher => {
+
+        const discount = calculateDiscount(voucher, subtotal);
+        voucher.dataset.discount = discount;
+
+        const preview = voucher.querySelector('.discount-preview');
+
+        if(discount > 0){
+            preview.innerText = `Giảm ${money(discount)}`;
+            voucher.style.opacity = 1;
+            voucher.style.pointerEvents = 'auto';
+        }else{
+            preview.innerText = `Không đủ điều kiện`;
+            voucher.style.opacity = 0.5;
+            voucher.style.pointerEvents = 'none';
+        }
+    });
+
+    // ===== SORT =====
+    vouchers.sort((a,b)=>{
+        return Number(b.dataset.discount) - Number(a.dataset.discount);
+    });
+
+    vouchers.forEach(v => container.appendChild(v));
+
+    // ===== GẮN NHÃN CHO VOUCHER TỐT NHẤT =====
+    const bestVoucher = vouchers.find(v => Number(v.dataset.discount) > 0);
+
+    if(bestVoucher){
+        bestVoucher.classList.add('border-primary');
+        bestVoucher.style.background = '#f0f8ff';
+
+        const badge = document.createElement('span');
+        badge.className = 'badge bg-primary best-badge ms-2';
+        badge.innerText = 'Phù hợp nhất';
+
+        bestVoucher.querySelector('.fw-semibold')
+            .appendChild(badge);
+    }
+
+});
+
 </script>
 @endpush

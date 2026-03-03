@@ -8,11 +8,13 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
 
+// Import Models
 use App\Models\Review;
 use App\Models\Order;
 use App\Models\Wishlist;
 use App\Models\Cart;
 use App\Models\UserAddress;
+use App\Models\UserPointHistory;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -34,13 +36,14 @@ class User extends Authenticatable implements MustVerifyEmail
         'role',
         'is_active',
         'blocked_reason',
-        'email_verified_at',
 
-        // =============================
-        // THÊM QUAN TRỌNG
-        // =============================
+        // Loyalty System
+        'loyalty_points',
+        'total_spent',
         'member_level',
         'birthday_discount_year',
+
+        'email_verified_at',
     ];
 
     /*
@@ -64,6 +67,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'is_active'              => 'boolean',
         'date_of_birth'          => 'date',
         'birthday_discount_year' => 'integer',
+        'loyalty_points'         => 'integer',
+        'total_spent'            => 'float',
     ];
 
     /*
@@ -100,6 +105,12 @@ class User extends Authenticatable implements MustVerifyEmail
     public function addresses()
     {
         return $this->hasMany(UserAddress::class);
+    }
+
+    // 🔥 LỊCH SỬ ĐIỂM (FIX LỖI Undefined method pointHistories)
+    public function pointHistories()
+    {
+        return $this->hasMany(UserPointHistory::class);
     }
 
     /*
@@ -153,5 +164,14 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         $this->birthday_discount_year = now()->year;
         $this->save();
+    }
+    public function getMemberLevelAttribute()
+    {
+        $points = $this->loyalty_points;
+
+        if ($points >= 20000) return 'diamond';
+        if ($points >= 5000) return 'gold';
+        if ($points >= 1000) return 'silver';
+        return 'bronze';
     }
 }

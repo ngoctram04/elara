@@ -17,6 +17,11 @@ use App\Http\Controllers\Frontend\OrderController;
 use App\Http\Controllers\Frontend\WishlistController;
 use App\Http\Controllers\Frontend\ReviewController;
 use App\Http\Controllers\Frontend\AddressController;
+use App\Http\Controllers\Frontend\PointController;
+use App\Models\Order;
+use App\Mail\OrderCompletedMail;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\OrderCreatedMail;
 /*
 |--------------------------------------------------------------------------
 | USER PROFILE
@@ -97,6 +102,7 @@ Route::prefix('cart')->name('cart.')->group(function () {
     // ⭐ THÊM Ở ĐÂY
     Route::post('/apply-promotion', [CartController::class, 'applyPromotion'])
     ->name('applyPromotion');
+    
 });
 
 
@@ -141,7 +147,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/membership', [ProfileController::class, 'membership'])
     ->name('membership');
 });
+Route::middleware('auth')->group(function () {
 
+    Route::get('/points/history', [PointController::class, 'history'])
+        ->name('points.history');
+
+    Route::get('/points/redeem', [PointController::class, 'redeemPage'])
+        ->name('points.redeem.page');
+
+    Route::post('/points/redeem', [PointController::class, 'redeem'])
+        ->name('points.redeem');
+});
 /*
 |--------------------------------------------------------------------------
 | ORDER HISTORY (LOGIN)  ⭐ QUAN TRỌNG
@@ -363,39 +379,58 @@ Route::prefix('admin')
 */
     Route::prefix('promotions')->name('promotions.')->group(function () {
 
-        // List
+        // ================= LIST =================
         Route::get('/', [PromotionController::class, 'index'])
         ->name('index');
 
-        // ⭐ Trang chọn loại (thay cho create)
+        // ================= CHOOSE TYPE =================
         Route::get('/create', [PromotionController::class, 'chooseType'])
         ->name('create');
 
-        // Form tạo theo loại
+        // ================= CREATE PRODUCT =================
         Route::get('/create-product', [PromotionController::class, 'createProduct'])
         ->name('createProduct');
 
+        // ================= CREATE ORDER =================
         Route::get('/create-order', [PromotionController::class, 'createOrder'])
-        ->name('createOrder');
+            ->name('createOrder');
 
-        // Store
+        // ================= CREATE REWARD =================
+        Route::get('/create-reward', [PromotionController::class, 'createReward'])
+        ->name('createReward');
+
+        // ================= STORE NORMAL PROMOTION =================
         Route::post('/', [PromotionController::class, 'store'])
         ->name('store');
 
-        // Edit
+        // ================= STORE REWARD =================
+        Route::post('/store-reward', [PromotionController::class, 'storeReward'])
+        ->name('storeReward');
+
+        // ================= EDIT NORMAL =================
         Route::get('/{promotion}/edit', [PromotionController::class, 'edit'])
         ->name('edit');
 
         Route::put('/{promotion}', [PromotionController::class, 'update'])
         ->name('update');
 
-        // Toggle active
+        // ================= TOGGLE =================
         Route::patch('/{promotion}/toggle', [PromotionController::class, 'toggle'])
-        ->name('toggle');
+            ->name('toggle');
 
-        // (Nếu có destroy)
+        // ================= DELETE =================
         Route::delete('/{promotion}', [PromotionController::class, 'destroy'])
         ->name('destroy');
+        // ===== EDIT REWARD =====
+        Route::get('/reward/{reward}/edit', [PromotionController::class, 'editReward'])
+        ->name('editReward');
+
+        Route::put('/reward/{reward}', [PromotionController::class, 'updateReward'])
+        ->name('updateReward');
+
+        // ===== TOGGLE REWARD =====
+        Route::patch('/reward/{reward}/toggle', [PromotionController::class, 'toggleReward'])
+        ->name('toggleReward');
     });
 
     /*
@@ -429,7 +464,70 @@ Route::middleware(['auth', 'check_active'])
     ->name('store');
 
 });
+Route::post(
+    '/cart/apply-best-promotion',
+    [CartController::class, 'applyBestPromotion']
+)->name('cart.applyBestPromotion');
 
+Route::post(
+    '/cart/get-available-promotions',
+    [CartController::class, 'getAvailablePromotions']
+)->name('cart.getAvailablePromotions');
+/*
+|--------------------------------------------------------------------------
+| TEST MAIL - ORDER COMPLETED
+|--------------------------------------------------------------------------
+*/
+Route::get('/test-order-completed', function () {
+
+    $order = Order::with('user')->first();
+
+    if (!$order) {
+        return 'Không có đơn hàng trong database';
+    }
+
+    if (!$order->user || !$order->user->email) {
+        return 'Đơn hàng không có user hoặc email';
+    }
+
+    Mail::to($order->user->email)
+        ->send(new OrderCompletedMail($order));
+
+    return 'Order Completed Mail Sent';
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| TEST MAIL - ORDER CREATED (KHÁCH + ADMIN)
+|--------------------------------------------------------------------------
+*/
+Route::get('/test-order-created', function () {
+
+    $order = Order::with('user')->first();
+
+    if (!$order) {
+        return 'Không có đơn hàng trong database';
+    }
+
+    if (!$order->user || !$order->user->email) {
+        return 'Đơn hàng không có user hoặc email';
+    }
+
+    // Gửi cho khách
+    Mail::to($order->user->email)
+        ->send(new OrderCreatedMail($order));
+
+    // Gửi cho admin (lấy từ MAIL_FROM_ADDRESS trong .env)
+    $adminEmail = config('mail.from.address');
+
+    if ($adminEmail) {
+        Mail::to($adminEmail)
+            ->send(new OrderCreatedMail($order, true));
+    }
+
+    return 'Order Created Mail Sent (Customer + Admin)';
+});
 
 /*
 |--------------------------------------------------------------------------

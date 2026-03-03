@@ -8,45 +8,8 @@
 <div class="row">
 
     {{-- SIDEBAR --}}
-    <div class="col-md-3 mb-4">
-        <div class="card border-0 shadow-sm rounded-4">
-            <div class="card-body text-center">
-
-                <img
-                    src="{{ auth()->user()->avatar
-                        ? asset('storage/'.auth()->user()->avatar)
-                        : asset('images/avatar-default.png') }}"
-                    class="rounded-circle mb-3 border"
-                    width="80" height="80"
-                    style="object-fit:cover;"
-                >
-
-                <h6 class="fw-semibold mb-1">{{ auth()->user()->name }}</h6>
-                <small class="text-muted">Quản lý tài khoản</small>
-
-                <hr>
-
-                <div class="text-start small">
-                    <a class="d-block py-2 text-decoration-none text-dark"
-                       href="{{ route('orders.history') }}">
-                        <i class="bi bi-box-seam me-2"></i> Đơn hàng
-                    </a>
-
-                    <a class="d-block py-2 text-decoration-none text-dark"
-                       href="{{ route('profile.index') }}">
-                        <i class="bi bi-person me-2"></i> Thông tin tài khoản
-                    </a>
-
-                    <a class="d-block py-2 fw-semibold text-primary text-decoration-none"
-                       href="{{ route('addresses.index') }}">
-                        <i class="bi bi-geo-alt me-2"></i> Sổ địa chỉ
-                    </a>
-                </div>
-
-            </div>
-        </div>
-    </div>
-
+    
+    @include('frontend.partials.account-sidebar')
 
     {{-- CONTENT --}}
     <div class="col-md-9">

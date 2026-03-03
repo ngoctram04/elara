@@ -8,6 +8,7 @@ use App\Models\Promotion;
 use App\Models\PromotionProduct;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Models\PointReward;
 
 class PromotionController extends Controller
 {
@@ -16,12 +17,15 @@ class PromotionController extends Controller
     ========================================================= */
     public function index()
     {
-        $promotions = Promotion::orderByDesc('id')->paginate(10);
-        return view('admin.promotions.index', compact('promotions'));
+        $promotions = Promotion::latest()->paginate(10);
+
+        $rewards = PointReward::latest()->paginate(10);
+
+        return view('admin.promotions.index', compact('promotions', 'rewards'));
     }
 
     /* =========================================================
-        CREATE (Chọn loại)
+        CREATE (Redirect chọn loại)
     ========================================================= */
     public function create()
     {
@@ -34,13 +38,24 @@ class PromotionController extends Controller
     }
 
     /* =========================================================
+        CREATE – REWARD (🔥 FIX LỖI Ở ĐÂY)
+    ========================================================= */
+    public function createReward()
+    {
+        // Nếu bạn có view riêng:
+        return view('admin.promotions.create_reward');
+
+        // Nếu bạn muốn dùng chung với order:
+        // return view('admin.promotions.create_order');
+    }
+
+    /* =========================================================
         CREATE – PRODUCT
     ========================================================= */
     public function createProduct()
     {
         $products = Product::with('variants')->get();
 
-        // Lấy variant đang có khuyến mãi active
         $activeVariantIds = PromotionProduct::whereHas('promotion', function ($q) {
             $q->where('type', 'product')
                 ->where('is_active', true)
@@ -71,7 +86,7 @@ class PromotionController extends Controller
     {
         $request->validate([
             'name'           => 'required|string|max:255',
-            'type'           => 'required|in:product,order',
+            'type'           => 'required|in:product,order,reward',
             'discount_value' => 'required|integer|min:1|max:100',
             'start_date'     => 'required|date',
             'end_date'       => 'required|date|after_or_equal:start_date',
@@ -97,7 +112,6 @@ class PromotionController extends Controller
             'usage_limit'     => 'nullable|integer|min:1',
         ]);
 
-        // Check trùng KM product
         if (
             $request->type === 'product'
             && $this->hasActiveProductConflict($request)
@@ -155,7 +169,6 @@ class PromotionController extends Controller
             $products = Product::with('variants')->get();
             $selected = $promotion->promotionProducts;
 
-            // Variant đang KM (trừ chính promotion hiện tại)
             $activeVariantIds = PromotionProduct::whereHas('promotion', function ($q) use ($promotion) {
                 $q->where('type', 'product')
                     ->where('is_active', true)
@@ -250,7 +263,7 @@ class PromotionController extends Controller
     }
 
     /* =========================================================
-        CHECK TRÙNG
+        CHECK TRÙNG PRODUCT
     ========================================================= */
     private function hasActiveProductConflict(Request $request, Promotion $ignore = null): bool
     {
@@ -272,5 +285,82 @@ class PromotionController extends Controller
                 }
             })
             ->exists();
+    }
+    public function storeReward(Request $request)
+    {
+        $request->validate([
+            'name'            => 'required|string|max:255',
+            'points_required' => 'required|integer|min:1',
+            'discount_type'   => 'required|in:percent,fixed',
+            'discount_value'  => 'required|numeric|min:1',
+            'min_order_value' => 'nullable|numeric|min:0',
+            'max_discount'    => 'nullable|numeric|min:0',
+            'valid_days'      => 'required|integer|min:1',
+        ]);
+
+        PointReward::create([
+            'title'            => $request->name,
+            'points_required'  => $request->points_required,
+            'member_level'     => 'bronze', // hoặc cho chọn
+            'discount_type'    => $request->discount_type,
+            'discount_value'   => $request->discount_value,
+            'min_order_value'  => $request->min_order_value,
+            'max_discount'     => $request->max_discount,
+            'valid_days'       => $request->valid_days,
+            'is_active'        => 1,
+        ]);
+
+        return redirect()
+            ->route('admin.promotions.index')
+            ->with('success', 'Tạo voucher đổi điểm thành công');
+    }
+    /* =========================================================
+    EDIT REWARD
+========================================================= */
+    public function editReward(PointReward $reward)
+    {
+        return view('admin.promotions.edit_reward', compact('reward'));
+    }
+
+    /* =========================================================
+    UPDATE REWARD
+========================================================= */
+    public function updateReward(Request $request, PointReward $reward)
+    {
+        $request->validate([
+            'name'            => 'required|string|max:255',
+            'points_required' => 'required|integer|min:1',
+            'discount_type'   => 'required|in:percent,fixed',
+            'discount_value'  => 'required|numeric|min:1',
+            'min_order_value' => 'nullable|numeric|min:0',
+            'max_discount'    => 'nullable|numeric|min:0',
+            'valid_days'      => 'required|integer|min:1',
+        ]);
+
+        $reward->update([
+            'title'           => $request->name,
+            'points_required' => $request->points_required,
+            'discount_type'   => $request->discount_type,
+            'discount_value'  => $request->discount_value,
+            'min_order_value' => $request->min_order_value,
+            'max_discount'    => $request->max_discount,
+            'valid_days'      => $request->valid_days,
+        ]);
+
+        return redirect()
+        ->route('admin.promotions.index')
+        ->with('success', 'Cập nhật voucher thành công');
+    }
+
+    /* =========================================================
+    TOGGLE REWARD
+========================================================= */
+    public function toggleReward(PointReward $reward)
+    {
+        $reward->update([
+            'is_active' => !$reward->is_active
+        ]);
+
+        return back()->with('success', 'Đã cập nhật trạng thái voucher');
     }
 }

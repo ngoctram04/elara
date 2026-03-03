@@ -1,3 +1,4 @@
+@ -1,209 +0,0 @@
 @extends('layouts.frontend')
 
 @section('title','Hạng thành viên')
@@ -6,6 +7,7 @@
 
 <div class="container py-4">
 <div class="row">
+@include('frontend.partials.account-sidebar')
 
     {{-- ===== SIDEBAR ===== --}}
     <div class="col-md-3 mb-4">
@@ -60,8 +62,8 @@
             $levels = [
                 'bronze' => ['name' => 'Đồng', 'min' => 0],
                 'silver' => ['name' => 'Bạc', 'min' => 1000000],
-                'gold' => ['name' => 'Vàng', 'min' => 3000000],
-                'platinum' => ['name' => 'Bạch kim', 'min' => 7000000],
+                'gold' => ['name' => 'Vàng', 'min' => 5000000],
+                'platinum' => ['name' => 'Bạch kim', 'min' => 20000000],
             ];
 
             $currentLevel = $user->member_level;
