@@ -184,7 +184,7 @@ class="tab {{ request('status')=='cancelled'?'active':'' }}">
 
 <a href="{{ route('orders.history',['status'=>'return']) }}"
 class="tab {{ request('status')=='return'?'active':'' }}">
-Đổi / trả </a>
+Trả hàng / Hoàn tiền</a>
 
 </div>
 
@@ -361,7 +361,50 @@ class="tab {{ request('status')=='return'?'active':'' }}">
                         </button>
                     </form>
                 @endif
+                {{-- YÊU CẦU TRẢ HÀNG / HOÀN TIỀN --}}
+                @if($order->isCompleted() && !$order->refundRequest)
 
+<a href="{{ route('refund.create',$order->id) }}"
+   class="btn btn-outline-danger btn-sm btn-action">
+   Trả hàng / Hoàn tiền
+</a>
+
+@endif
+@if($order->refundRequest)
+
+    @if($order->refundRequest->status == 'pending')
+
+        <span class="badge bg-warning">
+            Đang chờ xử lý hoàn tiền
+        </span>
+
+    @elseif($order->refundRequest->status == 'approved')
+
+        <span class="badge bg-primary">
+            Yêu cầu hoàn tiền đã được duyệt
+        </span>
+
+    @elseif($order->refundRequest->status == 'refunded')
+
+        <span class="badge bg-success">
+            Đã hoàn tiền
+        </span>
+
+    @elseif($order->refundRequest->status == 'rejected')
+
+        <span class="badge bg-danger">
+            Yêu cầu hoàn tiền bị từ chối
+        </span>
+
+        @if($order->refundRequest->admin_note)
+        <div class="text-danger small mt-1">
+            Lý do: {{ $order->refundRequest->admin_note }}
+        </div>
+        @endif
+
+    @endif
+
+@endif
             </div>
         </div>
 

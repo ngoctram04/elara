@@ -283,6 +283,68 @@
             {{ number_format($order->grand_total) }}đ
         </b>
     </div>
+{{-- ================= REFUND ================= --}}
+@if($order->isCompleted() || $order->refundRequest)
+
+<div class="text-end mt-3">
+
+@php
+$refund = $order->refundRequest;
+@endphp
+
+{{-- CHƯA GỬI --}}
+@if(!$refund)
+
+<a href="{{ route('refund.create',$order->id) }}"
+class="btn btn-outline-danger btn-sm">
+Yêu cầu trả hàng / hoàn tiền
+</a>
+
+@else
+
+{{-- PENDING --}}
+@if($refund->status == 'pending')
+
+<div class="alert alert-warning mt-3 mb-0">
+<b>Đã gửi yêu cầu hoàn tiền</b><br>
+Vui lòng chờ cửa hàng phản hồi trong vòng <b>24 giờ</b>.
+</div>
+
+{{-- APPROVED --}}
+@elseif($refund->status == 'approved')
+
+<div class="alert alert-primary mt-3 mb-0">
+<b>Yêu cầu hoàn tiền đã được chấp nhận</b><br>
+Cửa hàng đang tiến hành xử lý hoàn tiền.
+</div>
+
+{{-- REFUNDED --}}
+@elseif($refund->status == 'refunded')
+
+<div class="alert alert-success mt-3 mb-0">
+<b>Đã hoàn tiền thành công</b>
+</div>
+
+{{-- REJECTED --}}
+@elseif($refund->status == 'rejected')
+
+<div class="alert alert-danger mt-3 mb-0">
+<b>Yêu cầu hoàn tiền đã bị từ chối</b>
+
+@if($refund->admin_note)
+<br>
+Lý do: {{ $refund->admin_note }}
+@endif
+
+</div>
+
+@endif
+
+@endif
+
+</div>
+
+@endif
 
 </div>
 

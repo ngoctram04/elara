@@ -355,4 +355,9 @@ class Order extends Model
     {
         return $value ?? 0;
     }
+    public function refundRequest()
+    {
+        return $this->hasOne(RefundRequest::class);
+    }
+    
 }

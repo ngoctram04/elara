@@ -22,6 +22,7 @@ use App\Models\Order;
 use App\Mail\OrderCompletedMail;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\OrderCreatedMail;
+use App\Http\Controllers\Frontend\RefundController;
 /*
 |--------------------------------------------------------------------------
 | USER PROFILE
@@ -43,6 +44,7 @@ use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\StockImportController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\ReportController;
+use App\Http\Controllers\Admin\RefundController as AdminRefundController;
 /*
 |--------------------------------------------------------------------------
 | FRONTEND – PUBLIC
@@ -158,6 +160,14 @@ Route::middleware('auth')->group(function () {
     Route::post('/points/redeem', [PointController::class, 'redeem'])
         ->name('points.redeem');
 });
+Route::middleware('auth')->group(function () {
+
+    Route::get('/refund/{order}', [RefundController::class, 'create'])
+        ->name('refund.create');
+
+    Route::post('/refund/store', [RefundController::class, 'store'])
+        ->name('refund.store');
+});
 /*
 |--------------------------------------------------------------------------
 | ORDER HISTORY (LOGIN)  ⭐ QUAN TRỌNG
@@ -244,6 +254,7 @@ Route::prefix('admin')
 ->name('admin.')
 ->middleware(['auth', 'check_active', 'is_admin'])
 ->group(function () {
+
 
     /*
         |--------------------------------------------------
@@ -371,6 +382,23 @@ Route::prefix('admin')
         Route::post('/cancel/{id}', [AdminOrderController::class, 'cancel'])
         ->name('cancel');
     });
+    /*
+|--------------------------------------------------
+| REFUNDS - HOÀN TIỀN
+|--------------------------------------------------
+*/
+
+    Route::get('/refunds', [AdminRefundController::class, 'index'])
+    ->name('refunds.index');
+
+    Route::post('/refunds/{id}/approve', [AdminRefundController::class, 'approve'])
+    ->name('refunds.approve');
+
+    Route::post('/refunds/{id}/reject', [AdminRefundController::class, 'reject'])
+    ->name('refunds.reject');
+
+    Route::post('/refunds/{id}/refunded', [AdminRefundController::class, 'refunded'])
+    ->name('refunds.refunded');
 
     /*
 |--------------------------------------------------

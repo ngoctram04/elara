@@ -21,10 +21,11 @@ class OrderController extends Controller
             'items.variant.product',
             'items.variant.mainImage',
             'items.review',
-            'cancelledByUser'
+            'cancelledByUser',
+            'refundRequest' // ⭐ thêm relation refund
         ])
-            ->where('user_id', Auth::id())
-            ->latest();
+        ->where('user_id', Auth::id())
+        ->latest();
 
         // 🔎 Tìm kiếm mã đơn
         if ($request->filled('keyword')) {
@@ -52,8 +53,9 @@ class OrderController extends Controller
                     $query->where('status', 4);
                     break;
 
+                    // ⭐ ĐỔI / TRẢ
                 case 'return':
-                    $query->where('status', 6);
+                    $query->whereHas('refundRequest');
                     break;
             }
         }
@@ -75,7 +77,8 @@ class OrderController extends Controller
             'items.variant.mainImage',
             'items.review',
             'items.review.media',
-            'cancelledByUser'
+            'cancelledByUser',
+            'refundRequest'
         ])
             ->where('id', $id)
             ->where('user_id', Auth::id())

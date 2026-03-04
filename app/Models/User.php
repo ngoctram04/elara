@@ -174,4 +174,8 @@ class User extends Authenticatable implements MustVerifyEmail
         if ($points >= 1000) return 'silver';
         return 'bronze';
     }
+    public function refundRequests()
+    {
+        return $this->hasMany(RefundRequest::class);
+    }
 }

@@ -13,12 +13,37 @@ body {
     min-height: 100vh;
     overflow-x: hidden;
 }
+/* submenu */
+.submenu{
+    list-style: none;
+    padding-left: 28px;
+    margin: 4px 0;
+}
 
+.submenu li{
+    margin: 0;
+}
+
+.submenu li a{
+    display: block;
+    padding: 6px 0;
+    font-size: 14px;
+    color: #fff;
+    text-decoration: none;
+}
+
+.submenu li a:hover{
+    opacity: 0.9;
+}
+
+.submenu li a.active{
+    font-weight: 600;
+}
 /* ======================
    SIDEBAR
 ====================== */
 .sidebar {
-    width: 230px;
+    width: 245px;
     background: linear-gradient(180deg, #8fd3ff, #6ec1f7);
     color: #ffffff;
     padding: 20px 0;

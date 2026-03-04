@@ -1,167 +1,228 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <title>@yield('title', 'Admin')</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8">
+<title>@yield('title', 'Admin')</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-    {{-- Bootstrap --}}
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
-    {{-- Icons --}}
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-
-    {{-- Admin CSS & JS --}}
-    @vite([
-        'resources/css/admin.css',
-        'resources/js/admin.js'
-    ])
+@vite([
+'resources/css/admin.css',
+'resources/js/admin.js'
+])
 </head>
+
 <body>
 
-{{-- ===== TOAST DÙNG CHUNG (toàn admin) ===== --}}
 <x-toast />
 
 <div class="admin-wrapper">
 
-    {{-- ================= SIDEBAR ================= --}}
-    <aside class="sidebar" id="sidebar">
-        <div class="sidebar-logo">
-            <i class="bi bi-emoji-smile"></i>
-            <span>QUẢN LÝ BÁN HÀNG</span>
-        </div>
+{{-- ================= SIDEBAR ================= --}}
+<aside class="sidebar" id="sidebar">
 
-        <ul class="sidebar-menu">
-            <li>
-                <a href="{{ route('admin.customers.index') }}"
-                   class="{{ request()->routeIs('admin.customers.*') ? 'active' : '' }}">
-                    <i class="bi bi-people"></i> Quản lý người dùng
-                </a>
-            </li>
+<div class="sidebar-logo">
+<i class="bi bi-emoji-smile"></i>
+<span>QUẢN LÝ BÁN HÀNG</span>
+</div>
 
-            <li>
-                <a href="{{ route('admin.categories.index') }}"
-                   class="{{ request()->is('admin/categories*') ? 'active' : '' }}">
-                    <i class="bi bi-grid"></i> Quản lý danh mục
-                </a>
-            </li>
+<ul class="sidebar-menu">
 
-            <li>
-                <a href="{{ route('admin.brands.index') }}"
-                   class="{{ request()->is('admin/brands*') ? 'active' : '' }}">
-                    <i class="bi bi-tags"></i> Quản lý thương hiệu
-                </a>
-            </li>
+{{-- USERS --}}
+<li>
+<a href="{{ route('admin.customers.index') }}"
+class="{{ request()->routeIs('admin.customers.*') ? 'active' : '' }}">
+<i class="bi bi-people"></i>
+Quản lý người dùng
+</a>
+</li>
 
-            <li>
-                <a href="{{ route('admin.products.index') }}"
-                   class="{{ request()->is('admin/products*') ? 'active' : '' }}">
-                    <i class="bi bi-box"></i> Quản lý sản phẩm
-                </a>
-            </li>
+{{-- CATEGORY --}}
+<li>
+<a href="{{ route('admin.categories.index') }}"
+class="{{ request()->is('admin/categories*') ? 'active' : '' }}">
+<i class="bi bi-grid"></i>
+Quản lý danh mục
+</a>
+</li>
 
-            <li>
-                <a href="{{ route('admin.stock.create') }}"
-                   class="{{ request()->is('admin/stock-import*') ? 'active' : '' }}">
-                    <i class="bi bi-box-arrow-in-down"></i> Nhập hàng
-                </a>
-            </li>
+{{-- BRAND --}}
+<li>
+<a href="{{ route('admin.brands.index') }}"
+class="{{ request()->is('admin/brands*') ? 'active' : '' }}">
+<i class="bi bi-tags"></i>
+Quản lý thương hiệu
+</a>
+</li>
 
-            <li>
-                <a href="{{ route('admin.orders.index') }}"
-                   class="{{ request()->is('admin/orders*') ? 'active' : '' }}">
-                    <i class="bi bi-cart"></i> Quản lý đơn hàng
-                </a>
-            </li>
+{{-- PRODUCT --}}
+<li>
+<a href="{{ route('admin.products.index') }}"
+class="{{ request()->is('admin/products*') ? 'active' : '' }}">
+<i class="bi bi-box"></i>
+Quản lý sản phẩm
+</a>
+</li>
 
-            <li>
-                <a href="{{ route('admin.promotions.index') }}"
-                   class="{{ request()->is('admin/promotions*') ? 'active' : '' }}">
-                    <i class="bi bi-gift"></i> Quản lý khuyến mãi
-                </a>
-            </li>
+{{-- STOCK --}}
+<li>
+<a href="{{ route('admin.stock.create') }}"
+class="{{ request()->is('admin/stock-import*') ? 'active' : '' }}">
+<i class="bi bi-box-arrow-in-down"></i>
+Nhập hàng
+</a>
+</li>
 
-            <li>
-                <a href="{{ route('admin.reports.index') }}"
-                   class="{{ request()->is('admin/reports*') ? 'active' : '' }}">
-                    <i class="bi bi-bar-chart"></i> Thống kê
-                </a>
-            </li>
-        </ul>
-    </aside>
+{{-- ================= ORDERS ================= --}}
+<li>
 
-    {{-- ================= MAIN ================= --}}
-    <main class="main-content">
+<a class="d-flex justify-content-between align-items-center
+{{ request()->is('admin/orders*') || request()->is('admin/refunds*') ? 'active' : '' }}"
+data-bs-toggle="collapse"
+href="#orderMenu"
+role="button">
 
-        {{-- TOPBAR --}}
-        <header class="topbar d-flex align-items-center">
-            <button class="btn btn-light d-md-none" id="toggleSidebar">
-                <i class="bi bi-list"></i>
-            </button>
+<span>
+<i class="bi bi-cart"></i>
+Quản lý đơn hàng
+</span>
 
-            {{-- ADMIN USER --}}
-            <div class="dropdown ms-auto">
-                <button
-                    class="btn btn-light d-flex align-items-center gap-2 rounded-pill dropdown-toggle"
-                    type="button"
-                    data-bs-toggle="dropdown"
-                >
-                    @if (auth()->user()->avatar)
-                        <img src="{{ asset('storage/' . auth()->user()->avatar) }}"
-                             class="rounded-circle" width="32" height="32">
-                    @else
-                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
-                             style="width:32px;height:32px;font-size:14px">
-                            {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
-                        </div>
-                    @endif
+<i class="bi bi-chevron-down small"></i>
 
-                    <span class="fw-semibold">{{ auth()->user()->name }}</span>
-                </button>
+</a>
 
-                <ul class="dropdown-menu dropdown-menu-end shadow">
-                    <li class="dropdown-header">
-                        Xin chào, <strong>{{ auth()->user()->name }}</strong>
-                    </li>
+<div class="collapse {{ request()->is('admin/orders*') || request()->is('admin/refunds*') ? 'show' : '' }}"
+id="orderMenu">
 
-                    <li>
-                        <a class="dropdown-item" href="{{ route('admin.profile.show') }}">
-                            <i class="bi bi-person me-2"></i> Xem thông tin
-                        </a>
-                    </li>
+<ul class="submenu">
 
-                    <li>
-                        <a class="dropdown-item" href="{{ route('admin.profile.edit') }}">
-                            <i class="bi bi-pencil-square me-2"></i> Chỉnh sửa thông tin
-                        </a>
-                    </li>
+<li>
+<a href="{{ route('admin.orders.index') }}"
+class="{{ request()->is('admin/orders*') ? 'active' : '' }}">
+Danh sách đơn hàng
+</a>
+</li>
 
-                    <li><hr class="dropdown-divider"></li>
+<li>
+<a href="{{ route('admin.refunds.index') }}"
+class="{{ request()->is('admin/refunds*') ? 'active' : '' }}">
+Yêu cầu hoàn tiền
+</a>
+</li>
 
-                    <li>
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-                            <button class="dropdown-item text-danger">
-                                <i class="bi bi-box-arrow-right me-2"></i> Đăng xuất
-                            </button>
-                        </form>
-                    </li>
-                </ul>
-            </div>
-        </header>
-
-        {{-- CONTENT --}}
-        <section class="content container-fluid px-4 py-3">
-            @yield('content')
-        </section>
-
-    </main>
+</ul>
 
 </div>
 
-{{-- Bootstrap JS --}}
+</li>
+
+{{-- PROMOTION --}}
+<li>
+<a href="{{ route('admin.promotions.index') }}"
+class="{{ request()->is('admin/promotions*') ? 'active' : '' }}">
+<i class="bi bi-gift"></i>
+Quản lý khuyến mãi
+</a>
+</li>
+
+{{-- REPORT --}}
+<li>
+<a href="{{ route('admin.reports.index') }}"
+class="{{ request()->is('admin/reports*') ? 'active' : '' }}">
+<i class="bi bi-bar-chart"></i>
+Thống kê
+</a>
+</li>
+
+</ul>
+
+</aside>
+
+{{-- ================= MAIN ================= --}}
+<main class="main-content">
+
+<header class="topbar d-flex align-items-center">
+
+<button class="btn btn-light d-md-none" id="toggleSidebar">
+<i class="bi bi-list"></i>
+</button>
+
+<div class="dropdown ms-auto">
+
+<button
+class="btn btn-light d-flex align-items-center gap-2 rounded-pill dropdown-toggle"
+type="button"
+data-bs-toggle="dropdown">
+
+@if (auth()->user()->avatar)
+<img src="{{ asset('storage/' . auth()->user()->avatar) }}"
+class="rounded-circle"
+width="32"
+height="32">
+@else
+<div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
+style="width:32px;height:32px;font-size:14px">
+{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
+</div>
+@endif
+
+<span class="fw-semibold">
+{{ auth()->user()->name }}
+</span>
+
+</button>
+
+<ul class="dropdown-menu dropdown-menu-end shadow">
+
+<li class="dropdown-header">
+Xin chào, <strong>{{ auth()->user()->name }}</strong>
+</li>
+
+<li>
+<a class="dropdown-item" href="{{ route('admin.profile.show') }}">
+<i class="bi bi-person me-2"></i>
+Xem thông tin
+</a>
+</li>
+
+<li>
+<a class="dropdown-item" href="{{ route('admin.profile.edit') }}">
+<i class="bi bi-pencil-square me-2"></i>
+Chỉnh sửa thông tin
+</a>
+</li>
+
+<li><hr class="dropdown-divider"></li>
+
+<li>
+<form method="POST" action="{{ route('logout') }}">
+@csrf
+<button class="dropdown-item text-danger">
+<i class="bi bi-box-arrow-right me-2"></i>
+Đăng xuất
+</button>
+</form>
+</li>
+
+</ul>
+
+</div>
+
+</header>
+
+<section class="content container-fluid px-4 py-3">
+@yield('content')
+</section>
+
+</main>
+
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
 @stack('scripts')
+
 </body>
 </html>
