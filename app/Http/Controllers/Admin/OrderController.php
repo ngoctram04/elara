@@ -258,7 +258,8 @@ class OrderController extends Controller
                 'status' => Order::STATUS_CANCELLED,
                 'cancel_reason' => $request->cancel_reason,
                 'cancelled_by' => 'admin',
-                'cancelled_by_user_id' => Auth::id()
+                'cancelled_by_user_id' => Auth::id(),
+                'cancelled_at' => now()
             ]);
 
             DB::commit();

@@ -45,12 +45,36 @@
                 </span>
             </p>
 
-            <p class="mb-2">
-                <strong>Trạng thái:</strong><br>
-                <span class="badge bg-{{ $order->status_badge }}">
-                    {{ $order->status_name }}
-                </span>
-            </p>
+            @if($order->status == 4)
+
+<div class="alert alert-danger mt-3">
+
+<strong>Đơn hàng đã bị huỷ</strong>
+
+<hr class="my-2">
+
+<div>
+<strong>Người huỷ:</strong>
+@if($order->cancelled_by == 'admin')
+    Admin
+@else
+    Khách hàng
+@endif
+</div>
+
+<div>
+<strong>Thời gian:</strong>
+{{ \Carbon\Carbon::parse($order->cancelled_at)->format('d/m/Y H:i') }}
+</div>
+
+<div>
+<strong>Lý do:</strong>
+{{ $order->cancel_reason }}
+</div>
+
+</div>
+
+@endif
 
             <hr>
 

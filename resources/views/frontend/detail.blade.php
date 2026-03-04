@@ -229,6 +229,9 @@
     cursor:pointer;
     font-weight:bold;
 }
+#product-reviews{
+    scroll-margin-top:150px;
+}
 </style>
 <div class="container py-4">
 <div class="row g-4">
@@ -280,13 +283,6 @@
     </h4>
 
     {{-- GIÁ --}}
-    <div class="mb-3">
-        <div id="price-original"
-             class="text-muted text-decoration-line-through"
-             style="display:none"></div>
-
-        <div id="price-final" class="fs-3 fw-bold text-danger"></div>
-    </div>
 <div class="mb-3">
     <div id="price-original"
          class="text-muted text-decoration-line-through"
@@ -403,82 +399,186 @@
     </div>
 </div>
 {{-- ================= REVIEW ================= --}}
-<div class="mt-5">
+<div class="mt-5" id="product-reviews">
     <h5 class="fw-bold mb-3">
-        Đánh giá sản phẩm ({{ $product->reviews->count() }})
+    Đánh giá sản phẩm ({{ $reviewCount }})
     </h5>
+    <div class="review-summary p-3 mb-3 border rounded bg-light">
 
-    @foreach($product->reviews as $index => $review)
+<div class="d-flex align-items-center gap-4 flex-wrap">
 
-    <div class="review-card border rounded p-3 mb-3 bg-white review-item"
-         style="{{ $index >= 2 ? 'display:none;' : '' }}">
+    <div class="fs-1 text-danger fw-bold">
+    {{ number_format($avgRating,1) }}
+    <small class="fs-6 text-muted">trên 5</small>
 
-        {{-- Header --}}
-        <div class="d-flex align-items-start">
+    <div class="text-warning fs-4">
+        {!! str_repeat('★', round($avgRating)) !!}
+        {!! str_repeat('☆', 5 - round($avgRating)) !!}
+    </div>
+</div>
 
-            <img
-                src="{{ $review->user->avatar 
-                        ? asset('storage/'.$review->user->avatar) 
-                        : asset('images/avatar-default.png') }}"
-                class="review-avatar me-3"
-                alt="avatar">
+    <div class="d-flex flex-wrap gap-2">
 
-            <div class="flex-grow-1">
+<a href="{{ request()->fullUrlWithQuery(['rating'=>'all']) }}#product-reviews"
+   class="btn btn-sm {{ request('rating')=='all' || !request('rating') ? 'btn-dark' : 'btn-outline-secondary' }}">
+    Tất cả
+</a>
 
-                <div class="d-flex justify-content-between">
-                    <div class="fw-semibold">
-                        {{ $review->user->name }}
-                    </div>
+<a href="{{ request()->fullUrlWithQuery(['rating'=>5]) }}#product-reviews"
+   class="btn btn-sm {{ request('rating')==5 ? 'btn-dark' : 'btn-outline-secondary' }}">
+    5 Sao ({{ $ratingStats[5] }})
+</a>
 
-                    <small class="text-muted">
-                        {{ $review->created_at->format('d/m/Y H:i') }}
-                    </small>
+<a href="{{ request()->fullUrlWithQuery(['rating'=>4]) }}#product-reviews"
+   class="btn btn-sm {{ request('rating')==4 ? 'btn-dark' : 'btn-outline-secondary' }}">
+    4 Sao ({{ $ratingStats[4] }})
+</a>
+
+<a href="{{ request()->fullUrlWithQuery(['rating'=>3]) }}#product-reviews"
+   class="btn btn-sm {{ request('rating')==3 ? 'btn-dark' : 'btn-outline-secondary' }}">
+    3 Sao ({{ $ratingStats[3] }})
+</a>
+
+<a href="{{ request()->fullUrlWithQuery(['rating'=>2]) }}#product-reviews"
+   class="btn btn-sm {{ request('rating')==2 ? 'btn-dark' : 'btn-outline-secondary' }}">
+    2 Sao ({{ $ratingStats[2] }})
+</a>
+
+<a href="{{ request()->fullUrlWithQuery(['rating'=>1]) }}#product-reviews"
+   class="btn btn-sm {{ request('rating')==1 ? 'btn-dark' : 'btn-outline-secondary' }}">
+    1 Sao ({{ $ratingStats[1] }})
+</a>
+
+<a href="{{ request()->fullUrlWithQuery(['type'=>'comment']) }}#product-reviews"
+   class="btn btn-sm {{ request('type')=='comment' ? 'btn-dark' : 'btn-outline-secondary' }}">
+    Có bình luận ({{ $withComment }})
+</a>
+
+<a href="{{ request()->fullUrlWithQuery(['type'=>'media']) }}#product-reviews"
+   class="btn btn-sm {{ request('type')=='media' ? 'btn-danger' : 'btn-outline-danger' }}">
+    Có hình ảnh / video ({{ $withMedia }})
+</a>
+<div class="dropdown">
+
+<button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+        type="button"
+        data-bs-toggle="dropdown">
+
+    @if(request('sort') == 'old')
+        Cũ nhất
+    @elseif(request('sort') == 'new')
+        Mới nhất
+    @else
+        Tất cả
+    @endif
+
+</button>
+
+<ul class="dropdown-menu">
+
+<li>
+<a class="dropdown-item {{ !request('sort') ? 'active' : '' }}"
+   href="{{ request()->fullUrlWithQuery(['sort'=>null]) }}#product-reviews">
+    Tất cả
+</a>
+</li>
+
+<li>
+<a class="dropdown-item {{ request('sort')=='new' ? 'active' : '' }}"
+   href="{{ request()->fullUrlWithQuery(['sort'=>'new']) }}#product-reviews">
+    Mới nhất
+</a>
+</li>
+
+<li>
+<a class="dropdown-item {{ request('sort')=='old' ? 'active' : '' }}"
+   href="{{ request()->fullUrlWithQuery(['sort'=>'old']) }}#product-reviews">
+    Cũ nhất
+</a>
+</li>
+
+</ul>
+
+</div>
+</div>
+
+</div>
+</div>
+@forelse($reviews as $review)
+
+<div class="review-card border rounded p-3 mb-3 bg-white review-item">
+
+    {{-- Header --}}
+    <div class="d-flex align-items-start">
+
+        <img
+            src="{{ $review->user->avatar 
+                    ? asset('storage/'.$review->user->avatar) 
+                    : asset('images/avatar-default.png') }}"
+            class="review-avatar me-3"
+            alt="avatar">
+
+        <div class="flex-grow-1">
+
+            <div class="d-flex justify-content-between">
+                <div class="fw-semibold">
+                    {{ $review->user->name }}
                 </div>
 
-                {{-- Stars --}}
-                <div class="review-stars text-warning mb-1">
-                    {!! str_repeat('★', (int)$review->rating) !!}
-                    {!! str_repeat('☆', 5 - (int)$review->rating) !!}
-                    <span class="text-muted ms-1">
-                        ({{ number_format($review->rating, 1) }})
-                    </span>
-                </div>
-
+                <small class="text-muted">
+                    {{ $review->created_at->format('d/m/Y H:i') }}
+                </small>
             </div>
+
+            {{-- Stars --}}
+            <div class="review-stars text-warning mb-1">
+                {!! str_repeat('★', (int)$review->rating) !!}
+                {!! str_repeat('☆', 5 - (int)$review->rating) !!}
+            </div>
+
         </div>
 
-        {{-- Comment --}}
-        @if($review->comment)
-            <div class="mt-2 review-content">
-                {{ $review->comment }}
-            </div>
-        @endif
-
-        {{-- Media --}}
-        @if($review->media->count())
-            <div class="review-media mt-2 d-flex gap-2 flex-wrap">
-                @foreach($review->media as $m)
-                    @if($m->file_type == 'image')
-                        <img src="{{ asset('storage/'.$m->file_path) }}">
-                    @else
-                        <video controls>
-                            <source src="{{ asset('storage/'.$m->file_path) }}">
-                        </video>
-                    @endif
-                @endforeach
-            </div>
-        @endif
-
     </div>
 
-@endforeach
-@if($product->reviews->count() > 2)
-    <div class="text-center mt-3">
-        <button id="load-more-reviews" class="btn btn-outline-primary">
-            Xem thêm đánh giá
-        </button>
+    {{-- Comment --}}
+    @if($review->comment)
+        <div class="mt-2 review-content">
+            {{ $review->comment }}
+        </div>
+    @endif
+
+    {{-- Media --}}
+    @if($review->media->count())
+        <div class="review-media mt-2 d-flex gap-2 flex-wrap">
+            @foreach($review->media as $m)
+
+                @if($m->file_type == 'image')
+                    <img src="{{ asset('storage/'.$m->file_path) }}">
+                @else
+                    <video controls>
+                        <source src="{{ asset('storage/'.$m->file_path) }}">
+                    </video>
+                @endif
+
+            @endforeach
+        </div>
+    @endif
+
+</div>
+
+@empty
+
+<div class="text-center py-4 text-muted">
+    <i class="bi bi-chat-left-text fs-3"></i>
+    <div class="mt-2">
+        Chưa có đánh giá phù hợp với bộ lọc này
     </div>
-@endif
+</div>
+
+@endforelse
+<div class="mt-4 d-flex justify-content-center">
+    {{ $reviews->withQueryString()->fragment('product-reviews')->links() }}
+</div>
 {{-- ================= SẢN PHẨM LIÊN QUAN ================= --}}
 @if(!empty($relatedProducts) && $relatedProducts->count())
 <div class="mt-5">
@@ -645,19 +745,7 @@ if (form) {
         });
     });
 }
-/* =====================
-   LOAD MORE REVIEWS
-===================== */
-const loadMoreBtn = document.getElementById('load-more-reviews');
 
-if (loadMoreBtn) {
-    loadMoreBtn.addEventListener('click', function () {
-        document.querySelectorAll('.review-item')
-            .forEach(item => item.style.display = 'block');
-
-        this.style.display = 'none';
-    });
-}
 /* =====================
    LIGHTBOX IMAGE/VIDEO
 ===================== */
