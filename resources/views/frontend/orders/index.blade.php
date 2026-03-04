@@ -75,11 +75,129 @@ body{background:#f5f6fa;}
     padding:6px 14px;
     margin-left:6px;
 }
+.order-tabs .tab{
+padding:6px 16px;
+border-radius:20px;
+background:#f1f5f9;
+text-decoration:none;
+color:#334155;
+font-size:14px;
+transition:.2s;
+}
+
+.order-tabs .tab:hover{
+background:#e2e8f0;
+}
+
+.order-tabs .tab.active{
+background:#dbeafe;
+color:#2563eb;
+font-weight:600;
+}
+
+.search-box .input-group-text{
+background:#fff;
+border-right:0;
+}
+
+.search-box .form-control{
+border-left:0;
+}
+
+.btn-search{
+background:#2563eb;
+color:#fff;
+border-radius:8px;
+padding:6px 16px;
+}
+
+.btn-search:hover{
+background:#1d4ed8;
+color:#fff;
+}
+
+.btn-reset{
+border:1px solid #cbd5e1;
+border-radius:8px;
+padding:6px 16px;
+color:#475569;
+}
 </style>
 
 <div class="container py-4">
 
 <h4 class="fw-bold mb-4">Lịch sử đơn hàng</h4>
+<div class="order-filter card border-0 shadow-sm mb-4">
+<div class="card-body">
+
+<form method="GET" id="orderSearchForm">
+
+<div class="row align-items-center g-3">
+
+{{-- SEARCH --}}
+
+<div class="col-md-5">
+
+<div class="input-group search-box">
+
+<span class="input-group-text">
+<i class="bi bi-search"></i>
+</span>
+
+<input
+type="text"
+name="keyword"
+value="{{ request('keyword') }}"
+class="form-control"
+placeholder="Nhập mã đơn..."
+oninput="autoSearch()">
+
+</div>
+
+</div>
+
+{{-- TABS --}}
+
+<div class="col-md-7">
+
+<div class="order-tabs d-flex flex-wrap gap-2 justify-content-md-end">
+
+<a href="{{ route('orders.history') }}"
+class="tab {{ request('status')==''?'active':'' }}">
+Tất cả </a>
+
+<a href="{{ route('orders.history',['status'=>'processing']) }}"
+class="tab {{ request('status')=='processing'?'active':'' }}">
+Đang xử lý </a>
+
+<a href="{{ route('orders.history',['status'=>'shipping']) }}"
+class="tab {{ request('status')=='shipping'?'active':'' }}">
+Đang giao </a>
+
+<a href="{{ route('orders.history',['status'=>'completed']) }}"
+class="tab {{ request('status')=='completed'?'active':'' }}">
+Đã giao </a>
+
+<a href="{{ route('orders.history',['status'=>'cancelled']) }}"
+class="tab {{ request('status')=='cancelled'?'active':'' }}">
+Đã huỷ </a>
+
+<a href="{{ route('orders.history',['status'=>'return']) }}"
+class="tab {{ request('status')=='return'?'active':'' }}">
+Đổi / trả </a>
+
+</div>
+
+</div>
+
+</div>
+
+</form>
+
+</div>
+</div>
+
+
 
 @forelse($orders as $order)
 
@@ -222,6 +340,9 @@ body{background:#f5f6fa;}
       class="d-inline cancel-form">
     @csrf
     @method('PUT')
+
+    <input type="hidden" name="cancel_reason" class="cancel-reason">
+
     <button type="button"
             class="btn btn-outline-danger btn-sm btn-action btn-cancel">
         Huỷ đơn
@@ -268,27 +389,44 @@ body{background:#f5f6fa;}
 <script>
 // Xác nhận huỷ đơn
 document.querySelectorAll('.btn-cancel').forEach(function(button){
-    button.addEventListener('click', function () {
 
-        let form = this.closest('.cancel-form');
+button.addEventListener('click', function () {
 
-        Swal.fire({
-            title: 'Bạn muốn huỷ đơn?',
-            text: 'Đơn hàng sẽ được huỷ và không thể khôi phục!',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Huỷ đơn',
-            cancelButtonText: 'Không',
-            confirmButtonColor: '#e74c3c',
-            cancelButtonColor: '#6c757d',
-            reverseButtons: true
-        }).then((result) => {
-            if (result.isConfirmed) {
-                form.submit();
-            }
-        });
+let form = this.closest('.cancel-form');
+let input = form.querySelector('.cancel-reason');
 
-    });
+Swal.fire({
+title: 'Huỷ đơn hàng',
+input: 'textarea',
+inputLabel: 'Lý do huỷ đơn',
+inputPlaceholder: 'Ví dụ: đặt nhầm, muốn đổi sản phẩm...',
+icon: 'warning',
+showCancelButton: true,
+confirmButtonText: 'Xác nhận huỷ',
+cancelButtonText: 'Không',
+confirmButtonColor: '#e74c3c',
+cancelButtonColor: '#6c757d',
+reverseButtons: true,
+inputValidator: (value) => {
+    if (!value) {
+        return 'Bạn cần nhập lý do huỷ!';
+    }
+}
+
+}).then((result) => {
+
+if (result.isConfirmed) {
+
+input.value = result.value;
+
+form.submit();
+
+}
+
+});
+
+});
+
 });
 </script>
 
@@ -312,6 +450,17 @@ Swal.fire({
     text: '{{ session('error') }}',
     confirmButtonColor: '#d33'
 });
+let searchTimer;
+
+function autoSearch(){
+
+clearTimeout(searchTimer);
+
+searchTimer = setTimeout(function(){
+document.getElementById('orderSearchForm').submit();
+},500);
+
+}
 </script>
 @endif
 

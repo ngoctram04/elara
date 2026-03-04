@@ -10,22 +10,22 @@
     <h4 class="fw-bold mb-0">Đơn hàng #{{ $order->id }}</h4>
 
     @if($order->canCancel())
-        <form action="{{ route('orders.cancel', $order->id) }}" method="POST"
-              onsubmit="return confirm('Bạn chắc chắn muốn huỷ đơn này?')">
-            @csrf
-            @method('PUT')
-            <button class="btn btn-danger btn-sm">Huỷ đơn</button>
-        </form>
+        <form action="{{ route('orders.cancel', $order->id) }}"
+      method="POST"
+      class="cancel-form">
+    @csrf
+    @method('PUT')
+
+    <input type="hidden" name="cancel_reason" class="cancel-reason">
+
+    <button type="button"
+            class="btn btn-danger btn-sm btn-cancel">
+        Huỷ đơn
+    </button>
+</form>
     @endif
 </div>
 
-{{-- THÔNG BÁO --}}
-@if(session('success'))
-    <div class="alert alert-success">{{ session('success') }}</div>
-@endif
-@if(session('error'))
-    <div class="alert alert-danger">{{ session('error') }}</div>
-@endif
 
 
 {{-- ================= THÔNG TIN CHUNG ================= --}}
@@ -33,40 +33,39 @@
     <div class="card-body row">
 
         <div class="col-md-4">
-            <p class="mb-1 text-muted">Ngày đặt</p>
-            <b>{{ $order->created_at->format('d/m/Y H:i') }}</b>
-        </div>
+    <p class="mb-1 text-muted">Ngày đặt</p>
+    <b>{{ $order->created_at->format('d/m/Y H:i') }}</b>
+
+    {{-- Nếu đã giao --}}
+    @if($order->isCompleted() && $order->delivered_at)
+        <br>
+        <small class="text-success">
+            Ngày giao: {{ $order->delivered_at->format('d/m/Y H:i') }}
+        </small>
+    @endif
+
+    {{-- Nếu đã huỷ --}}
+    @if($order->isCancelled() && $order->cancelled_at)
+        <br>
+        <small class="text-danger">
+            Thời gian huỷ: {{ $order->cancelled_at->format('d/m/Y H:i') }}
+        </small>
+    @endif
+
+    {{-- Lý do huỷ --}}
+    @if($order->isCancelled() && $order->cancel_reason)
+        <br>
+        <small class="text-muted">
+            Lý do: {{ $order->cancel_reason }}
+        </small>
+    @endif
+</div>
 
         <div class="col-md-4">
             <p class="mb-1 text-muted">Trạng thái</p>
             <span class="badge bg-{{ $order->status_badge }}">
                 {{ $order->status_name }}
             </span>
-
-            @if($order->isCompleted() && $order->delivered_at)
-                <br>
-                <small class="text-muted">
-                    Đã giao: {{ $order->delivered_at->format('d/m/Y H:i') }}
-                </small>
-            @endif
-
-            @if($order->isCancelled())
-                <br>
-                <small class="text-danger">
-                    Huỷ bởi:
-                    {{ $order->cancelled_by == 'admin' ? 'Admin' : 'Khách' }}
-                    @if($order->cancelled_by_name)
-                        ({{ $order->cancelled_by_name }})
-                    @endif
-                </small>
-
-                @if($order->cancel_reason)
-                    <br>
-                    <small class="text-muted">
-                        Lý do: {{ $order->cancel_reason }}
-                    </small>
-                @endif
-            @endif
         </div>
 
         <div class="col-md-4">
@@ -314,5 +313,51 @@
     color: #fff;
 }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+<script>
+
+document.querySelectorAll('.btn-cancel').forEach(function(button){
+
+button.addEventListener('click', function(){
+
+let form = this.closest('.cancel-form');
+let input = form.querySelector('.cancel-reason');
+
+Swal.fire({
+title: 'Huỷ đơn hàng',
+input: 'textarea',
+inputLabel: 'Lý do huỷ đơn',
+inputPlaceholder: 'Ví dụ: đặt nhầm, muốn đổi sản phẩm...',
+icon: 'warning',
+showCancelButton: true,
+confirmButtonText: 'Xác nhận huỷ',
+cancelButtonText: 'Không',
+confirmButtonColor: '#e74c3c',
+cancelButtonColor: '#6c757d',
+reverseButtons: true,
+
+inputValidator: (value) => {
+    if (!value) {
+        return 'Bạn cần nhập lý do huỷ!';
+    }
+}
+
+}).then((result) => {
+
+if (result.isConfirmed){
+
+input.value = result.value;
+
+form.submit();
+
+}
+
+});
+
+});
+
+});
+
+</script>
 @endsection

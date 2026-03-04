@@ -48,6 +48,7 @@ class Order extends Model
         'status' => 'integer',
         'payment_status' => 'integer',
         'delivered_at' => 'datetime',
+        'cancelled_at' => 'datetime',
     ];
 
     /*
