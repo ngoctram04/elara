@@ -199,4 +199,10 @@ class Product extends Model
     {
         return $this->hasMany(Review::class);
     }
+    public function questions()
+    {
+        return $this->hasMany(ProductQuestion::class)
+            ->where('is_active', 1)
+            ->latest();
+    }
 }

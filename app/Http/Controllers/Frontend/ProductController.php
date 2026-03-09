@@ -21,20 +21,34 @@ class ProductController extends Controller
         $product = Product::with([
             'images',
             'mainImage',
+
             'variants' => function ($q) {
                 $q->where('is_active', 1)
                 ->orderBy('id')
                     ->with('images');
             },
+
             'category',
             'brand',
+
             'promotions' => function ($q) {
                 $q->where('is_active', 1);
+            },
+
+            // ⭐ THÊM Q&A
+            'questions' => function ($q) {
+                $q->where('is_active', 1)
+                ->latest()
+                    ->with([
+                        'user:id,name',
+                        'answers.user:id,name'
+                    ]);
             }
+
         ])
-            ->where('slug', $slug)
-            ->where('is_active', 1)
-            ->firstOrFail();
+        ->where('slug', $slug)
+        ->where('is_active', 1)
+        ->firstOrFail();
 
 
         /* ======================================================
@@ -42,10 +56,10 @@ class ProductController extends Controller
      * ====================================================== */
 
         $reviewsQuery = $product->reviews()
-        ->with([
-            'user:id,name,avatar',
-            'media'
-        ]);
+            ->with([
+                'user:id,name,avatar',
+                'media'
+            ]);
 
         /* ===== FILTER RATING ===== */
         if ($request->rating && $request->rating !== 'all') {
@@ -66,7 +80,7 @@ class ProductController extends Controller
         if ($request->sort === 'old') {
             $reviewsQuery->orderBy('created_at', 'asc');
         } else {
-            $reviewsQuery->orderBy('created_at', 'desc'); // mặc định mới nhất
+            $reviewsQuery->orderBy('created_at', 'desc');
         }
 
         $reviews = $reviewsQuery->paginate(5);
@@ -79,7 +93,7 @@ class ProductController extends Controller
         $reviewCount = $product->reviews()->count();
 
         $avgRating = $reviewCount
-        ? round($product->reviews()->avg('rating'), 1)
+            ? round($product->reviews()->avg('rating'), 1)
             : 0;
 
         $ratingStats = [];
@@ -91,12 +105,12 @@ class ProductController extends Controller
         }
 
         $withComment = $product->reviews()
-        ->whereNotNull('comment')
-        ->count();
+            ->whereNotNull('comment')
+            ->count();
 
         $withMedia = $product->reviews()
-        ->whereHas('media')
-        ->count();
+            ->whereHas('media')
+            ->count();
 
 
         /* ======================================================
@@ -129,20 +143,20 @@ class ProductController extends Controller
             'mainImage',
             'brand'
         ])
-        ->withAvg('reviews', 'rating')
-        ->withCount('reviews')
-        ->withSum('variants as total_sold', 'sold_quantity')
-        ->where('is_active', 1)
-        ->where('id', '!=', $product->id)
-        ->where('category_id', $product->category_id)
-        ->whereHas('variants', function ($q) {
-            $q->where('stock_quantity', '>', 0)
-            ->where('is_active', 1);
-        })
-        ->orderByRaw("brand_id = ? DESC", [$product->brand_id])
-        ->orderByDesc('total_sold')
-        ->limit(8)
-        ->get();
+            ->withAvg('reviews', 'rating')
+            ->withCount('reviews')
+            ->withSum('variants as total_sold', 'sold_quantity')
+            ->where('is_active', 1)
+            ->where('id', '!=', $product->id)
+            ->where('category_id', $product->category_id)
+            ->whereHas('variants', function ($q) {
+                $q->where('stock_quantity', '>', 0)
+                ->where('is_active', 1);
+            })
+            ->orderByRaw("brand_id = ? DESC", [$product->brand_id])
+            ->orderByDesc('total_sold')
+            ->limit(8)
+            ->get();
 
 
         /* ======================================================

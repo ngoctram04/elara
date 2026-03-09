@@ -647,3 +647,149 @@ body {
     font-size: 22px;
     letter-spacing: 1px;
 }
+/* =====================================================
+   FLOATING BUTTON (WISHLIST + CHAT)
+===================================================== */
+
+.floating-left {
+    position: fixed;
+    left: 20px;
+    bottom: 25px;
+    z-index: 9999;
+}
+
+.floating-right {
+    position: fixed;
+    right: 20px;
+    bottom: 25px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.float-btn {
+    width: 55px;
+    height: 55px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .2);
+    transition: .25s;
+}
+
+
+/* chat */
+
+.contact-btn {
+    background: #3b82f6;
+}
+
+/* CHAT BOX */
+
+.chat-box {
+    position: fixed;
+    right: 90px;
+    bottom: 80px;
+    width: 260px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, .15);
+    display: none;
+    z-index: 9999;
+}
+
+.chat-header {
+    padding: 10px 14px;
+    background: #3b82f6;
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 10px 10px 0 0;
+}
+
+.chat-body {
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.chat-option {
+    padding: 10px;
+    border: none;
+    background: #f3f4f6;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.chat-option:hover {
+    background: #e5e7eb;
+}
+/* =====================================================
+   CHAT DATE DIVIDER
+===================================================== */
+
+.chat-date {
+    text-align: center;
+    font-size: 12px;
+    color: #8a8a8a;
+    margin: 14px 0;
+    position: relative;
+}
+
+.chat-date::before,
+.chat-date::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 35%;
+    height: 1px;
+    background: #ddd;
+}
+
+.chat-date::before {
+    left: 0;
+}
+
+.chat-date::after {
+    right: 0;
+}
+/* ================= CHAT BADGE ================= */
+
+.chat-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 999px;
+    min-width: 18px;
+    text-align: center;
+    line-height: 1.2;
+}
+.ai-msg {
+    margin-top: 6px;
+    padding: 6px 8px;
+    background: #f5f7fa;
+    border-radius: 6px;
+}
+
+.ai-msg a {
+    color: #0d6efd;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.ai-msg a:hover {
+    text-decoration: underline;
+}

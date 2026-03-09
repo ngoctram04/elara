@@ -126,7 +126,56 @@ class="{{ request()->is('admin/promotions*') ? 'active' : '' }}">
 Quản lý khuyến mãi
 </a>
 </li>
+{{-- BLOG --}}
+<li>
+<a href="{{ route('admin.blogs.index') }}"
+class="{{ request()->is('admin/blogs*') ? 'active' : '' }}">
+<i class="bi bi-journal-text"></i>
+Quản lý Blog
+</a>
+</li>
+{{-- ================= CUSTOMER SUPPORT ================= --}}
+<li>
 
+<a class="d-flex justify-content-between align-items-center
+{{ request()->is('admin/questions*') || request()->is('admin/messages*') ? 'active' : '' }}"
+data-bs-toggle="collapse"
+href="#supportMenu"
+role="button">
+
+<span>
+<i class="bi bi-headset"></i>
+Hỗ trợ khách hàng
+</span>
+
+<i class="bi bi-chevron-down small"></i>
+
+</a>
+
+<div class="collapse {{ request()->is('admin/questions*') || request()->is('admin/messages*') ? 'show' : '' }}"
+id="supportMenu">
+
+<ul class="submenu">
+
+<li>
+<a href="{{ route('admin.questions.index') }}"
+class="{{ request()->is('admin/questions*') ? 'active' : '' }}">
+Hỏi đáp sản phẩm
+</a>
+</li>
+
+<li>
+<a href="{{ route('admin.messages.index') }}"
+class="{{ request()->is('admin/messages*') ? 'active' : '' }}">
+Tin nhắn khách hàng
+</a>
+</li>
+
+</ul>
+
+</div>
+
+</li>
 {{-- REPORT --}}
 <li>
 <a href="{{ route('admin.reports.index') }}"
@@ -221,7 +270,7 @@ Chỉnh sửa thông tin
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 @stack('scripts')
 
 </body>

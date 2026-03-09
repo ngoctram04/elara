@@ -1,218 +1,428 @@
 <!DOCTYPE html>
+
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'ELARA')</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>@yield('title', 'ELARA')</title>
 
-    {{-- CSRF cho Ajax --}}
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+<meta name="csrf-token" content="{{ csrf_token() }}">
 
-    {{-- Bootstrap --}}
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
 @vite(['resources/js/app.js'])
-    {{-- FRONTEND CSS --}}
-    @vite([
-        'resources/css/app.css',
-        'resources/css/frontend.css',
-        'resources/css/category.css',
-        'resources/css/product.css',
-        'resources/css/flash-sale.css',
-        'resources/css/profile.css',
-    ])
 
-    @stack('styles')
+@vite([
+'resources/css/app.css',
+'resources/css/frontend.css',
+'resources/css/category.css',
+'resources/css/product.css',
+'resources/css/flash-sale.css',
+'resources/css/profile.css',
+])
+
+<style>
+
+/* floating buttons */
+
+.floating-right{
+position:fixed;
+bottom:20px;
+right:20px;
+z-index:999;
+}
+
+.floating-left{
+position:fixed;
+bottom:20px;
+left:20px;
+z-index:999;
+}
+
+.float-btn{
+width:55px;
+height:55px;
+border-radius:50%;
+border:none;
+color:white;
+font-size:22px;
+display:flex;
+align-items:center;
+justify-content:center;
+}
+
+.contact-btn{
+background:#0d6efd;
+}
+
+.ai-btn{
+background:#7ec8ea;
+}
+
+/* AI chat box */
+
+.ai-chat-box{
+position:fixed;
+bottom:90px;
+left:20px;
+width:320px;
+height:420px;
+background:white;
+border-radius:12px;
+box-shadow:0 5px 20px rgba(0,0,0,0.2);
+display:none;
+flex-direction:column;
+z-index:999;
+}
+
+.ai-header{
+background:#7ec8ea;
+color:white;
+padding:10px;
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+.ai-body{
+flex:1;
+padding:10px;
+overflow-y:auto;
+font-size:14px;
+}
+
+.ai-input{
+display:flex;
+border-top:1px solid #eee;
+}
+
+.ai-input input{
+flex:1;
+border:none;
+padding:10px;
+outline:none;
+}
+
+.ai-input button{
+border:none;
+background:#7ec8ea;
+color:white;
+padding:10px 15px;
+}
+
+</style>
+
+@stack('styles')
+
 </head>
+
 <body>
 
 <header class="header-box">
-    <div class="header-inner">
+<div class="header-inner">
 
-        <a href="{{ route('home') }}" class="logo">ELARA</a>
+<a href="{{ route('home') }}" class="logo">ELARA</a>
 
-        {{-- SEARCH --}}
-        <form class="search-pill position-relative" action="{{ route('shop') }}" method="GET">
-            <input
-                id="search-input"
-                type="text"
-                name="q"
-                value="{{ request('q') }}"
-                placeholder="Tìm kiếm sản phẩm..."
-                autocomplete="off"
-            >
-            <button type="submit">
-                <i class="bi bi-search"></i>
-            </button>
+<form class="search-pill position-relative" action="{{ route('shop') }}" method="GET">
+<input
+id="search-input"
+type="text"
+name="q"
+value="{{ request('q') }}"
+placeholder="Tìm kiếm sản phẩm..."
+autocomplete="off"
+>
 
-            <div id="search-suggest-box" class="search-suggest-box"></div>
-        </form>
+<button type="submit">
+<i class="bi bi-search"></i>
+</button>
 
-        <div class="header-icons">
-            @auth
-                @include('components.user-dropdown')
-            @else
-                <a href="{{ route('login') }}" class="icon-btn">
-                    <i class="bi bi-person"></i>
-                </a>
-            @endauth
+<div id="search-suggest-box" class="search-suggest-box"></div>
+</form>
 
-            <a href="{{ route('cart.index') }}" class="icon-btn">
-                <i class="bi bi-cart3"></i>
-                @php $cartCount = $cartCount ?? 0; @endphp
-                @if($cartCount > 0)
-                    <span class="cart-badge">
-                        {{ $cartCount > 99 ? '99+' : $cartCount }}
-                    </span>
-                @endif
-            </a>
-        </div>
-    </div>
+<div class="header-icons">
+
+@auth
+@include('components.user-dropdown')
+@else <a href="{{ route('login') }}" class="icon-btn"> <i class="bi bi-person"></i> </a>
+@endauth
+
+<a href="{{ route('cart.index') }}" class="icon-btn">
+
+<i class="bi bi-cart3"></i>
+
+@php $cartCount = $cartCount ?? 0; @endphp
+
+@if($cartCount > 0) <span class="cart-badge">
+{{ $cartCount > 99 ? '99+' : $cartCount }} </span>
+@endif
+
+</a>
+
+</div>
+</div>
 </header>
 
 <nav class="nav-box">
-    <div class="nav-inner">
-        <div class="nav-category">
-            <a href="#" class="nav-category-trigger">
-                <i class="bi bi-list"></i> Danh mục sản phẩm
-            </a>
-            @include('components.mega-menu')
-        </div>
+<div class="nav-inner">
 
-        <a href="{{ route('shop', ['sort' => 'newest']) }}">Sản phẩm mới</a>
-        <a href="#">Tin tức</a>
+<div class="nav-category">
 
-        @auth
-            <a href="{{ route('orders.history') }}">Đơn hàng của tôi</a>
-        @endauth
-    </div>
+<a href="#" class="nav-category-trigger">
+<i class="bi bi-list"></i> Danh mục sản phẩm
+</a>
+
+@include('components.mega-menu')
+
+</div>
+
+<a href="{{ route('shop', ['sort' => 'newest']) }}">
+Sản phẩm mới
+</a>
+
+<a href="{{ route('blogs.index') }}">
+Tin tức
+</a>
+
+@auth <a href="{{ route('orders.history') }}">
+Đơn hàng của tôi </a>
+@endauth
+
+</div>
 </nav>
 
 <main class="page-wrapper">
-    @yield('content')
+@yield('content')
 </main>
 
 <footer class="footer-box mt-2">
-    <div class="footer-inner">
-        <div class="footer-bottom">
-            © {{ date('Y') }} ELARA. All Rights Reserved.
-        </div>
-    </div>
+<div class="footer-inner">
+
+<div class="footer-bottom">
+© {{ date('Y') }} ELARA. All Rights Reserved.
+</div>
+
+</div>
 </footer>
 
+{{-- AI CHAT BUTTON --}}
+
+<div class="floating-left">
+
+<button class="float-btn ai-btn" onclick="toggleAIChat()">
+<i class="bi bi-robot"></i>
+</button>
+
+</div>
+
+{{-- CHAT NHÂN VIÊN --}}
+
+<div class="floating-right">
+
+<a href="/chat" class="float-btn contact-btn position-relative">
+
+<i class="bi bi-chat-dots"></i>
+
+<span id="chat-badge" class="chat-badge" style="display:none">
+0
+</span>
+
+</a>
+
+</div>
+
+{{-- AI CHAT BOX --}}
+
+<div id="ai-chat-box" class="ai-chat-box">
+
+<div class="ai-header">
+
+<span>🤖 AI tư vấn ELARA</span>
+
+<button onclick="toggleAIChat()" class="btn-close btn-close-white"></button>
+
+</div>
+
+<div id="ai-messages" class="ai-body"></div>
+
+<div class="ai-input">
+
+<input type="text" id="ai-input" placeholder="Hỏi về mỹ phẩm...">
+
+<button onclick="sendAI()">Gửi</button>
+
+</div>
+
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
 <x-toast />
+
 @stack('scripts')
 
 
-{{-- ================= SEARCH SCRIPT ================= --}}
 <script>
-document.addEventListener("DOMContentLoaded", function () {
 
-    const input = document.getElementById("search-input");
-    const box = document.getElementById("search-suggest-box");
-    const form = input.closest("form");
-    const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+/* ==============================
+   MỞ / ĐÓNG AI CHAT
+============================== */
 
-    if (!input) return;
+function toggleAIChat(){
 
-    /* ================= HISTORY ================= */
-    function loadHistory() {
-        fetch('/search/history')
-            .then(res => res.json())
-            .then(data => {
-                box.innerHTML = "";
+let box = document.getElementById("ai-chat-box");
+let chat = document.getElementById("ai-messages");
 
-                if (data.length === 0) {
-                    box.style.display = "none";
-                    return;
-                }
+if(box.style.display === "flex"){
 
-                data.forEach(item => {
-                    let row = document.createElement("div");
-                    row.className = "search-history-item";
+    box.style.display = "none";
 
-                    row.innerHTML = `
-                        <span class="history-left">
-                            <i class="bi bi-clock-history"></i> ${item}
-                        </span>
-                        <span class="history-delete">&times;</span>
-                    `;
+}else{
 
-                    // Click → search
-                    row.querySelector('.history-left').onclick = function () {
-                        input.value = item;
-                        form.submit();
-                    };
+    box.style.display = "flex";
 
-                    // Xóa
-                    row.querySelector('.history-delete').onclick = function(e) {
-                        e.stopPropagation();
+    /* lời chào lần đầu */
 
-                        fetch('/search/history/delete', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': csrf
-                            },
-                            body: JSON.stringify({ keyword: item })
-                        }).then(() => loadHistory());
-                    };
-
-                    box.appendChild(row);
-                });
-
-                box.style.display = "block";
-            });
+    if(chat.innerHTML.trim() === ""){
+        chat.innerHTML = `
+        <div><b>AI:</b> Xin chào 👋 Tôi là trợ lý ELARA. 
+        Bạn cần tư vấn mỹ phẩm gì?</div>
+        `;
     }
 
-    /* ================= SUGGEST ================= */
-    function loadSuggest() {
-        let keyword = input.value.trim();
+}
 
-        if (!keyword) {
-            loadHistory();
-            return;
-        }
+}
 
-        fetch(`/search/suggest?q=${keyword}`)
-            .then(res => res.json())
-            .then(data => {
-                box.innerHTML = "";
 
-                if (data.length === 0) {
-                    box.style.display = "none";
-                    return;
-                }
+/* ==============================
+   GỬI CÂU HỎI AI
+============================== */
 
-                data.forEach(item => {
-                    let div = document.createElement("div");
-                    div.className = "search-suggest-item";
-                    div.innerText = item;
+function sendAI(){
 
-                    div.onclick = function () {
-                        input.value = item;
-                        form.submit();
-                    };
+let input = document.getElementById("ai-input");
+let msg = input.value.trim();
 
-                    box.appendChild(div);
-                });
+if(!msg) return;
 
-                box.style.display = "block";
-            });
-    }
+let chat = document.getElementById("ai-messages");
 
-    input.addEventListener("focus", loadHistory);
-    input.addEventListener("input", loadSuggest);
+/* hiển thị tin nhắn user */
 
-    document.addEventListener("click", function(e){
-        if (!input.contains(e.target) && !box.contains(e.target)) {
-            box.style.display = "none";
-        }
-    });
+chat.innerHTML += `<div><b>Bạn:</b> ${msg}</div>`;
+
+input.value = "";
+
+/* auto scroll */
+
+chat.scrollTop = chat.scrollHeight;
+
+
+/* loading AI */
+
+let loading = document.createElement("div");
+loading.innerHTML = "<b>AI:</b> Đang tư vấn...";
+chat.appendChild(loading);
+
+chat.scrollTop = chat.scrollHeight;
+
+
+/* gửi request */
+
+fetch('/ai-chat/send',{
+
+method:'POST',
+
+headers:{
+'Content-Type':'application/json',
+'X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content
+},
+
+body:JSON.stringify({
+message: msg
+})
+
+})
+.then(res => res.json())
+.then(data => {
+
+loading.remove();
+
+/* hiển thị trả lời AI */
+
+chat.innerHTML += `<div class="ai-msg"><b>AI:</b> ${data.reply}</div>`;
+
+
+/* auto scroll */
+
+chat.scrollTop = chat.scrollHeight;
+
+})
+.catch(() => {
+
+loading.innerHTML = "<b>AI:</b> Chatbot đang lỗi.";
 
 });
-</script>
 
+}
+
+
+/* ==============================
+   ENTER ĐỂ GỬI
+============================== */
+
+document.getElementById("ai-input").addEventListener("keypress",function(e){
+
+if(e.key === "Enter"){
+sendAI();
+}
+
+});
+
+
+/* ==============================
+   CHAT NHÂN VIÊN - UNREAD BADGE
+============================== */
+
+@auth
+
+function loadUnreadChat(){
+
+fetch('/chat/unread-count')
+.then(res => res.json())
+.then(data => {
+
+let badge = document.getElementById("chat-badge");
+
+if(!badge) return;
+
+if(data.count > 0){
+
+badge.innerText = data.count;
+badge.style.display = "block";
+
+}else{
+
+badge.style.display = "none";
+
+}
+
+});
+
+}
+
+/* load lần đầu */
+
+loadUnreadChat();
+
+/* refresh mỗi 5s */
+
+setInterval(loadUnreadChat,5000);
+
+@endauth
+
+</script>
 </body>
 </html>

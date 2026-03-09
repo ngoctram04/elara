@@ -178,4 +178,27 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(RefundRequest::class);
     }
+    /*
+|--------------------------------------------------------------------------
+| Chat
+|--------------------------------------------------------------------------
+*/
+
+    // Conversation của khách
+    public function conversations()
+    {
+        return $this->hasMany(ChatConversation::class, 'user_id');
+    }
+
+    // Conversation của admin
+    public function adminConversations()
+    {
+        return $this->hasMany(ChatConversation::class, 'admin_id');
+    }
+
+    // Tin nhắn gửi
+    public function sentMessages()
+    {
+        return $this->hasMany(ChatMessage::class, 'sender_id');
+    }
 }

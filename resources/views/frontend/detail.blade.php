@@ -579,6 +579,119 @@
 <div class="mt-4 d-flex justify-content-center">
     {{ $reviews->withQueryString()->fragment('product-reviews')->links() }}
 </div>
+{{-- ================= HỎI ĐÁP SẢN PHẨM ================= --}}
+<div class="mt-5">
+
+<h5 class="fw-bold mb-3">Hỏi đáp sản phẩm</h5>
+
+{{-- FORM HỎI --}}
+@if(auth()->check())
+<form action="{{ route('questions.store') }}" method="POST" class="mb-4">
+@csrf
+
+<input type="hidden" name="product_id" value="{{ $product->id }}">
+
+<textarea name="question"
+          class="form-control"
+          rows="3"
+          placeholder="Đặt câu hỏi về sản phẩm..."
+          required></textarea>
+
+<button class="btn btn-primary mt-2">
+<i class="bi bi-question-circle"></i> Gửi câu hỏi
+</button>
+
+</form>
+@else
+<div class="alert alert-warning">
+Bạn cần <a href="{{ route('login') }}">đăng nhập</a> để đặt câu hỏi.
+</div>
+@endif
+
+
+{{-- DANH SÁCH CÂU HỎI --}}
+@forelse($product->questions as $question)
+
+<div class="border rounded p-3 mb-3 bg-white">
+
+    {{-- Người hỏi --}}
+    <div class="fw-semibold">
+        {{ $question->user->name }}
+    </div>
+
+    <div class="text-muted small mb-2">
+        {{ $question->created_at->format('d/m/Y H:i') }}
+    </div>
+
+    <div class="mb-2">
+        {{ $question->question }}
+    </div>
+
+
+    {{-- CÂU TRẢ LỜI --}}
+    @foreach($question->answers as $answer)
+
+    <div class="ms-4 border-start ps-3 mt-2">
+
+        <strong>
+            {{ $answer->user->name }}
+
+            @if($answer->is_admin)
+            <span class="badge bg-danger">Shop</span>
+            @endif
+        </strong>
+
+        <div class="small text-muted">
+            {{ $answer->created_at->format('d/m/Y H:i') }}
+        </div>
+
+        <div>
+            {{ $answer->answer }}
+        </div>
+
+    </div>
+
+    @endforeach
+
+
+    {{-- FORM TRẢ LỜI --}}
+    @if(auth()->check())
+
+    <form action="{{ route('questions.answer') }}"
+          method="POST"
+          class="mt-3 ms-4 d-flex gap-2">
+
+        @csrf
+
+        <input type="hidden"
+               name="question_id"
+               value="{{ $question->id }}">
+
+        <input type="text"
+               name="answer"
+               class="form-control form-control-sm"
+               placeholder="Trả lời câu hỏi..."
+               required>
+
+        <button class="btn btn-sm btn-primary">
+            <i class="bi bi-send"></i> Gửi
+        </button>
+
+    </form>
+
+    @endif
+
+</div>
+
+@empty
+
+<div class="text-muted">
+    Chưa có câu hỏi nào về sản phẩm này.
+</div>
+
+@endforelse
+
+</div>
 {{-- ================= SẢN PHẨM LIÊN QUAN ================= --}}
 @if(!empty($relatedProducts) && $relatedProducts->count())
 <div class="mt-5">
