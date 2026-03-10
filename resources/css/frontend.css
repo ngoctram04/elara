@@ -574,9 +574,8 @@ body {
 
 .history-left i {
     font-size: 16px;
-    color: #888;
+    color: #9aa0a6;
 }
-
 /* nút X bên phải */
 .history-delete {
     font-size: 18px;
@@ -792,4 +791,94 @@ body {
 
 .ai-msg a:hover {
     text-decoration: underline;
+}
+/* ================= DELETE HISTORY BUTTON ================= */
+
+.delete-history {
+    font-size: 16px;
+    color: #bbb;
+    cursor: pointer;
+    padding-left: 10px;
+    transition: color .2s;
+}
+
+.delete-history:hover {
+    color: #e74c3c;
+}
+.voice-btn {
+    border: none;
+    background: transparent;
+    font-size: 18px;
+    color: #666;
+    margin-right: 5px;
+}
+
+.voice-btn:hover {
+    color: #7ec8ea;
+}
+/* ==============================
+VOICE POPUP
+============================== */
+
+.voice-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.voice-box {
+    background: white;
+    padding: 25px 35px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.voice-icon {
+    font-size: 40px;
+    color: #7ec8ea;
+    margin-bottom: 10px;
+    animation: voicePulse 1s infinite;
+}
+
+@keyframes voicePulse {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.2);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+.voice-text {
+    font-size: 16px;
+    color: #333;
+}
+
+.search-history-item {
+    cursor: pointer;
+    padding: 10px 14px;
+}
+
+.search-history-item:hover {
+    background: #f5f7fa;
+}
+.history-row {
+    transition: all .2s ease;
+}
+
+.history-row:hover {
+    background: #f7f9fb;
 }

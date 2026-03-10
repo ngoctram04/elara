@@ -125,6 +125,7 @@ padding:10px 15px;
 <a href="{{ route('home') }}" class="logo">ELARA</a>
 
 <form class="search-pill position-relative" action="{{ route('shop') }}" method="GET">
+
 <input
 id="search-input"
 type="text"
@@ -134,13 +135,32 @@ placeholder="Tìm kiếm sản phẩm..."
 autocomplete="off"
 >
 
+<!-- NÚT MICRO -->
+<button type="button" id="voice-btn" class="voice-btn">
+<i class="bi bi-mic"></i>
+</button>
+
 <button type="submit">
 <i class="bi bi-search"></i>
 </button>
 
 <div id="search-suggest-box" class="search-suggest-box"></div>
-</form>
 
+</form>
+<div id="voice-popup" class="voice-popup">
+    <div class="voice-box">
+
+        <div class="voice-icon">
+            <i class="bi bi-mic-fill"></i>
+        </div>
+
+        <div class="voice-text">
+            Đang nghe...<br>
+            Hãy nói tên sản phẩm
+        </div>
+
+    </div>
+</div>
 <div class="header-icons">
 
 @auth
@@ -238,7 +258,7 @@ Tin tức
 
 <div class="ai-header">
 
-<span>🤖 AI tư vấn ELARA</span>
+<span>AI tư vấn ELARA</span>
 
 <button onclick="toggleAIChat()" class="btn-close btn-close-white"></button>
 
@@ -286,7 +306,7 @@ if(box.style.display === "flex"){
 
     if(chat.innerHTML.trim() === ""){
         chat.innerHTML = `
-        <div><b>AI:</b> Xin chào 👋 Tôi là trợ lý ELARA. 
+        <div><b>AI:</b> Xin chào! Tôi là trợ lý ELARA. 
         Bạn cần tư vấn mỹ phẩm gì?</div>
         `;
     }
@@ -368,20 +388,6 @@ loading.innerHTML = "<b>AI:</b> Chatbot đang lỗi.";
 
 }
 
-
-/* ==============================
-   ENTER ĐỂ GỬI
-============================== */
-
-document.getElementById("ai-input").addEventListener("keypress",function(e){
-
-if(e.key === "Enter"){
-sendAI();
-}
-
-});
-
-
 /* ==============================
    CHAT NHÂN VIÊN - UNREAD BADGE
 ============================== */
@@ -422,7 +428,233 @@ loadUnreadChat();
 setInterval(loadUnreadChat,5000);
 
 @endauth
+/* ==============================
+SEARCH AUTOCOMPLETE
+============================== */
 
+const input = document.getElementById("search-input");
+const box = document.getElementById("search-suggest-box");
+
+if(input){
+
+input.addEventListener("focus", loadHistory);
+
+input.addEventListener("input", function(){
+
+let q = this.value.trim();
+
+if(q.length === 0){
+loadHistory();
+return;
+}
+
+fetch(`/search/suggest?q=${encodeURIComponent(q)}`)
+.then(res => res.json())
+.then(data => {
+
+box.innerHTML = "";
+
+if(data.length === 0){
+box.style.display = "none";
+return;
+}
+
+data.forEach(item => {
+
+box.innerHTML += `
+<div class="search-history-item suggest-item">
+${item}
+</div>
+`;
+
+});
+
+box.style.display = "block";
+
+});
+
+});
+
+}
+
+/* ==============================
+LOAD HISTORY
+============================== */
+function loadHistory(){
+
+fetch("/search/history")
+.then(res => res.json())
+.then(data => {
+
+box.innerHTML = "";
+
+if(!data.length){
+box.style.display = "none";
+return;
+}
+
+/* lọc trùng */
+
+[...new Set(data)].forEach(item => {
+
+box.innerHTML += `
+<div class="search-history-item history-row">
+
+    <div class="history-left suggest-item">
+        <i class="bi bi-clock"></i>
+        <span>${item}</span>
+    </div>
+
+    <span class="delete-history" data-key="${item}">
+        <i class="bi bi-x"></i>
+    </span>
+
+</div>
+`;
+
+});
+
+box.style.display = "block";
+
+});
+
+}
+/* ==============================
+DELETE SEARCH HISTORY
+============================== */
+
+document.addEventListener("click", function(e){
+
+const btn = e.target.closest(".delete-history");
+
+if(!btn) return;
+
+e.stopPropagation(); // tránh trigger suggest
+
+const key = btn.dataset.key;
+
+/* lấy dòng cần xóa */
+
+const row = btn.closest(".history-row");
+
+if(row){
+
+/* animation nhẹ */
+
+row.style.transition = "all .2s ease";
+row.style.opacity = "0";
+row.style.transform = "translateX(10px)";
+
+setTimeout(()=>{
+row.remove();
+},200);
+
+}
+
+/* gọi API xóa */
+
+fetch("/search/history/delete",{
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+"X-CSRF-TOKEN":document.querySelector('meta[name="csrf-token"]').content
+},
+body:JSON.stringify({ keyword:key })
+});
+
+});
+/* ==============================
+VOICE SEARCH
+============================== */
+
+const voiceBtn = document.getElementById("voice-btn");
+const voicePopup = document.getElementById("voice-popup");
+
+if(voiceBtn){
+
+voiceBtn.addEventListener("click", () => {
+
+const SpeechRecognition =
+window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if(!SpeechRecognition){
+alert("Trình duyệt không hỗ trợ tìm kiếm giọng nói");
+return;
+}
+
+const recognition = new SpeechRecognition();
+
+recognition.lang = "vi-VN";
+recognition.interimResults = false;
+
+recognition.start();
+
+/* hiện popup */
+
+voicePopup.style.display = "flex";
+
+/* đổi icon */
+
+voiceBtn.innerHTML = '<i class="bi bi-mic-fill text-danger"></i>';
+
+/* tự ngắt sau 5s */
+
+let silenceTimer = setTimeout(()=>{
+recognition.stop();
+},5000);
+
+
+recognition.onresult = function(event){
+
+clearTimeout(silenceTimer);
+
+let text = event.results[0][0].transcript;
+
+input.value = text;
+
+voicePopup.style.display = "none";
+
+input.form.submit();
+
+};
+
+
+recognition.onend = function(){
+
+voicePopup.style.display = "none";
+
+voiceBtn.innerHTML = '<i class="bi bi-mic"></i>';
+
+};
+
+});
+
+}
+/* ==============================
+CLICK SUGGEST ITEM
+============================== */
+
+document.addEventListener("click", function(e){
+
+const item = e.target.closest(".suggest-item");
+
+if(item){
+
+const keyword = item.innerText.trim();
+
+input.value = keyword;
+
+input.form.submit();
+
+return;
+
+}
+
+if(!e.target.closest(".search-pill")){
+box.style.display = "none";
+}
+
+});
 </script>
 </body>
 </html>
