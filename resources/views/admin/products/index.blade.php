@@ -102,11 +102,11 @@
     <th>Tên sản phẩm</th>
     <th width="160">Giá</th>
     <th width="160">Danh mục</th>
-    <th width="120">Thương hiệu</th>
-    <th width="90">Tồn</th>
-    <th width="90">Đã bán</th>
-    <th width="110">Trạng thái</th>
-    <th width="150">Hành động</th>
+    <th width="100">Thương hiệu</th>
+    <th width="80">Tồn</th>
+    <th width="80">Đã bán</th>
+    <th width="80">Trạng thái</th>
+    <th width="185">Hành động</th>
 </tr>
 </thead>
 
@@ -211,25 +211,46 @@ $hasPromotion = $sellMin < $originMin;
 </td>
 
 <td class="text-center">
-    <a href="{{ route('admin.products.show', $product) }}"
-       class="btn btn-sm btn-outline-primary">
-        <i class="bi bi-eye"></i>
-    </a>
+
+<a href="{{ route('admin.products.show', $product) }}"
+   class="btn btn-sm btn-outline-primary">
+    <i class="bi bi-eye"></i>
+</a>
 
 <a href="{{ route('admin.products.edit', $product) }}"
    class="btn btn-sm btn-outline-warning">
     <i class="bi bi-pencil"></i>
 </a>
 
+{{-- NÚT ẨN / HIỆN --}}
+<form action="{{ route('admin.products.toggle',$product) }}"
+      method="POST"
+      class="d-inline">
+@csrf
+@method('PATCH')
+
+<button class="btn btn-sm {{ $product->is_active ? 'btn-secondary' : 'btn-success' }}">
+
+@if($product->is_active)
+<i class="bi bi-eye-slash"></i>
+@else
+<i class="bi bi-eye"></i>
+@endif
+
+</button>
+
+</form>
+
 <form action="{{ route('admin.products.destroy', $product) }}"
       method="POST"
-      class="d-inline"
-      onsubmit="return confirm('Xóa sản phẩm này?')">
-    @csrf
-    @method('DELETE')
-    <button class="btn btn-sm btn-outline-danger">
-        <i class="bi bi-trash"></i>
-    </button>
+      class="d-inline delete-form">
+@csrf
+@method('DELETE')
+
+<button class="btn btn-sm btn-outline-danger">
+<i class="bi bi-trash"></i>
+</button>
+
 </form>
 
 </td>
@@ -266,3 +287,36 @@ Không có dữ liệu
 </div>
 </div>
 @endsection
+@push('scripts')
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+
+document.querySelectorAll('.delete-form').forEach(form => {
+
+form.addEventListener('submit', function(e){
+
+e.preventDefault();
+
+Swal.fire({
+title: 'Xóa sản phẩm?',
+text: "Hành động này không thể hoàn tác",
+icon: 'warning',
+showCancelButton: true,
+confirmButtonText: 'Xóa',
+cancelButtonText: 'Hủy',
+confirmButtonColor: '#dc3545'
+}).then((result) => {
+
+if(result.isConfirmed){
+form.submit();
+}
+
+});
+
+});
+
+});
+
+});
+</script>
+@endpush

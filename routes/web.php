@@ -52,6 +52,7 @@ use App\Http\Controllers\Admin\RefundController as AdminRefundController;
 use App\Http\Controllers\Admin\BlogController;
 use App\Http\Controllers\Admin\ProductQuestionController as AdminProductQuestionController;
 use App\Http\Controllers\Admin\AdminChatController;
+use App\Http\Controllers\Admin\InventoryController;
 /*
 |--------------------------------------------------------------------------
 | FRONTEND – PUBLIC
@@ -372,7 +373,10 @@ Route::prefix('admin')
         |--------------------------------------------------
         */
         Route::resource('products', ProductController::class);
-
+        Route::patch(
+            'products/{product}/toggle',
+            [ProductController::class, 'toggle']
+        )->name('products.toggle');
         /*
         |--------------------------------------------------
         | ORDERS  🔥 QUẢN LÝ ĐƠN HÀNG
@@ -491,6 +495,26 @@ Route::prefix('admin')
 
         Route::get('/stock-import/history', [StockImportController::class, 'history'])
             ->name('stock.history');
+        Route::get('/stock-import/{code}', [StockImportController::class, 'show'])
+            ->name('stock.show');
+        Route::get('/stock-import/{code}/pdf', [StockImportController::class, 'exportPdf'])
+            ->name('stock.exportPdf');
+    /*
+|--------------------------------------------------
+| INVENTORY - QUẢN LÝ KHO
+|--------------------------------------------------
+*/
+
+    Route::get('/inventory/logs', [InventoryController::class, 'logs'])
+    ->name('inventory.logs');
+
+    Route::get('/inventory/low-stock', [InventoryController::class, 'lowStock'])
+    ->name('inventory.low');
+
+    Route::get('/inventory/report', [InventoryController::class, 'report'])
+        ->name('inventory.report');
+    Route::get('/inventory/near-expiry', [InventoryController::class, 'nearExpiry'])
+    ->name('inventory.near_expiry');
     /*
         |--------------------------------------------------
         | BLOG

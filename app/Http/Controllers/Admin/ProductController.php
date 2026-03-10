@@ -360,16 +360,40 @@ class ProductController extends Controller
     ======================= */
     public function destroy(Product $product)
     {
+        // kiểm tra tồn kho
         $stock = $product->variants()->sum('stock_quantity');
-        $sold  = $product->variants()->sum('sold_quantity');
 
-        if ($stock > 0 || $sold > 0) {
-            return back()->with('error', 'Sản phẩm còn tồn kho hoặc đã phát sinh bán, không thể xóa');
+        if ($stock > 0) {
+            return back()->with('error', 'Sản phẩm còn tồn kho nên không thể xóa');
+        }
+
+        // kiểm tra có nằm trong đơn hàng không
+        $hasOrder = DB::table('order_items')
+        ->join('product_variants', 'order_items.variant_id', '=', 'product_variants.id')
+        ->where('product_variants.product_id', $product->id)
+        ->exists();
+
+        if ($hasOrder) {
+            return back()->with('error', 'Sản phẩm đã có trong đơn hàng nên không thể xóa');
         }
 
         $product->delete();
 
-        return redirect()->route('admin.products.index')
-            ->with('success', 'Đã xóa sản phẩm');
+        return redirect()
+        ->route('admin.products.index')
+        ->with('success', 'Đã xóa sản phẩm');
+    }
+    public function toggle(Product $product)
+    {
+        $product->is_active = !$product->is_active;
+        $product->save();
+
+        $message = $product->is_active
+            ? 'Sản phẩm đã được hiển thị trên website'
+            : 'Sản phẩm đã được ẩn khỏi website';
+
+        return redirect()
+            ->route('admin.products.index')
+            ->with('success', $message);
     }
 }

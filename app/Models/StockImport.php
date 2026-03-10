@@ -12,34 +12,49 @@ class StockImport extends Model
         'variant_id',
         'quantity',
         'cost_price',
-        'expiry_date' // thêm field này
+        'manufacture_date',
+        'expiry_date',
+        'code',
+        'supplier',
+        'note',
+        'created_by'
     ];
 
-    // Quan trọng: để format ngày bằng Carbon trong Blade
     protected $casts = [
-        'expiry_date' => 'date',
-        'created_at'  => 'datetime',
-        'updated_at'  => 'datetime',
+        'manufacture_date' => 'date',
+        'expiry_date'      => 'date',
+        'created_at'       => 'datetime',
+        'updated_at'       => 'datetime',
     ];
 
-    /* =======================
-        RELATIONSHIP
-    ======================= */
+    /*
+    |--------------------------------------------------------------------------
+    | RELATIONSHIPS
+    |--------------------------------------------------------------------------
+    */
+
+    // biến thể sản phẩm
     public function variant()
     {
         return $this->belongsTo(ProductVariant::class, 'variant_id');
     }
 
-    // tiện dùng trong history
+    // sản phẩm (thông qua variant)
     public function product()
     {
         return $this->hasOneThrough(
             Product::class,
             ProductVariant::class,
-            'id',        // Foreign key trên product_variants
-            'id',        // Foreign key trên products
-            'variant_id', // Local key trên stock_imports
-            'product_id' // Local key trên product_variants
+            'id',          // FK trên product_variants
+            'id',          // FK trên products
+            'variant_id',  // local key stock_imports
+            'product_id'   // local key product_variants
         );
+    }
+
+    // người tạo phiếu nhập
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 }

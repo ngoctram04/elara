@@ -1,209 +1,298 @@
 @extends('layouts.admin')
 
+@section('title','Nhập kho')
+
 @section('content')
+
 <div class="container-fluid">
 
-    <div class="row justify-content-center">
-        <div class="col-xl-7 col-lg-8">
+@if(session('success'))
 
-            <div class="card border-0 shadow-sm">
-                <div class="card-body p-5">
+<div class="alert alert-success alert-dismissible fade show">
+{{ session('success') }}
+<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+@endif
 
-                    {{-- HEADER --}}
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <h4 class="fw-semibold mb-0">
-                            <i class="bi bi-box-seam text-primary me-2"></i>
-                            Nhập hàng vào kho
-                        </h4>
+<div class="card shadow border-0">
 
-                        <a href="{{ route('admin.stock.history') }}"
-                           class="btn btn-outline-secondary btn-sm">
-                            <i class="bi bi-clock-history"></i> Lịch sử
-                        </a>
-                    </div>
+<div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
 
-                    {{-- SUCCESS --}}
-                    @if(session('success'))
-                        <div class="alert alert-success">
-                            {{ session('success') }}
-                        </div>
-                    @endif
+<div>
+<h5 class="mb-0">
+<i class="bi bi-box-arrow-in-down me-2"></i>
+Nhập hàng vào kho
+</h5>
+<small>Tạo phiếu nhập nhiều biến thể</small>
+</div>
 
-                    {{-- FORM --}}
-                    <form method="POST" action="{{ route('admin.stock.store') }}">
-                        @csrf
-
-                        {{-- BIẾN THỂ --}}
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Biến thể sản phẩm</label>
-
-                            <select name="variant_id"
-                                    id="variantSelect"
-                                    class="form-select shadow-sm @error('variant_id') is-invalid @enderror"
-                                    required>
-                                <option value="">-- Chọn biến thể --</option>
-
-                                @foreach($variants as $v)
-                                    <option value="{{ $v->id }}"
-                                        data-stock="{{ (int) $v->stock_quantity }}"
-                                        data-cost="{{ (float) $v->cost_price }}"
-                                        {{ old('variant_id') == $v->id ? 'selected' : '' }}>
-                                        #{{ $v->id }}
-                                        | {{ $v->product->name }}
-                                        | {{ $v->attribute_value }}
-                                        (Tồn: {{ $v->stock_quantity }})
-                                    </option>
-                                @endforeach
-                            </select>
-
-                            @error('variant_id')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        {{-- THÔNG TIN HIỆN TẠI --}}
-                        <div class="row mb-4">
-                            <div class="col-md-6">
-                                <div class="alert alert-light border mb-0">
-                                    Tồn hiện tại:
-                                    <span class="fw-bold text-primary" id="currentStock">0</span>
-                                </div>
-                            </div>
-
-                            <div class="col-md-6">
-                                <div class="alert alert-light border mb-0">
-                                    Giá vốn TB:
-                                    <span class="fw-bold text-primary" id="currentCost">0 đ</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {{-- INPUT --}}
-                        <div class="row">
-
-                            <div class="col-md-4 mb-4">
-                                <label class="form-label fw-semibold">Số lượng nhập</label>
-                                <input type="number"
-                                       name="quantity"
-                                       id="quantityInput"
-                                       value="{{ old('quantity') }}"
-                                       class="form-control form-control-lg @error('quantity') is-invalid @enderror"
-                                       min="1"
-                                       required>
-                                @error('quantity')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <div class="col-md-4 mb-4">
-                                <label class="form-label fw-semibold">Giá nhập</label>
-                                <input type="number"
-                                       name="cost_price"
-                                       value="{{ old('cost_price') }}"
-                                       class="form-control form-control-lg @error('cost_price') is-invalid @enderror"
-                                       min="0"
-                                       required>
-                                @error('cost_price')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            {{-- HẠN --}}
-                            <div class="col-md-4 mb-4">
-                                <label class="form-label fw-semibold">
-                                    Hạn sử dụng
-                                </label>
-                                <input type="date"
-                                       name="expiry_date"
-                                       value="{{ old('expiry_date', date('Y-m-d')) }}"
-                                       class="form-control form-control-lg @error('expiry_date') is-invalid @enderror"
-                                       min="{{ date('Y-m-d') }}">
-                                @error('expiry_date')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                        </div>
-
-                        {{-- PREVIEW --}}
-                        <div class="alert alert-info d-none" id="previewBox">
-                            Tồn sau khi nhập:
-                            <span class="fw-bold" id="previewStock"></span>
-                        </div>
-
-                        {{-- ACTION --}}
-                        <div class="d-flex justify-content-between mt-3">
-                            <a href="{{ url()->previous() }}"
-                               class="btn btn-light px-4">
-                                Quay lại
-                            </a>
-
-                            <button class="btn btn-primary px-4">
-                                Nhập hàng
-                            </button>
-                        </div>
-
-                    </form>
-
-                </div>
-            </div>
-
-        </div>
-    </div>
+<a href="{{ route('admin.stock.history') }}" class="btn btn-light btn-sm">
+<i class="bi bi-clock-history"></i> Lịch sử nhập
+</a>
 
 </div>
-@endsection
 
+<div class="card-body p-4">
 
-@push('scripts')
+<form action="{{ route('admin.stock.store') }}" method="POST">
+@csrf
+
+<div class="row g-4 mb-4">
+
+<div class="col-md-6">
+<label class="form-label fw-semibold">
+<i class="bi bi-building"></i> Nhà cung cấp
+</label>
+
+<input type="text"
+name="supplier"
+class="form-control"
+placeholder="Ví dụ: Cocoon Việt Nam">
+
+</div>
+
+<div class="col-md-6">
+<label class="form-label fw-semibold">
+<i class="bi bi-pencil-square"></i> Ghi chú
+</label>
+
+<input type="text"
+name="note"
+class="form-control"
+placeholder="Ghi chú cho lô hàng">
+
+</div>
+
+</div>
+
+<hr class="mb-4">
+
+<h6 class="fw-bold mb-3">
+<i class="bi bi-box-seam"></i>
+Danh sách sản phẩm nhập
+</h6>
+
+<div class="table-responsive">
+
+<table class="table table-bordered align-middle" id="importTable">
+
+<thead class="table-light">
+
+<tr>
+<th width="30%">Biến thể</th>
+<th width="120">SL</th>
+<th width="150">Giá nhập</th>
+<th width="170">Ngày sản xuất</th>
+<th width="170">Hạn sử dụng</th>
+<th width="60"></th>
+</tr>
+
+</thead>
+
+<tbody>
+
+<tr>
+
+<td>
+
+<select name="variant_id[]" class="form-select variant-select" required>
+
+<option value="">-- Chọn biến thể --</option>
+
+@foreach($variants as $v)
+
+<option value="{{ $v->id }}"
+data-stock="{{ $v->stock_quantity }}">
+
+{{ $v->product->name }} -
+{{ $v->attribute_value }}
+
+@if($v->stock_quantity == 0)
+| 🔴 Hết hàng
+@elseif($v->stock_quantity <=5)
+| 🟡 Sắp hết ({{ $v->stock_quantity }})
+@else
+| tồn: {{ $v->stock_quantity }}
+@endif
+
+</option>
+
+@endforeach
+
+</select>
+
+</td>
+
+<td>
+<input type="number"
+name="quantity[]"
+class="form-control qty"
+min="1"
+required>
+</td>
+
+<td>
+<input type="number"
+name="cost_price[]"
+class="form-control price"
+min="0"
+required>
+</td>
+
+<td>
+<input type="date"
+name="mfg_date[]"
+class="form-control">
+</td>
+
+<td>
+<input type="date"
+name="expiry_date[]"
+class="form-control">
+</td>
+
+<td class="text-center">
+<button type="button"
+class="btn btn-danger btn-sm removeRow">
+<i class="bi bi-x-lg"></i>
+</button>
+</td>
+
+</tr>
+
+</tbody>
+
+</table>
+
+</div>
+
+<div class="mb-3">
+
+<button type="button"
+id="addRow"
+class="btn btn-primary btn-sm">
+
+<i class="bi bi-plus-lg"></i>
+Thêm biến thể
+
+</button>
+
+</div>
+
+<div class="text-end fw-bold mb-4">
+
+Tổng tiền nhập: <span id="totalCost">0</span> đ
+
+</div>
+
+<div class="d-flex gap-3">
+
+<button class="btn btn-success px-4">
+<i class="bi bi-check-circle"></i>
+Lưu phiếu nhập
+</button>
+
+<a href="{{ route('admin.stock.history') }}"
+class="btn btn-outline-secondary"> <i class="bi bi-clock-history"></i>
+Xem lịch sử </a>
+
+</div>
+
+</form>
+
+</div>
+
+</div>
+
+</div>
+
 <script>
-const variantSelect = document.getElementById('variantSelect');
-const currentStockEl = document.getElementById('currentStock');
-const currentCostEl = document.getElementById('currentCost');
-const quantityInput = document.getElementById('quantityInput');
-const previewBox = document.getElementById('previewBox');
-const previewStockEl = document.getElementById('previewStock');
 
-let currentStock = 0;
+function calculateTotal(){
 
-function formatMoney(value) {
-    return Number(value).toLocaleString('vi-VN') + ' đ';
+let total = 0;
+
+document.querySelectorAll('#importTable tbody tr').forEach(row=>{
+
+let qty = row.querySelector('.qty').value;
+let price = row.querySelector('.price').value;
+
+if(qty && price){
+total += qty * price;
 }
 
-function updateVariantInfo() {
-    const option = variantSelect.options[variantSelect.selectedIndex];
-    if (!option || !option.value) return;
+});
 
-    currentStock = parseInt(option.dataset.stock || 0);
-    const cost = parseFloat(option.dataset.cost || 0);
+document.getElementById('totalCost').innerText =
+total.toLocaleString();
 
-    currentStockEl.innerText = currentStock;
-    currentCostEl.innerText = formatMoney(cost);
 }
 
-// Khi chọn biến thể
-variantSelect.addEventListener('change', function () {
-    updateVariantInfo();
-    previewBox.classList.add('d-none');
+
+document.getElementById('addRow').addEventListener('click',function(){
+
+let table = document.querySelector('#importTable tbody');
+let row = table.querySelector('tr').cloneNode(true);
+
+row.querySelectorAll('input').forEach(input=>{
+input.value='';
 });
 
-// Preview tồn sau nhập
-quantityInput.addEventListener('input', function () {
-    const qty = parseInt(this.value || 0);
-
-    if (qty > 0 && variantSelect.value) {
-        previewStockEl.innerText = currentStock + qty;
-        previewBox.classList.remove('d-none');
-    } else {
-        previewBox.classList.add('d-none');
-    }
+row.querySelectorAll('select').forEach(select=>{
+select.selectedIndex = 0;
+select.style.border = '';
 });
 
-// Nếu form reload (old data)
-document.addEventListener('DOMContentLoaded', function () {
-    if (variantSelect.value) {
-        updateVariantInfo();
-    }
+table.appendChild(row);
+
 });
+
+
+document.addEventListener('input',function(e){
+
+if(e.target.classList.contains('qty') ||
+e.target.classList.contains('price')){
+calculateTotal();
+}
+
+});
+
+
+document.addEventListener('click',function(e){
+
+if(e.target.closest('.removeRow')){
+
+let rows = document.querySelectorAll('#importTable tbody tr');
+
+if(rows.length>1){
+e.target.closest('tr').remove();
+calculateTotal();
+}
+
+}
+
+});
+
+
+document.addEventListener('change',function(e){
+
+if(e.target.classList.contains('variant-select')){
+
+let option = e.target.selectedOptions[0];
+let stock = option.dataset.stock;
+
+if(stock == 0){
+e.target.style.border = "2px solid red";
+}else if(stock <=5){
+e.target.style.border = "2px solid orange";
+}else{
+e.target.style.border = "";
+}
+
+}
+
+});
+
 </script>
-@endpush
+
+@endsection

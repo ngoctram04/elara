@@ -570,7 +570,21 @@ class CheckoutController extends Controller
                     'quantity'   => $item['quantity'],
                 ]);
 
+                $before = $variant->stock_quantity;
+
                 $variant->decrement('stock_quantity', $item['quantity']);
+
+                $variant->refresh();
+
+                \App\Models\InventoryLog::create([
+                    'variant_id'       => $variant->id,
+                    'type'             => 'order',
+                    'quantity_change'  => -$item['quantity'],
+                    'stock_before'     => $before,
+                    'stock_after'      => $variant->stock_quantity,
+                    'reference_type'   => 'order',
+                    'reference_id'     => $order->id
+                ]);
             }
             // ==================================================
             // 10.5 SEND MAIL (SAU KHI ĐÃ CÓ ORDER ITEMS)

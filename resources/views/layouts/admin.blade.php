@@ -67,12 +67,63 @@ Quản lý sản phẩm
 </li>
 
 {{-- STOCK --}}
+{{-- ================= INVENTORY ================= --}}
+<li>
+
+<a class="d-flex justify-content-between align-items-center
+{{ request()->is('admin/stock*') || request()->is('admin/inventory*') ? 'active' : '' }}"
+data-bs-toggle="collapse"
+href="#inventoryMenu"
+role="button">
+
+<span>
+<i class="bi bi-box-arrow-in-down"></i>
+Quản lý kho
+</span>
+
+<i class="bi bi-chevron-down small"></i>
+
+</a>
+
+<div class="collapse
+{{ request()->is('admin/stock*') || request()->is('admin/inventory*') ? 'show' : '' }}"
+id="inventoryMenu">
+
+<ul class="submenu">
+
 <li>
 <a href="{{ route('admin.stock.create') }}"
 class="{{ request()->is('admin/stock-import*') ? 'active' : '' }}">
-<i class="bi bi-box-arrow-in-down"></i>
-Nhập hàng
+Nhập kho
 </a>
+</li>
+
+<li>
+<a href="{{ route('admin.inventory.logs') }}">
+Lịch sử thay đổi tồn kho
+</a>
+</li>
+
+<li>
+<a href="{{ route('admin.inventory.low') }}">
+Sắp hết hàng
+</a>
+</li>
+
+<li>
+<a href="{{ route('admin.inventory.report') }}">
+Báo cáo tồn kho
+</a>
+</li>
+<li>
+    <a href="{{ route('admin.inventory.near_expiry') }}">
+        Lô sắp hết hạn
+    </a>
+</li>
+</ul>
+
+</div>
+
 </li>
 
 {{-- ================= ORDERS ================= --}}

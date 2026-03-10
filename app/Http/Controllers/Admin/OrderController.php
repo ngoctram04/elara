@@ -153,8 +153,25 @@ class OrderController extends Controller
 
                 // 1. Cộng số lượng đã bán
                 foreach ($order->items as $item) {
+
                     if ($item->variant) {
-                        $item->variant->increment('sold_quantity', $item->quantity);
+
+                        $variant = $item->variant;
+
+                        $before = $variant->stock_quantity;
+
+                        // tăng số lượng đã bán
+                        $variant->increment('sold_quantity', $item->quantity);
+
+                        \App\Models\InventoryLog::create([
+                            'variant_id' => $variant->id,
+                            'type' => 'order', // ⚠️ sửa ở đây
+                            'quantity_change' => -$item->quantity,
+                            'stock_before' => $before,
+                            'stock_after' => $variant->stock_quantity,
+                            'reference_type' => 'order',
+                            'reference_id' => $order->id
+                        ]);
                     }
                 }
 
