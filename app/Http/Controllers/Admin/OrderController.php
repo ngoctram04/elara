@@ -20,6 +20,41 @@ class OrderController extends Controller
 
         /*
     |--------------------------------
+    | Tìm kiếm mã đơn / tên / SĐT
+    |--------------------------------
+    */
+        if ($request->filled('keyword')) {
+
+            $keyword = trim($request->keyword);
+
+            // nếu nhập dạng #59
+            if (str_starts_with($keyword, '#')) {
+
+                $id = str_replace('#', '', $keyword);
+
+                $query->where('id', $id);
+            }
+            // nếu nhập số (59)
+            elseif (is_numeric($keyword)) {
+
+                $query->where('id', $keyword);
+            }
+            // nếu nhập chữ → tìm tên hoặc sđt
+            else {
+
+                $query->where(function ($q) use ($keyword) {
+
+                    $q->where('receiver_name', 'like', "%{$keyword}%")
+                        ->orWhere('receiver_phone', 'like', "%{$keyword}%")
+                        ->orWhereHas('user', function ($u) use ($keyword) {
+                            $u->where('name', 'like', "%{$keyword}%");
+                        });
+                });
+            }
+        }
+
+        /*
+    |--------------------------------
     | Lọc trạng thái đơn
     |--------------------------------
     */
@@ -41,55 +76,76 @@ class OrderController extends Controller
                     // COD đã giao OR VNPAY paid
                     // =========================
                 case 'paid':
+
                     $query->where(function ($q) {
+
                         $q->where(function ($sub) {
                             $sub->where('payment_method', 'vnpay')
-                                ->where('payment_status', Order::PAYMENT_PAID);
+                            ->where('payment_status', Order::PAYMENT_PAID);
                         })
+
                             ->orWhere(function ($sub) {
                                 $sub->where('payment_method', 'cod')
-                                ->where('status', Order::STATUS_COMPLETED);
+                                    ->where('status', Order::STATUS_COMPLETED);
                             });
                     });
+
                     break;
+
 
                     // =========================
                     // CHƯA THANH TOÁN
                     // COD chưa giao OR VNPAY unpaid
                     // =========================
                 case 'unpaid':
+
                     $query->where(function ($q) {
+
                         $q->where(function ($sub) {
                             $sub->where('payment_method', 'cod')
-                            ->where('status', '!=', Order::STATUS_COMPLETED);
+                                ->where('status', '!=', Order::STATUS_COMPLETED);
                         })
+
                             ->orWhere(function ($sub) {
                                 $sub->where('payment_method', 'vnpay')
-                                    ->where('payment_status', Order::PAYMENT_UNPAID);
+                                ->where('payment_status', Order::PAYMENT_UNPAID);
                             });
                     });
+
                     break;
+
 
                     // =========================
                     // ĐÃ HOÀN TIỀN
                     // =========================
                 case 'refunded':
+
                     $query->where('payment_status', Order::PAYMENT_REFUNDED);
+
                     break;
+
 
                     // =========================
                     // THANH TOÁN THẤT BẠI
                     // =========================
                 case 'failed':
+
                     $query->where('payment_status', Order::PAYMENT_FAILED);
+
                     break;
             }
         }
 
+        /*
+    |--------------------------------
+    | Danh sách đơn
+    |--------------------------------
+    */
+
         $orders = $query
-        ->latest()
-        ->paginate(15)
-        ->withQueryString();
+            ->latest()
+            ->paginate(15)
+            ->withQueryString();
 
         return view('admin.orders.index', compact('orders'));
     }
@@ -200,12 +256,13 @@ class OrderController extends Controller
                 | 3. XÉT HẠNG THÀNH VIÊN
                 |-----------------------------------------
                 */
-                    if ($user->total_spent >= 10000000) {
+                    $pointsTotal = $user->loyalty_points;
+
+                    if ($pointsTotal >= 10000) {
                         $user->member_level = 'diamond';
-                    } elseif ($user->total_spent >= 3000000) {
+                    } elseif ($pointsTotal >= 3000) {
                         $user->member_level = 'gold';
-                    } elseif ($user->total_spent >= 1000000
-                    ) {
+                    } elseif ($pointsTotal >= 1000) {
                         $user->member_level = 'silver';
                     } else {
                         $user->member_level = 'bronze';

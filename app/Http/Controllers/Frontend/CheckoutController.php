@@ -843,16 +843,47 @@ class CheckoutController extends Controller
             }
         }
 
-        // ================= THANH TOÁN THẤT BẠI =================
+        // ================= THANH TOÁN THẤT BẠI / HỦY =================
         DB::beginTransaction();
 
         try {
-            $order->update([
-                'payment_status' => Order::PAYMENT_FAILED
-            ]);
+
+            if ($order->payment_status != Order::PAYMENT_PAID) {
+
+                $order->update([
+                    'payment_status' => Order::PAYMENT_FAILED,
+                    'status' => Order::STATUS_CANCELLED
+                ]);
+
+                // hoàn tồn kho
+                foreach ($order->items as $item) {
+
+                    $variant = $item->variant;
+
+                    if ($variant) {
+
+                        $before = $variant->stock_quantity;
+
+                        $variant->increment('stock_quantity', $item->quantity);
+
+                        $variant->refresh();
+
+                        \App\Models\InventoryLog::create([
+                            'variant_id'       => $variant->id,
+                            'type'             => 'cancel',
+                            'quantity_change'  => $item->quantity,
+                            'stock_before'     => $before,
+                            'stock_after'      => $variant->stock_quantity,
+                            'reference_type'   => 'order',
+                            'reference_id'     => $order->id
+                        ]);
+                    }
+                }
+            }
 
             DB::commit();
         } catch (\Exception $e) {
+
             DB::rollBack();
         }
 
