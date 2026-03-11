@@ -232,6 +232,13 @@
 #product-reviews{
     scroll-margin-top:150px;
 }
+.shop-reply{
+background:#f8f9fa;
+border-left:4px solid #0d6efd;
+padding:10px 12px;
+border-radius:6px;
+font-size:14px;
+}
 </style>
 <div class="container py-4">
 <div class="row g-4">
@@ -504,7 +511,7 @@
 
 </div>
 </div>
-@forelse($reviews as $review)
+@forelse($reviews->where('is_visible',1) as $review)
 
 <div class="review-card border rounded p-3 mb-3 bg-white review-item">
 
@@ -512,7 +519,7 @@
     <div class="d-flex align-items-start">
 
         <img
-            src="{{ $review->user->avatar 
+            src="{{ $review->user?->avatar 
                     ? asset('storage/'.$review->user->avatar) 
                     : asset('images/avatar-default.png') }}"
             class="review-avatar me-3"
@@ -524,7 +531,10 @@
                 <div class="fw-semibold">
                     {{ $review->user->name }}
                 </div>
-
+                <div class="text-success small">
+                    <i class="bi bi-patch-check-fill"></i>
+                    Đã mua hàng
+                </div>
                 <small class="text-muted">
                     {{ $review->created_at->format('d/m/Y H:i') }}
                 </small>
@@ -541,14 +551,15 @@
     </div>
 
     {{-- Comment --}}
-    @if($review->comment)
-        <div class="mt-2 review-content">
-            {{ $review->comment }}
-        </div>
-    @endif
+@if($review->comment)
+<div class="mt-2 review-content">
+    {{ $review->comment }}
+</div>
+@endif
+
 
     {{-- Media --}}
-    @if($review->media->count())
+    @if($review->media && $review->media->count())
         <div class="review-media mt-2 d-flex gap-2 flex-wrap">
             @foreach($review->media as $m)
 
@@ -563,6 +574,27 @@
             @endforeach
         </div>
     @endif
+    {{-- SHOP REPLY --}}
+@if($review->admin_reply)
+
+<div class="shop-reply mt-3">
+
+<div class="fw-semibold text-primary">
+<i class="bi bi-shop"></i>
+Phản hồi từ cửa hàng
+</div>
+
+<div class="small text-muted mb-1">
+{{ $review->replied_at ? $review->replied_at->format('d/m/Y H:i') : '' }}
+</div>
+
+<div>
+{{ $review->admin_reply }}
+</div>
+
+</div>
+
+@endif
 
 </div>
 

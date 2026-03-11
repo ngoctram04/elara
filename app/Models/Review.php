@@ -27,6 +27,10 @@ class Review extends Model
         'packaging',
 
         'comment',
+
+        'is_visible',
+        'admin_reply',
+        'replied_at'
     ];
 
     protected $casts = [
@@ -36,6 +40,9 @@ class Review extends Model
         'fragrance' => 'integer',
         'texture' => 'integer',
         'packaging' => 'integer',
+
+        'is_visible' => 'boolean',
+        'replied_at' => 'datetime'
     ];
 
     /*
@@ -56,7 +63,7 @@ class Review extends Model
         return $this->belongsTo(Order::class);
     }
 
-    // Order item (quan trọng nhất)
+    // Order item
     public function orderItem()
     {
         return $this->belongsTo(OrderItem::class);
@@ -80,25 +87,33 @@ class Review extends Model
         return $this->hasMany(ReviewMedia::class);
     }
 
+
     /*
     |--------------------------------------------------------------------------
-    | Helper Methods
+    | Media Helpers
     |--------------------------------------------------------------------------
     */
 
-    // Lấy danh sách ảnh
+    // Lấy ảnh review
     public function images()
     {
         return $this->media()->where('file_type', 'image');
     }
 
-    // Lấy video (1 cái)
+    // Lấy video review
     public function video()
     {
         return $this->media()->where('file_type', 'video')->first();
     }
 
-    // Trung bình đánh giá chi tiết
+
+    /*
+    |--------------------------------------------------------------------------
+    | Rating Helpers
+    |--------------------------------------------------------------------------
+    */
+
+    // Trung bình rating chi tiết
     public function getDetailAverageAttribute()
     {
         $fields = [
@@ -118,4 +133,60 @@ class Review extends Model
         return round(array_sum($valid) / count($valid), 1);
     }
 
+
+    // Review tốt
+    public function getIsPositiveAttribute()
+    {
+        return $this->rating >= 4;
+    }
+
+    // Review xấu
+    public function getIsNegativeAttribute()
+    {
+        return $this->rating <= 2;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Admin Helpers
+    |--------------------------------------------------------------------------
+    */
+
+    // Đã trả lời
+    public function getIsRepliedAttribute()
+    {
+        return !empty($this->admin_reply);
+    }
+
+    // Trạng thái hiển thị
+    public function getStatusLabelAttribute()
+    {
+        return $this->is_visible ? 'Hiển thị' : 'Đã ẩn';
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Query Scopes
+    |--------------------------------------------------------------------------
+    */
+
+    // Review hiển thị
+    public function scopeVisible($query)
+    {
+        return $query->where('is_visible', 1);
+    }
+
+    // Review chưa trả lời
+    public function scopePendingReply($query)
+    {
+        return $query->whereNull('admin_reply');
+    }
+
+    // Review đã trả lời
+    public function scopeReplied($query)
+    {
+        return $query->whereNotNull('admin_reply');
+    }
 }

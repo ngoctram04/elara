@@ -65,7 +65,14 @@ class="{{ request()->is('admin/products*') ? 'active' : '' }}">
 Quản lý sản phẩm
 </a>
 </li>
-
+{{-- REVIEWS --}}
+<li>
+<a href="{{ route('admin.reviews.index') }}"
+class="{{ request()->is('admin/reviews*') ? 'active' : '' }}">
+<i class="bi bi-star"></i>
+Quản lý đánh giá
+</a>
+</li>
 {{-- STOCK --}}
 {{-- ================= INVENTORY ================= --}}
 <li>

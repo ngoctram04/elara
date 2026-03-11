@@ -53,6 +53,7 @@ use App\Http\Controllers\Admin\BlogController;
 use App\Http\Controllers\Admin\ProductQuestionController as AdminProductQuestionController;
 use App\Http\Controllers\Admin\AdminChatController;
 use App\Http\Controllers\Admin\InventoryController;
+use App\Http\Controllers\Admin\ReviewController as AdminReviewController;
 /*
 |--------------------------------------------------------------------------
 | FRONTEND – PUBLIC
@@ -557,8 +558,28 @@ Route::get('/messages/{id}', [AdminChatController::class, 'show'])
 
 Route::post('/messages/{id}', [AdminChatController::class, 'send'])
     ->name('messages.send');
+
+    /*
+|--------------------------------------------------
+| REVIEWS - QUẢN LÝ ĐÁNH GIÁ
+|--------------------------------------------------
+*/
+
+    Route::prefix('reviews')->name('reviews.')->group(function () {
+
+        Route::get('/', [AdminReviewController::class, 'index'])
+        ->name('index');
+
+        Route::get('/{id}', [AdminReviewController::class, 'show'])
+        ->name('show');
+
+        Route::post('/{id}/toggle', [AdminReviewController::class, 'toggleVisibility'])
+            ->name('toggle');
+
+        Route::post('/{id}/reply', [AdminReviewController::class, 'reply'])
+        ->name('reply');
     });
-    
+    });
 /*
 |------------------------------------------------------------------
 | PRODUCT QUESTIONS (Q&A)
@@ -635,6 +656,7 @@ Route::middleware(['auth', 'check_active'])
     Route::get('/unread-count', [ChatController::class, 'unreadCount'])
     ->name('unreadCount');
     });
+    
 /*
 |--------------------------------------------------------------------------
 | AI CHAT
