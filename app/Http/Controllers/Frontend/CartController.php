@@ -10,6 +10,7 @@ use App\Models\Product;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Promotion;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 class CartController extends Controller
 {
     /**
@@ -198,16 +199,36 @@ class CartController extends Controller
         /* ======================================================
      * 8. VOUCHER KHẢ DỤNG
      * ====================================================== */
+        $userId = Auth::id();
+
         $availablePromotions = Promotion::where('is_active', 1)
         ->where('type', 'order')
+
         ->where(function ($q) {
             $q->whereNull('start_date')
             ->orWhere('start_date', '<=', now());
         })
-            ->where(function ($q) {
-                $q->whereNull('end_date')
+
+        ->where(function ($q) {
+            $q->whereNull('end_date')
                 ->orWhere('end_date', '>=', now());
+        })
+
+            // chưa hết lượt
+            ->where(function ($q) {
+                $q->whereNull('usage_limit')
+                ->orWhereColumn('used_count', '<', 'usage_limit');
             })
+
+            // chưa dùng
+            ->whereNotExists(function ($q) use ($userId) {
+                $q->select(DB::raw(1))
+                ->from('orders')
+                ->whereColumn('orders.promotion_code', 'promotions.code')
+                ->where('orders.user_id', $userId)
+                ->where('orders.status', '!=', 4); // nếu huỷ thì cho dùng lại
+            })
+
             ->orderByDesc('discount_value')
             ->get();
 

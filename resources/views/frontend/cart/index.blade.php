@@ -489,8 +489,14 @@ select option:disabled{
 const money = n => new Intl.NumberFormat('vi-VN').format(n) + 'đ';
 
 function recalcTotal(){
+
     let subtotal = 0;
     let count = 0;
+
+    const voucherRow = document.getElementById('summary-voucher-row');
+    const voucherEl = document.getElementById('summary-voucher');
+    const bdRow = document.getElementById('summary-birthday-row');
+    const bdEl = document.getElementById('summary-birthday');
 
     document.querySelectorAll('.js-check-item:checked').forEach(cb=>{
         const id = cb.value;
@@ -504,16 +510,20 @@ function recalcTotal(){
         count += Number(qty?.value || 0);
     });
 
+    // Nếu không còn item nào được chọn -> bỏ voucher
+    if(subtotal === 0){
+        appliedCode = null;
+
+        if(voucherRow) voucherRow.classList.add('d-none');
+        if(voucherEl) voucherEl.dataset.value = 0;
+    }
+
     // ===== Cập nhật số lượng =====
     const countEl = document.querySelector('.js-count');
     if(countEl) countEl.innerText = count;
 
     // ===== SUMMARY =====
     const subEl = document.getElementById('summary-subtotal');
-    const voucherRow = document.getElementById('summary-voucher-row');
-    const voucherEl = document.getElementById('summary-voucher');
-    const bdRow = document.getElementById('summary-birthday-row');
-    const bdEl = document.getElementById('summary-birthday');
 
     if(subEl){
         subEl.innerText = money(subtotal);
@@ -521,48 +531,48 @@ function recalcTotal(){
     }
 
     // ===== Voucher =====
-let voucher = appliedCode ? Number(voucherEl?.dataset.value || 0) : 0;
+    let voucher = appliedCode ? Number(voucherEl?.dataset.value || 0) : 0;
 
-if(voucher > 0 && subtotal > 0){
-    voucherRow?.classList.remove('d-none');
-}else{
-    voucherRow?.classList.add('d-none');
-    voucher = 0;
-}
+    if(voucher > 0 && subtotal > 0){
+        voucherRow?.classList.remove('d-none');
+    }else{
+        voucherRow?.classList.add('d-none');
+        voucher = 0;
+    }
 
-// ===== Birthday =====
-let percent = Number(bdEl?.dataset.percent || 0);
-let birthday = Math.round(subtotal * percent / 100);
+    // ===== Birthday =====
+    let percent = Number(bdEl?.dataset.percent || 0);
+    let birthday = Math.round(subtotal * percent / 100);
 
-if(birthday > 0 && subtotal > 0){
-    bdRow?.classList.remove('d-none');
-    bdEl.innerText = '-' + money(birthday);
-}else{
-    bdRow?.classList.add('d-none');
-    birthday = 0;
-}
+    if(birthday > 0 && subtotal > 0){
+        bdRow?.classList.remove('d-none');
+        bdEl.innerText = '-' + money(birthday);
+    }else{
+        bdRow?.classList.add('d-none');
+        birthday = 0;
+    }
 
-// ===== Saving (Shopee style) =====
-const savingRow = document.getElementById('summary-saving-row');
-const savingEl = document.getElementById('summary-saving');
+    // ===== Saving =====
+    const savingRow = document.getElementById('summary-saving-row');
+    const savingEl = document.getElementById('summary-saving');
 
-const saving = voucher + birthday;
+    const saving = voucher + birthday;
 
-if(saving > 0){
-    savingRow?.classList.remove('d-none');
-    savingEl.innerText = '-' + money(saving);
-}else{
-    savingRow?.classList.add('d-none');
-}
+    if(saving > 0){
+        savingRow?.classList.remove('d-none');
+        savingEl.innerText = '-' + money(saving);
+    }else{
+        savingRow?.classList.add('d-none');
+    }
 
-// ===== FINAL TOTAL =====
-const finalTotal = Math.max(0, subtotal - saving);
+    // ===== FINAL TOTAL =====
+    const finalTotal = Math.max(0, subtotal - saving);
 
-const totalEl = document.querySelector('.js-total');
-if(totalEl){
-    totalEl.innerText = money(finalTotal);
-    totalEl.dataset.value = subtotal; // giữ subtotal gốc
-}
+    const totalEl = document.querySelector('.js-total');
+    if(totalEl){
+        totalEl.innerText = money(finalTotal);
+        totalEl.dataset.value = subtotal;
+    }
 }
 
 /* ================= CHECK ALL ================= */
@@ -968,10 +978,22 @@ function applyVoucher(code){
     .then(res => res.json())
     .then(res => {
 
-        if(!res.success){
-            showToast(res.message || 'Mã không hợp lệ', 'error');
-            return;
-        }
+    if(!res.success){
+
+        // reset voucher nếu server báo lỗi
+        appliedCode = null;
+
+        const voucherRow = document.getElementById('summary-voucher-row');
+        const voucherEl = document.getElementById('summary-voucher');
+
+        if(voucherRow) voucherRow.classList.add('d-none');
+        if(voucherEl) voucherEl.dataset.value = 0;
+
+        recalcTotal();
+
+        showToast(res.message || 'Mã không hợp lệ', 'error');
+        return;
+    }
 
         appliedCode = code;
 

@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use App\Models\Order;
 use App\Models\Cart;
-
+use App\Models\Promotion;
 class OrderController extends Controller
 {
 
@@ -94,7 +94,6 @@ class OrderController extends Controller
      */
     public function cancel(Request $request, $id)
     {
-
         $order = Order::where('id', $id)
             ->where('user_id', Auth::id())
             ->firstOrFail();
@@ -126,8 +125,7 @@ class OrderController extends Controller
                 'status' => Order::STATUS_CANCELLED,
                 'payment_status' => $paymentStatus,
 
-                'cancel_reason' => $request->cancel_reason, // ⭐ thêm dòng này
-
+                'cancel_reason' => $request->cancel_reason,
                 'cancelled_by' => 'customer',
                 'cancelled_by_user_id' => Auth::id(),
                 'cancelled_at' => now()

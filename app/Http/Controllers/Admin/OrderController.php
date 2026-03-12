@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Order;
-
+use App\Models\Promotion;
 class OrderController extends Controller
 {
     /**
@@ -320,14 +320,6 @@ class OrderController extends Controller
 
         try {
 
-            /*
-            |-----------------------------------------
-            | KHÔNG hoàn kho ở đây
-            | Order Model sẽ tự:
-            | - Hoàn tồn kho
-            | - Nếu VNPAY đã thanh toán → chuyển refunded
-            |-----------------------------------------
-            */
             $order->update([
                 'status' => Order::STATUS_CANCELLED,
                 'cancel_reason' => $request->cancel_reason,
@@ -340,7 +332,9 @@ class OrderController extends Controller
 
             return back()->with('success', 'Đã huỷ đơn hàng.');
         } catch (\Exception $e) {
+
             DB::rollBack();
+
             return back()->with('error', 'Huỷ đơn thất bại.');
         }
     }

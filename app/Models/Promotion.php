@@ -147,5 +147,8 @@ class Promotion extends Model
             'expired'  => 'dark',
         };
     }
-    
+    public function orders()
+    {
+        return $this->hasMany(Order::class, 'promotion_id');
+    }
 }

@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\OrderCreatedMail;
 use App\Mail\OrderCompletedMail;
+use App\Models\Promotion;
 class Order extends Model
+
 {
     use HasFactory;
 
@@ -300,9 +302,11 @@ class Order extends Model
                 $order->status == self::STATUS_CANCELLED
             ) {
 
-                $order->loadMissing('items.variant');
+                $order->loadMissing('items.variant', 'user');
 
-                // Hoàn kho
+                // =========================
+                // Hoàn tồn kho
+                // =========================
                 foreach ($order->items as $item) {
                     if ($item->variant) {
                         $item->variant->increment(
@@ -312,7 +316,24 @@ class Order extends Model
                     }
                 }
 
-                // VNPAY → hoàn tiền
+                // =========================
+                // Trả lại voucher
+                // =========================
+                $order->refundVoucher();
+
+                // =========================
+                // Trả lại birthday discount
+                // =========================
+                if ($order->birthday_discount > 0 && $order->user
+                ) {
+
+                    $order->user->birthday_discount_year = null;
+                    $order->user->save();
+                }
+
+                // =========================
+                // Hoàn tiền VNPay
+                // =========================
                 if (
                     $order->payment_method === 'vnpay' &&
                     $order->payment_status == self::PAYMENT_PAID
@@ -359,5 +380,12 @@ class Order extends Model
     {
         return $this->hasOne(RefundRequest::class);
     }
-    
+    public function refundVoucher()
+    {
+        if ($this->promotion_code) {
+            Promotion::where('code', $this->promotion_code)
+                ->where('used_count', '>', 0)
+                ->decrement('used_count');
+        }
+    }
 }
