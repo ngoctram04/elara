@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use App\Models\Order;
 class ReportController extends Controller
 {
 
@@ -149,17 +150,20 @@ SHIPPING (QUAN TRỌNG)
 
         // Doanh thu khách trả (tiền sản phẩm)
         $revenue = DB::table('orders')
-        ->where('status', 3)
-            ->whereBetween('created_at', [$from, $to])
-            ->sum(DB::raw('total + shipping_fee'));
-
+        ->where('status', Order::STATUS_COMPLETED)
+        ->where('payment_status', '!=', Order::PAYMENT_REFUNDED)
+        ->whereBetween('created_at', [$from, $to])
+        ->sum(DB::raw('total + shipping_fee'));
         // Ship khách trả
         $shippingTotal = DB::table('orders')
         ->where(function ($q) {
-            $q->where('status', 3)
+            $q->whereIn('status', [
+                Order::STATUS_COMPLETED,
+                Order::STATUS_RETURNED
+            ])
             ->orWhere(function ($sub) {
-                $sub->where('status', 4)
-                    ->whereNotNull('delivered_at');
+                $sub->where('status', Order::STATUS_CANCELLED)
+                ->whereNotNull('delivered_at');
             });
         })
         ->whereBetween('created_at', [$from, $to])
@@ -168,9 +172,12 @@ SHIPPING (QUAN TRỌNG)
         // Ship thực tế phải trả cho đơn vị vận chuyển
         $shippingCostTotal = DB::table('orders')
         ->where(function ($q) {
-            $q->where('status', 3)
+            $q->whereIn('status', [
+                Order::STATUS_COMPLETED,
+                Order::STATUS_RETURNED
+            ])
             ->orWhere(function ($sub) {
-                $sub->where('status', 4)
+                $sub->where('status', Order::STATUS_CANCELLED)
                     ->whereNotNull('delivered_at');
             });
         })
@@ -183,14 +190,19 @@ END
 '));
         // Tổng giảm giá
         $discountTotal = DB::table('orders')
-        ->where('status', 3)
-            ->whereBetween('created_at', [$from, $to])
-            ->sum('discount');
+        ->where('status', Order::STATUS_COMPLETED)
+        ->where('payment_status', '!=', Order::PAYMENT_REFUNDED)
+        ->whereBetween('created_at', [$from, $to])
+        ->sum('discount');
 
         // Giá vốn
         $cost = DB::table('order_items as oi')
         ->join('orders as o', 'o.id', '=', 'oi.order_id')
-        ->where('o.status', 3)
+        ->where('o.status', Order::STATUS_COMPLETED)
+        ->where('o.payment_status',
+            '!=',
+            Order::PAYMENT_REFUNDED
+        )
             ->whereBetween('o.created_at', [$from, $to])
             ->sum(DB::raw('oi.quantity * oi.cost_price'));
 
@@ -248,7 +260,8 @@ END
         $prevTo = (clone $from)->subSecond();
 
         $previousRevenue = DB::table('orders')
-        ->where('status', 3)
+        ->where('status', Order::STATUS_COMPLETED)
+        ->where('payment_status', '!=', Order::PAYMENT_REFUNDED)
         ->whereBetween('created_at', [$prevFrom, $prevTo])
         ->sum(DB::raw('total + shipping_fee'));
 
@@ -269,12 +282,13 @@ END
             SUM(status = 1) as pending,
             SUM(status = 2) as shipping,
             SUM(status = 3) as completed,
-            SUM(status = 4) as cancelled
+            SUM(status = 4) as cancelled,
+            SUM(status = 5) as returned
         ')
         ->first();
 
         $cancelRate = $orderStats->total > 0
-        ? ($orderStats->cancelled / $orderStats->total) * 100
+        ? (($orderStats->cancelled + $orderStats->returned) / $orderStats->total) * 100
         : 0;
 
         /*
@@ -297,31 +311,36 @@ END
     */
 
         $dailyRevenue = DB::table('orders')
-            ->where('status', 3)
+            ->where('status',
+                Order::STATUS_COMPLETED
+            )
+            ->where('payment_status', '!=', Order::PAYMENT_REFUNDED)
             ->whereBetween('created_at', [$from, $to])
             ->selectRaw('DATE(created_at) as date, SUM(total + shipping_fee) as revenue')
             ->groupBy('date')
             ->orderBy('date')
             ->get();
-
         $weeklyRevenue = DB::table('orders')
-        ->where('status', 3)
+        ->where('status', Order::STATUS_COMPLETED)
+        ->where('payment_status', '!=', Order::PAYMENT_REFUNDED)
         ->whereBetween('created_at', [$from, $to])
-            ->selectRaw('YEARWEEK(created_at) as week, SUM(total + shipping_fee) as revenue')
-            ->groupBy('week')
-            ->orderBy('week')
-            ->get();
+        ->selectRaw('YEARWEEK(created_at) as week, SUM(total + shipping_fee) as revenue')
+        ->groupBy('week')
+        ->orderBy('week')
+        ->get();
 
         $monthlyRevenue = DB::table('orders')
-        ->where('status', 3)
+        ->where('status', Order::STATUS_COMPLETED)
+        ->where('payment_status', '!=', Order::PAYMENT_REFUNDED)
         ->whereBetween('created_at', [$from, $to])
-            ->selectRaw('DATE_FORMAT(created_at,"%Y-%m") as month, SUM(total + shipping_fee) as revenue')
-            ->groupBy('month')
-            ->orderBy('month')
-            ->get();
+        ->selectRaw('DATE_FORMAT(created_at,"%Y-%m") as month, SUM(total + shipping_fee) as revenue')
+        ->groupBy('month')
+        ->orderBy('month')
+        ->get();
 
         $yearlyRevenue = DB::table('orders')
-        ->where('status', 3)
+        ->where('status', Order::STATUS_COMPLETED)
+        ->where('payment_status', '!=', Order::PAYMENT_REFUNDED)
         ->selectRaw('YEAR(created_at) as year, SUM(total + shipping_fee) as revenue')
         ->groupBy('year')
         ->orderBy('year')
@@ -338,6 +357,7 @@ END
             ->join('product_variants as pv', 'pv.id', '=', 'oi.variant_id')
             ->join('products as p', 'p.id', '=', 'pv.product_id')
             ->where('o.status', 3)
+            ->where('o.payment_status', '!=', 3)
             ->whereBetween('o.created_at', [$from, $to])
             ->select(
                 'p.name',
@@ -395,7 +415,8 @@ END
 
         $topCustomers = DB::table('orders')
         ->join('users', 'users.id', '=', 'orders.user_id')
-        ->where('orders.status', 3)
+            ->where('orders.status', Order::STATUS_COMPLETED)
+            ->where('orders.payment_status', '!=', Order::PAYMENT_REFUNDED)
         ->whereBetween('orders.created_at', [$from, $to])
         ->select(
             'users.name',
@@ -486,7 +507,8 @@ END
         ->join('orders as o', 'o.id', '=', 'oi.order_id')
         ->join('product_variants as pv', 'pv.id', '=', 'oi.variant_id')
         ->join('products as p', 'p.id', '=', 'pv.product_id')
-        ->where('o.status', 3)
+            ->where('o.status', Order::STATUS_COMPLETED)
+            ->where('o.payment_status', '!=', Order::PAYMENT_REFUNDED)
         ->whereBetween('o.created_at', [$range['from'], $range['to']])
         ->select(
             'p.name',
@@ -518,7 +540,8 @@ END
 
         $query = DB::table('orders')
             ->join('users', 'users.id', '=', 'orders.user_id')
-            ->where('orders.status', 3)
+            ->where('orders.status', Order::STATUS_COMPLETED)
+            ->where('orders.payment_status', '!=', Order::PAYMENT_REFUNDED)
             ->whereBetween('orders.created_at', [$range['from'], $range['to']])
             ->select(
                 'users.name',

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\RefundRequest;
+use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -64,16 +65,14 @@ class RefundController extends Controller
             $query->orderBy('created_at', 'desc');
         }
 
-
         $refunds = $query->paginate(10)->withQueryString();
 
         return view('admin.refunds.index', compact('refunds'));
     }
 
 
-
     /**
-     * Chấp nhận hoàn tiền
+     * Admin duyệt yêu cầu đổi trả
      */
     public function approve($id)
     {
@@ -85,7 +84,6 @@ class RefundController extends Controller
 
             $order = $refund->order;
 
-
             /*
             |--------------------------------------------------------------------------
             | Update trạng thái refund
@@ -96,25 +94,23 @@ class RefundController extends Controller
                 'status' => 'approved'
             ]);
 
-
             /*
             |--------------------------------------------------------------------------
-            | Huỷ đơn
+            | Chuyển đơn sang trạng thái ĐỔI TRẢ
             |--------------------------------------------------------------------------
             */
 
             $order->update([
-                'status' => 4
+                'status' => Order::STATUS_RETURNED
             ]);
         });
 
-        return back()->with('success', 'Đã chấp nhận hoàn tiền');
+        return back()->with('success', 'Đã chấp nhận yêu cầu đổi trả');
     }
 
 
-
     /**
-     * Từ chối hoàn tiền
+     * Admin từ chối yêu cầu
      */
     public function reject(Request $request, $id)
     {
@@ -123,7 +119,6 @@ class RefundController extends Controller
             'admin_note' => 'required|string|max:1000'
         ]);
 
-
         $refund = RefundRequest::findOrFail($id);
 
         $refund->update([
@@ -131,30 +126,58 @@ class RefundController extends Controller
             'admin_note' => $request->admin_note
         ]);
 
-
         return back()->with('success', 'Đã từ chối yêu cầu hoàn tiền');
     }
 
 
-
     /**
-     * Xác nhận đã hoàn tiền
+     * Admin xác nhận đã hoàn tiền
      */
     public function refunded($id)
     {
-        $refund = RefundRequest::with('order.user')->findOrFail($id);
 
-        $refund->update([
-            'status' => 'refunded'
-        ]);
+        DB::transaction(function () use ($id) {
 
-        $order = $refund->order;
+            $refund = RefundRequest::with('order.user')
+                ->findOrFail($id);
 
-        Mail::to($order->user->email)
-            ->send(new RefundCompletedMail(
-                $order,
-                $order->grand_total
-            ));
+            $order = $refund->order;
+
+            /*
+            |--------------------------------------------------------------------------
+            | Update refund status
+            |--------------------------------------------------------------------------
+            */
+
+            $refund->update([
+                'status' => 'refunded'
+            ]);
+
+            /*
+            |--------------------------------------------------------------------------
+            | Cập nhật trạng thái thanh toán
+            |--------------------------------------------------------------------------
+            */
+
+            $order->update([
+                'payment_status' => Order::PAYMENT_REFUNDED
+            ]);
+
+            /*
+            |--------------------------------------------------------------------------
+            | Gửi email thông báo
+            |--------------------------------------------------------------------------
+            */
+
+            if ($order->user && $order->user->email) {
+
+                Mail::to($order->user->email)
+                    ->send(new RefundCompletedMail(
+                        $order,
+                        $order->grand_total
+                    ));
+            }
+        });
 
         return back()->with('success', 'Đã xác nhận hoàn tiền và gửi email cho khách');
     }

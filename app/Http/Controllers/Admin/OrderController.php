@@ -85,8 +85,11 @@ class OrderController extends Controller
                         })
 
                             ->orWhere(function ($sub) {
-                                $sub->where('payment_method', 'cod')
-                                    ->where('status', Order::STATUS_COMPLETED);
+                            $sub->where('payment_method', 'cod')
+                            ->whereIn('status', [
+                                Order::STATUS_COMPLETED,
+                                Order::STATUS_RETURNED
+                            ]);
                             });
                     });
 
@@ -103,7 +106,10 @@ class OrderController extends Controller
 
                         $q->where(function ($sub) {
                             $sub->where('payment_method', 'cod')
-                                ->where('status', '!=', Order::STATUS_COMPLETED);
+                            ->whereNotIn('status', [
+                                Order::STATUS_COMPLETED,
+                                Order::STATUS_RETURNED
+                            ]);
                         })
 
                             ->orWhere(function ($sub) {
@@ -177,23 +183,31 @@ class OrderController extends Controller
 
         $oldStatus = $order->status;
         $newStatus = (int) $request->status;
+        if ($newStatus == Order::STATUS_RETURNED && $oldStatus != Order::STATUS_COMPLETED) {
+            return back()->with('error', 'Chỉ có thể đổi trả khi đơn đã giao.');
+        }
 
         // Không cho sửa nếu đã huỷ hoặc đã hoàn thành
-        if (in_array($oldStatus, [
-            Order::STATUS_CANCELLED,
-            Order::STATUS_COMPLETED
-        ])) {
-            return back()->with('error', 'Đơn này không thể thay đổi trạng thái.');
+        // Cho phép trả hàng từ đã giao
+        // Không cho sửa nếu đã huỷ
+        if ($oldStatus == Order::STATUS_CANCELLED) {
+            return back()->with('error', 'Đơn đã huỷ không thể thay đổi.');
         }
 
-        // Không cho chuyển ngược
-        if ($newStatus <= $oldStatus) {
-            return back()->with('error', 'Không thể chuyển trạng thái ngược.');
-        }
+        // Cho phép trả hàng từ đã giao
+        if ($oldStatus == Order::STATUS_COMPLETED && $newStatus == Order::STATUS_RETURNED) {
+            // cho phép
+        } else {
 
-        // Chỉ cho đi từng bước
-        if ($newStatus - $oldStatus > 1) {
-            return back()->with('error', 'Phải chuyển trạng thái theo thứ tự.');
+            // Không cho chuyển ngược
+            if ($newStatus <= $oldStatus) {
+                return back()->with('error', 'Không thể chuyển trạng thái ngược.');
+            }
+
+            // Chỉ cho đi từng bước
+            if ($newStatus - $oldStatus > 1) {
+                return back()->with('error', 'Phải chuyển trạng thái theo thứ tự.');
+            }
         }
 
         DB::beginTransaction();
@@ -285,7 +299,18 @@ class OrderController extends Controller
                     ]);
                 }
             }
+            if ($newStatus == Order::STATUS_RETURNED) {
 
+                foreach ($order->items as $item) {
+
+                    if ($item->variant) {
+
+                        $variant = $item->variant;
+
+                        $variant->decrement('sold_quantity', $item->quantity);
+                    }
+                }
+            }
             $order->status = $newStatus;
             $order->save();
 

@@ -19,8 +19,8 @@ class Order extends Model
         'user_id',
         'subtotal',
         'discount',
-        'voucher_discount',     // thêm
-        'birthday_discount',    // thêm
+        'voucher_discount',
+        'birthday_discount',
         'shipping_fee',
         'shipping_cost',
         'total',
@@ -46,7 +46,7 @@ class Order extends Model
         'voucher_discount' => 'integer',
         'birthday_discount' => 'integer',
         'shipping_fee' => 'integer',
-        'shipping_cost' => 'integer', 
+        'shipping_cost' => 'integer',
         'total' => 'integer',
         'grand_total' => 'integer',
         'status' => 'integer',
@@ -56,29 +56,31 @@ class Order extends Model
     ];
 
     /*
-    |--------------------------------
-    | ORDER STATUS
-    |--------------------------------
-    */
+|--------------------------------
+| ORDER STATUS
+|--------------------------------
+*/
     const STATUS_PENDING    = 1; // Đang xử lý
     const STATUS_PROCESSING = 2; // Đang giao
     const STATUS_COMPLETED  = 3; // Đã giao
     const STATUS_CANCELLED  = 4; // Đã huỷ
+    const STATUS_RETURNED   = 5; // Đổi trả
 
     /*
-    |--------------------------------
-    | PAYMENT STATUS
-    |--------------------------------
-    */
-    const PAYMENT_UNPAID = 0;
-    const PAYMENT_PAID   = 1;
-    const PAYMENT_FAILED = 2;
+|--------------------------------
+| PAYMENT STATUS
+|--------------------------------
+*/
+    const PAYMENT_UNPAID   = 0;
+    const PAYMENT_PAID     = 1;
+    const PAYMENT_FAILED   = 2;
     const PAYMENT_REFUNDED = 3;
+
     /*
-    |--------------------------------
-    | RELATIONSHIPS
-    |--------------------------------
-    */
+|--------------------------------
+| RELATIONSHIPS
+|--------------------------------
+*/
 
     // Người đặt
     public function user()
@@ -98,16 +100,17 @@ class Order extends Model
         return $this->hasMany(OrderItem::class, 'order_id');
     }
 
+    // Khuyến mãi
     public function promotions()
     {
         return $this->hasMany(OrderPromotion::class, 'order_id');
     }
 
     /*
-    |--------------------------------
-    | ACCESSORS - ORDER STATUS
-    |--------------------------------
-    */
+|--------------------------------
+| ACCESSORS - ORDER STATUS
+|--------------------------------
+*/
     public function getStatusNameAttribute()
     {
         return match ($this->status) {
@@ -115,6 +118,7 @@ class Order extends Model
             self::STATUS_PROCESSING => 'Đang giao',
             self::STATUS_COMPLETED  => 'Đã giao',
             self::STATUS_CANCELLED  => 'Đã huỷ',
+            self::STATUS_RETURNED   => 'Đổi trả',
             default => 'Không xác định',
         };
     }
@@ -126,6 +130,7 @@ class Order extends Model
             self::STATUS_PROCESSING => 'primary',
             self::STATUS_COMPLETED  => 'success',
             self::STATUS_CANCELLED  => 'danger',
+            self::STATUS_RETURNED   => 'info',
             default => 'secondary',
         };
     }
@@ -147,7 +152,12 @@ class Order extends Model
 
     public function getPaymentStatusNameAttribute()
     {
-        // COD: đã giao = đã thanh toán
+        // Nếu đã hoàn tiền
+        if ($this->payment_status == self::PAYMENT_REFUNDED) {
+            return 'Đã hoàn tiền';
+        }
+
+        // COD
         if ($this->payment_method === 'cod') {
             return $this->status == self::STATUS_COMPLETED
                 ? 'Đã thanh toán'
@@ -165,6 +175,11 @@ class Order extends Model
 
     public function getPaymentStatusBadgeAttribute()
     {
+        // Đã hoàn tiền
+        if ($this->payment_status == self::PAYMENT_REFUNDED) {
+            return 'warning';
+        }
+
         // COD
         if ($this->payment_method === 'cod') {
             return $this->status == self::STATUS_COMPLETED
@@ -266,18 +281,11 @@ class Order extends Model
     }
     protected static function booted()
     {
-
-
-        /*
-    |--------------------------------------------------------------------------
-    | 2. KHI UPDATE ĐƠN
-    |--------------------------------------------------------------------------
-    */
         static::updating(function ($order) {
 
             /*
         |--------------------------------------------------------------------------
-        | 2.1 GIAO THÀNH CÔNG → GỬI MAIL HOÀN TẤT
+        | 1. GIAO THÀNH CÔNG → GỬI MAIL HOÀN TẤT
         |--------------------------------------------------------------------------
         */
             if (
@@ -296,20 +304,17 @@ class Order extends Model
 
             /*
         |--------------------------------------------------------------------------
-        | 2.2 HUỶ ĐƠN → HOÀN KHO + HOÀN TIỀN
+        | 2. HUỶ ĐƠN → HOÀN KHO + TRẢ LẠI KHUYẾN MÃI
         |--------------------------------------------------------------------------
         */
             if (
                 $order->isDirty('status') &&
-                $order->getOriginal('status') != self::STATUS_CANCELLED &&
                 $order->status == self::STATUS_CANCELLED
             ) {
 
                 $order->loadMissing('items.variant', 'user');
 
-                // =========================
                 // Hoàn tồn kho
-                // =========================
                 foreach ($order->items as $item) {
                     if ($item->variant) {
                         $item->variant->increment(
@@ -319,24 +324,16 @@ class Order extends Model
                     }
                 }
 
-                // =========================
                 // Trả lại voucher
-                // =========================
                 $order->refundVoucher();
 
-                // =========================
                 // Trả lại birthday discount
-                // =========================
-                if ($order->birthday_discount > 0 && $order->user
-                ) {
-
+                if ($order->birthday_discount > 0 && $order->user) {
                     $order->user->birthday_discount_year = null;
                     $order->user->save();
                 }
 
-                // =========================
-                // Hoàn tiền VNPay
-                // =========================
+                // Hoàn tiền VNPAY (chỉ khi huỷ đơn)
                 if (
                     $order->payment_method === 'vnpay' &&
                     $order->payment_status == self::PAYMENT_PAID
@@ -347,8 +344,46 @@ class Order extends Model
 
 
             /*
+|--------------------------------------------------------------------------
+| 3. ĐỔI TRẢ → HOÀN KHO + TRỪ ĐÃ BÁN
+|--------------------------------------------------------------------------
+*/
+            if (
+                $order->isDirty('status') &&
+                $order->getOriginal('status') != self::STATUS_RETURNED &&
+                $order->status == self::STATUS_RETURNED
+            ) {
+
+                $order->loadMissing('items.variant');
+
+                foreach ($order->items as $item) {
+                    if ($item->variant) {
+
+                        // hoàn tồn kho
+                        $item->variant->increment(
+                            'stock_quantity',
+                            $item->quantity
+                        );
+
+                        // trừ số lượng đã bán
+                        $item->variant->decrement(
+                            'sold_quantity',
+                            $item->quantity
+                        );
+
+                        // tránh bị âm
+                        if ($item->variant->sold_quantity < 0) {
+                            $item->variant->sold_quantity = 0;
+                            $item->variant->save();
+                        }
+                    }
+                }
+            }
+
+
+            /*
         |--------------------------------------------------------------------------
-        | 2.3 COD → Khi giao xong = đã thanh toán
+        | 4. COD → Khi giao xong = đã thanh toán
         |--------------------------------------------------------------------------
         */
             if (
