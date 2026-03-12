@@ -111,6 +111,7 @@ class InventoryController extends Controller
 
         $expiredLots = DB::table('stock_imports')
             ->whereDate('expiry_date', '<=', now()->addMonths(6))
+            ->whereNull('expired_at')
             ->get();
 
         foreach ($expiredLots as $lot) {
@@ -137,8 +138,10 @@ class InventoryController extends Controller
             }
 
             DB::table('stock_imports')
-                ->where('id', $lot->id)
-                ->delete();
+            ->where('id', $lot->id)
+            ->update([
+                'expired_at' => now()
+            ]);
         }
 
 
@@ -154,6 +157,7 @@ class InventoryController extends Controller
             ->leftJoin('variant_images', 'product_variants.id', '=', 'variant_images.variant_id')
 
             ->whereDate('expiry_date', '<=', now()->addMonths(7))
+            ->whereNull('expired_at')
 
             ->select(
                 'stock_imports.*',

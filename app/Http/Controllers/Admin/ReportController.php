@@ -51,10 +51,10 @@ class ReportController extends Controller
 
 
         /*
-    =====================================
-    SHIPPING (QUAN TRỌNG)
-    =====================================
-    */
+=====================================
+SHIPPING (QUAN TRỌNG)
+=====================================
+*/
 
         // Khách trả phí ship
         $data['shippingCollected'] = $data['finance']->shipping_total ?? 0;
@@ -62,17 +62,18 @@ class ReportController extends Controller
         // Shop phải trả cho đơn vị vận chuyển
         $data['shippingPaid'] = $data['finance']->shipping_cost_total ?? 0;
 
+        // Nợ ship còn lại
+        $data['shippingDebt'] = $data['finance']->shipping_debt ?? 0;
+        $data['shippingPaidTotal'] = $data['finance']->shipping_paid_total ?? 0;
         // Chi phí freeship shop chịu
         $data['freeShippingLoss'] = max(
             0,
             $data['shippingPaid'] - $data['shippingCollected']
         );
 
-        // Lãi / lỗ vận chuyển (âm = lỗ)
+        // Lãi / lỗ vận chuyển
         $data['shippingProfit'] =
         $data['shippingCollected'] - $data['shippingPaid'];
-
-
         /*
     =====================================
     CHI PHÍ
@@ -99,7 +100,11 @@ class ReportController extends Controller
         $data['totalImport'] = DB::table('stock_imports')
         ->sum(DB::raw('quantity * cost_price'));
 
-
+        // Tổng hao hụt kho (hàng hết hạn, hư, thất thoát)
+        $data['inventoryLoss'] = max(
+            0,
+            $data['totalImport'] - ($data['totalCost'] + $data['inventoryValue'])
+        );
         /*
     =====================================
     TRẢ VIEW
@@ -108,16 +113,11 @@ class ReportController extends Controller
 
         return view('admin.reports.index', $data);
     }
-    /*
-    =====================================
-    KHOẢNG THỜI GIAN
-    =====================================
-    */
     private function getDateRange(Request $request)
     {
         $from = $request->from
-        ? Carbon::parse($request->from)->startOfDay()
-        : now()->startOfMonth();
+            ? Carbon::parse($request->from)->startOfDay()
+            : now()->startOfMonth();
 
         $to = $request->to
             ? Carbon::parse($request->to)->endOfDay()
@@ -130,10 +130,9 @@ class ReportController extends Controller
             'to_date' => $to->format('Y-m-d'),
         ];
     }
-
     /*
     =====================================
-    HÀM CHÍNH
+    KHOẢNG THỜI GIAN
     =====================================
     */
     private function getReportData(Request $request)
@@ -143,65 +142,106 @@ class ReportController extends Controller
         $to = $range['to'];
 
         /*
-    /*
-=====================================
-1. TÀI CHÍNH (chuẩn ecommerce)
-=====================================
-*/
+    =====================================
+    1. TÀI CHÍNH
+    =====================================
+    */
 
-        // Doanh thu khách trả
+        // Doanh thu khách trả (tiền sản phẩm)
         $revenue = DB::table('orders')
-            ->where('status', 3)
+        ->where('status', 3)
             ->whereBetween('created_at', [$from, $to])
-            ->sum('total');
+            ->sum(DB::raw('total + shipping_fee'));
 
-        // Khách trả phí ship
+        // Ship khách trả
         $shippingTotal = DB::table('orders')
-        ->where('status', 3)
+        ->where(function ($q) {
+            $q->where('status', 3)
+            ->orWhere(function ($sub) {
+                $sub->where('status', 4)
+                    ->whereNotNull('delivered_at');
+            });
+        })
         ->whereBetween('created_at', [$from, $to])
-        ->sum('shipping_fee');
+        ->sum(DB::raw('COALESCE(shipping_fee,0)'));
 
-        // Shop phải trả cho đơn vị vận chuyển
+        // Ship thực tế phải trả cho đơn vị vận chuyển
         $shippingCostTotal = DB::table('orders')
-        ->where('status', 3)
+        ->where(function ($q) {
+            $q->where('status', 3)
+            ->orWhere(function ($sub) {
+                $sub->where('status', 4)
+                    ->whereNotNull('delivered_at');
+            });
+        })
         ->whereBetween('created_at', [$from, $to])
-        ->sum('shipping_cost');
-
+        ->sum(DB::raw('
+CASE 
+WHEN shipping_cost > 0 THEN shipping_cost
+ELSE shipping_fee
+END
+'));
         // Tổng giảm giá
         $discountTotal = DB::table('orders')
         ->where('status', 3)
-        ->whereBetween('created_at', [$from, $to])
-        ->sum('discount');
+            ->whereBetween('created_at', [$from, $to])
+            ->sum('discount');
 
         // Giá vốn
         $cost = DB::table('order_items as oi')
         ->join('orders as o', 'o.id', '=', 'oi.order_id')
         ->where('o.status', 3)
-        ->whereBetween('o.created_at', [$from, $to])
-        ->sum(DB::raw('oi.quantity * oi.cost_price'));
+            ->whereBetween('o.created_at', [$from, $to])
+            ->sum(DB::raw('oi.quantity * oi.cost_price'));
 
         /*
-Lợi nhuận thực:
-Doanh thu - giá vốn - phí ship shop chịu
-*/
-        $profit = $revenue - $cost - $shippingCostTotal;
+    =====================================
+    SHIP ĐÃ TRẢ
+    =====================================
+    */
+
+        $shipPaid = DB::table('shipping_payments')
+            ->whereBetween('created_at', [$from, $to])
+            ->sum('amount');
+
+        /*
+    =====================================
+    LỢI NHUẬN
+    =====================================
+    */
+
+        // Lợi nhuận thực
+        $profit = $revenue - $cost - $shipPaid;
+
+        // Nợ ship còn lại
+        $shippingDebt = max(0, $shippingCostTotal - $shipPaid);
+
+        /*
+    =====================================
+    OBJECT FINANCE
+    =====================================
+    */
 
         $finance = (object)[
                 'revenue' => $revenue,
                 'cost' => $cost,
                 'profit' => $profit,
 
-                // Ship
-                'shipping_total' => $shippingTotal,        // khách trả
-                'shipping_cost_total' => $shippingCostTotal, // shop trả
+                // ship
+                'shipping_total' => $shippingTotal,
+                'shipping_cost_total' => $shippingCostTotal,
+                'shipping_paid_total' => $shipPaid,
+                'shipping_debt' => $shippingDebt,
 
                 'discount_total' => $discountTotal
             ];
+
         /*
     =====================================
     2. TĂNG TRƯỞNG
     =====================================
     */
+
         $days = $from->diffInDays($to) + 1;
 
         $prevFrom = (clone $from)->subDays($days);
@@ -209,13 +249,11 @@ Doanh thu - giá vốn - phí ship shop chịu
 
         $previousRevenue = DB::table('orders')
         ->where('status', 3)
-            ->whereBetween('created_at', [$prevFrom,
-                $prevTo
-            ])
-            ->sum('total');
+        ->whereBetween('created_at', [$prevFrom, $prevTo])
+        ->sum(DB::raw('total + shipping_fee'));
 
         $growth = $previousRevenue > 0
-            ? (($revenue - $previousRevenue) / $previousRevenue) * 100
+        ? (($revenue - $previousRevenue) / $previousRevenue) * 100
             : 0;
 
         /*
@@ -223,6 +261,7 @@ Doanh thu - giá vốn - phí ship shop chịu
     3. THỐNG KÊ ĐƠN
     =====================================
     */
+
         $orderStats = DB::table('orders')
         ->whereBetween('created_at', [$from, $to])
         ->selectRaw('
@@ -235,14 +274,15 @@ Doanh thu - giá vốn - phí ship shop chịu
         ->first();
 
         $cancelRate = $orderStats->total > 0
-            ? ($orderStats->cancelled / $orderStats->total) * 100
-            : 0;
+        ? ($orderStats->cancelled / $orderStats->total) * 100
+        : 0;
 
         /*
     =====================================
     4. THỜI GIAN XỬ LÝ TB
     =====================================
     */
+
         $avgProcessingTime = DB::table('orders')
             ->where('status', 3)
             ->whereNotNull('delivered_at')
@@ -255,12 +295,11 @@ Doanh thu - giá vốn - phí ship shop chịu
     5. DOANH THU THEO THỜI GIAN
     =====================================
     */
+
         $dailyRevenue = DB::table('orders')
             ->where('status', 3)
-            ->whereBetween('created_at', [$from,
-                $to
-            ])
-            ->selectRaw('DATE(created_at) as date, SUM(total) as revenue')
+            ->whereBetween('created_at', [$from, $to])
+            ->selectRaw('DATE(created_at) as date, SUM(total + shipping_fee) as revenue')
             ->groupBy('date')
             ->orderBy('date')
             ->get();
@@ -268,7 +307,7 @@ Doanh thu - giá vốn - phí ship shop chịu
         $weeklyRevenue = DB::table('orders')
         ->where('status', 3)
         ->whereBetween('created_at', [$from, $to])
-            ->selectRaw('YEARWEEK(created_at) as week, SUM(total) as revenue')
+            ->selectRaw('YEARWEEK(created_at) as week, SUM(total + shipping_fee) as revenue')
             ->groupBy('week')
             ->orderBy('week')
             ->get();
@@ -276,25 +315,26 @@ Doanh thu - giá vốn - phí ship shop chịu
         $monthlyRevenue = DB::table('orders')
         ->where('status', 3)
         ->whereBetween('created_at', [$from, $to])
-            ->selectRaw('DATE_FORMAT(created_at,"%Y-%m") as month, SUM(total) as revenue')
+            ->selectRaw('DATE_FORMAT(created_at,"%Y-%m") as month, SUM(total + shipping_fee) as revenue')
             ->groupBy('month')
             ->orderBy('month')
             ->get();
 
         $yearlyRevenue = DB::table('orders')
         ->where('status', 3)
-        ->selectRaw('YEAR(created_at) as year, SUM(total) as revenue')
+        ->selectRaw('YEAR(created_at) as year, SUM(total + shipping_fee) as revenue')
         ->groupBy('year')
         ->orderBy('year')
-            ->get();
+        ->get();
 
         /*
     =====================================
-    6. TOP SẢN PHẨM (có lợi nhuận)
+    TOP SẢN PHẨM
     =====================================
     */
+
         $topProducts = DB::table('order_items as oi')
-        ->join('orders as o', 'o.id', '=', 'oi.order_id')
+            ->join('orders as o', 'o.id', '=', 'oi.order_id')
             ->join('product_variants as pv', 'pv.id', '=', 'oi.variant_id')
             ->join('products as p', 'p.id', '=', 'pv.product_id')
             ->where('o.status', 3)
@@ -312,14 +352,13 @@ Doanh thu - giá vốn - phí ship shop chịu
 
         /*
     =====================================
-    7 → 11 (giữ nguyên)
+    SẢN PHẨM TỒN LÂU
     =====================================
     */
+
         $slowMoving = DB::table('product_variants as pv')
-        ->join('products as p', 'p.id', '=', 'pv.product_id')
-            ->leftJoin('order_items as oi', 'oi.variant_id', '=',
-                'pv.id'
-            )
+            ->join('products as p', 'p.id', '=', 'pv.product_id')
+            ->leftJoin('order_items as oi', 'oi.variant_id', '=', 'pv.id')
             ->select(
                 'p.name',
                 'pv.stock_quantity',
@@ -331,44 +370,62 @@ Doanh thu - giá vốn - phí ship shop chịu
             ->limit(10)
             ->get();
 
+        /*
+    =====================================
+    SẢN PHẨM ĐƯỢC QUAN TÂM
+    =====================================
+    */
+
         $mostViewed = DB::table('wishlists as w')
-        ->join('products as p', 'p.id', '=', 'w.product_id')
-        ->select(
-            'p.name',
-            DB::raw('COUNT(w.id) as total_wishlist')
-        )
-        ->groupBy('p.id', 'p.name')
+            ->join('products as p', 'p.id', '=', 'w.product_id')
+            ->select(
+                'p.name',
+                DB::raw('COUNT(w.id) as total_wishlist')
+            )
+            ->groupBy('p.id', 'p.name')
             ->orderByDesc('total_wishlist')
             ->limit(10)
             ->get();
 
+        /*
+    =====================================
+    TOP KHÁCH HÀNG
+    =====================================
+    */
+
         $topCustomers = DB::table('orders')
         ->join('users', 'users.id', '=', 'orders.user_id')
-            ->where('orders.status', 3)
-            ->whereBetween('orders.created_at', [$from, $to])
-            ->select(
-                'users.name',
-                DB::raw('COUNT(*) as orders'),
-                DB::raw('SUM(total) as spending')
-            )
+        ->where('orders.status', 3)
+        ->whereBetween('orders.created_at', [$from, $to])
+        ->select(
+            'users.name',
+            DB::raw('COUNT(*) as orders'),
+            DB::raw('SUM(total + shipping_fee) as spending')
+        )
             ->groupBy('users.id', 'users.name')
             ->orderByDesc('spending')
             ->limit(10)
             ->get();
 
+        /*
+    =====================================
+    TỒN KHO
+    =====================================
+    */
+
         $inventory = DB::table('product_variants')
-            ->selectRaw('
+        ->selectRaw('
             SUM(stock_quantity) as total_qty,
             SUM(stock_quantity * cost_price) as total_value
         ')
-            ->first();
+        ->first();
 
         $lowStock = DB::table('product_variants as pv')
         ->join('products as p', 'p.id', '=', 'pv.product_id')
-            ->where('pv.stock_quantity', '<=', 5)
-            ->select('p.name', 'pv.attribute_value', 'pv.stock_quantity')
-            ->orderBy('pv.stock_quantity')
-            ->limit(10)
+        ->where('pv.stock_quantity', '<=', 5)
+        ->select('p.name', 'pv.attribute_value', 'pv.stock_quantity')
+        ->orderBy('pv.stock_quantity')
+        ->limit(10)
             ->get();
 
         return [
@@ -466,7 +523,7 @@ Doanh thu - giá vốn - phí ship shop chịu
             ->select(
                 'users.name',
                 DB::raw('COUNT(*) as orders'),
-                DB::raw('SUM(total) as spending')
+            DB::raw('SUM(total + shipping_fee) as spending')
             )
             ->groupBy('users.id', 'users.name')
             ->orderByDesc('spending');
@@ -558,6 +615,16 @@ Doanh thu - giá vốn - phí ship shop chịu
             'products' => $products,
             'keyword' => $keyword
         ]);
+    }
+    public function payShipping(Request $request)
+    {
+        DB::table('shipping_payments')->insert([
+            'amount' => $request->amount,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+
+        return back()->with('success', 'Đã thanh toán tiền ship');
     }
     
 }

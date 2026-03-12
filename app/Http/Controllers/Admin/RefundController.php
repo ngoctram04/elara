@@ -99,29 +99,6 @@ class RefundController extends Controller
 
             /*
             |--------------------------------------------------------------------------
-            | Hoàn tồn kho
-            |--------------------------------------------------------------------------
-            */
-
-            foreach ($order->items as $item) {
-
-                $variant = $item->variant;
-
-                if (!$variant) continue;
-
-                $variant->stock_quantity += $item->quantity;
-                $variant->sold_quantity -= $item->quantity;
-
-                if ($variant->sold_quantity < 0) {
-                    $variant->sold_quantity = 0;
-                }
-
-                $variant->save();
-            }
-
-
-            /*
-            |--------------------------------------------------------------------------
             | Huỷ đơn
             |--------------------------------------------------------------------------
             */

@@ -22,6 +22,7 @@ class Order extends Model
         'voucher_discount',     // thêm
         'birthday_discount',    // thêm
         'shipping_fee',
+        'shipping_cost',
         'total',
         'grand_total',
         'promotion_code',
@@ -45,6 +46,7 @@ class Order extends Model
         'voucher_discount' => 'integer',
         'birthday_discount' => 'integer',
         'shipping_fee' => 'integer',
+        'shipping_cost' => 'integer', 
         'total' => 'integer',
         'grand_total' => 'integer',
         'status' => 'integer',
@@ -299,6 +301,7 @@ class Order extends Model
         */
             if (
                 $order->isDirty('status') &&
+                $order->getOriginal('status') != self::STATUS_CANCELLED &&
                 $order->status == self::STATUS_CANCELLED
             ) {
 

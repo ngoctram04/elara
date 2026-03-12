@@ -242,7 +242,7 @@
                 </h5>
 
                 <small class="text-muted">
-                    (Doanh thu sản phẩm: {{ number_format($order->total) }}đ)
+                    (Doanh thu: {{ number_format($order->total + $order->shipping_fee) }}đ)
                 </small>
 
             </div>

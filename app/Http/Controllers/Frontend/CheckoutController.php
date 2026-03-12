@@ -208,24 +208,25 @@ class CheckoutController extends Controller
          * 8. SHIPPING (theo total thực trả)
          * =================================
          */
-        $shippingFee = 0;
+        $shippingCost = $this->calculateShippingFee(
+            $defaultAddress->province,
+            $total
+        );
 
-        if ($defaultAddress) {
+        $shippingFee = $shippingCost;
 
-            $shippingFee = $this->calculateShippingFee(
-                $defaultAddress->province,
-                $total
-            );
+        $isFreeShip = false;
 
-            if ($user) {
-                if ($user->member_level === 'gold' && $total >= 300000) {
-                    $shippingFee = 0;
-                }
+        if ($user->member_level === 'gold' && $total >= 300000) {
+            $isFreeShip = true;
+        }
 
-                if ($user->member_level === 'diamond') {
-                    $shippingFee = 0;
-                }
-            }
+        if ($user->member_level === 'diamond') {
+            $isFreeShip = true;
+        }
+
+        if ($isFreeShip) {
+            $shippingFee = 0;
         }
 
         $shippingFee = round($shippingFee);

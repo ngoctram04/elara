@@ -66,7 +66,7 @@
         <div class="card shadow-sm border-0">
             <div class="card-body">
                 <small class="text-muted">Lợi nhuận</small>
-                <h5 class="text-success fw-bold">
+                <h5 class="fw-bold {{ $profit >=0 ? 'text-success':'text-danger' }}">
                     {{ number_format($profit) }} đ
                 </h5>
             </div>
@@ -111,59 +111,6 @@
         </div>
     </div>
 
-    {{-- Ship khách trả --}}
-    <div class="col-md-2">
-        <div class="card shadow-sm border-0">
-            <div class="card-body">
-                <small class="text-muted">Ship khách trả</small>
-                <h6 class="fw-bold">
-                    {{ number_format($shippingCollected) }} đ
-                </h6>
-            </div>
-        </div>
-    </div>
-
-    {{-- Ship shop trả --}}
-    <div class="col-md-2">
-        <div class="card shadow-sm border-0">
-            <div class="card-body">
-                <small class="text-muted">Ship shop trả</small>
-                <h6 class="text-danger fw-bold">
-                    {{ number_format($shippingPaid) }} đ
-                </h6>
-            </div>
-        </div>
-    </div>
-
-    {{-- Chi phí freeship --}}
-    <div class="col-md-2">
-        <div class="card shadow-sm border-0">
-            <div class="card-body">
-                <small class="text-muted">Chi phí freeship</small>
-                <h6 class="text-warning fw-bold">
-                    {{ number_format($freeShippingLoss) }} đ
-                </h6>
-            </div>
-        </div>
-    </div>
-
-    {{-- Lãi / lỗ vận chuyển --}}
-    <div class="col-md-3">
-        <div class="card shadow-sm border-0">
-            <div class="card-body">
-                <small class="text-muted">Lãi / lỗ vận chuyển</small>
-                <h5 class="fw-bold {{ $shippingProfit < 0 ? 'text-danger' : 'text-success' }}">
-                    {{ number_format($shippingProfit) }} đ
-                </h5>
-            </div>
-        </div>
-    </div>
-
-</div>
-
-{{-- HÀNG KPI PHỤ --}}
-<div class="row mb-4">
-
     {{-- Giá trị tồn kho --}}
     <div class="col-md-3">
         <div class="card shadow-sm border-0">
@@ -187,6 +134,68 @@
             </div>
         </div>
     </div>
+
+<div class="col-md-3">
+<div class="card shadow-sm border-0">
+<div class="card-body">
+
+<small class="text-muted">Tổng hao hụt</small>
+
+<h5 class="fw-bold text-danger">
+{{ number_format($inventoryLoss) }} đ
+</h5>
+
+</div>
+</div>
+</div>
+</div>
+
+
+{{-- KPI SHIPPING --}}
+<div class="row mb-4">
+
+{{-- NỢ SHIP --}}
+<div class="col-md-6">
+<div class="card shadow-sm border-0">
+<div class="card-body">
+
+<small class="text-muted">Nợ đơn vị vận chuyển</small>
+
+<h5 class="fw-bold text-warning">
+{{ number_format($shippingDebt) }} đ
+</h5>
+
+@if($shippingDebt > 0)
+<form method="POST" action="{{ route('admin.reports.payShipping') }}">
+@csrf
+
+<input type="hidden" name="amount" value="{{ $shippingDebt }}">
+
+<button class="btn btn-warning btn-sm mt-2">
+Trả tiền ship
+</button>
+
+</form>
+@endif
+
+</div>
+</div>
+</div>
+
+{{-- ĐÃ TRẢ --}}
+<div class="col-md-6">
+<div class="card shadow-sm border-0">
+<div class="card-body">
+
+<small class="text-muted">Đã trả đơn vị vận chuyển</small>
+
+<h5 class="fw-bold text-success">
+{{ number_format($shippingPaidTotal) }} đ
+</h5>
+
+</div>
+</div>
+</div>
 
 </div>
 
@@ -347,14 +356,25 @@
 let revenueChart = new Chart(document.getElementById('revenueChart'), {
     type: 'line',
     data: {
-        labels: @json($dailyRevenue->pluck('date')),
+        labels: @json($dailyRevenue->pluck('date')->toArray()),
         datasets: [{
             label: 'Doanh thu',
-            data: @json($dailyRevenue->pluck('revenue')),
+            data: @json($dailyRevenue->pluck('revenue')->toArray()),
             tension: 0.3,
             borderWidth: 2,
             fill: false
         }]
+    },
+    options:{
+        scales:{
+            y:{
+                ticks:{
+                    callback:function(value){
+                        return value.toLocaleString() + " đ";
+                    }
+                }
+            }
+        }
     }
 });
 
