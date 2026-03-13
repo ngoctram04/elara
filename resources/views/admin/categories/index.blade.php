@@ -10,7 +10,7 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h5 class="fw-bold mb-1">Danh sách danh mục</h5>
-                <small class="text-muted">Quản lý danh mục cha & danh mục con</small>
+                <small class="text-muted">Quản lý danh mục lớn & danh mục nhỏ</small>
             </div>
 
             <a href="{{ route('admin.categories.create') }}"
@@ -72,7 +72,7 @@
                     <tr>
                         {{-- ID --}}
                         <td class="text-center text-muted fw-semibold">
-                            {{ $category->id }}
+                            #{{ $category->id }}
                         </td>
 
                         {{-- NAME --}}
@@ -111,14 +111,16 @@
                             </a>
 
                             <form method="POST"
-                                  action="{{ route('admin.categories.destroy', $category) }}"
-                                  class="d-inline"
-                                  onsubmit="return confirm('Xóa danh mục này?')">
+                            id="delete-category-{{ $category->id }}"
+                            action="{{ route('admin.categories.destroy', $category) }}"
+                            class="d-inline">
                                 @csrf
                                 @method('DELETE')
-                                <button class="btn btn-sm btn-outline-danger"
-                                        title="Xóa">
-                                    <i class="bi bi-trash"></i>
+                                <button type="button"
+                                class="btn btn-sm btn-outline-danger btn-delete-category"
+                                data-id="{{ $category->id }}"
+                                title="Xóa">
+                                <i class="bi bi-trash"></i>
                                 </button>
                             </form>
                         </td>
@@ -137,3 +139,36 @@
     </div>
 </div>
 @endsection
+@push('scripts')
+
+<script>
+
+document.querySelectorAll('.btn-delete-category').forEach(btn => {
+
+btn.addEventListener('click', function(){
+
+let id = this.dataset.id
+
+Swal.fire({
+title: 'Xóa danh mục?',
+text: 'Hành động này không thể hoàn tác',
+icon: 'warning',
+showCancelButton: true,
+confirmButtonColor: '#dc3545',
+cancelButtonText: 'Hủy',
+confirmButtonText: 'Xóa'
+}).then((result) => {
+
+if(result.isConfirmed){
+document.getElementById('delete-category-'+id).submit()
+}
+
+})
+
+})
+
+})
+
+</script>
+
+@endpush

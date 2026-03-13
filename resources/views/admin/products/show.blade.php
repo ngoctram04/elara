@@ -12,7 +12,6 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="fw-semibold mb-0">
-        <i class="bi bi-box-seam text-primary me-2"></i>
         Chi tiết sản phẩm
     </h4>
 

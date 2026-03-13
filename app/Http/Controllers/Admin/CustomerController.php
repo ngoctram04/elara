@@ -7,13 +7,16 @@ use App\Models\User;
 use App\Models\Order;
 use App\Models\Review;
 use Illuminate\Http\Request;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\Mail;
+use Carbon\Carbon;
+
 class CustomerController extends Controller
 {
 
     /**
-     * Danh sách khách hàng
+     * ================================
+     * DANH SÁCH KHÁCH HÀNG
+     * ================================
      */
     public function index(Request $request)
     {
@@ -21,9 +24,9 @@ class CustomerController extends Controller
             ->where('role', 'customer');
 
         /*
-        |--------------------------------
+        |--------------------------------------------------------------------------
         | TÌM KIẾM
-        |--------------------------------
+        |--------------------------------------------------------------------------
         */
         if ($request->filled('keyword')) {
 
@@ -38,29 +41,27 @@ class CustomerController extends Controller
         }
 
         /*
-        |--------------------------------
+        |--------------------------------------------------------------------------
         | LỌC HẠNG THÀNH VIÊN
-        |--------------------------------
+        |--------------------------------------------------------------------------
         */
         if ($request->filled('member_level')) {
-
             $query->where('member_level', $request->member_level);
         }
 
         /*
-        |--------------------------------
+        |--------------------------------------------------------------------------
         | LỌC TRẠNG THÁI
-        |--------------------------------
+        |--------------------------------------------------------------------------
         */
         if ($request->filled('status')) {
-
-            $query->where('is_active', (int)$request->status);
+            $query->where('is_active', (int) $request->status);
         }
 
         /*
-        |--------------------------------
+        |--------------------------------------------------------------------------
         | SẮP XẾP
-        |--------------------------------
+        |--------------------------------------------------------------------------
         */
         switch ($request->sort) {
 
@@ -87,15 +88,15 @@ class CustomerController extends Controller
             ->withQueryString();
 
         /*
-        |--------------------------------
-        | ĐẾM SỐ ĐƠN HỦY TRONG 7 NGÀY
-        |--------------------------------
+        |--------------------------------------------------------------------------
+        | ĐẾM ĐƠN HỦY TRONG 7 NGÀY
+        |--------------------------------------------------------------------------
         */
         foreach ($customers as $customer) {
 
             $customer->cancel_count = Order::where('user_id', $customer->id)
-                ->where('status', 4) // trạng thái đã hủy
-                ->where('cancelled_by', 'customer') // chỉ tính khách hủy
+                ->where('status', 4) // đã hủy
+                ->where('cancelled_by', 'customer')
                 ->where('updated_at', '>=', Carbon::now()->subDays(7))
                 ->count();
         }
@@ -105,73 +106,78 @@ class CustomerController extends Controller
 
 
     /**
-     * Chi tiết khách hàng
+     * ================================
+     * CHI TIẾT KHÁCH HÀNG
+     * ================================
      */
     public function show(User $user)
     {
         abort_if($user->role !== 'customer', 404);
 
         /*
-        |--------------------------------
-        | ĐƠN HÀNG
-        |--------------------------------
+        |--------------------------------------------------------------------------
+        | LỊCH SỬ ĐƠN HÀNG
+        |--------------------------------------------------------------------------
         */
         $orders = Order::where('user_id', $user->id)
             ->latest()
-            ->take(10)
             ->get();
 
         /*
-        |--------------------------------
+        |--------------------------------------------------------------------------
         | ĐÁNH GIÁ SẢN PHẨM
-        |--------------------------------
+        |--------------------------------------------------------------------------
         */
         $reviews = Review::with('product')
             ->where('user_id', $user->id)
             ->latest()
             ->get();
 
-        return view(
-            'admin.customers.show',
-            compact('user', 'orders', 'reviews')
-        );
+        return view('admin.customers.show', compact(
+            'user',
+            'orders',
+            'reviews'
+        ));
     }
 
 
     /**
-     * Khóa / mở tài khoản
+     * ================================
+     * KHÓA / MỞ TÀI KHOẢN
+     * ================================
      */
     public function toggleStatus(Request $request, User $user)
     {
         abort_if($user->role !== 'customer', 404);
 
         /*
-    |--------------------------------
-    | KHÓA TÀI KHOẢN
-    |--------------------------------
-    */
+        |--------------------------------------------------------------------------
+        | KHÓA TÀI KHOẢN
+        |--------------------------------------------------------------------------
+        */
         if ($user->is_active) {
 
             $validated = $request->validate([
                 'blocked_reason' => 'required|string|min:5|max:1000',
             ], [
                 'blocked_reason.required' => 'Vui lòng nhập lý do khóa tài khoản',
-                'blocked_reason.min'      => 'Lý do phải có ít nhất 5 ký tự',
+                'blocked_reason.min' => 'Lý do phải có ít nhất 5 ký tự',
             ]);
 
             $lockedFrom = now();
             $lockedUntil = now()->addDays(7);
 
-            $user->is_active = false;
-            $user->blocked_reason = $validated['blocked_reason'];
-            $user->locked_until = $lockedUntil;
-            $user->save();
+            $user->update([
+                'is_active' => false,
+                'blocked_reason' => $validated['blocked_reason'],
+                'locked_until' => $lockedUntil
+            ]);
 
             /*
-        |--------------------------------
-        | GỬI MAIL THÔNG BÁO KHÓA
-        |--------------------------------
-        */
+            |--------------------------------------------------------------------------
+            | GỬI MAIL KHÓA
+            |--------------------------------------------------------------------------
+            */
             Mail::send(
                 'emails.account_blocked',
                 [
@@ -189,23 +195,22 @@ class CustomerController extends Controller
             return back()->with('success', 'Đã khóa tài khoản khách hàng (7 ngày)');
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | MỞ KHÓA
+        |--------------------------------------------------------------------------
+        */
+        $user->update([
+            'is_active' => true,
+            'blocked_reason' => null,
+            'locked_until' => null
+        ]);
 
         /*
-    |--------------------------------
-    | MỞ KHÓA TÀI KHOẢN
-    |--------------------------------
-    */
-        $user->is_active = true;
-        $user->blocked_reason = null;
-        $user->locked_until = null;
-        $user->save();
-
-
-        /*
-    |--------------------------------
-    | GỬI MAIL THÔNG BÁO MỞ KHÓA
-    |--------------------------------
-    */
+        |--------------------------------------------------------------------------
+        | GỬI MAIL MỞ KHÓA
+        |--------------------------------------------------------------------------
+        */
         Mail::send(
             'emails.account_unblocked',
             [
@@ -216,7 +221,6 @@ class CustomerController extends Controller
                     ->subject('Tài khoản ELARA đã được mở khóa');
             }
         );
-
 
         return back()->with('success', 'Đã mở khóa tài khoản khách hàng');
     }

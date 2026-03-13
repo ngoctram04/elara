@@ -106,26 +106,30 @@ Nhập kho
 </li>
 
 <li>
-<a href="{{ route('admin.inventory.logs') }}">
-Lịch sử thay đổi tồn kho
+<a href="{{ route('admin.inventory.logs') }}"
+class="{{ request()->is('admin/inventory/logs*') ? 'active' : '' }}">
+Lịch sử tồn kho
 </a>
 </li>
 
 <li>
-<a href="{{ route('admin.inventory.low') }}">
+<a href="{{ route('admin.inventory.low') }}"
+class="{{ request()->is('admin/inventory/low*') ? 'active' : '' }}">
 Sắp hết hàng
 </a>
 </li>
 
 <li>
-<a href="{{ route('admin.inventory.report') }}">
+<a href="{{ route('admin.inventory.report') }}"
+class="{{ request()->is('admin/inventory/report*') ? 'active' : '' }}">
 Báo cáo tồn kho
 </a>
 </li>
 <li>
-    <a href="{{ route('admin.inventory.near_expiry') }}">
-        Lô sắp hết hạn
-    </a>
+    <a href="{{ route('admin.inventory.near_expiry') }}"
+class="{{ request()->is('admin/inventory/near-expiry*') ? 'active' : '' }}">
+Lô sắp hết hạn
+</a>
 </li>
 </ul>
 

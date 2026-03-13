@@ -4,41 +4,75 @@
 
 @section('content')
 
-<div class="container-fluid">
-
-<h4 class="mb-4">
-<i class="bi bi-star-fill text-warning"></i>
-Chi tiết đánh giá
-</h4>
-
-<div class="card shadow-sm border-0">
-
+<div class="card border-0 shadow-sm">
 <div class="card-body">
 
-<div class="row">
+{{-- HEADER --}}
+<div class="d-flex justify-content-between align-items-center mb-4">
+
+<div>
+<h5 class="fw-bold mb-1">
+Chi tiết đánh giá
+</h5>
+
+<small class="text-muted">
+Xem và phản hồi đánh giá của khách hàng
+</small>
+</div>
+
+<a href="{{ route('admin.reviews.index') }}"
+class="btn btn-outline-secondary btn-sm">
+<i class="bi bi-arrow-left"></i>
+Quay lại
+</a>
+
+</div>
+
 
 {{-- ===== THÔNG TIN REVIEW ===== --}}
+<div class="row g-4">
+
+<div class="col-md-8">
+
+<div class="border rounded p-3">
+
+<div class="row mb-2">
+
 <div class="col-md-6">
+<strong>Mã:</strong> #{{ $review->id }}
+</div>
 
-<p>
-<strong>ID:</strong>
-{{ $review->id }}
-</p>
-
-<p>
+<div class="col-md-6">
 <strong>Khách hàng:</strong>
 {{ $review->user->name ?? 'N/A' }}
-</p>
+</div>
 
-<p>
+</div>
+
+
+<div class="row mb-2">
+
+<div class="col-md-6">
 <strong>Sản phẩm:</strong>
 {{ $review->product->name ?? 'N/A' }}
-</p>
+</div>
 
-<p>
+<div class="col-md-6">
+<strong>Ngày đánh giá:</strong>
+{{ $review->created_at->format('d/m/Y H:i') }}
+</div>
+
+</div>
+
+
+<div class="row mb-2">
+
+<div class="col-md-6">
+
 <strong>Rating:</strong>
 
-<span class="text-warning">
+<span class="text-warning ms-2">
+
 @for($i=1;$i<=5;$i++)
 @if($i <= $review->rating)
 <i class="bi bi-star-fill"></i>
@@ -46,40 +80,47 @@ Chi tiết đánh giá
 <i class="bi bi-star"></i>
 @endif
 @endfor
+
 </span>
-
-</p>
-
-<p>
-<strong>Ngày đánh giá:</strong>
-{{ $review->created_at->format('d/m/Y H:i') }}
-</p>
-
-<p>
-<strong>Trạng thái:</strong>
-
-@if($review->is_visible)
-<span class="badge bg-success">Hiển thị</span>
-@else
-<span class="badge bg-secondary">Đã ẩn</span>
-@endif
-
-</p>
 
 </div>
 
+<div class="col-md-6">
+
+<strong>Trạng thái:</strong>
+
+@if($review->is_visible)
+<span class="badge bg-success ms-2">
+Hiển thị
+</span>
+@else
+<span class="badge bg-secondary ms-2">
+Đã ẩn
+</span>
+@endif
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+
 {{-- ===== ẨN / HIỆN ===== --}}
-<div class="col-md-6 text-end">
+<div class="col-md-4 text-end">
 
 <form action="{{ route('admin.reviews.toggle',$review->id) }}" method="POST">
-
 @csrf
 
 <button class="btn btn-warning">
 
 @if($review->is_visible)
+<i class="bi bi-eye-slash"></i>
 Ẩn đánh giá
 @else
+<i class="bi bi-eye"></i>
 Hiện đánh giá
 @endif
 
@@ -94,30 +135,35 @@ Hiện đánh giá
 
 <hr>
 
-{{-- ===== NỘI DUNG REVIEW ===== --}}
-<h6>Nội dung đánh giá</h6>
 
-<div class="border rounded p-3 bg-light">
+{{-- ===== NỘI DUNG REVIEW ===== --}}
+<h6 class="fw-bold mb-2">
+Nội dung đánh giá
+</h6>
+
+<div class="border rounded p-3 bg-light mb-4">
 
 {{ $review->comment }}
 
 </div>
 
-<hr>
+
 
 {{-- ===== ẢNH REVIEW ===== --}}
 @if($review->media->count())
 
-<h6>Ảnh / Video review</h6>
+<h6 class="fw-bold mb-3">
+Ảnh / Video review
+</h6>
 
 <div class="row">
 
 @foreach($review->media as $media)
 
-<div class="col-md-3 mb-3">
+<div class="col-md-3 col-6 mb-3">
 
 <img src="{{ asset('storage/'.$media->file_path) }}"
-class="img-fluid rounded border">
+class="img-fluid rounded border shadow-sm">
 
 </div>
 
@@ -130,8 +176,11 @@ class="img-fluid rounded border">
 @endif
 
 
+
 {{-- ===== ADMIN REPLY ===== --}}
-<h6>Trả lời từ cửa hàng</h6>
+<h6 class="fw-bold mb-2">
+Trả lời từ cửa hàng
+</h6>
 
 <form action="{{ route('admin.reviews.reply',$review->id) }}" method="POST">
 
@@ -164,7 +213,7 @@ Gửi phản hồi
 
 <strong>Phản hồi hiện tại:</strong>
 
-<p class="mb-0">
+<p class="mb-0 mt-1">
 {{ $review->admin_reply }}
 </p>
 
@@ -174,8 +223,6 @@ Gửi phản hồi
 
 
 </div>
-</div>
-
 </div>
 
 @endsection

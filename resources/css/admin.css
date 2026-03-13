@@ -53,6 +53,9 @@ body {
     left: 0;
     bottom: 0;
     z-index: 1000;
+
+    overflow-y: auto;
+    /* thêm dòng này để cuộn */
 }
 
 /* ======================
@@ -271,4 +274,12 @@ body {
     .content {
         padding: 16px;
     }
+}
+.sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 10px;
 }

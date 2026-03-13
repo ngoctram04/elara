@@ -7,10 +7,9 @@
 <div class="card border-0 shadow-sm">
 <div class="card-body p-4">
 
-<h4 class="fw-semibold mb-4">
-    <i class="bi bi-plus-square text-primary"></i>
+<h5 class="fw-semibold mb-4">
     Thêm sản phẩm mới
-</h4>
+</h5>
 
 <form method="POST"
       action="{{ route('admin.products.store') }}"
@@ -78,10 +77,13 @@
     <div class="mb-3">
         <label class="form-label fw-semibold">Ảnh chính</label>
         <input type="file"
-               name="main_image"
-               class="form-control"
-               accept="image/*"
-               required>
+       name="main_image"
+       id="main_image"
+       class="form-control"
+       accept="image/*"
+       required>
+
+<div class="mt-2" id="main-image-preview"></div>
     </div>
 
     <div class="mb-3">
@@ -136,9 +138,11 @@
 
             <div class="col-md-2">
                 <input type="file"
-                       name="variants[0][image]"
-                       class="form-control"
-                       accept="image/*">
+       name="variants[0][image]"
+       class="form-control variant-image"
+       accept="image/*">
+
+<div class="variant-preview mt-2"></div>
             </div>
 
         </div>
@@ -250,11 +254,15 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
 
                     <div class="col-md-2">
-                        <input type="file"
-                               name="variants[${variantIndex}][image]"
-                               class="form-control"
-                               accept="image/*">
-                    </div>
+    <input type="file"
+           name="variants[${variantIndex}][image]"
+           class="form-control variant-image"
+           accept="image/*">
+</div>
+
+</div>
+
+<div class="variant-preview mt-2"></div>
 
                 </div>
 
@@ -284,6 +292,66 @@ document.addEventListener('DOMContentLoaded', function () {
             if (item) item.remove();
         }
     });
+
+});
+/* =============================
+   Preview ảnh chính
+============================= */
+
+const mainImageInput = document.getElementById('main_image');
+const mainPreview = document.getElementById('main-image-preview');
+
+if (mainImageInput) {
+    mainImageInput.addEventListener('change', function () {
+
+        mainPreview.innerHTML = '';
+
+        const file = this.files[0];
+        if (!file || !file.type.startsWith('image/')) return;
+
+        const reader = new FileReader();
+
+        reader.onload = function(e){
+            mainPreview.innerHTML = `
+                <img src="${e.target.result}"
+                     class="img-thumbnail"
+                     style="height:120px;object-fit:cover">
+            `;
+        }
+
+        reader.readAsDataURL(file);
+    });
+}
+
+
+/* =============================
+   Preview ảnh biến thể
+============================= */
+
+document.addEventListener('change', function(e){
+
+    if(!e.target.classList.contains('variant-image')) return;
+
+    const input = e.target;
+    const wrapper = input.closest('.variant-item');
+    const preview = wrapper.querySelector('.variant-preview');
+
+    preview.innerHTML = '';
+
+    const file = input.files[0];
+    if(!file || !file.type.startsWith('image/')) return;
+
+    const reader = new FileReader();
+
+    reader.onload = function(ev){
+        preview.innerHTML = `
+            <img src="${ev.target.result}"
+                 class="img-thumbnail"
+                 style="height:90px;object-fit:cover">
+        `;
+    }
+
+    reader.readAsDataURL(file);
 
 });
 </script>

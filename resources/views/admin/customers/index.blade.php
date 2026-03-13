@@ -6,7 +6,7 @@
 <div class="card shadow-sm border-0">
 <div class="card-body">
 
-<h5 class="fw-semibold mb-3">Danh sách khách hàng</h5>
+<h5 class="fw-bold mb-1" >Danh sách khách hàng</h5>
 
 {{-- ALERT --}}
 @if($errors->any())
@@ -133,7 +133,7 @@ class="btn btn-outline-secondary">
 
 <tr>
 
-<td>{{ $customer->id }}</td>
+<td>#{{ $customer->id }}</td>
 
 <td>{{ $customer->name }}</td>
 
@@ -323,16 +323,16 @@ Xác nhận khóa
 @else
 
 <form method="POST"
+id="unblock-form-{{ $customer->id }}"
 action="{{ route('admin.customers.toggle-status',$customer) }}"
 class="d-inline">
 
 @csrf
 
-<button class="btn btn-sm btn-success"
-onclick="return confirm('Bạn có chắc muốn mở lại tài khoản này?')">
-
+<button type="button"
+class="btn btn-sm btn-success btn-unblock"
+data-id="{{ $customer->id }}">
 Mở
-
 </button>
 
 </form>
@@ -373,3 +373,34 @@ Không có khách hàng
 </div>
 </div>
 @endsection
+@push('scripts')
+<script>
+
+document.querySelectorAll('.btn-unblock').forEach(btn => {
+
+btn.addEventListener('click', function(){
+
+let id = this.dataset.id
+
+Swal.fire({
+title: 'Mở lại tài khoản?',
+text: 'Bạn có chắc muốn mở lại tài khoản này?',
+icon: 'question',
+showCancelButton: true,
+confirmButtonColor: '#16a34a',
+cancelButtonText: 'Hủy',
+confirmButtonText: 'Mở tài khoản'
+}).then((result) => {
+
+if(result.isConfirmed){
+document.getElementById('unblock-form-'+id).submit()
+}
+
+})
+
+})
+
+})
+
+</script>
+@endpush

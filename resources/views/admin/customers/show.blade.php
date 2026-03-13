@@ -4,114 +4,175 @@
 
 @section('content')
 
-<div class="card shadow-sm border-0">
+{{-- ================= KHÁCH HÀNG ================= --}}
+
+<div class="card shadow-sm border-0 mb-4">
 <div class="card-body">
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-<h5 class="fw-semibold mb-0">Chi tiết khách hàng</h5>
+
+<h5 class="fw-semibold mb-0">
+Chi tiết khách hàng
+</h5>
 
 <a href="{{ route('admin.customers.index') }}"
-class="btn btn-sm btn-secondary">
-← Quay lại
-</a>
+class="btn btn-sm btn-outline-secondary">
+← Quay lại </a>
+
 </div>
 
-<div class="row">
+<div class="row align-items-center">
 
 {{-- AVATAR --}}
+
 <div class="col-md-3 text-center">
 
-<img src="{{ $user->avatar
-? asset('storage/'.$user->avatar)
-: asset('images/default-avatar.png') }}"
-class="rounded-circle border mb-3"
-width="120" height="120">
+<img
+src="{{ $user->avatar ? asset('storage/'.$user->avatar) : asset('images/default-avatar.png') }}"
+class="rounded-circle shadow-sm mb-3"
+style="width:120px;height:120px;object-fit:cover"
 
-<h6 class="fw-semibold">{{ $user->name }}</h6>
+>
 
-@if($user->is_active)
-<span class="badge bg-success">Hoạt động</span>
-@else
-<span class="badge bg-danger">Đã khóa</span>
+<h6 class="fw-semibold mb-1">
+{{ $user->name }}
+</h6>
+
+@if($user->is_active) <span class="badge bg-success">Hoạt động</span>
+@else <span class="badge bg-danger">Đã khóa</span>
 @endif
 
 </div>
 
-
 {{-- THÔNG TIN --}}
+
 <div class="col-md-9">
 
-<table class="table table-borderless">
+<div class="row g-3">
 
-<tr>
-<th width="180">Email</th>
-<td>{{ $user->email }}</td>
-</tr>
+<div class="col-md-6">
+<div class="bg-light rounded p-3">
 
-<tr>
-<th>Số điện thoại</th>
-<td>{{ $user->phone ?? '—' }}</td>
-</tr>
+<div class="text-muted small">
+Email
+</div>
 
-<tr>
-<th>Ngày tham gia</th>
-<td>{{ $user->created_at->format('d/m/Y') }}</td>
-</tr>
+<div class="fw-semibold">
+{{ $user->email }}
+</div>
 
-<tr>
-<th>Hạng thành viên</th>
-<td>
+</div>
+</div>
+
+<div class="col-md-6">
+<div class="bg-light rounded p-3">
+
+<div class="text-muted small">
+Số điện thoại
+</div>
+
+<div class="fw-semibold">
+{{ $user->phone ?? '—' }}
+</div>
+
+</div>
+</div>
+
+<div class="col-md-6">
+<div class="bg-light rounded p-3">
+
+<div class="text-muted small">
+Ngày tham gia
+</div>
+
+<div class="fw-semibold">
+{{ $user->created_at->format('d/m/Y') }}
+</div>
+
+</div>
+</div>
+
+<div class="col-md-6">
+<div class="bg-light rounded p-3">
+
+<div class="text-muted small">
+Hạng thành viên
+</div>
+
+<div>
 
 @switch($user->member_level)
 
-@case('bronze')
-<span class="badge bg-secondary">Đồng</span>
+@case('bronze') <span class="badge bg-secondary">Đồng</span>
 @break
 
-@case('silver')
-<span class="badge bg-info text-dark">Bạc</span>
+@case('silver') <span class="badge bg-info text-dark">Bạc</span>
 @break
 
-@case('gold')
-<span class="badge bg-warning text-dark">Vàng</span>
+@case('gold') <span class="badge bg-warning text-dark">Vàng</span>
 @break
 
-@case('diamond')
-<span class="badge bg-primary">Kim cương</span>
+@case('diamond') <span class="badge bg-primary">Kim cương</span>
 @break
+
+@default <span class="text-muted">—</span>
 
 @endswitch
 
-</td>
-</tr>
-
-<tr>
-<th>Điểm hiện có</th>
-<td>{{ number_format($user->loyalty_points) }}</td>
-</tr>
-
-<tr>
-<th>Tổng chi tiêu</th>
-<td>{{ number_format($user->total_spent) }} đ</td>
-</tr>
-
-</table>
-
-</div>
-
 </div>
 
 </div>
 </div>
 
+<div class="col-md-6">
+<div class="bg-light rounded p-3">
 
-{{-- LỊCH SỬ MUA HÀNG --}}
-<div class="card shadow-sm border-0 mt-4">
+<div class="text-muted small">
+Điểm hiện có
+</div>
+
+<div class="fw-semibold">
+{{ number_format($user->loyalty_points) }}
+</div>
+
+</div>
+</div>
+
+<div class="col-md-6">
+<div class="bg-light rounded p-3">
+
+<div class="text-muted small">
+Tổng chi tiêu
+</div>
+
+<div class="fw-semibold text-success">
+{{ number_format($user->total_spent) }} đ
+</div>
+
+</div>
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+</div>
+
+{{-- ================= LỊCH SỬ MUA ================= --}}
+
+<div class="card shadow-sm border-0 mb-4">
 <div class="card-body">
 
-<h6 class="fw-semibold mb-3">Lịch sử mua hàng</h6>
+<h6 class="fw-semibold mb-3">
+Lịch sử mua hàng
+</h6>
 
-<table class="table table-hover">
+<div class="table-responsive">
+
+<table class="table table-hover align-middle">
 
 <thead>
 <tr>
@@ -123,21 +184,25 @@ width="120" height="120">
 </tr>
 </thead>
 
-<tbody>
+<tbody id="orderTable">
 
-@forelse($orders as $order)
+@foreach($orders as $key => $order)
 
-<tr>
+<tr class="order-row {{ $key >= 5 ? 'd-none extra-order' : '' }}">
 
 <td>#{{ $order->id }}</td>
 
-<td>{{ $order->created_at->format('d/m/Y') }}</td>
+<td>
+{{ $order->created_at->format('d/m/Y') }}
+</td>
 
-<td>{{ number_format($order->grand_total) }} đ</td>
+<td>
+{{ number_format($order->grand_total) }} đ
+</td>
 
 <td>
 
-@switch($order->status)
+@switch((int)$order->status)
 
 @case(1)
 <span class="badge bg-secondary">Đang xử lý</span>
@@ -155,44 +220,68 @@ width="120" height="120">
 <span class="badge bg-danger">Đã huỷ</span>
 @break
 
+@case(5)
+<span class="badge bg-warning text-dark">Hoàn hàng</span>
+@break
+
+@default
+<span class="badge bg-light text-dark">
+{{ $order->status }}
+</span>
+
 @endswitch
 
 </td>
 
 <td>
+
 <a href="{{ route('admin.orders.show',$order->id) }}"
 class="btn btn-sm btn-primary">
-Xem
-</a>
+Xem </a>
+
 </td>
 
 </tr>
 
-@empty
-
-<tr>
-<td colspan="5" class="text-center text-muted">
-Chưa có đơn hàng
-</td>
-</tr>
-
-@endforelse
+@endforeach
 
 </tbody>
 
 </table>
 
 </div>
+
+@if($orders->count() > 5)
+
+<div class="text-center">
+
+<button class="btn btn-sm btn-outline-primary"
+onclick="toggleOrders()"
+id="toggleOrderBtn">
+
+Xem tất cả
+
+</button>
+
 </div>
 
+@endif
 
-{{-- SẢN PHẨM ĐÃ ĐÁNH GIÁ --}}
-<div class="card shadow-sm border-0 mt-4">
+</div>
+</div>
+
+{{-- ================= ĐÁNH GIÁ ================= --}}
+
+<div class="card shadow-sm border-0">
 <div class="card-body">
 
-<h6 class="fw-semibold mb-3">Sản phẩm đã đánh giá</h6>
+<h6 class="fw-semibold mb-3">
+Sản phẩm đã đánh giá
+</h6>
 
-<table class="table table-hover">
+<div class="table-responsive">
+
+<table class="table table-hover align-middle">
 
 <thead>
 <tr>
@@ -205,11 +294,13 @@ Chưa có đơn hàng
 
 <tbody>
 
-@forelse($reviews as $review)
+@foreach($reviews as $key => $review)
 
-<tr>
+<tr class="{{ $key >= 5 ? 'd-none extra-review' : '' }}">
 
-<td>{{ $review->product->name }}</td>
+<td>
+{{ $review->product->name }}
+</td>
 
 <td>
 
@@ -223,27 +314,76 @@ Chưa có đơn hàng
 
 </td>
 
-<td>{{ $review->content }}</td>
-
-<td>{{ $review->created_at->format('d/m/Y') }}</td>
-
-</tr>
-
-@empty
-
-<tr>
-<td colspan="4" class="text-center text-muted">
-Chưa có đánh giá
+<td>
+{{ $review->content }}
 </td>
+
+<td>
+{{ $review->created_at->format('d/m/Y') }}
+</td>
+
 </tr>
 
-@endforelse
+@endforeach
 
 </tbody>
 
 </table>
 
 </div>
+
+@if($reviews->count() > 5)
+
+<div class="text-center">
+
+<button class="btn btn-sm btn-outline-primary"
+onclick="toggleReviews()"
+id="toggleReviewBtn">
+
+Xem tất cả
+
+</button>
+
+</div>
+
+@endif
+
+</div>
 </div>
 
 @endsection
+
+@push('scripts')
+
+<script>
+
+function toggleOrders(){
+
+let rows = document.querySelectorAll('.extra-order')
+let btn = document.getElementById('toggleOrderBtn')
+
+rows.forEach(row => row.classList.toggle('d-none'))
+
+btn.innerText = btn.innerText === 'Xem tất cả'
+? 'Thu gọn'
+: 'Xem tất cả'
+
+}
+
+
+function toggleReviews(){
+
+let rows = document.querySelectorAll('.extra-review')
+let btn = document.getElementById('toggleReviewBtn')
+
+rows.forEach(row => row.classList.toggle('d-none'))
+
+btn.innerText = btn.innerText === 'Xem tất cả'
+? 'Thu gọn'
+: 'Xem tất cả'
+
+}
+
+</script>
+
+@endpush

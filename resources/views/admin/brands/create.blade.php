@@ -25,7 +25,7 @@
             </div>
 
             <div class="d-flex gap-2">
-                <button class="btn btn-success">
+                <button class="btn btn-primary btn-sm">
                     <i class="bi bi-save"></i> Lưu
                 </button>
 

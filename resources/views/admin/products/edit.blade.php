@@ -8,7 +8,6 @@
 <div class="card-body p-4">
 
 <h4 class="fw-semibold mb-4">
-    <i class="bi bi-pencil-square text-warning"></i>
     Chỉnh sửa sản phẩm
 </h4>
 
@@ -81,14 +80,16 @@
     <div class="mb-3">
         <label class="form-label fw-semibold">Ảnh đại diện</label>
         @if($product->mainImage)
-            <img src="{{ $product->mainImage->url }}"
-                 class="img-thumbnail d-block mb-2"
-                 style="height:120px">
+            <img id="main-image-preview"
+     src="{{ $product->mainImage?->url }}"
+     class="img-thumbnail d-block mb-2"
+     style="height:120px;object-fit:cover">
         @endif
         <input type="file"
-               name="main_image"
-               class="form-control"
-               accept="image/*">
+       id="main_image"
+       name="main_image"
+       class="form-control"
+       accept="image/*">
     </div>
 
     {{-- ẢNH PHỤ --}}
@@ -188,9 +189,9 @@
     </small>
 
     @if($variant->images->first())
-        <img src="{{ $variant->images->first()->url }}"
-             class="img-thumbnail mt-2 variant-preview"
-             style="height:70px">
+        <img src="{{ $variant->images->first()?->url }}"
+     class="img-thumbnail mt-2 variant-preview"
+     style="height:70px;object-fit:cover">
     @endif
 
     <button type="button"
@@ -359,5 +360,30 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
 });
+/* ======================================
+   PREVIEW ẢNH CHÍNH
+====================================== */
+const mainImageInput = document.getElementById('main_image');
+const mainPreview = document.getElementById('main-image-preview');
+
+if (mainImageInput) {
+
+    mainImageInput.addEventListener('change', function () {
+
+        const file = this.files[0];
+        if (!file || !file.type.startsWith('image/')) return;
+
+        const reader = new FileReader();
+
+        reader.onload = function(e){
+            mainPreview.src = e.target.result;
+        }
+
+        reader.readAsDataURL(file);
+
+    });
+
+}
+
 </script>
 @endpush

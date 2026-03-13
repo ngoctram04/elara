@@ -96,9 +96,9 @@ class CategoryController extends Controller
 
         return $category->parent_id
             ? redirect()->route('admin.categories.show', $category->parent_id)
-            ->with('success', 'Thêm danh mục con thành công')
+            ->with('success', 'Thêm danh mục nhỏ thành công')
             : redirect()->route('admin.categories.index')
-            ->with('success', 'Thêm danh mục cha thành công');
+            ->with('success', 'Thêm danh mục lớn thành công');
     }
 
     /*
@@ -166,7 +166,7 @@ class CategoryController extends Controller
 
         return $category->parent_id
             ? redirect()->route('admin.categories.show', $category->parent_id)
-            ->with('success', 'Cập nhật danh mục con thành công')
+            ->with('success', 'Cập nhật danh mục nhỏ thành công')
             : redirect()->route('admin.categories.index')
             ->with('success', 'Cập nhật danh mục thành công');
     }
@@ -180,7 +180,7 @@ class CategoryController extends Controller
     {
         // ❌ Không cho xóa danh mục cha khi còn danh mục con
         if ($category->parent_id === null && $category->children()->exists()) {
-            return back()->with('error', 'Không thể xóa danh mục đang chứa danh mục con');
+            return back()->with('error', 'Không thể xóa danh mục đang chứa danh mục nhỏ');
         }
 
         $parentId = $category->parent_id;
@@ -188,7 +188,7 @@ class CategoryController extends Controller
 
         return $parentId
             ? redirect()->route('admin.categories.show', $parentId)
-            ->with('success', 'Xóa danh mục con thành công')
+            ->with('success', 'Xóa danh mục nhỏ thành công')
             : redirect()->route('admin.categories.index')
             ->with('success', 'Xóa danh mục thành công');
     }

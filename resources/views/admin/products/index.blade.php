@@ -4,23 +4,21 @@
 
 @section('content')
 
-<div class="container-fluid">
 <div class="card border-0 shadow-sm">
-<div class="card-body p-4">
+<div class="card-body">
 
 {{-- HEADER --}}
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h4 class="fw-bold mb-1">
-            <i class="bi bi-box-seam text-primary me-2"></i>
+        <h5 class="fw-bold mb-1">
             Danh sách sản phẩm
-        </h4>
+        </h5>
         <small class="text-muted">Quản lý toàn bộ sản phẩm trong hệ thống</small>
     </div>
 
 <a href="{{ route('admin.products.create') }}"
-   class="btn btn-success btn-sm">
+   class="btn btn-primary btn-sm">
     <i class="bi bi-plus-lg me-1"></i> Thêm sản phẩm
 </a>
 
@@ -79,14 +77,17 @@
     </select>
 </div>
 
-<div class="col-md-3 text-end">
-    <button class="btn btn-primary btn-sm">
-        <i class="bi bi-funnel"></i> Lọc
-    </button>
-    <a href="{{ route('admin.products.index') }}"
-       class="btn btn-outline-secondary btn-sm">
-        Đặt lại
-    </a>
+<div class="col-md-3 d-flex gap-2">
+
+<button class="btn btn-outline-primary btn-sm">
+    <i class="bi bi-search"></i> Lọc
+</button>
+
+<a href="{{ route('admin.products.index') }}"
+   class="btn btn-outline-secondary btn-sm">
+    Đặt lại
+</a>
+
 </div>
 
 </form>
@@ -97,7 +98,7 @@
 <table class="table table-hover align-middle mb-0">
 <thead class="table-light text-center">
 <tr>
-    <th width="60">ID</th>
+    <th width="60">Mã</th>
     <th width="80">Ảnh</th>
     <th>Tên sản phẩm</th>
     <th width="160">Giá</th>
@@ -115,7 +116,7 @@
 <tr>
 
 <td class="text-center text-muted fw-semibold">
-    {{ $product->id }}
+    #{{ $product->id }}
 </td>
 
 <td class="text-center">
@@ -283,7 +284,6 @@ Không có dữ liệu
 
 </div>
 
-</div>
 </div>
 </div>
 @endsection
