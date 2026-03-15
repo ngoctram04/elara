@@ -41,7 +41,7 @@ class InventoryController extends Controller
 
         $logs = $query
             ->latest()
-            ->paginate(30)
+            ->paginate(20)
             ->withQueryString();
 
         return view('admin.inventory.logs', compact('logs'));

@@ -4,42 +4,74 @@
 
 @section('content')
 
-<div class="container-fluid">
+<div class="card border-0 shadow-sm">
 
-<div class="card shadow border-0">
+<div class="card-body">
 
-<div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+{{-- HEADER --}}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
 
 <div>
-<h5 class="mb-0">
-<i class="bi bi-clock-history me-2"></i>
+<h5 class="fw-bold mb-1">
 Lịch sử nhập kho
 </h5>
-<small>Danh sách các phiếu nhập</small>
+
+<small class="text-muted">
+Danh sách các phiếu nhập kho trong hệ thống
+</small>
 </div>
 
-<a href="{{ route('admin.stock.create') }}" class="btn btn-primary btn-sm">
-<i class="bi bi-plus-lg"></i> Nhập hàng
+<a href="{{ route('admin.stock.create') }}"
+class="btn btn-primary btn-sm">
+
+<i class="bi bi-plus-lg me-1"></i>
+Nhập hàng
+
 </a>
 
 </div>
 
-<div class="card-body p-0">
+{{-- TABLE --}}
 
 <div class="table-responsive">
 
-<table class="table table-bordered table-hover align-middle mb-0">
+<table class="table table-hover align-middle mb-0">
 
 <thead class="table-light">
+
 <tr>
-<th width="80">STT</th>
-<th width="180">Mã phiếu</th>
-<th width="200">Nhà cung cấp</th>
-<th width="120">Số SP</th>
-<th width="140">Tổng SL</th>
-<th width="180">Ngày nhập</th>
-<th width="140">Thao tác</th>
+
+<th style="width:80px" class="text-center">
+STT
+</th>
+
+<th style="width:180px">
+Mã phiếu
+</th>
+
+<th>
+Nhà cung cấp
+</th>
+
+<th style="width:120px" class="text-center">
+Số SP
+</th>
+
+<th style="width:140px" class="text-center">
+Tổng SL
+</th>
+
+<th style="width:180px" class="text-center">
+Ngày nhập
+</th>
+
+<th style="width:140px" class="text-center">
+Thao tác
+</th>
+
 </tr>
+
 </thead>
 
 <tbody>
@@ -48,7 +80,7 @@ Lịch sử nhập kho
 
 <tr>
 
-<td>
+<td class="text-center text-muted fw-semibold">
 {{ $imports->firstItem() + $index }}
 </td>
 
@@ -58,32 +90,38 @@ Lịch sử nhập kho
 </span>
 </td>
 
-<td>
+<td class="fw-medium">
 {{ $item->supplier ?? '—' }}
 </td>
 
-<td>
+<td class="text-center">
+
 <span class="badge bg-info">
 {{ $item->total_items }}
 </span>
+
 </td>
 
-<td>
+<td class="text-center">
+
 <span class="badge bg-success">
 {{ $item->total_qty }}
 </span>
+
 </td>
 
-<td>
-{{ \Carbon\Carbon::parse($item->created_at)->format('d/m/Y H:i') }}
+<td class="text-center text-muted small">
+
+{{ optional($item->created_at)->format('d/m/Y H:i') }}
+
 </td>
 
-<td>
+<td class="text-center">
 
 <a href="{{ url('admin/stock-import/'.$item->code) }}"
 class="btn btn-sm btn-outline-primary">
 
-<i class="bi bi-eye"></i> Xem
+<i class="bi bi-eye"></i>
 
 </a>
 
@@ -94,10 +132,15 @@ class="btn btn-sm btn-outline-primary">
 @empty
 
 <tr>
-<td colspan="7" class="text-center py-4">
-<i class="bi bi-inbox"></i>
+
+<td colspan="7"
+class="text-center text-muted py-4">
+
+<i class="bi bi-inbox me-1"></i>
 Chưa có phiếu nhập kho
+
 </td>
+
 </tr>
 
 @endforelse
@@ -108,16 +151,18 @@ Chưa có phiếu nhập kho
 
 </div>
 
-</div>
+{{-- PAGINATION --}}
+@if($imports->hasPages())
 
-<div class="card-footer">
+<div class="mt-4">
 
 {{ $imports->links('pagination::bootstrap-5') }}
 
 </div>
 
-</div>
+@endif
 
+</div>
 </div>
 
 @endsection

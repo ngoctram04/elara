@@ -4,61 +4,72 @@
 
 @section('content')
 
-<div class="container-fluid">
+<div class="card border-0 shadow-sm">
+
+<div class="card-body">
+
+{{-- HEADER --}}
+<div class="d-flex justify-content-between align-items-center mb-4">
+
+<div>
+<h5 class="fw-bold mb-1">
+Nhập hàng vào kho
+</h5>
+
+<small class="text-muted">
+Tạo phiếu nhập nhiều biến thể sản phẩm
+</small>
+</div>
+
+<a href="{{ route('admin.stock.history') }}"
+class="btn btn-outline-secondary btn-sm">
+
+<i class="bi bi-clock-history me-1"></i>
+Lịch sử nhập
+
+</a>
+
+</div>
+
 
 @if(session('success'))
-
 <div class="alert alert-success alert-dismissible fade show">
 {{ session('success') }}
 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
 </div>
 @endif
 
-<div class="card shadow border-0">
 
-<div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-
-<div>
-<h5 class="mb-0">
-<i class="bi bi-box-arrow-in-down me-2"></i>
-Nhập hàng vào kho
-</h5>
-<small>Tạo phiếu nhập nhiều biến thể</small>
-</div>
-
-<a href="{{ route('admin.stock.history') }}" class="btn btn-light btn-sm">
-<i class="bi bi-clock-history"></i> Lịch sử nhập
-</a>
-
-</div>
-
-<div class="card-body p-4">
-
+{{-- FORM --}}
 <form action="{{ route('admin.stock.store') }}" method="POST">
 @csrf
 
-<div class="row g-4 mb-4">
+<div class="row g-3 mb-4">
 
 <div class="col-md-6">
+
 <label class="form-label fw-semibold">
-<i class="bi bi-building"></i> Nhà cung cấp
+<i class="bi bi-building me-1"></i>
+Nhà cung cấp
 </label>
 
 <input type="text"
 name="supplier"
-class="form-control"
+class="form-control form-control-sm"
 placeholder="Ví dụ: Cocoon Việt Nam">
 
 </div>
 
 <div class="col-md-6">
+
 <label class="form-label fw-semibold">
-<i class="bi bi-pencil-square"></i> Ghi chú
+<i class="bi bi-pencil-square me-1"></i>
+Ghi chú
 </label>
 
 <input type="text"
 name="note"
-class="form-control"
+class="form-control form-control-sm"
 placeholder="Ghi chú cho lô hàng">
 
 </div>
@@ -68,23 +79,25 @@ placeholder="Ghi chú cho lô hàng">
 <hr class="mb-4">
 
 <h6 class="fw-bold mb-3">
-<i class="bi bi-box-seam"></i>
 Danh sách sản phẩm nhập
 </h6>
 
+
 <div class="table-responsive">
 
-<table class="table table-bordered align-middle" id="importTable">
+<table class="table table-hover align-middle mb-0" id="importTable">
 
 <thead class="table-light">
 
 <tr>
-<th width="30%">Biến thể</th>
-<th width="120">SL</th>
-<th width="150">Giá nhập</th>
-<th width="170">Ngày sản xuất</th>
-<th width="170">Hạn sử dụng</th>
-<th width="60"></th>
+
+<th style="width:30%">Biến thể</th>
+<th style="width:120px">SL</th>
+<th style="width:150px">Giá nhập</th>
+<th style="width:170px">Ngày sản xuất</th>
+<th style="width:170px">Hạn sử dụng</th>
+<th style="width:60px"></th>
+
 </tr>
 
 </thead>
@@ -95,9 +108,13 @@ Danh sách sản phẩm nhập
 
 <td>
 
-<select name="variant_id[]" class="form-select variant-select" required>
+<select name="variant_id[]"
+class="form-select form-select-sm variant-select"
+required>
 
-<option value="">-- Chọn biến thể --</option>
+<option value="">
+-- Chọn biến thể --
+</option>
 
 @foreach($variants as $v)
 
@@ -123,39 +140,56 @@ data-stock="{{ $v->stock_quantity }}">
 
 </td>
 
+
 <td>
+
 <input type="number"
 name="quantity[]"
-class="form-control qty"
+class="form-control form-control-sm qty"
 min="1"
 required>
+
 </td>
 
+
 <td>
+
 <input type="number"
 name="cost_price[]"
-class="form-control price"
+class="form-control form-control-sm price"
 min="0"
 required>
+
 </td>
 
+
 <td>
+
 <input type="date"
 name="mfg_date[]"
-class="form-control">
+class="form-control form-control-sm">
+
 </td>
+
 
 <td>
+
 <input type="date"
 name="expiry_date[]"
-class="form-control">
+class="form-control form-control-sm">
+
 </td>
 
+
 <td class="text-center">
+
 <button type="button"
-class="btn btn-danger btn-sm removeRow">
+class="btn btn-sm btn-outline-danger removeRow">
+
 <i class="bi bi-x-lg"></i>
+
 </button>
+
 </td>
 
 </tr>
@@ -166,44 +200,49 @@ class="btn btn-danger btn-sm removeRow">
 
 </div>
 
-<div class="mb-3">
+
+{{-- ADD ROW --}}
+<div class="mt-3 mb-3">
 
 <button type="button"
 id="addRow"
 class="btn btn-primary btn-sm">
 
-<i class="bi bi-plus-lg"></i>
+<i class="bi bi-plus-lg me-1"></i>
 Thêm biến thể
 
 </button>
 
 </div>
 
-<div class="text-end fw-bold mb-4">
 
-Tổng tiền nhập: <span id="totalCost">0</span> đ
+{{-- TOTAL --}}
+<div class="text-end fw-semibold mb-4">
+
+Tổng tiền nhập:
+
+<span id="totalCost" class="text-danger">
+0
+</span> đ
 
 </div>
 
-<div class="d-flex gap-3">
 
-<button class="btn btn-success px-4">
-<i class="bi bi-check-circle"></i>
+{{-- ACTION --}}
+<div class="d-flex gap-2">
+
+<button class="btn btn-success btn-sm px-4">
+
+<i class="bi bi-check-circle me-1"></i>
 Lưu phiếu nhập
-</button>
 
-<a href="{{ route('admin.stock.history') }}"
-class="btn btn-outline-secondary"> <i class="bi bi-clock-history"></i>
-Xem lịch sử </a>
+</button>
 
 </div>
 
 </form>
 
 </div>
-
-</div>
-
 </div>
 
 <script>

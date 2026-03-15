@@ -1,31 +1,80 @@
 @extends('layouts.admin')
 
+@section('title','Lô sản phẩm sắp hết hạn')
+
 @section('content')
 
-<div class="container-fluid">
+<div class="card border-0 shadow-sm">
 
-<h3 class="mb-4">📦 Lô sản phẩm sắp hết hạn</h3>
+<div class="card-body">
 
-<div class="alert alert-warning">
-    <b>Quy tắc hệ thống:</b><br>
-    🟡 Còn ≤ 7 tháng → nên giảm giá / sale để bán nhanh.<br>
-    🔴 Còn ≤ 6 tháng → hệ thống sẽ tự động huỷ tồn kho.
+{{-- HEADER --}}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+
+<div>
+<h5 class="fw-bold mb-1">
+Lô sản phẩm sắp hết hạn
+</h5>
+
+<small class="text-muted">
+Theo dõi các lô hàng gần đến hạn sử dụng
+</small>
 </div>
 
-<div class="card shadow-sm border-0">
-<div class="card-body p-0">
+<span class="badge bg-warning text-dark">
+{{ $lots->total() }} lô
+</span>
+
+</div>
+
+{{-- ALERT --}}
+
+<div class="alert alert-warning mb-4">
+
+<b>Quy tắc hệ thống:</b><br>
+
+🟡 Còn ≤ <b>7 tháng</b> → nên giảm giá / sale để bán nhanh.<br>
+🔴 Còn ≤ <b>6 tháng</b> → hệ thống sẽ tự động huỷ tồn kho.
+
+</div>
+
+{{-- TABLE --}}
+
+<div class="table-responsive">
 
 <table class="table table-hover align-middle mb-0">
 
 <thead class="table-light">
+
 <tr>
-    <th width="80">Ảnh</th>
-    <th>Sản phẩm</th>
-    <th>Biến thể</th>
-    <th width="120">Số lượng</th>
-    <th width="150">Hạn sử dụng</th>
-    <th width="180">Trạng thái</th>
+
+<th style="width:80px">
+Ảnh
+</th>
+
+<th>
+Sản phẩm
+</th>
+
+<th>
+Biến thể
+</th>
+
+<th style="width:120px" class="text-center">
+Số lượng
+</th>
+
+<th style="width:150px" class="text-center">
+Hạn sử dụng
+</th>
+
+<th style="width:180px" class="text-center">
+Trạng thái
+</th>
+
 </tr>
+
 </thead>
 
 <tbody>
@@ -33,23 +82,31 @@
 @forelse($lots as $lot)
 
 @php
-    $months = \Carbon\Carbon::now()->diffInMonths($lot->expiry_date, false);
+$months = \Carbon\Carbon::now()->diffInMonths($lot->expiry_date, false);
 @endphp
 
 <tr>
 
 <td>
+
 @if($lot->image_path)
+
 <img src="{{ asset('storage/'.$lot->image_path) }}"
-     width="50"
-     class="rounded">
+width="50"
+class="rounded border">
+
 @else
-<span class="text-muted">No image</span>
+
+<span class="text-muted small">
+No image
+</span>
+
 @endif
+
 </td>
 
-<td>
-<b>{{ $lot->product_name }}</b>
+<td class="fw-medium">
+{{ $lot->product_name }}
 </td>
 
 <td>
@@ -57,17 +114,21 @@
 {{ $lot->attribute_value ?? '' }}
 </td>
 
-<td>
+<td class="text-center">
+
 <span class="badge bg-dark">
 {{ $lot->quantity }}
 </span>
+
 </td>
 
-<td>
+<td class="text-center text-muted">
+
 {{ \Carbon\Carbon::parse($lot->expiry_date)->format('d/m/Y') }}
+
 </td>
 
-<td>
+<td class="text-center">
 
 @if($months <= 6)
 
@@ -96,9 +157,15 @@ Bình thường
 @empty
 
 <tr>
-<td colspan="6" class="text-center text-muted py-4">
+
+<td colspan="6"
+class="text-center text-muted py-4">
+
+<i class="bi bi-inbox me-1"></i>
 Không có lô sắp hết hạn
+
 </td>
+
 </tr>
 
 @endforelse
@@ -108,10 +175,18 @@ Không có lô sắp hết hạn
 </table>
 
 </div>
+
+{{-- PAGINATION --}}
+@if($lots->hasPages())
+
+<div class="mt-4 d-flex justify-content-center">
+
+{{ $lots->links('pagination::bootstrap-5') }}
+
 </div>
 
-<div class="mt-3">
-{{ $lots->links() }}
+@endif
+
 </div>
 
 </div>

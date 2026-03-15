@@ -208,10 +208,13 @@ class CheckoutController extends Controller
          * 8. SHIPPING (theo total thực trả)
          * =================================
          */
-        $shippingCost = $this->calculateShippingFee(
-            $defaultAddress->province,
-            $total
-        );
+
+
+        $province = $defaultAddress?->province ?? null;
+
+        $shippingCost = $province
+        ? $this->calculateShippingFee($province, $total)
+        : 0;
 
         $shippingFee = $shippingCost;
 

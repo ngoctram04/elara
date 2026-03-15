@@ -38,6 +38,8 @@ class Order extends Model
         'cancelled_by',
         'cancelled_by_user_id',
         'delivered_at',
+        'customer_confirmed',
+        'received_at'
     ];
 
     protected $casts = [
@@ -53,6 +55,8 @@ class Order extends Model
         'payment_status' => 'integer',
         'delivered_at' => 'datetime',
         'cancelled_at' => 'datetime',
+        'customer_confirmed' => 'boolean',
+        'received_at' => 'datetime',
     ];
 
     /*
@@ -113,10 +117,14 @@ class Order extends Model
 */
     public function getStatusNameAttribute()
     {
+        if ($this->status == self::STATUS_COMPLETED && !$this->customer_confirmed) {
+            return 'Đã giao - chờ xác nhận';
+        }
+
         return match ($this->status) {
             self::STATUS_PENDING    => 'Đang xử lý',
             self::STATUS_PROCESSING => 'Đang giao',
-            self::STATUS_COMPLETED  => 'Đã giao',
+            self::STATUS_COMPLETED  => 'Hoàn tất',
             self::STATUS_CANCELLED  => 'Đã huỷ',
             self::STATUS_RETURNED   => 'Đổi trả',
             default => 'Không xác định',
@@ -217,7 +225,7 @@ class Order extends Model
     // Đã giao chưa?
     public function isCompleted()
     {
-        return $this->status == self::STATUS_COMPLETED;
+        return $this->status == self::STATUS_COMPLETED && $this->customer_confirmed;
     }
 
     // Có thể chuyển trạng thái tiếp không? (Admin)

@@ -214,6 +214,8 @@ Route::middleware(['auth', 'check_active'])
         // Mua lại
         Route::post('/{id}/reorder', [OrderController::class, 'reorder'])
             ->name('reorder');
+        Route::post('/{id}/confirm-received', [OrderController::class, 'confirmReceived'])
+        ->name('confirmReceived');
     });
 
 /*

@@ -8,12 +8,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use App\Models\Order;
 use App\Models\Cart;
-use App\Models\Promotion;
+
 class OrderController extends Controller
 {
 
     /**
-     * Danh sách đơn hàng + lọc + tìm kiếm
+     * Danh sách đơn hàng
      */
     public function index(Request $request)
     {
@@ -22,17 +22,17 @@ class OrderController extends Controller
             'items.variant.mainImage',
             'items.review',
             'cancelledByUser',
-            'refundRequest' // ⭐ thêm relation refund
+            'refundRequest'
         ])
-        ->where('user_id', Auth::id())
-        ->latest();
+            ->where('user_id', Auth::id())
+            ->latest();
 
-        // 🔎 Tìm kiếm mã đơn
+        // tìm kiếm mã đơn
         if ($request->filled('keyword')) {
             $query->where('id', 'like', '%' . $request->keyword . '%');
         }
 
-        // 🧾 Lọc trạng thái
+        // lọc trạng thái
         if ($request->filled('status')) {
 
             switch ($request->status) {
@@ -53,7 +53,6 @@ class OrderController extends Controller
                     $query->where('status', 4);
                     break;
 
-                    // ⭐ ĐỔI / TRẢ
                 case 'return':
                     $query->whereHas('refundRequest');
                     break;
@@ -72,6 +71,7 @@ class OrderController extends Controller
      */
     public function show($id)
     {
+
         $order = Order::with([
             'items.variant.product',
             'items.variant.mainImage',
@@ -94,6 +94,7 @@ class OrderController extends Controller
      */
     public function cancel(Request $request, $id)
     {
+
         $order = Order::where('id', $id)
             ->where('user_id', Auth::id())
             ->firstOrFail();
@@ -108,23 +109,17 @@ class OrderController extends Controller
 
             $paymentStatus = $order->payment_status;
 
-            /**
-             * Nếu thanh toán VNPay thì chuyển sang trạng thái hoàn tiền
-             */
+            // hoàn tiền vnpay
             if (
-                $order->payment_method === 'vnpay' &&
-                $order->payment_status == Order::PAYMENT_PAID
+                $order->payment_method === 'vnpay'
+                && $order->payment_status == Order::PAYMENT_PAID
             ) {
                 $paymentStatus = Order::PAYMENT_REFUNDED;
             }
 
-            /**
-             * Model Order sẽ tự rollback tồn kho
-             */
             $order->update([
                 'status' => Order::STATUS_CANCELLED,
                 'payment_status' => $paymentStatus,
-
                 'cancel_reason' => $request->cancel_reason,
                 'cancelled_by' => 'customer',
                 'cancelled_by_user_id' => Auth::id(),
@@ -141,6 +136,48 @@ class OrderController extends Controller
             DB::rollBack();
 
             return back()->with('error', 'Huỷ đơn thất bại.');
+        }
+    }
+
+
+
+    /**
+     * Khách xác nhận đã nhận hàng
+     */
+    public function confirmReceived($id)
+    {
+
+        $order = Order::where('id', $id)
+            ->where('user_id', Auth::id())
+            ->firstOrFail();
+
+        // chỉ xác nhận khi admin đã giao
+        if ($order->status != Order::STATUS_COMPLETED) {
+            return back()->with('error', 'Đơn hàng chưa được giao.');
+        }
+
+        // tránh xác nhận nhiều lần
+        if ($order->customer_confirmed) {
+            return back()->with('error', 'Bạn đã xác nhận đơn này.');
+        }
+
+        DB::beginTransaction();
+
+        try {
+
+            $order->update([
+                'customer_confirmed' => 1,
+                'received_at' => now()
+            ]);
+
+            DB::commit();
+
+            return back()->with('success', 'Đã xác nhận nhận hàng.');
+        } catch (\Exception $e) {
+
+            DB::rollBack();
+
+            return back()->with('error', 'Xác nhận thất bại.');
         }
     }
 
@@ -167,12 +204,10 @@ class OrderController extends Controller
 
                 $variant = $item->variant;
 
-                // bỏ qua nếu sản phẩm không tồn tại hoặc hết hàng
                 if (!$variant || $variant->stock_quantity <= 0) {
                     continue;
                 }
 
-                // không vượt quá tồn kho
                 $quantity = min($item->quantity, $variant->stock_quantity);
 
                 $cart = Cart::where('user_id', $userId)

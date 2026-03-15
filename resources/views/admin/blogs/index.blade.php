@@ -4,24 +4,57 @@
 
 @section('content')
 
-<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+<div class="card border-0 shadow-sm">
+<div class="card-body">
 
-<h4 class="mb-0">Quản lý Blog</h4>
+{{-- HEADER --}}
 
-<div class="d-flex gap-2">
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
 
-<form method="GET" class="d-flex gap-2">
+<div>
+<h5 class="fw-bold mb-1">
+Quản lý Blog
+</h5>
+
+<small class="text-muted">
+Quản lý các bài viết blog trong hệ thống
+</small>
+</div>
+
+<a href="{{ route('admin.blogs.create') }}"
+class="btn btn-primary btn-sm">
+
+<i class="bi bi-plus-lg"></i>
+Thêm bài viết
+
+</a>
+
+</div>
+
+{{-- FILTER --}}
+
+<form method="GET"
+class="row g-2 mb-4 align-items-center">
+
+<div class="col-md-4">
 
 <input
 type="text"
 name="keyword"
 value="{{ request('keyword') }}"
-class="form-control"
+class="form-control form-control-sm"
 placeholder="Tìm bài viết...">
 
-<select name="sort" class="form-select">
+</div>
 
-<option value="">Mặc định</option>
+<div class="col-md-3">
+
+<select name="sort"
+class="form-select form-select-sm">
+
+<option value="">
+Mặc định
+</option>
 
 <option value="most"
 {{ request('sort')=='most' ? 'selected' : '' }}>
@@ -35,40 +68,65 @@ Xem ít nhất
 
 </select>
 
-<button class="btn btn-dark">
+</div>
+
+<div class="col-md-5 d-flex gap-2">
+
+<button class="btn btn-outline-primary btn-sm">
+
 <i class="bi bi-search"></i>
+Lọc
+
 </button>
 
-</form>
+<a href="{{ route('admin.blogs.index') }}"
+class="btn btn-outline-secondary btn-sm">
 
-<a href="{{ route('admin.blogs.create') }}" class="btn btn-primary">
-<i class="bi bi-plus"></i> Thêm bài viết
+Đặt lại
+
 </a>
 
 </div>
 
-</div>
+</form>
 
-
-<div class="card shadow-sm border-0">
-
-<div class="card-body p-0">
+{{-- TABLE --}}
 
 <div class="table-responsive">
 
-<table class="table table-hover mb-0 align-middle">
+<table class="table table-hover align-middle mb-0">
 
 <thead class="table-light">
 
 <tr>
 
-<th width="60">ID</th>
-<th width="120">Ảnh</th>
-<th>Tiêu đề</th>
-<th width="120">Lượt xem</th>
-<th width="120">Trạng thái</th>
-<th width="150">Ngày tạo</th>
-<th width="160">Hành động</th>
+<th style="width:70px">
+ID
+</th>
+
+<th style="width:120px">
+Ảnh
+</th>
+
+<th>
+Tiêu đề
+</th>
+
+<th style="width:120px">
+Lượt xem
+</th>
+
+<th style="width:120px">
+Trạng thái
+</th>
+
+<th style="width:150px">
+Ngày tạo
+</th>
+
+<th style="width:160px">
+Hành động
+</th>
 
 </tr>
 
@@ -80,7 +138,11 @@ Xem ít nhất
 
 <tr>
 
-<td>{{ $blog->id }}</td>
+<td class="text-muted fw-semibold">
+
+{{ $blog->id }}
+
+</td>
 
 <td>
 
@@ -93,7 +155,11 @@ class="rounded">
 
 @else
 
-<span class="text-muted">Không có</span>
+<span class="text-muted small">
+
+Không có
+
+</span>
 
 @endif
 
@@ -101,14 +167,20 @@ class="rounded">
 
 <td>
 
-<strong>{{ $blog->title }}</strong>
+<strong>
+
+{{ $blog->title }}
+
+</strong>
 
 </td>
 
 <td>
 
 <span class="badge bg-secondary">
+
 {{ $blog->views }}
+
 </span>
 
 </td>
@@ -116,14 +188,26 @@ class="rounded">
 <td>
 
 @if($blog->is_active)
-<span class="badge bg-success">Hiển thị</span>
+
+<span class="badge bg-success">
+
+Hiển thị
+
+</span>
+
 @else
-<span class="badge bg-secondary">Đã ẩn</span>
+
+<span class="badge bg-secondary">
+
+Đã ẩn
+
+</span>
+
 @endif
 
 </td>
 
-<td>
+<td class="text-muted">
 
 {{ $blog->created_at?->format('d/m/Y') }}
 
@@ -134,7 +218,7 @@ class="rounded">
 <div class="d-flex gap-1">
 
 <a href="{{ route('admin.blogs.edit',$blog->id) }}"
-class="btn btn-sm btn-warning">
+class="btn btn-sm btn-outline-warning">
 
 <i class="bi bi-pencil"></i>
 
@@ -149,12 +233,16 @@ class="toggle-form">
 
 <button
 type="button"
-class="btn btn-sm {{ $blog->is_active ? 'btn-secondary' : 'btn-success' }} btn-toggle">
+class="btn btn-sm {{ $blog->is_active ? 'btn-outline-secondary' : 'btn-outline-success' }} btn-toggle">
 
 @if($blog->is_active)
+
 <i class="bi bi-eye-slash"></i>
+
 @else
+
 <i class="bi bi-eye"></i>
+
 @endif
 
 </button>
@@ -174,6 +262,10 @@ class="btn btn-sm {{ $blog->is_active ? 'btn-secondary' : 'btn-success' }} btn-t
 <td colspan="7"
 class="text-center py-4 text-muted">
 
+<i class="bi bi-inbox"></i>
+
+<br>
+
 Chưa có bài viết nào
 
 </td>
@@ -188,19 +280,21 @@ Chưa có bài viết nào
 
 </div>
 
-</div>
+{{-- PAGINATION --}}
+@if($blogs->hasPages())
+
+<div class="mt-4">
+
+{{ $blogs->links('pagination::bootstrap-5') }}
 
 </div>
 
+@endif
 
-<div class="mt-3">
-
-{{ $blogs->links() }}
-
+</div>
 </div>
 
 @endsection
-
 
 @push('scripts')
 
@@ -213,14 +307,23 @@ btn.addEventListener('click', function(){
 let form = this.closest('form');
 
 Swal.fire({
+
 title: 'Bạn muốn thay đổi trạng thái bài viết?',
+
 text: "Bài viết sẽ được ẩn hoặc hiển thị",
+
 icon: 'question',
+
 showCancelButton: true,
+
 confirmButtonColor: '#3085d6',
+
 cancelButtonColor: '#6c757d',
+
 confirmButtonText: 'Xác nhận',
+
 cancelButtonText: 'Hủy'
+
 }).then((result) => {
 
 if (result.isConfirmed) {

@@ -13,16 +13,14 @@
 <div class="card shadow-sm border-0 mb-3">
 <div class="card-body">
 
-<form method="GET">
-
-<div class="row g-2 align-items-center">
+<form method="GET" class="row g-2 mb-3 align-items-center">
 
 <div class="col-md-4">
 
 <input
 type="text"
 name="search"
-class="form-control"
+class="form-control form-control-sm"
 placeholder="Tìm mã đơn hoặc khách hàng..."
 value="{{ request('search') }}">
 
@@ -30,7 +28,7 @@ value="{{ request('search') }}">
 
 <div class="col-md-3">
 
-<select name="status" class="form-select">
+<select name="status" class="form-select form-select-sm">
 
 <option value="">-- Tất cả trạng thái --</option>
 
@@ -60,7 +58,7 @@ Từ chối
 
 <div class="col-md-3">
 
-<select name="sort" class="form-select">
+<select name="sort" class="form-select form-select-sm">
 
 <option value="new"
 {{ request('sort')=='new' ? 'selected':'' }}>
@@ -76,11 +74,17 @@ Cũ nhất
 
 </div>
 
-<div class="col-md-2 d-grid">
+<div class="col-md-2 d-flex gap-2">
 
-<button class="btn btn-dark">
+<button class="btn btn-outline-primary btn-sm">
+<i class="bi bi-search"></i>
 Lọc
 </button>
+
+<a href="{{ route('admin.refunds.index') }}"
+class="btn btn-outline-secondary btn-sm">
+Đặt lại
+</a>
 
 </div>
 
@@ -90,11 +94,11 @@ Lọc
 
 </div>
 </div>
-<table class="table table-hover mb-0">
+<table class="table table-hover align-middle mb-0">
 
 <thead class="table-light">
 <tr>
-<th>#</th>
+<th>STT</th>
 <th>Đơn hàng</th>
 <th>Khách hàng</th>
 <th>Lý do</th>

@@ -4,58 +4,76 @@
 
 @section('content')
 
-<div class="container-fluid">
-
-<div class="card shadow border-0">
+<div class="card border-0 shadow-sm">
 
 <div class="card-body">
 
+{{-- HEADER --}}
+
 <div class="d-flex justify-content-between align-items-center mb-4">
 
-<h4 class="fw-bold">
-PHIẾU NHẬP KHO
-</h4>
-
 <div>
+<h5 class="fw-bold mb-1">
+Phiếu nhập kho
+</h5>
+
+<small class="text-muted">
+Chi tiết phiếu nhập kho
+</small>
+</div>
+
+<div class="d-flex gap-2">
 
 <a href="{{ route('admin.stock.history') }}"
-class="btn btn-secondary btn-sm me-2">
-Quay lại </a>
+class="btn btn-outline-secondary btn-sm">
+
+<i class="bi bi-arrow-left me-1"></i>
+Quay lại
+
+</a>
 
 <a href="{{ route('admin.stock.exportPdf',$code) }}"
-class="btn btn-danger btn-sm"> <i class="bi bi-file-earmark-pdf"></i>
-Xuất PDF </a>
+class="btn btn-danger btn-sm">
+
+<i class="bi bi-file-earmark-pdf me-1"></i>
+Xuất PDF
+
+</a>
 
 </div>
 
 </div>
+
+{{-- INFO --}}
 
 <div class="row mb-4">
 
 <div class="col-md-6">
 
-<p>
-<b>Mã phiếu:</b>
+<p class="mb-1">
+<strong>Mã phiếu:</strong>
+<span class="badge bg-secondary">
 {{ $code }}
+</span>
 </p>
 
-<p>
-<b>Nhà cung cấp:</b>
+<p class="mb-1">
+<strong>Nhà cung cấp:</strong>
 {{ $items->first()->supplier ?? '---' }}
 </p>
 
-<p>
-<b>Ngày nhập:</b>
-{{ $items->first()->created_at->format('d/m/Y') }}
+<p class="mb-1">
+<strong>Ngày nhập:</strong>
+{{ optional($items->first()->created_at)->format('d/m/Y') }}
 </p>
 
-<p>
-<b>Người nhập:</b>
+<p class="mb-1">
+<strong>Người nhập:</strong>
 {{ auth()->user()->name ?? 'Admin' }}
 </p>
 
-<p>
-<b>Ghi chú:</b>
+<p class="mb-0">
+<strong>Ghi chú:</strong>
 {{ $items->first()->note ?? '---' }}
 </p>
 
@@ -71,25 +89,39 @@ $total = 0;
 
 </div>
 
+{{-- TABLE --}}
+
 <div class="table-responsive">
 
-<table class="table table-bordered align-middle">
+<table class="table table-hover align-middle mb-0">
 
 <thead class="table-light">
 
 <tr>
 
-<th width="70">STT</th>
+<th style="width:70px" class="text-center">
+STT
+</th>
 
-<th>Sản phẩm</th>
+<th>
+Sản phẩm
+</th>
 
-<th width="220">Biến thể (SKU)</th>
+<th style="width:220px">
+Biến thể (SKU)
+</th>
 
-<th width="120">Số lượng</th>
+<th style="width:120px" class="text-center">
+Số lượng
+</th>
 
-<th width="140">Giá nhập</th>
+<th style="width:140px" class="text-end">
+Giá nhập
+</th>
 
-<th width="160">Thành tiền</th>
+<th style="width:160px" class="text-end">
+Thành tiền
+</th>
 
 </tr>
 
@@ -106,9 +138,11 @@ $total += $sub;
 
 <tr>
 
-<td>{{ $index + 1 }}</td>
+<td class="text-center text-muted fw-semibold">
+{{ $index + 1 }}
+</td>
 
-<td>
+<td class="fw-medium">
 {{ $item->variant->product->name ?? '-' }}
 </td>
 
@@ -116,15 +150,15 @@ $total += $sub;
 {{ $item->variant->attribute_value ?? '-' }}
 </td>
 
-<td>
+<td class="text-center">
 {{ $item->quantity }}
 </td>
 
-<td>
+<td class="text-end">
 {{ number_format($item->cost_price) }} đ
 </td>
 
-<td>
+<td class="text-end fw-semibold">
 {{ number_format($sub) }} đ
 </td>
 
@@ -138,7 +172,9 @@ $total += $sub;
 
 </div>
 
-<div class="text-end mt-3">
+{{-- TOTAL --}}
+
+<div class="text-end mt-4">
 
 <h5 class="fw-bold text-danger">
 
@@ -150,9 +186,6 @@ Tổng tiền:
 </div>
 
 </div>
-
-</div>
-
 </div>
 
 @endsection

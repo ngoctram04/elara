@@ -49,15 +49,26 @@ color:#777;
 
 </style>
 
-<div class="container-fluid">
+<div class="card border-0 shadow-sm">
+<div class="card-body">
 
-<h4 class="mb-4">
-<i class="bi bi-question-circle"></i>
+{{-- HEADER --}}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+
+<div>
+<h5 class="fw-bold mb-1">
 Hỏi đáp sản phẩm
-</h4>
+</h5>
 
-<div class="card shadow-sm border-0">
+<small class="text-muted">
+Quản lý câu hỏi và câu trả lời của khách hàng
+</small>
+</div>
 
+</div>
+
+<div class="card border-0 shadow-sm">
 <div class="card-body p-0">
 
 @forelse($questions as $q)
@@ -67,6 +78,7 @@ Hỏi đáp sản phẩm
 <div class="row">
 
 {{-- PRODUCT --}}
+
 <div class="col-md-3">
 
 <div class="product-info">
@@ -92,6 +104,7 @@ ID: {{ $q->product_id }}
 </div>
 
 {{-- QUESTION --}}
+
 <div class="col-md-3">
 
 <div class="fw-semibold">
@@ -101,7 +114,9 @@ ID: {{ $q->product_id }}
 </div>
 
 <div class="text-muted small">
+
 {{ $q->created_at->format('d/m/Y H:i') }}
+
 </div>
 
 <div class="mt-2">
@@ -112,8 +127,8 @@ ID: {{ $q->product_id }}
 
 </div>
 
-
 {{-- ANSWERS --}}
+
 <div class="col-md-6">
 
 {{-- LIST ANSWERS --}}
@@ -126,25 +141,35 @@ ID: {{ $q->product_id }}
 {{ $a->user->name }}
 
 @if($a->is_admin)
-<span class="badge bg-danger ms-1">Shop</span>
+
+<span class="badge bg-danger ms-1">
+
+Shop
+
+</span>
+
 @endif
 
 </div>
 
 <div class="answer-meta">
+
 {{ $a->created_at->format('d/m/Y H:i') }}
+
 </div>
 
 <div>
+
 {{ $a->answer }}
+
 </div>
 
 </div>
 
 @endforeach
 
-
 {{-- FORM REPLY --}}
+
 <form
 action="{{ route('admin.questions.answer') }}"
 method="POST"
@@ -165,7 +190,9 @@ placeholder="Trả lời câu hỏi..."
 required>
 
 <button class="btn btn-sm btn-primary">
+
 <i class="bi bi-send"></i>
+
 </button>
 
 </form>
@@ -183,7 +210,9 @@ required>
 <i class="bi bi-chat-left-text fs-2"></i>
 
 <div class="mt-2">
+
 Chưa có câu hỏi nào
+
 </div>
 
 </div>
@@ -191,15 +220,20 @@ Chưa có câu hỏi nào
 @endforelse
 
 </div>
+</div>
+
+{{-- PAGINATION --}}
+@if($questions->hasPages())
+
+<div class="mt-4">
+
+{{ $questions->links('pagination::bootstrap-5') }}
 
 </div>
 
-<div class="mt-3">
-
-{{ $questions->links() }}
+@endif
 
 </div>
-
 </div>
 
 @endsection

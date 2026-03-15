@@ -10,35 +10,48 @@ use Illuminate\Support\Facades\Auth;
 
 class AdminChatController extends Controller
 {
-    // Danh sách cuộc trò chuyện
+    /**
+     * Danh sách cuộc trò chuyện
+     */
     public function index()
     {
         $conversations = ChatConversation::with('user')
-            ->latest('updated_at')
-            ->get();
+            ->orderBy('updated_at', 'desc')
+            ->paginate(10);
 
         return view('admin.messages.index', compact('conversations'));
     }
 
 
-    // Xem chi tiết chat
+    /**
+     * Xem chi tiết chat
+     */
     public function show($id)
     {
-        $conversation = ChatConversation::with(['user', 'messages.sender'])
-            ->findOrFail($id);
+        $conversation = ChatConversation::with([
+            'user',
+            'messages.sender'
+        ])->findOrFail($id);
 
         return view('admin.messages.show', compact('conversation'));
     }
 
 
-    // Admin gửi tin nhắn
+    /**
+     * Admin gửi tin nhắn
+     */
     public function send(Request $request, $id)
     {
         $conversation = ChatConversation::findOrFail($id);
 
         $message = $request->message;
 
-        // Upload ảnh nếu có
+        /*
+        ========================
+        Upload ảnh nếu có
+        ========================
+        */
+
         if ($request->hasFile('image')) {
 
             $file = $request->file('image');
@@ -48,10 +61,23 @@ class AdminChatController extends Controller
             $message = '/storage/' . $path;
         }
 
-        // Không gửi nếu rỗng
+
+        /*
+        ========================
+        Không gửi nếu rỗng
+        ========================
+        */
+
         if (!$message) {
             return back();
         }
+
+
+        /*
+        ========================
+        Lưu tin nhắn
+        ========================
+        */
 
         ChatMessage::create([
             'conversation_id' => $conversation->id,
@@ -60,8 +86,15 @@ class AdminChatController extends Controller
             'is_admin' => 1
         ]);
 
-        // cập nhật thời gian chat
+
+        /*
+        ========================
+        Cập nhật thời gian chat
+        ========================
+        */
+
         $conversation->touch();
+
 
         return back();
     }

@@ -3,29 +3,30 @@
 
 @section('content')
 
-<h4 class="mb-3 fw-bold">
-    <i class="bi bi-cart me-2"></i> Quản lý đơn hàng
-</h4>
-
-<div class="card shadow-sm">
+<div class="card border-0 shadow-sm">
 <div class="card-body">
 
-{{-- Bộ lọc --}}
-<form method="GET" class="row g-2 mb-3">
+<div class="d-flex justify-content-between align-items-center mb-4">
+<div>
+<h5 class="fw-bold mb-1">Quản lý đơn hàng</h5>
+<small class="text-muted">Danh sách đơn hàng trong hệ thống</small>
+</div>
+</div>
 
-{{-- Tìm kiếm --}}
+<form method="GET" class="row g-2 mb-4 align-items-center">
+
 <div class="col-md-3">
 <input type="text"
 name="keyword"
 value="{{ request('keyword') }}"
-class="form-control"
+class="form-control form-control-sm"
 placeholder="Mã đơn / tên / SĐT">
 </div>
 
-{{-- Trạng thái đơn --}}
-<div class="col-md-3">
-<select name="status" class="form-select">
-<option value="">-- Tất cả trạng thái --</option>
+<div class="col-md-2">
+<select name="status" class="form-select form-select-sm">
+
+<option value="">Trạng thái đơn</option>
 
 <option value="1" {{ request('status') == 1 ? 'selected' : '' }}>
 Đang xử lý
@@ -46,65 +47,74 @@ placeholder="Mã đơn / tên / SĐT">
 </select>
 </div>
 
-{{-- Trạng thái thanh toán --}}
-<div class="col-md-3">
-<select name="payment_status" class="form-select">
+<div class="col-md-2">
+<select name="payment_status" class="form-select form-select-sm">
 
-<option value="">-- Trạng thái thanh toán --</option>
+<option value="">Thanh toán</option>
 
-<option value="paid"
-{{ request('payment_status') == 'paid' ? 'selected' : '' }}>
+<option value="paid" {{ request('payment_status')=='paid'?'selected':'' }}>
 Đã thanh toán
 </option>
 
-<option value="unpaid"
-{{ request('payment_status') == 'unpaid' ? 'selected' : '' }}>
+<option value="unpaid" {{ request('payment_status')=='unpaid'?'selected':'' }}>
 Chưa thanh toán
 </option>
 
-<option value="refunded"
-{{ request('payment_status') == 'refunded' ? 'selected' : '' }}>
+<option value="refunded" {{ request('payment_status')=='refunded'?'selected':'' }}>
 Đã hoàn tiền
 </option>
 
-<option value="failed"
-{{ request('payment_status') == 'failed' ? 'selected' : '' }}>
+<option value="failed" {{ request('payment_status')=='failed'?'selected':'' }}>
 Thanh toán thất bại
 </option>
 
 </select>
 </div>
 
-<div class="col-md-3">
+<div class="col-md-2">
+<select name="sort" class="form-select form-select-sm">
 
-<button class="btn btn-primary">
-<i class="bi bi-search"></i> Tìm
+<option value="">Sắp xếp</option>
+
+<option value="newest" {{ request('sort')=='newest'?'selected':'' }}>
+Mới → Cũ
+</option>
+
+<option value="oldest" {{ request('sort')=='oldest'?'selected':'' }}>
+Cũ → Mới
+</option>
+
+</select>
+</div>
+
+<div class="col-md-3 d-flex gap-2">
+
+<button class="btn btn-outline-primary btn-sm">
+<i class="bi bi-search"></i> Lọc
 </button>
 
 <a href="{{ route('admin.orders.index') }}"
-class="btn btn-secondary">
-Đặt lại
-</a>
+class="btn btn-outline-secondary btn-sm">
+Đặt lại </a>
 
 </div>
 
 </form>
 
-{{-- Danh sách --}}
 <div class="table-responsive">
 
-<table class="table table-hover align-middle">
+<table class="table table-hover align-middle mb-0">
 
 <thead class="table-light">
 <tr>
-<th>#ID</th>
+<th style="width:80px">ID</th>
 <th>Khách hàng</th>
-<th>Phương thức</th>
-<th>Tổng tiền</th>
-<th>Thanh toán</th>
-<th>Trạng thái</th>
-<th>Ngày đặt</th>
-<th width="110"></th>
+<th style="width:120px">Phương thức</th>
+<th style="width:140px">Tổng tiền</th>
+<th style="width:140px">Thanh toán</th>
+<th style="width:170px">Trạng thái</th>
+<th style="width:170px">Ngày đặt</th>
+<th style="width:120px"></th>
 </tr>
 </thead>
 
@@ -114,12 +124,12 @@ class="btn btn-secondary">
 
 <tr>
 
-<td>#{{ $order->id }}</td>
+<td class="fw-semibold">#{{ $order->id }}</td>
 
 <td>
 
 <strong>
-{{ $order->receiver_name ?? $order->user->name }}
+{{ $order->receiver_name ?? optional($order->user)->name }}
 </strong>
 
 <br>
@@ -135,7 +145,6 @@ class="btn btn-secondary">
 <small class="text-danger">
 
 Huỷ bởi:
-
 {{ $order->cancelled_by == 'admin' ? 'Admin' : 'Khách' }}
 
 @if($order->cancelledByUser)
@@ -152,11 +161,15 @@ Huỷ bởi:
 
 @if($order->payment_method == 'cod')
 
-<span class="badge bg-secondary">COD</span>
+<span class="badge bg-secondary">
+COD
+</span>
 
 @elseif($order->payment_method == 'vnpay')
 
-<span class="badge bg-primary">VNPAY</span>
+<span class="badge bg-primary">
+VNPAY
+</span>
 
 @else
 
@@ -169,7 +182,9 @@ Huỷ bởi:
 </td>
 
 <td class="fw-bold text-danger">
-{{ number_format($order->grand_total) }}đ
+
+{{ number_format($order->grand_total,0,',','.') }}đ
+
 </td>
 
 <td>
@@ -186,6 +201,16 @@ Huỷ bởi:
 {{ $order->status_name }}
 </span>
 
+@if($order->status == 3 && !$order->customer_confirmed)
+
+<br>
+
+<small class="text-info">
+Chờ khách xác nhận
+</small>
+
+@endif
+
 @if($order->status == 4 && $order->cancel_reason)
 
 <br>
@@ -198,7 +223,7 @@ Lý do: {{ $order->cancel_reason }}
 
 </td>
 
-<td>
+<td class="text-muted">
 
 {{ $order->created_at->format('d/m/Y H:i') }}
 
@@ -206,9 +231,11 @@ Lý do: {{ $order->cancel_reason }}
 
 <td>
 
-<a href="{{ route('admin.orders.show', $order->id) }}"
+<a href="{{ route('admin.orders.show',$order->id) }}"
 class="btn btn-sm btn-primary">
+
 Chi tiết
+
 </a>
 
 </td>
@@ -219,8 +246,11 @@ Chi tiết
 
 <tr>
 
-<td colspan="8" class="text-center text-muted py-4">
+<td colspan="8"
+class="text-center text-muted py-4">
+
 Chưa có đơn hàng
+
 </td>
 
 </tr>
@@ -233,12 +263,13 @@ Chưa có đơn hàng
 
 </div>
 
-{{-- Pagination --}}
-<div class="mt-3">
+@if($orders->hasPages())
 
-{{ $orders->withQueryString()->links() }}
-
+<div class="mt-4">
+{{ $orders->withQueryString()->links('pagination::bootstrap-5') }}
 </div>
+
+@endif
 
 </div>
 </div>

@@ -4,13 +4,28 @@
 
 @section('content')
 
-<h4 class="mb-3">
-💬 Chat với {{ $conversation->user->name ?? 'Khách' }}
-</h4>
+<div class="card border-0 shadow-sm">
 
-<div class="card">
+<div class="card-body">
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+
+<div>
+<h5 class="fw-bold mb-1">
+💬 Chat với {{ $conversation->user->name ?? 'Khách' }}
+</h5>
+
+<small class="text-muted">
+Trao đổi tin nhắn với khách hàng
+</small>
+</div>
+
+</div>
+
+<div class="card border-0 shadow-sm">
 
 {{-- CHAT BODY --}}
+
 <div id="chat-box" class="card-body chat-body">
 
 @foreach($conversation->messages as $msg)
@@ -22,29 +37,41 @@ $isAdmin = $msg->sender_id == auth()->id();
 <div class="message-row {{ $isAdmin ? 'admin' : 'user' }}">
 
 <div class="avatar">
+
 {{ $isAdmin ? 'A' : 'U' }}
+
 </div>
 
 <div class="message-content">
 
 <div class="sender">
+
 {{ $isAdmin ? 'Admin' : ($conversation->user->name ?? 'Khách') }}
+
 </div>
 
 <div class="bubble">
 
-@if(preg_match('/\.(jpg|jpeg|png|webp|gif)$/i',$msg->message))
+@if(preg_match('/.(jpg|jpeg|png|webp|gif)$/i',$msg->message))
+
 <a href="{{ $msg->message }}" target="_blank">
+
 <img src="{{ $msg->message }}">
+
 </a>
+
 @else
+
 {{ $msg->message }}
+
 @endif
 
 </div>
 
 <div class="time">
+
 {{ $msg->created_at->format('d/m/Y H:i') }}
+
 </div>
 
 </div>
@@ -55,9 +82,9 @@ $isAdmin = $msg->sender_id == auth()->id();
 
 </div>
 
-
 {{-- INPUT --}}
-<div class="card-footer">
+
+<div class="card-footer bg-white">
 
 <form method="POST"
 action="{{ route('admin.messages.send',$conversation->id) }}"
@@ -68,8 +95,11 @@ enctype="multipart/form-data">
 <div class="chat-input">
 
 <label class="file-btn">
+
 📷
+
 <input type="file" name="image" accept="image/*">
+
 </label>
 
 <input
@@ -77,7 +107,11 @@ type="text"
 name="message"
 placeholder="Nhập tin nhắn...">
 
-<button type="submit">Gửi</button>
+<button type="submit">
+
+Gửi
+
+</button>
 
 </div>
 
@@ -87,7 +121,9 @@ placeholder="Nhập tin nhắn...">
 
 </div>
 
+</div>
 
+</div>
 
 <style>
 
@@ -113,14 +149,15 @@ flex-direction:row-reverse;
 }
 
 .avatar{
-width:34px;
-height:34px;
+width:36px;
+height:36px;
 border-radius:50%;
-background:#d1d5db;
+background:#dee2e6;
 display:flex;
 align-items:center;
 justify-content:center;
 font-size:13px;
+font-weight:600;
 }
 
 .message-content{
@@ -166,7 +203,7 @@ margin-top:2px;
 
 .chat-input{
 display:flex;
-gap:6px;
+gap:8px;
 align-items:center;
 }
 
@@ -207,12 +244,12 @@ border-radius:3px;
 
 </style>
 
-
 <script>
 
 window.onload=function(){
 
 let box=document.getElementById("chat-box");
+
 box.scrollTop=box.scrollHeight;
 
 }

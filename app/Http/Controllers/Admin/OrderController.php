@@ -150,7 +150,7 @@ class OrderController extends Controller
 
         $orders = $query
             ->latest()
-            ->paginate(15)
+            ->paginate(7)
             ->withQueryString();
 
         return view('admin.orders.index', compact('orders'));
@@ -171,7 +171,7 @@ class OrderController extends Controller
     }
 
     /**
-     * Cập nhật trạng thái: 1 → 2 → 3
+     * Cập nhật trạng thái:
      */
     public function updateStatus(Request $request, $id)
     {
@@ -182,46 +182,30 @@ class OrderController extends Controller
         $order = Order::with(['items.variant', 'user'])->findOrFail($id);
 
         $oldStatus = $order->status;
-        $newStatus = (int) $request->status;
-        if ($newStatus == Order::STATUS_RETURNED && $oldStatus != Order::STATUS_COMPLETED) {
-            return back()->with('error', 'Chỉ có thể đổi trả khi đơn đã giao.');
-        }
+        $newStatus = (int)$request->status;
 
-        // Không cho sửa nếu đã huỷ hoặc đã hoàn thành
-        // Cho phép trả hàng từ đã giao
-        // Không cho sửa nếu đã huỷ
+        // Đơn đã huỷ
         if ($oldStatus == Order::STATUS_CANCELLED) {
             return back()->with('error', 'Đơn đã huỷ không thể thay đổi.');
         }
 
-        // Cho phép trả hàng từ đã giao
-        if ($oldStatus == Order::STATUS_COMPLETED && $newStatus == Order::STATUS_RETURNED) {
-            // cho phép
-        } else {
+        // Không cho chuyển ngược
+        if ($newStatus <= $oldStatus) {
+            return back()->with('error', 'Không thể chuyển trạng thái ngược.');
+        }
 
-            // Không cho chuyển ngược
-            if ($newStatus <= $oldStatus) {
-                return back()->with('error', 'Không thể chuyển trạng thái ngược.');
-            }
-
-            // Chỉ cho đi từng bước
-            if ($newStatus - $oldStatus > 1) {
-                return back()->with('error', 'Phải chuyển trạng thái theo thứ tự.');
-            }
+        // Không cho nhảy trạng thái
+        if ($newStatus - $oldStatus > 1) {
+            return back()->with('error', 'Phải chuyển trạng thái theo thứ tự.');
         }
 
         DB::beginTransaction();
 
         try {
 
-            /*
-        |-----------------------------------------
-        | Khi chuyển sang ĐÃ GIAO (3)
-        |-----------------------------------------
-        */
-            if ($newStatus == Order::STATUS_COMPLETED) {
+            // 1 → 2 (bắt đầu giao)
+            if ($oldStatus == Order::STATUS_PENDING && $newStatus == Order::STATUS_PROCESSING) {
 
-                // 1. Cộng số lượng đã bán
                 foreach ($order->items as $item) {
 
                     if ($item->variant) {
@@ -230,87 +214,26 @@ class OrderController extends Controller
 
                         $before = $variant->stock_quantity;
 
-                        // tăng số lượng đã bán
                         $variant->increment('sold_quantity', $item->quantity);
 
                         \App\Models\InventoryLog::create([
                             'variant_id' => $variant->id,
-                            'type' => 'order', // ⚠️ sửa ở đây
+                            'type' => 'order',
                             'quantity_change' => -$item->quantity,
                             'stock_before' => $before,
-                            'stock_after' => $variant->stock_quantity,
+                            'stock_after' => $before - $item->quantity,
                             'reference_type' => 'order',
                             'reference_id' => $order->id
                         ]);
                     }
                 }
+            }
 
+            // 2 → 3 (admin xác nhận đã giao)
+            if ($oldStatus == Order::STATUS_PROCESSING && $newStatus == Order::STATUS_COMPLETED) {
                 $order->delivered_at = now();
-
-                /*
-            |-----------------------------------------
-            | 2. CỘNG ĐIỂM THÀNH VIÊN
-            |-----------------------------------------
-            */
-                $user = $order->user;
-
-                if ($user) {
-
-                    // Quy đổi: 1.000đ = 1 điểm
-                    $points = floor($order->grand_total / 1000);
-
-                    // Cộng điểm
-                    $user->loyalty_points += $points;
-
-                    // Cộng tổng chi tiêu
-                    $user->total_spent += $order->grand_total;
-
-                    /*
-                |-----------------------------------------
-                | 3. XÉT HẠNG THÀNH VIÊN
-                |-----------------------------------------
-                */
-                    $pointsTotal = $user->loyalty_points;
-
-                    if ($pointsTotal >= 10000) {
-                        $user->member_level = 'diamond';
-                    } elseif ($pointsTotal >= 3000) {
-                        $user->member_level = 'gold';
-                    } elseif ($pointsTotal >= 1000) {
-                        $user->member_level = 'silver';
-                    } else {
-                        $user->member_level = 'bronze';
-                    }
-
-                    $user->save();
-
-                    /*
-                |-----------------------------------------
-                | 4. LƯU LỊCH SỬ ĐIỂM
-                |-----------------------------------------
-                */
-                    DB::table('user_point_histories')->insert([
-                        'user_id' => $user->id,
-                        'points' => $points,
-                        'type' => 'earn',
-                        'description' => 'Tích điểm từ đơn #' . $order->id,
-                        'created_at' => now(),
-                        'updated_at' => now()
-                    ]);
-                }
             }
-            if ($newStatus == Order::STATUS_RETURNED) {
 
-                foreach ($order->items as $item) {
-
-                    if ($item->variant) {
-
-                        $variant = $item->variant;
-
-                        $variant->decrement('sold_quantity', $item->quantity);
-                    }
-                }
-            }
             $order->status = $newStatus;
             $order->save();
 
@@ -318,10 +241,13 @@ class OrderController extends Controller
 
             return back()->with('success', 'Cập nhật trạng thái thành công!');
         } catch (\Exception $e) {
+
             DB::rollBack();
+
             return back()->with('error', 'Cập nhật thất bại!');
         }
     }
+
 
     /**
      * Admin huỷ đơn

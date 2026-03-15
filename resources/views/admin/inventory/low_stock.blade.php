@@ -4,42 +4,74 @@
 
 @section('content')
 
-<div class="container-fluid">
+<div class="card border-0 shadow-sm">
 
-<div class="card shadow border-0">
+<div class="card-body">
 
-<div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+{{-- HEADER --}}
 
-<h5 class="mb-0">
-<i class="bi bi-exclamation-triangle me-2"></i>
+<div class="d-flex justify-content-between align-items-center mb-4">
+
+<div>
+<h5 class="fw-bold mb-1">
 Sản phẩm sắp hết hàng
 </h5>
 
-<span class="badge bg-light text-danger">
+<small class="text-muted">
+Danh sách các biến thể có tồn kho thấp
+</small>
+</div>
+
+<span class="badge bg-danger">
 {{ $variants->count() }} sản phẩm
 </span>
 
 </div>
 
-<div class="card-body">
+{{-- ALERT --}}
 
 <div class="alert alert-warning mb-4">
+
+<i class="bi bi-exclamation-triangle me-1"></i>
+
 Những sản phẩm có tồn kho ≤ <b>5</b> sẽ hiển thị tại đây để quản trị viên kịp thời nhập thêm hàng.
+
 </div>
+
+{{-- TABLE --}}
 
 <div class="table-responsive">
 
-<table class="table table-bordered align-middle">
+<table class="table table-hover align-middle mb-0">
 
 <thead class="table-light">
 
 <tr>
-<th width="70">STT</th>
-<th>Sản phẩm</th>
-<th>Biến thể</th>
-<th width="120">Tồn kho</th>
-<th width="140">Trạng thái</th>
-<th width="150">Hành động</th>
+
+<th style="width:70px" class="text-center">
+STT
+</th>
+
+<th>
+Sản phẩm
+</th>
+
+<th>
+Biến thể
+</th>
+
+<th style="width:120px" class="text-center">
+Tồn kho
+</th>
+
+<th style="width:140px" class="text-center">
+Trạng thái
+</th>
+
+<th style="width:150px" class="text-center">
+Hành động
+</th>
+
 </tr>
 
 </thead>
@@ -50,9 +82,11 @@ Những sản phẩm có tồn kho ≤ <b>5</b> sẽ hiển thị tại đây đ
 
 <tr>
 
-<td>{{ $index + 1 }}</td>
+<td class="text-center text-muted fw-semibold">
+{{ $index + 1 }}
+</td>
 
-<td>
+<td class="fw-medium">
 {{ $v->product->name ?? '-' }}
 </td>
 
@@ -60,15 +94,17 @@ Những sản phẩm có tồn kho ≤ <b>5</b> sẽ hiển thị tại đây đ
 {{ $v->attribute_value ?? '-' }}
 </td>
 
-<td class="fw-bold
+<td class="text-center fw-bold
 @if($v->stock_quantity <= 2) text-danger
 @elseif($v->stock_quantity <=5) text-warning
 @endif
 ">
+
 {{ $v->stock_quantity }}
+
 </td>
 
-<td>
+<td class="text-center">
 
 @if($v->stock_quantity <= 2)
 
@@ -86,12 +122,12 @@ Sắp hết
 
 </td>
 
-<td>
+<td class="text-center">
 
 <a href="{{ route('admin.stock.create') }}"
 class="btn btn-sm btn-primary">
 
-<i class="bi bi-box-arrow-in-down"></i>
+<i class="bi bi-box-arrow-in-down me-1"></i>
 Nhập thêm
 
 </a>
@@ -103,9 +139,15 @@ Nhập thêm
 @empty
 
 <tr>
-<td colspan="6" class="text-center text-muted">
+
+<td colspan="6"
+class="text-center text-muted py-4">
+
+<i class="bi bi-inbox me-1"></i>
 Không có sản phẩm sắp hết hàng
+
 </td>
+
 </tr>
 
 @endforelse
@@ -113,8 +155,6 @@ Không có sản phẩm sắp hết hàng
 </tbody>
 
 </table>
-
-</div>
 
 </div>
 

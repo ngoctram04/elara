@@ -4,20 +4,51 @@
 
 @section('content')
 
-<h4 class="mb-3">Sửa bài viết</h4>
-
-@if ($errors->any())
-<div class="alert alert-danger">
-<ul class="mb-0">
-@foreach ($errors->all() as $error)
-<li>{{ $error }}</li>
-@endforeach
-</ul>
-</div>
-@endif
-
-<div class="card shadow-sm border-0">
+<div class="card border-0 shadow-sm">
 <div class="card-body">
+
+{{-- HEADER --}}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+
+<div>
+<h5 class="fw-bold mb-1">
+Sửa bài viết
+</h5>
+
+<small class="text-muted">
+Cập nhật nội dung bài viết blog
+</small>
+</div>
+
+<a href="{{ route('admin.blogs.index') }}"
+class="btn btn-outline-secondary btn-sm">
+
+<i class="bi bi-arrow-left"></i>
+Quay lại
+
+</a>
+
+</div>
+
+{{-- ERROR --}}
+@if ($errors->any())
+
+<div class="alert alert-danger">
+
+<ul class="mb-0">
+
+@foreach ($errors->all() as $error)
+
+<li>{{ $error }}</li>
+
+@endforeach
+
+</ul>
+
+</div>
+
+@endif
 
 <form method="POST"
 action="{{ route('admin.blogs.update',$blog->id) }}"
@@ -26,33 +57,48 @@ enctype="multipart/form-data">
 @csrf
 @method('PUT')
 
+{{-- TIÊU ĐỀ --}}
+
 <div class="mb-3">
-<label class="form-label">Tiêu đề</label>
+
+<label class="form-label fw-semibold">
+Tiêu đề
+</label>
 
 <input type="text"
 name="title"
-class="form-control"
+class="form-control form-control-sm"
 value="{{ old('title',$blog->title) }}"
 required>
+
 </div>
 
+{{-- MÔ TẢ NGẮN --}}
 
 <div class="mb-3">
-<label class="form-label">Mô tả ngắn</label>
+
+<label class="form-label fw-semibold">
+Mô tả ngắn
+</label>
 
 <textarea
 name="excerpt"
-class="form-control"
+class="form-control form-control-sm"
 rows="3">{{ old('excerpt',$blog->excerpt) }}</textarea>
+
 </div>
 
+{{-- THUMBNAIL --}}
 
-<div class="mb-3">
-<label class="form-label">Ảnh thumbnail</label>
+<div class="mb-4">
+
+<label class="form-label fw-semibold">
+Ảnh thumbnail
+</label>
 
 <input type="file"
 name="thumbnail"
-class="form-control"
+class="form-control form-control-sm"
 id="thumbnailInput"
 accept="image/*">
 
@@ -63,33 +109,41 @@ accept="image/*">
 <img
 id="thumbnailPreview"
 src="{{ asset('storage/'.$blog->thumbnail) }}"
-style="max-width:220px;border-radius:8px;border:1px solid #ddd;">
+style="max-width:220px;border-radius:8px;border:1px solid #ddd">
 
 <p id="noImageText"
 class="text-muted small mt-2"
 style="display:none">
+
 Chưa có ảnh
+
 </p>
 
 @else
 
 <img id="thumbnailPreview"
-style="max-width:220px; display:none; border-radius:8px; border:1px solid #ddd;">
+style="max-width:220px;display:none;border-radius:8px;border:1px solid #ddd">
 
 <p id="noImageText"
 class="text-muted small mt-2">
+
 Chưa có ảnh
+
 </p>
 
 @endif
 
 </div>
+
 </div>
 
+{{-- NỘI DUNG --}}
 
-<div class="mb-3">
+<div class="mb-4">
 
-<label class="form-label">Nội dung bài viết</label>
+<label class="form-label fw-semibold">
+Nội dung bài viết
+</label>
 
 <textarea
 name="content"
@@ -97,20 +151,32 @@ id="editor"
 rows="10">{{ old('content',$blog->content) }}</textarea>
 
 <small class="text-muted">
+
 Bạn có thể upload ảnh hoặc video trực tiếp vào nội dung.
+
 </small>
 
 </div>
 
+{{-- ACTION --}}
 
-<button class="btn btn-primary">
+<div class="d-flex gap-2">
+
+<button class="btn btn-primary btn-sm">
+
+<i class="bi bi-check-lg"></i>
 Cập nhật
+
 </button>
 
 <a href="{{ route('admin.blogs.index') }}"
-class="btn btn-secondary">
-Quay lại
+class="btn btn-outline-secondary btn-sm">
+
+Hủy
+
 </a>
+
+</div>
 
 </form>
 
@@ -118,7 +184,6 @@ Quay lại
 </div>
 
 @endsection
-
 
 @push('scripts')
 
@@ -129,6 +194,7 @@ Quay lại
 tinymce.init({
 
 selector:'#editor',
+
 height:500,
 
 document_base_url:"{{ url('/') }}/",
@@ -153,7 +219,6 @@ automatic_uploads:true,
 
 
 /* upload ảnh */
-
 images_upload_handler:function(blobInfo){
 
 return new Promise(function(resolve,reject){
@@ -193,7 +258,6 @@ xhr.send(formData);
 
 
 /* upload video */
-
 file_picker_types:'media',
 
 file_picker_callback:function(callback,value,meta){

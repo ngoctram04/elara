@@ -231,9 +231,25 @@ Trả hàng / Hoàn tiền</a>
             @endif
         </div>
 
-        <div class="order-status status-{{ $order->status }}">
-            {{ $order->status_name }}
-        </div>
+        <div class="order-status">
+
+@if($order->status == 1)
+<span class="status-1">Đang xử lý</span>
+
+@elseif($order->status == 2)
+<span class="status-2">Đang giao</span>
+
+@elseif($order->status == 3 && !$order->customer_confirmed)
+<span class="status-2">Đã giao - chờ xác nhận</span>
+
+@elseif($order->status == 3 && $order->customer_confirmed)
+<span class="status-3">Hoàn tất</span>
+
+@elseif($order->status == 4)
+<span class="status-4">Đã huỷ</span>
+@endif
+
+</div>
     </div>
 
 
@@ -267,7 +283,7 @@ Trả hàng / Hoàn tiền</a>
             </div>
 
             {{-- ===== ĐÁNH GIÁ ===== --}}
-            @if($order->status == 3)
+            @if($order->status == 3 && $order->customer_confirmed)
 
                 @if(!$item->review)
                     <a href="{{ route('reviews.create', $item->id) }}"
@@ -333,7 +349,21 @@ Trả hàng / Hoàn tiền</a>
                    class="btn btn-outline-secondary btn-sm btn-action">
                     Chi tiết
                 </a>
+                {{-- KHÁCH XÁC NHẬN ĐÃ NHẬN HÀNG --}}
+@if($order->status == 3 && !$order->customer_confirmed)
+<form action="{{ route('orders.confirmReceived',$order->id) }}"
+      method="POST"
+      class="d-inline">
+@csrf
 
+<button type="submit"
+        class="btn btn-success btn-sm btn-action btn-confirm">
+    Đã nhận hàng
+</button>
+
+</form>
+
+@endif
                 @if($order->canCancel())
                     <form action="{{ route('orders.cancel',$order->id) }}"
       method="POST"
@@ -427,10 +457,28 @@ Trả hàng / Hoàn tiền</a>
 @push('scripts')
 
 {{-- SweetAlert --}}
+
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-// Xác nhận huỷ đơn
+
+// =============================
+// AUTO SEARCH
+// =============================
+let searchTimer;
+
+function autoSearch(){
+    clearTimeout(searchTimer);
+
+    searchTimer = setTimeout(function(){
+        document.getElementById('orderSearchForm').submit();
+    },500);
+}
+
+
+// =============================
+// XÁC NHẬN HUỶ ĐƠN
+// =============================
 document.querySelectorAll('.btn-cancel').forEach(function(button){
 
 button.addEventListener('click', function () {
@@ -471,40 +519,68 @@ form.submit();
 });
 
 });
+
+
+// =============================
+// XÁC NHẬN ĐÃ NHẬN HÀNG
+// =============================
+document.querySelectorAll('.btn-confirm').forEach(function(btn){
+
+btn.addEventListener('click',function(e){
+
+e.preventDefault();
+
+let form = this.closest('form');
+
+Swal.fire({
+title: 'Xác nhận đã nhận hàng?',
+text: 'Sau khi xác nhận, đơn hàng sẽ hoàn tất.',
+icon: 'question',
+showCancelButton: true,
+confirmButtonText: 'Đã nhận',
+cancelButtonText: 'Chưa',
+confirmButtonColor: '#2ecc71',
+cancelButtonColor: '#6c757d'
+}).then((result)=>{
+
+if(result.isConfirmed){
+form.submit();
+}
+
+});
+
+});
+
+});
+
 </script>
 
-{{-- Thông báo sau khi huỷ --}}
+{{-- THÔNG BÁO SUCCESS --}}
 @if(session('success'))
+
 <script>
 Swal.fire({
-    icon: 'success',
-    title: 'Thành công',
-    text: '{{ session('success') }}',
-    confirmButtonColor: '#3085d6'
+icon: 'success',
+title: 'Thành công',
+text: '{{ session('success') }}',
+confirmButtonColor: '#3085d6'
 });
 </script>
+
 @endif
 
+{{-- THÔNG BÁO ERROR --}}
 @if(session('error'))
+
 <script>
 Swal.fire({
-    icon: 'error',
-    title: 'Lỗi',
-    text: '{{ session('error') }}',
-    confirmButtonColor: '#d33'
+icon: 'error',
+title: 'Lỗi',
+text: '{{ session('error') }}',
+confirmButtonColor: '#d33'
 });
-let searchTimer;
-
-function autoSearch(){
-
-clearTimeout(searchTimer);
-
-searchTimer = setTimeout(function(){
-document.getElementById('orderSearchForm').submit();
-},500);
-
-}
 </script>
+
 @endif
 
 @endpush

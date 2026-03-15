@@ -4,44 +4,48 @@
 
 @section('content')
 
-<div class="container-fluid">
+<div class="card border-0 shadow-sm">
 
-<div class="card shadow border-0">
+<div class="card-body">
 
-<div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+{{-- HEADER --}}
 
-<h5 class="mb-0">
-<i class="bi bi-clock-history me-2"></i>
+<div class="d-flex justify-content-between align-items-center mb-4">
+
+<div>
+<h5 class="fw-bold mb-1">
 Lịch sử thay đổi tồn kho
 </h5>
 
-<span class="badge bg-light text-dark">
+<small class="text-muted">
+Theo dõi các thay đổi số lượng tồn kho trong hệ thống
+</small>
+</div>
+
+<span class="badge bg-secondary">
 Tổng: {{ $logs->total() }}
 </span>
 
 </div>
 
-
-<div class="card-body">
-
 {{-- ===================== FILTER ===================== --}}
 
-<form method="GET" class="row g-3 mb-4">
+<form method="GET" class="row g-2 mb-4 align-items-center">
 
-<div class="col-md-3">
+<div class="col-md-4">
 
 <input type="text"
 name="keyword"
-class="form-control"
-placeholder="Tìm sản phẩm..."
+class="form-control form-control-sm"
+placeholder="Tìm theo tên sản phẩm..."
 value="{{ request('keyword') }}">
 
 </div>
 
-
 <div class="col-md-2">
 
-<select name="type" class="form-select">
+<select name="type"
+class="form-select form-select-sm">
 
 <option value="">Tất cả loại</option>
 
@@ -69,60 +73,86 @@ Hoàn kho
 
 </div>
 
-
 <div class="col-md-2">
 
 <input type="date"
 name="from"
-class="form-control"
+class="form-control form-control-sm"
 value="{{ request('from') }}">
 
 </div>
-
 
 <div class="col-md-2">
 
 <input type="date"
 name="to"
-class="form-control"
+class="form-control form-control-sm"
 value="{{ request('to') }}">
 
 </div>
 
+<div class="col-md-2 d-flex gap-2">
 
-<div class="col-md-3">
+<button class="btn btn-outline-primary btn-sm">
 
-<button class="btn btn-primary">
-<i class="bi bi-search"></i> Lọc
+<i class="bi bi-search"></i>
+Lọc
+
 </button>
 
 <a href="{{ route('admin.inventory.logs') }}"
-class="btn btn-secondary">
-Reset
+class="btn btn-outline-secondary btn-sm">
+
+Đặt lại
+
 </a>
 
 </div>
 
 </form>
 
-
 {{-- ===================== TABLE ===================== --}}
 
 <div class="table-responsive">
 
-<table class="table table-hover align-middle">
+<table class="table table-hover align-middle mb-0">
 
 <thead class="table-light">
 
 <tr>
-<th width="70">STT</th>
-<th>Sản phẩm</th>
-<th>Biến thể</th>
-<th width="140">Loại</th>
-<th width="120">Thay đổi</th>
-<th width="120">Tồn trước</th>
-<th width="120">Tồn sau</th>
-<th width="180">Thời gian</th>
+
+<th style="width:70px" class="text-center">
+STT
+</th>
+
+<th>
+Sản phẩm
+</th>
+
+<th>
+Biến thể
+</th>
+
+<th style="width:150px" class="text-center">
+Loại
+</th>
+
+<th style="width:120px" class="text-center">
+Thay đổi
+</th>
+
+<th style="width:120px" class="text-center">
+Tồn trước
+</th>
+
+<th style="width:120px" class="text-center">
+Tồn sau
+</th>
+
+<th style="width:180px" class="text-center">
+Thời gian
+</th>
+
 </tr>
 
 </thead>
@@ -133,11 +163,11 @@ Reset
 
 <tr>
 
-<td>
+<td class="text-center text-muted fw-semibold">
 {{ $logs->firstItem() + $index }}
 </td>
 
-<td>
+<td class="fw-medium">
 {{ $log->variant->product->name ?? '-' }}
 </td>
 
@@ -145,46 +175,34 @@ Reset
 {{ $log->variant->attribute_value ?? '-' }}
 </td>
 
-
-<td>
+<td class="text-center">
 
 @switch($log->type)
 
-@case('import')
-<span class="badge bg-success">
-<i class="bi bi-box-arrow-in-down"></i> Nhập kho
-</span>
+@case('import') <span class="badge bg-success"> <i class="bi bi-box-arrow-in-down me-1"></i>
+Nhập kho </span>
 @break
 
-@case('order')
-<span class="badge bg-primary">
-<i class="bi bi-cart-check"></i> Bán hàng
-</span>
+@case('order') <span class="badge bg-primary"> <i class="bi bi-cart-check me-1"></i>
+Bán hàng </span>
 @break
 
-@case('cancel')
-<span class="badge bg-warning text-dark">
-<i class="bi bi-arrow-counterclockwise"></i> Hoàn kho
-</span>
+@case('cancel') <span class="badge bg-warning text-dark"> <i class="bi bi-arrow-counterclockwise me-1"></i>
+Hoàn kho </span>
 @break
 
-@case('adjust')
-<span class="badge bg-info text-dark">
-<i class="bi bi-tools"></i> Điều chỉnh
-</span>
+@case('adjust') <span class="badge bg-info text-dark"> <i class="bi bi-tools me-1"></i>
+Điều chỉnh </span>
 @break
 
-@default
-<span class="badge bg-secondary">
-{{ $log->type }}
-</span>
+@default <span class="badge bg-secondary">
+{{ $log->type }} </span>
 
 @endswitch
 
 </td>
 
-
-<td class="fw-bold">
+<td class="text-center fw-bold">
 
 @if($log->quantity_change > 0)
 
@@ -202,19 +220,16 @@ Reset
 
 </td>
 
-
-<td class="text-muted">
+<td class="text-center text-muted">
 {{ $log->stock_before }}
 </td>
 
-
-<td class="fw-semibold">
+<td class="text-center fw-semibold">
 {{ $log->stock_after }}
 </td>
 
-
-<td>
-{{ $log->created_at->format('d/m/Y H:i') }}
+<td class="text-center text-muted small">
+{{ optional($log->created_at)->format('d/m/Y H:i') }}
 </td>
 
 </tr>
@@ -223,9 +238,10 @@ Reset
 
 <tr>
 
-<td colspan="8" class="text-center py-4 text-muted">
+<td colspan="8"
+class="text-center text-muted py-4">
 
-<i class="bi bi-inbox fs-4"></i><br>
+<i class="bi bi-inbox me-1"></i>
 Không có lịch sử tồn kho
 
 </td>
@@ -240,17 +256,17 @@ Không có lịch sử tồn kho
 
 </div>
 
-
 {{-- ===================== PAGINATION ===================== --}}
 
-<div class="mt-3 d-flex justify-content-center">
+@if($logs->hasPages())
 
-{{ $logs->links() }}
+<div class="mt-4 d-flex justify-content-center">
+
+{{ $logs->links('pagination::bootstrap-5') }}
 
 </div>
 
-
-</div>
+@endif
 
 </div>
 
