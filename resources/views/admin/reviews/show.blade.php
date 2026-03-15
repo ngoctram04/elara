@@ -20,6 +20,16 @@ Xem và phản hồi đánh giá của khách hàng
 </small>
 </div>
 
+<div class="d-flex gap-2">
+
+@if($review->order_id)
+<a href="{{ route('admin.orders.show',$review->order_id) }}"
+class="btn btn-outline-primary btn-sm">
+<i class="bi bi-receipt"></i>
+Xem đơn hàng
+</a>
+@endif
+
 <a href="{{ route('admin.reviews.index') }}"
 class="btn btn-outline-secondary btn-sm">
 <i class="bi bi-arrow-left"></i>
@@ -28,10 +38,12 @@ Quay lại
 
 </div>
 
+</div>
 
-{{-- ===== THÔNG TIN REVIEW ===== --}}
+
 <div class="row g-4">
 
+{{-- ===== THÔNG TIN ===== --}}
 <div class="col-md-8">
 
 <div class="border rounded p-3">
@@ -39,7 +51,8 @@ Quay lại
 <div class="row mb-2">
 
 <div class="col-md-6">
-<strong>Mã:</strong> #{{ $review->id }}
+<strong>Đơn hàng:</strong>
+#{{ $review->order_id ?? 'N/A' }}
 </div>
 
 <div class="col-md-6">
@@ -58,14 +71,27 @@ Quay lại
 </div>
 
 <div class="col-md-6">
-<strong>Ngày đánh giá:</strong>
-{{ $review->created_at->format('d/m/Y H:i') }}
+<strong>Phân loại:</strong>
+
+@if($review->variant)
+{{ $review->variant->attribute_name }}
+:
+{{ $review->variant->attribute_value }}
+@else
+N/A
+@endif
+
 </div>
 
 </div>
 
 
 <div class="row mb-2">
+
+<div class="col-md-6">
+<strong>Ngày đánh giá:</strong>
+{{ $review->created_at->format('d/m/Y H:i') }}
+</div>
 
 <div class="col-md-6">
 
@@ -84,6 +110,11 @@ Quay lại
 </span>
 
 </div>
+
+</div>
+
+
+<div class="row mb-2">
 
 <div class="col-md-6">
 

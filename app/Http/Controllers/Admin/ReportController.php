@@ -568,6 +568,7 @@ END
     public function slowProducts(Request $request)
     {
         $keyword = $request->keyword;
+        $days = $request->days;
 
         $query = DB::table('product_variants as pv')
         ->join('products as p', 'p.id', '=', 'pv.product_id')
@@ -577,29 +578,41 @@ END
                 'pv.stock_quantity',
                 DB::raw('MAX(oi.created_at) as last_sold')
             )
-            ->groupBy('pv.id', 'p.name', 'pv.stock_quantity')
-            ->orderByRaw('MAX(oi.created_at) IS NULL DESC')
-            ->orderByRaw('MAX(oi.created_at) ASC');
+            ->groupBy('pv.id', 'p.name', 'pv.stock_quantity');
 
+        // lọc theo tên
         if ($keyword) {
             $query->where('p.name', 'like', "%{$keyword}%");
         }
+
+        // lọc theo số ngày chưa bán
+        if ($days) {
+            $query->havingRaw(
+                'MAX(oi.created_at) IS NULL OR MAX(oi.created_at) <= ?',
+                [now()->subDays($days)]
+            );
+        }
+
+        $query->orderByRaw('MAX(oi.created_at) IS NULL DESC')
+        ->orderByRaw('MAX(oi.created_at) ASC');
 
         $products = $query->paginate(20)->withQueryString();
 
         return view('admin.reports.slow_products', [
             'products' => $products,
-            'keyword' => $keyword
+            'keyword' => $keyword,
+            'days' => $days
         ]);
     }
 
     public function lowStock(Request $request)
     {
         $keyword = $request->keyword;
+        $maxStock = $request->max_stock ?? 100;
 
         $query = DB::table('product_variants as pv')
         ->join('products as p', 'p.id', '=', 'pv.product_id')
-        ->where('pv.stock_quantity', '<=', 5)
+        ->where('pv.stock_quantity', '<=', $maxStock)
             ->select('p.name', 'pv.attribute_value', 'pv.stock_quantity')
             ->orderBy('pv.stock_quantity');
 
@@ -611,7 +624,8 @@ END
 
         return view('admin.reports.low_stock', [
             'products' => $products,
-            'keyword' => $keyword
+            'keyword' => $keyword,
+            'max_stock' => $maxStock
         ]);
     }
 

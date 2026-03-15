@@ -12,7 +12,8 @@
 
 <div>
 <h5 class="fw-bold mb-1">
-💬 Chat với {{ $conversation->user->name ?? 'Khách' }}
+<i class="bi bi-chat-dots"></i>
+Chat với {{ $conversation->user->name ?? 'Khách' }}
 </h5>
 
 <small class="text-muted">
@@ -22,11 +23,11 @@ Trao đổi tin nhắn với khách hàng
 
 </div>
 
-<div class="card border-0 shadow-sm">
+<div class="chat-wrapper">
 
 {{-- CHAT BODY --}}
 
-<div id="chat-box" class="card-body chat-body">
+<div id="chat-box" class="chat-body">
 
 @foreach($conversation->messages as $msg)
 
@@ -38,7 +39,7 @@ $isAdmin = $msg->sender_id == auth()->id();
 
 <div class="avatar">
 
-{{ $isAdmin ? 'A' : 'U' }}
+<i class="bi {{ $isAdmin ? 'bi-person-badge' : 'bi-person' }}"></i>
 
 </div>
 
@@ -82,9 +83,10 @@ $isAdmin = $msg->sender_id == auth()->id();
 
 </div>
 
+
 {{-- INPUT --}}
 
-<div class="card-footer bg-white">
+<div class="chat-footer">
 
 <form method="POST"
 action="{{ route('admin.messages.send',$conversation->id) }}"
@@ -95,12 +97,16 @@ enctype="multipart/form-data">
 <div class="chat-input">
 
 <label class="file-btn">
-
-📷
-
-<input type="file" name="image" accept="image/*">
-
+<i class="bi bi-image"></i>
+<input type="file" name="image" id="imageInput" accept="image/*">
 </label>
+
+<div id="imagePreview" class="image-preview" style="display:none">
+<img id="previewImg">
+<button type="button" id="removeImage">
+<i class="bi bi-x-lg"></i>
+</button>
+</div>
 
 <input
 type="text"
@@ -109,7 +115,7 @@ placeholder="Nhập tin nhắn...">
 
 <button type="submit">
 
-Gửi
+<i class="bi bi-send-fill"></i>
 
 </button>
 
@@ -126,16 +132,52 @@ Gửi
 </div>
 
 <style>
+.image-preview{
+position:relative;
+margin-bottom:8px;
+}
+
+.image-preview img{
+max-width:120px;
+border-radius:8px;
+border:1px solid #ddd;
+}
+
+.image-preview button{
+position:absolute;
+top:-6px;
+right:-6px;
+background:#dc3545;
+border:none;
+color:white;
+border-radius:50%;
+width:22px;
+height:22px;
+font-size:12px;
+display:flex;
+align-items:center;
+justify-content:center;
+cursor:pointer;
+}
+.chat-wrapper{
+border:1px solid #eee;
+border-radius:10px;
+overflow:hidden;
+}
+
+/* chat body */
 
 .chat-body{
-height:450px;
+height:480px;
 overflow-y:auto;
-background:#f4f6fb;
+background:#f7f8fc;
 padding:20px;
 display:flex;
 flex-direction:column;
-gap:12px;
+gap:14px;
 }
+
+/* message row */
 
 .message-row{
 display:flex;
@@ -148,34 +190,43 @@ margin-left:auto;
 flex-direction:row-reverse;
 }
 
+/* avatar */
+
 .avatar{
 width:36px;
 height:36px;
 border-radius:50%;
-background:#dee2e6;
+background:#e5e7eb;
 display:flex;
 align-items:center;
 justify-content:center;
-font-size:13px;
-font-weight:600;
+font-size:16px;
+color:#555;
 }
+
+/* content */
 
 .message-content{
 display:flex;
 flex-direction:column;
 }
 
+/* sender */
+
 .sender{
 font-size:12px;
 color:#777;
-margin-bottom:2px;
+margin-bottom:3px;
 }
+
+/* bubble */
 
 .bubble{
 padding:10px 14px;
 border-radius:14px;
 font-size:14px;
 word-break:break-word;
+line-height:1.4;
 }
 
 .message-row.user .bubble{
@@ -189,17 +240,31 @@ color:white;
 border-bottom-right-radius:4px;
 }
 
+/* image */
+
 .bubble img{
 max-width:220px;
 border-radius:8px;
 cursor:pointer;
 }
 
+/* time */
+
 .time{
 font-size:11px;
 color:#999;
 margin-top:2px;
 }
+
+/* footer */
+
+.chat-footer{
+border-top:1px solid #eee;
+background:white;
+padding:10px 15px;
+}
+
+/* input */
 
 .chat-input{
 display:flex;
@@ -213,25 +278,36 @@ border:1px solid #ddd;
 border-radius:20px;
 padding:8px 14px;
 outline:none;
+font-size:14px;
 }
+
+/* send button */
 
 .chat-input button{
 background:#2563eb;
 border:none;
 color:white;
-padding:8px 16px;
+padding:8px 14px;
 border-radius:20px;
 cursor:pointer;
+display:flex;
+align-items:center;
+justify-content:center;
 }
+
+/* file button */
 
 .file-btn{
 font-size:20px;
 cursor:pointer;
+color:#555;
 }
 
 .file-btn input{
 display:none;
 }
+
+/* scrollbar */
 
 .chat-body::-webkit-scrollbar{
 width:6px;
@@ -249,11 +325,42 @@ border-radius:3px;
 window.onload=function(){
 
 let box=document.getElementById("chat-box");
-
 box.scrollTop=box.scrollHeight;
 
 }
+const input = document.getElementById("imageInput");
+const previewBox = document.getElementById("imagePreview");
+const previewImg = document.getElementById("previewImg");
+const removeBtn = document.getElementById("removeImage");
 
+input.addEventListener("change", function(){
+
+const file = this.files[0];
+
+if(file){
+
+const reader = new FileReader();
+
+reader.onload = function(e){
+
+previewImg.src = e.target.result;
+previewBox.style.display = "inline-block";
+
+}
+
+reader.readAsDataURL(file);
+
+}
+
+});
+
+removeBtn.addEventListener("click", function(){
+
+input.value = "";
+previewImg.src = "";
+previewBox.style.display = "none";
+
+});
 </script>
 
 @endsection

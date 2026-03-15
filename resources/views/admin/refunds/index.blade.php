@@ -115,7 +115,9 @@ class="btn btn-outline-secondary btn-sm">
 
 <tr>
 
-<td>{{ $refund->id }}</td>
+<td>
+{{ ($refunds->currentPage() - 1) * $refunds->perPage() + $loop->iteration }}
+</td>
 
 <td>
 <a href="{{ route('admin.orders.show',$refund->order_id) }}">

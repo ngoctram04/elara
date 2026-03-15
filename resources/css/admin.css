@@ -2,7 +2,7 @@
    GLOBAL
 ====================== */
 body {
-    background-color: #f2f8fd;
+    background: #f2f8fd;
     font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 14px;
     color: #1f2937;
@@ -13,59 +13,42 @@ body {
     min-height: 100vh;
     overflow-x: hidden;
 }
-/* submenu */
-.submenu{
-    list-style: none;
-    padding-left: 28px;
-    margin: 4px 0;
-}
 
-.submenu li{
-    margin: 0;
-}
-
-.submenu li a{
-    display: block;
-    padding: 6px 0;
-    font-size: 14px;
-    color: #fff;
-    text-decoration: none;
-}
-
-.submenu li a:hover{
-    opacity: 0.9;
-}
-
-.submenu li a.active{
-    font-weight: 600;
-}
 /* ======================
    SIDEBAR
 ====================== */
 .sidebar {
     width: 245px;
     background: linear-gradient(180deg, #8fd3ff, #6ec1f7);
-    color: #ffffff;
-    padding: 20px 0;
-    flex-shrink: 0;
+    color: #fff;
+
     position: fixed;
     top: 0;
     left: 0;
     bottom: 0;
+
+    padding: 20px 0;
     z-index: 1000;
 
     overflow-y: auto;
-    /* thêm dòng này để cuộn */
+
+    transform: translateX(0);
+    transition: transform .3s ease;
+}
+
+/* ẩn sidebar desktop */
+.sidebar.hidden {
+    transform: translateX(-245px);
 }
 
 /* ======================
-   LOGO
+   SIDEBAR LOGO
 ====================== */
 .sidebar-logo {
     text-align: center;
     font-weight: 700;
     margin-bottom: 32px;
-    letter-spacing: 0.5px;
+    letter-spacing: .5px;
     font-size: 15px;
 }
 
@@ -88,37 +71,40 @@ body {
     display: flex;
     align-items: center;
     gap: 12px;
+
     padding: 12px 22px;
-    color: #ffffff;
-    text-decoration: none;
-    font-size: 14.5px;
-    border-radius: 12px;
     margin: 6px 14px;
+
+    color: #fff;
+    text-decoration: none;
+
+    font-size: 14.5px;
     font-weight: 500;
+
+    border-radius: 12px;
+
     transition:
-        background 0.25s ease,
-        color 0.25s ease,
-        transform 0.15s ease,
-        box-shadow 0.25s ease;
+        background .25s,
+        transform .15s,
+        box-shadow .25s;
 }
 
 .sidebar-menu li a i {
     font-size: 17px;
-    opacity: 0.95;
 }
 
-/* HOVER */
+/* hover */
 .sidebar-menu li a:hover:not(.active) {
-    background: rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, .25);
     transform: translateX(4px);
 }
 
-/* ACTIVE */
+/* active */
 .sidebar-menu li a.active {
-    background: #ffffff;
+    background: #fff;
     color: #1e88e5;
     font-weight: 700;
-    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, .12);
 }
 
 .sidebar-menu li a.active i {
@@ -126,15 +112,59 @@ body {
 }
 
 /* ======================
+   SUBMENU
+====================== */
+.submenu {
+    list-style: none;
+    padding-left: 14px;
+    margin: 6px 0;
+}
+
+.submenu li a {
+    display: block;
+    padding: 8px 14px;
+    margin: 4px 10px;
+
+    font-size: 14px;
+    color: #fff;
+    text-decoration: none;
+
+    border-radius: 10px;
+
+    transition: background .25s, transform .15s;
+}
+
+/* hover */
+.submenu li a:hover {
+    background: rgba(255, 255, 255, .2);
+    transform: translateX(3px);
+}
+
+/* active */
+.submenu li a.active {
+    background: #fff;
+    color: #1e88e5;
+    font-weight: 600;
+}
+
+/* ======================
    MAIN CONTENT
 ====================== */
 .main-content {
-    margin-left: 230px;
-    flex: 1;
+    margin-left: 245px;
+    width: calc(100% - 245px);
+
     display: flex;
     flex-direction: column;
+
     min-height: 100vh;
-    width: calc(100% - 230px);
+
+    transition: .3s;
+}
+
+.main-content.full {
+    margin-left: 0;
+    width: 100%;
 }
 
 /* ======================
@@ -142,16 +172,17 @@ body {
 ====================== */
 .topbar {
     height: 60px;
-    background: #ffffff;
-    padding: 0 24px;
+    background: #fff;
+
     display: flex;
     align-items: center;
-    gap: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-    z-index: 10;
+
+    padding: 0 24px;
+
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .06);
 }
 
-/* Admin dropdown */
+/* avatar button */
 .topbar .dropdown-toggle {
     border-radius: 999px;
     font-size: 14px;
@@ -167,11 +198,13 @@ body {
     object-fit: cover;
 }
 
-/* Dropdown menu */
+/* ======================
+   DROPDOWN
+====================== */
 .dropdown-menu {
     border-radius: 14px;
     font-size: 14px;
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, .12);
     padding: 6px 0;
 }
 
@@ -189,16 +222,15 @@ body {
 }
 
 .dropdown-item:hover {
-    background-color: #eef6fb;
+    background: #eef6fb;
 }
 
 /* ======================
    CONTENT
 ====================== */
 .content {
-    padding: 24px 24px 24px 16px;
+    padding: 24px;
     flex-grow: 1;
-    min-height: calc(100vh - 60px);
 }
 
 /* ======================
@@ -207,7 +239,7 @@ body {
 .card {
     border-radius: 14px;
     border: none;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .06);
 }
 
 .card .card-body {
@@ -218,7 +250,7 @@ body {
    TABLE
 ====================== */
 .table {
-    background: #ffffff;
+    background: #fff;
     border-radius: 12px;
     overflow: hidden;
 }
@@ -251,35 +283,58 @@ body {
 ====================== */
 .alert {
     border-radius: 12px;
-    font-size: 14px;
+}
+
+/* ======================
+   SIDEBAR OVERLAY
+====================== */
+.sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .35);
+    opacity: 0;
+    visibility: hidden;
+    transition: .25s;
+    z-index: 900;
+}
+
+.sidebar-overlay.active {
+    opacity: 1;
+    visibility: visible;
 }
 
 /* ======================
    MOBILE
 ====================== */
-@media (max-width: 768px) {
+@media(max-width:768px) {
+
     .sidebar {
-        left: -230px;
-        transition: 0.3s ease;
+        transform: translateX(-245px);
     }
 
     .sidebar.show {
-        left: 0;
+        transform: translateX(0);
     }
 
     .main-content {
         margin-left: 0;
+        width: 100%;
     }
 
     .content {
         padding: 16px;
     }
+
 }
+
+/* ======================
+   SCROLLBAR
+====================== */
 .sidebar::-webkit-scrollbar {
     width: 6px;
 }
 
 .sidebar::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, .4);
     border-radius: 10px;
 }

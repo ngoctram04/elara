@@ -4,7 +4,10 @@
 
 <div class="container py-4">
 
-<h4 class="mb-3">💬 Chat với nhân viên</h4>
+<h4 class="mb-3">
+<i class="bi bi-chat-dots me-2"></i>
+Chat với nhân viên
+</h4>
 
 <div class="chat-wrapper">
 
@@ -14,14 +17,16 @@
     {{-- PREVIEW IMAGE --}}
     <div id="image-preview" class="preview-box" style="display:none;">
         <img id="preview-img">
-        <span onclick="removePreview()">✖</span>
+        <span onclick="removePreview()">
+            <i class="bi bi-x-lg"></i>
+        </span>
     </div>
 
     {{-- INPUT --}}
     <div class="chat-input">
 
         <label class="file-btn">
-            🖼️
+            <i class="bi bi-image"></i>
             <input type="file" id="file" accept="image/*">
         </label>
 
@@ -29,7 +34,9 @@
                id="message"
                placeholder="Nhập tin nhắn...">
 
-        <button onclick="sendMessage()">➤</button>
+        <button onclick="sendMessage()">
+            <i class="bi bi-send"></i>
+        </button>
 
     </div>
 
@@ -158,19 +165,30 @@ padding:8px 14px;
 outline:none;
 }
 
+/* send button */
 .chat-input button{
 background:#2563eb;
 border:none;
 color:white;
-padding:8px 16px;
+padding:8px 14px;
 border-radius:20px;
 cursor:pointer;
+display:flex;
+align-items:center;
+justify-content:center;
 }
 
 /* file button */
 .file-btn{
 cursor:pointer;
-font-size:22px;
+font-size:20px;
+color:#6b7280;
+display:flex;
+align-items:center;
+}
+
+.file-btn:hover{
+color:#2563eb;
 }
 
 .file-btn input{
@@ -194,8 +212,10 @@ border-radius:6px;
 
 .preview-box span{
 cursor:pointer;
-font-size:14px;
-color:red;
+font-size:16px;
+color:#dc3545;
+display:flex;
+align-items:center;
 }
 
 /* scrollbar */
@@ -209,6 +229,7 @@ border-radius:3px;
 }
 
 </style>
+
 
 <script>
 

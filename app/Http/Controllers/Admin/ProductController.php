@@ -37,6 +37,19 @@ class ProductController extends Controller
             $query->where('brand_id', $request->brand_id);
         }
 
+        // 🔥 THÊM ĐOẠN NÀY
+        if ($request->status === 'in_stock') {
+            $query->whereHas('variants', function ($q) {
+                $q->where('stock_quantity', '>', 0);
+            });
+        }
+
+        if ($request->status === 'out_stock') {
+            $query->whereDoesntHave('variants', function ($q) {
+                $q->where('stock_quantity', '>', 0);
+            });
+        }
+
         return view('admin.products.index', [
             'products'   => $query->latest()->paginate(10)->withQueryString(),
             'categories' => Category::whereNull('parent_id')->with('children')->get(),

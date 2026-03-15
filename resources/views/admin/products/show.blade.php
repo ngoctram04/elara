@@ -148,7 +148,7 @@ $attributeName = $product->variants->first()?->attribute_name;
 <table class="table table-bordered align-middle">
 <thead class="table-light text-center">
 <tr>
-    <th width="60">#</th>
+    <th width="60">STT</th>
     <th>Giá trị</th>
     <th width="160">Giá bán</th>
     <th width="110">Tồn kho</th>

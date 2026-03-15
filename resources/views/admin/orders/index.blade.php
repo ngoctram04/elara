@@ -107,7 +107,7 @@ class="btn btn-outline-secondary btn-sm">
 
 <thead class="table-light">
 <tr>
-<th style="width:80px">ID</th>
+<th style="width:80px">Mã</th>
 <th>Khách hàng</th>
 <th style="width:120px">Phương thức</th>
 <th style="width:140px">Tổng tiền</th>

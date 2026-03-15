@@ -23,7 +23,22 @@
 ])
 
 <style>
+/* badge tin nhắn chưa đọc */
 
+.chat-badge{
+position:absolute;
+top:-4px;
+right:-4px;
+background:#dc3545;
+color:white;
+font-size:11px;
+padding:3px 6px;
+border-radius:50%;
+font-weight:600;
+line-height:1;
+min-width:18px;
+text-align:center;
+}
 /* floating buttons */
 
 .floating-right{
@@ -396,7 +411,7 @@ loading.innerHTML = "<b>AI:</b> Chatbot đang lỗi.";
 
 function loadUnreadChat(){
 
-fetch('/chat/unread-count')
+fetch('{{ route("chat.unreadCount") }}')
 .then(res => res.json())
 .then(data => {
 

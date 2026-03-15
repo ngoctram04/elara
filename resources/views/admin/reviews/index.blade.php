@@ -85,13 +85,14 @@ class="btn btn-outline-secondary btn-sm">
 <thead class="table-light">
 
 <tr>
-<th>Mã</th>
+<th width="90">Đơn hàng</th>
 <th>Khách</th>
 <th>Sản phẩm</th>
-<th width="110">Rating</th>
-<th width="200">Nội dung</th>
-<th>Trả lời</th>
-<th>Trạng thái</th>
+<th width="120">Rating</th>
+<th width="220">Nội dung</th>
+<th width="100">Ảnh/Video</th>
+<th width="120">Trả lời</th>
+<th width="110">Trạng thái</th>
 <th width="160">Hành động</th>
 </tr>
 
@@ -103,18 +104,41 @@ class="btn btn-outline-secondary btn-sm">
 
 <tr>
 
-<td>#{{ $review->id }}</td>
+{{-- ĐƠN HÀNG --}}
+<td>
+#{{ $review->order_id ?? 'N/A' }}
+</td>
 
+
+{{-- KHÁCH --}}
 <td>
 <strong>{{ $review->user->name ?? 'N/A' }}</strong>
 </td>
 
+
+{{-- SẢN PHẨM --}}
 <td>
+
+<div>
 {{ $review->product->name ?? 'N/A' }}
+</div>
+
+@if($review->variant)
+<small class="text-muted">
+{{ $review->variant->attribute_name }}
+:
+{{ $review->variant->attribute_value }}
+</small>
+@endif
+
 </td>
 
+
+{{-- RATING --}}
 <td>
+
 <span class="text-warning">
+
 @for($i=1;$i<=5;$i++)
 @if($i <= $review->rating)
 <i class="bi bi-star-fill"></i>
@@ -122,13 +146,41 @@ class="btn btn-outline-secondary btn-sm">
 <i class="bi bi-star"></i>
 @endif
 @endfor
+
 </span>
+
+<small class="text-muted">
+({{ $review->rating }})
+</small>
+
 </td>
 
+
+{{-- NỘI DUNG --}}
 <td>
-{{ Str::limit($review->comment,80) }}
+{{ Str::limit($review->comment,50) }}
 </td>
 
+
+{{-- MEDIA --}}
+<td>
+
+@if($review->media->count())
+
+<span class="badge bg-info">
+{{ $review->media->count() }} ảnh
+</span>
+
+@else
+
+<span class="text-muted">—</span>
+
+@endif
+
+</td>
+
+
+{{-- TRẢ LỜI --}}
 <td>
 
 @if($review->admin_reply)
@@ -147,6 +199,8 @@ Chưa trả lời
 
 </td>
 
+
+{{-- TRẠNG THÁI --}}
 <td>
 
 @if($review->is_visible)
@@ -165,20 +219,29 @@ Hiển thị
 
 </td>
 
+
+{{-- HÀNH ĐỘNG --}}
 <td>
 
 <a href="{{ route('admin.reviews.show',$review->id) }}"
 class="btn btn-sm btn-outline-primary">
-Xem chi tiết
+Chi tiết
 </a>
 
 <form action="{{ route('admin.reviews.toggle',$review->id) }}"
 method="POST"
 class="d-inline">
+
 @csrf
 
 <button class="btn btn-sm btn-outline-warning">
+
+@if($review->is_visible)
 <i class="bi bi-eye-slash"></i>
+@else
+<i class="bi bi-eye"></i>
+@endif
+
 </button>
 
 </form>
@@ -190,7 +253,7 @@ class="d-inline">
 @empty
 
 <tr>
-<td colspan="8" class="text-center text-muted py-4">
+<td colspan="9" class="text-center text-muted py-4">
 Không có đánh giá
 </td>
 </tr>

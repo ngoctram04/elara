@@ -256,7 +256,7 @@ Thống kê
 
 <header class="topbar d-flex align-items-center">
 
-<button class="btn btn-light d-md-none" id="toggleSidebar">
+<button class="btn btn-light" id="toggleSidebar">
 <i class="bi bi-list"></i>
 </button>
 

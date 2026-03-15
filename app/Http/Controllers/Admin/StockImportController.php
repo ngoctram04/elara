@@ -39,7 +39,6 @@ class StockImportController extends Controller
     ======================= */
     public function store(Request $request)
     {
-
         $request->validate([
             'variant_id'   => 'required|array',
             'variant_id.*' => 'exists:product_variants,id',
@@ -64,15 +63,15 @@ class StockImportController extends Controller
 
             foreach ($request->variant_id as $index => $variantId) {
 
-                $qty  = $request->quantity[$index];
-                $cost = $request->cost_price[$index];
+                $qty  = $request->quantity[$index] ?? 0;
+                $cost = $request->cost_price[$index] ?? 0;
 
                 $mfg  = $request->mfg_date[$index] ?? null;
                 $exp  = $request->expiry_date[$index] ?? null;
 
 
                 /* ======================
-                    KHÓA VARIANT
+                    LOCK VARIANT
                 ====================== */
                 $variant = ProductVariant::with('product')
                     ->lockForUpdate()
@@ -96,15 +95,16 @@ class StockImportController extends Controller
 
 
                 /* ======================
-                    CẬP NHẬT VARIANT
+                    UPDATE VARIANT
                 ====================== */
-                $variant->stock_quantity = $newStock;
-                $variant->cost_price     = $avgCost;
-                $variant->save();
+                $variant->update([
+                    'stock_quantity' => $newStock,
+                    'cost_price'     => $avgCost
+                ]);
 
 
                 /* ======================
-                    CẬP NHẬT TOTAL STOCK
+                    UPDATE PRODUCT STOCK
                 ====================== */
                 if ($variant->product) {
 
@@ -118,7 +118,7 @@ class StockImportController extends Controller
 
 
                 /* ======================
-                    GHI LỊCH SỬ TỒN KHO
+                    INVENTORY LOG
                 ====================== */
                 InventoryLog::create([
                     'variant_id'       => $variant->id,
@@ -132,7 +132,7 @@ class StockImportController extends Controller
 
 
                 /* ======================
-                    LƯU LỊCH SỬ NHẬP
+                    STOCK IMPORT
                 ====================== */
                 StockImport::create([
                     'variant_id'       => $variant->id,
@@ -158,10 +158,38 @@ class StockImportController extends Controller
     /* =======================
         LỊCH SỬ NHẬP
     ======================= */
-    public function history()
+    public function history(Request $request)
     {
 
-        $imports = StockImport::select(
+        $query = StockImport::query();
+
+
+        /* ======================
+            SEARCH
+        ====================== */
+        if ($request->keyword) {
+
+            $query->where(function ($q) use ($request) {
+
+                $q->where('code', 'like', '%' . $request->keyword . '%')
+                    ->orWhere('supplier', 'like', '%' . $request->keyword . '%');
+            });
+        }
+
+
+        /* ======================
+            DATE FILTER
+        ====================== */
+        if ($request->from && $request->to) {
+
+            $query->whereBetween('created_at', [
+                $request->from,
+                $request->to
+            ]);
+        }
+
+
+        $imports = $query->select(
             'code',
             DB::raw('MAX(created_at) as created_at'),
             DB::raw('COUNT(DISTINCT variant_id) as total_items'),
@@ -170,7 +198,8 @@ class StockImportController extends Controller
         )
             ->groupBy('code')
             ->orderByDesc('created_at')
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
 
 
         return view('admin.stock_imports.history', compact('imports'));
@@ -198,6 +227,7 @@ class StockImportController extends Controller
     ======================= */
     public function exportPdf($code)
     {
+
         $items = StockImport::with([
             'variant:id,product_id,attribute_value',
             'variant.product:id,name'

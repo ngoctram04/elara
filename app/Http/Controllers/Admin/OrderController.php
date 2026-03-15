@@ -23,32 +23,35 @@ class OrderController extends Controller
     | Tìm kiếm mã đơn / tên / SĐT
     |--------------------------------
     */
+
         if ($request->filled('keyword')) {
 
             $keyword = trim($request->keyword);
 
-            // nếu nhập dạng #59
+            // nhập dạng #59
             if (str_starts_with($keyword, '#')) {
 
                 $id = str_replace('#', '', $keyword);
 
                 $query->where('id', $id);
             }
-            // nếu nhập số (59)
+
+            // nhập số 59
             elseif (is_numeric($keyword)) {
 
                 $query->where('id', $keyword);
             }
-            // nếu nhập chữ → tìm tên hoặc sđt
+
+            // nhập chữ → tìm tên / sđt
             else {
 
                 $query->where(function ($q) use ($keyword) {
 
                     $q->where('receiver_name', 'like', "%{$keyword}%")
-                        ->orWhere('receiver_phone', 'like', "%{$keyword}%")
-                        ->orWhereHas('user', function ($u) use ($keyword) {
-                            $u->where('name', 'like', "%{$keyword}%");
-                        });
+                    ->orWhere('receiver_phone', 'like', "%{$keyword}%")
+                    ->orWhereHas('user', function ($u) use ($keyword) {
+                        $u->where('name', 'like', "%{$keyword}%");
+                    });
                 });
             }
         }
@@ -58,61 +61,72 @@ class OrderController extends Controller
     | Lọc trạng thái đơn
     |--------------------------------
     */
+
         if ($request->filled('status')) {
+
             $query->where('status', $request->status);
         }
 
+
         /*
     |--------------------------------
-    | Lọc trạng thái thanh toán (chuẩn)
+    | Lọc trạng thái thanh toán
     |--------------------------------
     */
+
         if ($request->filled('payment_status')) {
 
             switch ($request->payment_status) {
 
-                    // =========================
-                    // ĐÃ THANH TOÁN
-                    // COD đã giao OR VNPAY paid
-                    // =========================
+                    /*
+            =========================
+            ĐÃ THANH TOÁN
+            COD đã giao OR VNPAY paid
+            =========================
+            */
                 case 'paid':
 
                     $query->where(function ($q) {
 
+                        // VNPAY đã thanh toán
                         $q->where(function ($sub) {
+
                             $sub->where('payment_method', 'vnpay')
                             ->where('payment_status', Order::PAYMENT_PAID);
                         })
 
+                            // COD đã giao
                             ->orWhere(function ($sub) {
-                            $sub->where('payment_method', 'cod')
-                            ->whereIn('status', [
-                                Order::STATUS_COMPLETED,
-                                Order::STATUS_RETURNED
-                            ]);
+
+                                $sub->where('payment_method', 'cod')
+                                    ->where('status', Order::STATUS_COMPLETED);
                             });
                     });
 
                     break;
 
 
-                    // =========================
-                    // CHƯA THANH TOÁN
-                    // COD chưa giao OR VNPAY unpaid
-                    // =========================
+                    /*
+            =========================
+            CHƯA THANH TOÁN
+            COD chưa giao OR VNPAY unpaid
+            =========================
+            */
+
                 case 'unpaid':
 
                     $query->where(function ($q) {
 
+                        // COD chưa giao
                         $q->where(function ($sub) {
+
                             $sub->where('payment_method', 'cod')
-                            ->whereNotIn('status', [
-                                Order::STATUS_COMPLETED,
-                                Order::STATUS_RETURNED
-                            ]);
+                                ->where('status', '!=', Order::STATUS_COMPLETED);
                         })
 
+                            // VNPAY chưa thanh toán
                             ->orWhere(function ($sub) {
+
                                 $sub->where('payment_method', 'vnpay')
                                 ->where('payment_status', Order::PAYMENT_UNPAID);
                             });
@@ -121,9 +135,12 @@ class OrderController extends Controller
                     break;
 
 
-                    // =========================
-                    // ĐÃ HOÀN TIỀN
-                    // =========================
+                    /*
+            =========================
+            ĐÃ HOÀN TIỀN
+            =========================
+            */
+
                 case 'refunded':
 
                     $query->where('payment_status', Order::PAYMENT_REFUNDED);
@@ -131,9 +148,12 @@ class OrderController extends Controller
                     break;
 
 
-                    // =========================
-                    // THANH TOÁN THẤT BẠI
-                    // =========================
+                    /*
+            =========================
+            THANH TOÁN THẤT BẠI
+            =========================
+            */
+
                 case 'failed':
 
                     $query->where('payment_status', Order::PAYMENT_FAILED);
@@ -142,6 +162,22 @@ class OrderController extends Controller
             }
         }
 
+
+        /*
+    |--------------------------------
+    | Sắp xếp
+    |--------------------------------
+    */
+
+        if ($request->sort == 'oldest') {
+
+            $query->oldest();
+        } else {
+
+            $query->latest();
+        }
+
+
         /*
     |--------------------------------
     | Danh sách đơn
@@ -149,9 +185,9 @@ class OrderController extends Controller
     */
 
         $orders = $query
-            ->latest()
             ->paginate(7)
             ->withQueryString();
+
 
         return view('admin.orders.index', compact('orders'));
     }

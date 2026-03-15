@@ -9,7 +9,6 @@
 <div class="card-body">
 
 {{-- HEADER --}}
-
 <div class="d-flex justify-content-between align-items-center mb-4">
 
 <div>
@@ -32,8 +31,68 @@ Nhập hàng
 
 </div>
 
-{{-- TABLE --}}
 
+{{-- ================= FILTER ================= --}}
+<form method="GET" class="row g-2 mb-4 align-items-center">
+
+<div class="col-md-4">
+
+<input
+type="text"
+name="keyword"
+value="{{ request('keyword') }}"
+class="form-control form-control-sm"
+placeholder="Tìm mã phiếu hoặc nhà cung cấp...">
+
+</div>
+
+
+<div class="col-md-2">
+
+<input
+type="date"
+name="from"
+value="{{ request('from') }}"
+class="form-control form-control-sm">
+
+</div>
+
+
+<div class="col-md-2">
+
+<input
+type="date"
+name="to"
+value="{{ request('to') }}"
+class="form-control form-control-sm">
+
+</div>
+
+
+<div class="col-md-4 d-flex gap-2">
+
+<button class="btn btn-outline-primary btn-sm">
+
+<i class="bi bi-search"></i>
+Lọc
+
+</button>
+
+
+<a href="{{ route('admin.stock.history') }}"
+class="btn btn-outline-secondary btn-sm">
+
+Đặt lại
+
+</a>
+
+</div>
+
+</form>
+
+
+
+{{-- ================= TABLE ================= --}}
 <div class="table-responsive">
 
 <table class="table table-hover align-middle mb-0">
@@ -81,34 +140,51 @@ Thao tác
 <tr>
 
 <td class="text-center text-muted fw-semibold">
+
 {{ $imports->firstItem() + $index }}
+
 </td>
+
 
 <td>
+
 <span class="badge bg-secondary">
+
 {{ $item->code }}
+
 </span>
+
 </td>
 
+
 <td class="fw-medium">
+
 {{ $item->supplier ?? '—' }}
+
 </td>
+
 
 <td class="text-center">
 
 <span class="badge bg-info">
+
 {{ $item->total_items }}
+
 </span>
 
 </td>
+
 
 <td class="text-center">
 
 <span class="badge bg-success">
+
 {{ $item->total_qty }}
+
 </span>
 
 </td>
+
 
 <td class="text-center text-muted small">
 
@@ -116,9 +192,11 @@ Thao tác
 
 </td>
 
+
 <td class="text-center">
 
-<a href="{{ url('admin/stock-import/'.$item->code) }}"
+<a
+href="{{ url('admin/stock-import/'.$item->code) }}"
 class="btn btn-sm btn-outline-primary">
 
 <i class="bi bi-eye"></i>
@@ -137,6 +215,7 @@ class="btn btn-sm btn-outline-primary">
 class="text-center text-muted py-4">
 
 <i class="bi bi-inbox me-1"></i>
+
 Chưa có phiếu nhập kho
 
 </td>
@@ -151,7 +230,8 @@ Chưa có phiếu nhập kho
 
 </div>
 
-{{-- PAGINATION --}}
+
+{{-- ================= PAGINATION ================= --}}
 @if($imports->hasPages())
 
 <div class="mt-4">
@@ -161,6 +241,7 @@ Chưa có phiếu nhập kho
 </div>
 
 @endif
+
 
 </div>
 </div>

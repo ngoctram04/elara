@@ -406,4 +406,21 @@ style='font-weight:600;color:#2c3e50'>
             'reply' => $reply
         ]);
     }
+    public function unreadCount()
+    {
+        $conversation = ChatConversation::where('user_id', Auth::id())->first();
+
+        if (!$conversation) {
+            return response()->json(['count' => 0]);
+        }
+
+        $count = ChatMessage::where('conversation_id', $conversation->id)
+            ->where('sender_id', '!=', Auth::id()) // admin gửi
+            ->where('is_read', 0)
+            ->count();
+
+        return response()->json([
+            'count' => $count
+        ]);
+    }
 }
