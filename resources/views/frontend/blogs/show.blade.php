@@ -54,7 +54,7 @@ Tin tức
 <span>
 
 <i class="bi bi-person"></i>
-Admin
+Elara
 
 </span>
 

@@ -487,7 +487,27 @@ select option:disabled{
 @push('scripts')
 <script>
 const money = n => new Intl.NumberFormat('vi-VN').format(n) + 'đ';
+function updateCartBadge(){
 
+    let total = 0;
+
+    document.querySelectorAll('.js-qty').forEach(input=>{
+        total += parseInt(input.value) || 0;
+    });
+
+    const badge = document.querySelector('.cart-badge');
+
+    if(!badge) return;
+
+    if(total <= 0){
+        badge.style.display = 'none';
+        return;
+    }
+
+    badge.style.display = 'inline-block';
+    badge.innerText = total > 99 ? '99+' : total;
+
+}
 function recalcTotal(){
 
     let subtotal = 0;
@@ -659,6 +679,7 @@ document.addEventListener('click', e=>{
         sub.innerText = money(price * qty);
 
         recalcTotal();
+updateCartBadge();
     }
 
 });
@@ -708,7 +729,7 @@ document.addEventListener('click', function(e){
 .then(() => {
     const row = document.querySelector(`tr[data-row="${id}"]`);
     if (row) row.remove();
-
+updateCartBadge();
     showToast('Đã xóa sản phẩm', 'success');
 
     // ===== KIỂM TRA GIỎ CÒN KHÔNG =====
@@ -762,6 +783,7 @@ document.addEventListener('change', e=>{
         sub.innerText = money(price * qty);
 
         recalcTotal();
+updateCartBadge();
     }
 });
 
@@ -906,6 +928,7 @@ if(priceCol){
             }
 
             recalcTotal();
+updateCartBadge();
         });
     };
 });
@@ -943,6 +966,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if(checkAll) checkAll.checked = false;
 
     recalcTotal();
+    updateCartBadge();
 });
 /* ================= VOUCHER ================= */
 

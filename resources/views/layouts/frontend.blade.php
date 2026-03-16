@@ -231,8 +231,85 @@ Tin tức
 @yield('content')
 </main>
 
-<footer class="footer-box mt-2">
+<footer class="footer-box mt-4">
 <div class="footer-inner">
+
+<div class="row">
+
+<!-- ELARA -->
+<div class="col-md-4 mb-4">
+<h5 class="footer-title">ELARA</h5>
+
+<p class="footer-desc">
+ELARA là cửa hàng chuyên cung cấp các sản phẩm chất lượng cao
+với giá tốt và dịch vụ giao hàng nhanh chóng.
+</p>
+
+<div class="footer-social">
+<a href="#"><i class="bi bi-facebook"></i></a>
+<a href="#"><i class="bi bi-instagram"></i></a>
+<a href="#"><i class="bi bi-tiktok"></i></a>
+</div>
+
+</div>
+
+
+<!-- LIÊN KẾT -->
+<div class="col-md-2 mb-4">
+
+<h6 class="footer-title-sm">Liên kết</h6>
+
+<ul class="footer-links">
+<li><a href="/">Trang chủ</a></li>
+<li><a href="/products">Sản phẩm</a></li>
+<li><a href="/cart">Giỏ hàng</a></li>
+<li><a href="/chat">Liên hệ</a></li>
+</ul>
+
+</div>
+
+
+<!-- HỖ TRỢ -->
+<div class="col-md-3 mb-4">
+
+<h6 class="footer-title-sm">Hỗ trợ</h6>
+
+<ul class="footer-links">
+<li><a href="#">Chính sách đổi trả</a></li>
+<li><a href="#">Chính sách bảo mật</a></li>
+<li><a href="#">Điều khoản dịch vụ</a></li>
+<li><a href="#">Hướng dẫn mua hàng</a></li>
+</ul>
+
+</div>
+
+
+<!-- LIÊN HỆ -->
+<div class="col-md-3 mb-4">
+
+<h6 class="footer-title-sm">Liên hệ</h6>
+
+<ul class="footer-info">
+<li>
+<i class="bi bi-geo-alt-fill"></i>
+Vĩnh Long, Việt Nam
+</li>
+
+<li>
+<i class="bi bi-telephone-fill"></i>
+0954353423
+</li>
+
+<li>
+<i class="bi bi-envelope-fill"></i>
+elara.shop26@gmail.com
+</li>
+</ul>
+
+</div>
+
+</div>
+
 
 <div class="footer-bottom">
 © {{ date('Y') }} ELARA. All Rights Reserved.

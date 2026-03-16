@@ -187,7 +187,6 @@ class="form-control form-control-sm">
 class="btn btn-sm btn-outline-danger removeRow">
 
 <i class="bi bi-x-lg"></i>
-
 </button>
 
 </td>

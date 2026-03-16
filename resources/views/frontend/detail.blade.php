@@ -198,6 +198,33 @@
     width:120px;
     border-radius:8px;
 }
+/* ===== SECTION BOX ===== */
+
+.section-box{
+    background:#fff;
+    border:1px solid #e9ecef;
+    border-radius:12px;
+    padding:20px 22px;
+    margin-top:30px;
+}
+
+/* title section */
+
+.section-title{
+    font-size:18px;
+    font-weight:700;
+    margin-bottom:16px;
+}
+
+/* hỏi đáp item */
+
+.qa-item{
+    border:1px solid #eee;
+    border-radius:10px;
+    padding:14px;
+    margin-bottom:12px;
+    background:#fafafa;
+}
 /* ===== LIGHTBOX STYLE ===== */
 #media-lightbox{
     position:fixed;
@@ -406,178 +433,130 @@ font-size:14px;
     </div>
 </div>
 {{-- ================= REVIEW ================= --}}
-<div class="mt-5" id="product-reviews">
-    <h5 class="fw-bold mb-3">
-    Đánh giá sản phẩm ({{ $reviewCount }})
-    </h5>
-    <div class="review-summary p-3 mb-3 border rounded bg-light">
+<div class="section-box mt-5" id="product-reviews">
 
-<div class="d-flex align-items-center gap-4 flex-wrap">
+<h5 class="section-title">
+Đánh giá sản phẩm ({{ $reviewCount }})
+</h5>
 
-    <div class="fs-1 text-danger fw-bold">
-    {{ number_format($avgRating,1) }}
-    <small class="fs-6 text-muted">trên 5</small>
+{{-- SUMMARY --}}
+<div class="review-summary">
 
-    <div class="text-warning fs-4">
-        {!! str_repeat('★', round($avgRating)) !!}
-        {!! str_repeat('☆', 5 - round($avgRating)) !!}
-    </div>
+<div>
+<div class="fs-2 text-danger fw-bold">
+{{ number_format($avgRating,1) }}
+<span class="text-muted fs-6">/5</span>
 </div>
 
-    <div class="d-flex flex-wrap gap-2">
+<div class="review-stars">
+{!! str_repeat('★', round($avgRating)) !!}
+{!! str_repeat('☆', 5-round($avgRating)) !!}
+</div>
+</div>
+
+<div class="d-flex flex-wrap gap-2">
 
 <a href="{{ request()->fullUrlWithQuery(['rating'=>'all']) }}#product-reviews"
-   class="btn btn-sm {{ request('rating')=='all' || !request('rating') ? 'btn-dark' : 'btn-outline-secondary' }}">
-    Tất cả
+class="btn btn-sm {{ request('rating')=='all' || !request('rating') ? 'btn-dark' : 'btn-outline-secondary' }}">
+Tất cả
 </a>
 
 <a href="{{ request()->fullUrlWithQuery(['rating'=>5]) }}#product-reviews"
-   class="btn btn-sm {{ request('rating')==5 ? 'btn-dark' : 'btn-outline-secondary' }}">
-    5 Sao ({{ $ratingStats[5] }})
+class="btn btn-sm {{ request('rating')==5 ? 'btn-dark' : 'btn-outline-secondary' }}">
+5 Sao ({{ $ratingStats[5] }})
 </a>
 
 <a href="{{ request()->fullUrlWithQuery(['rating'=>4]) }}#product-reviews"
-   class="btn btn-sm {{ request('rating')==4 ? 'btn-dark' : 'btn-outline-secondary' }}">
-    4 Sao ({{ $ratingStats[4] }})
+class="btn btn-sm {{ request('rating')==4 ? 'btn-dark' : 'btn-outline-secondary' }}">
+4 Sao ({{ $ratingStats[4] }})
 </a>
 
 <a href="{{ request()->fullUrlWithQuery(['rating'=>3]) }}#product-reviews"
-   class="btn btn-sm {{ request('rating')==3 ? 'btn-dark' : 'btn-outline-secondary' }}">
-    3 Sao ({{ $ratingStats[3] }})
+class="btn btn-sm {{ request('rating')==3 ? 'btn-dark' : 'btn-outline-secondary' }}">
+3 Sao ({{ $ratingStats[3] }})
 </a>
 
 <a href="{{ request()->fullUrlWithQuery(['rating'=>2]) }}#product-reviews"
-   class="btn btn-sm {{ request('rating')==2 ? 'btn-dark' : 'btn-outline-secondary' }}">
-    2 Sao ({{ $ratingStats[2] }})
+class="btn btn-sm {{ request('rating')==2 ? 'btn-dark' : 'btn-outline-secondary' }}">
+2 Sao ({{ $ratingStats[2] }})
 </a>
 
 <a href="{{ request()->fullUrlWithQuery(['rating'=>1]) }}#product-reviews"
-   class="btn btn-sm {{ request('rating')==1 ? 'btn-dark' : 'btn-outline-secondary' }}">
-    1 Sao ({{ $ratingStats[1] }})
+class="btn btn-sm {{ request('rating')==1 ? 'btn-dark' : 'btn-outline-secondary' }}">
+1 Sao ({{ $ratingStats[1] }})
 </a>
 
-<a href="{{ request()->fullUrlWithQuery(['type'=>'comment']) }}#product-reviews"
-   class="btn btn-sm {{ request('type')=='comment' ? 'btn-dark' : 'btn-outline-secondary' }}">
-    Có bình luận ({{ $withComment }})
-</a>
-
-<a href="{{ request()->fullUrlWithQuery(['type'=>'media']) }}#product-reviews"
-   class="btn btn-sm {{ request('type')=='media' ? 'btn-danger' : 'btn-outline-danger' }}">
-    Có hình ảnh / video ({{ $withMedia }})
-</a>
-<div class="dropdown">
-
-<button class="btn btn-sm btn-outline-secondary dropdown-toggle"
-        type="button"
-        data-bs-toggle="dropdown">
-
-    @if(request('sort') == 'old')
-        Cũ nhất
-    @elseif(request('sort') == 'new')
-        Mới nhất
-    @else
-        Tất cả
-    @endif
-
-</button>
-
-<ul class="dropdown-menu">
-
-<li>
-<a class="dropdown-item {{ !request('sort') ? 'active' : '' }}"
-   href="{{ request()->fullUrlWithQuery(['sort'=>null]) }}#product-reviews">
-    Tất cả
-</a>
-</li>
-
-<li>
-<a class="dropdown-item {{ request('sort')=='new' ? 'active' : '' }}"
-   href="{{ request()->fullUrlWithQuery(['sort'=>'new']) }}#product-reviews">
-    Mới nhất
-</a>
-</li>
-
-<li>
-<a class="dropdown-item {{ request('sort')=='old' ? 'active' : '' }}"
-   href="{{ request()->fullUrlWithQuery(['sort'=>'old']) }}#product-reviews">
-    Cũ nhất
-</a>
-</li>
-
-</ul>
-
-</div>
 </div>
 
 </div>
-</div>
+
+
+{{-- REVIEW LIST --}}
 @forelse($reviews->where('is_visible',1) as $review)
 
-<div class="review-card border rounded p-3 mb-3 bg-white review-item">
+<div class="review-card">
 
-    {{-- Header --}}
-    <div class="d-flex align-items-start">
+<div class="d-flex align-items-start">
 
-        <img
-            src="{{ $review->user?->avatar 
-                    ? asset('storage/'.$review->user->avatar) 
-                    : asset('images/avatar-default.png') }}"
-            class="review-avatar me-3"
-            alt="avatar">
+<img
+src="{{ $review->user?->avatar 
+? asset('storage/'.$review->user->avatar) 
+: asset('images/avatar-default.png') }}"
+class="review-avatar me-3">
 
-        <div class="flex-grow-1">
+<div class="flex-grow-1">
 
-            <div class="d-flex justify-content-between">
-                <div class="fw-semibold">
-                    {{ $review->user->name }}
-                </div>
-                <div class="text-success small">
-                    <i class="bi bi-patch-check-fill"></i>
-                    Đã mua hàng
-                </div>
-                <small class="text-muted">
-                    {{ $review->created_at->format('d/m/Y H:i') }}
-                </small>
-            </div>
+<div class="d-flex justify-content-between">
 
-            {{-- Stars --}}
-            <div class="review-stars text-warning mb-1">
-                {!! str_repeat('★', (int)$review->rating) !!}
-                {!! str_repeat('☆', 5 - (int)$review->rating) !!}
-            </div>
+<div class="fw-semibold">
+{{ $review->user->name }}
+</div>
 
-        </div>
+<small class="text-muted">
+{{ $review->created_at->format('d/m/Y H:i') }}
+</small>
 
-    </div>
+</div>
 
-    {{-- Comment --}}
+<div class="review-stars mb-1">
+{!! str_repeat('★',(int)$review->rating) !!}
+{!! str_repeat('☆',5-(int)$review->rating) !!}
+</div>
+
+</div>
+
+</div>
+
+
 @if($review->comment)
-<div class="mt-2 review-content">
-    {{ $review->comment }}
+<div class="review-content mt-2">
+{{ $review->comment }}
 </div>
 @endif
 
 
-    {{-- Media --}}
-    @if($review->media && $review->media->count())
-        <div class="review-media mt-2 d-flex gap-2 flex-wrap">
-            @foreach($review->media as $m)
+@if($review->media && $review->media->count())
+<div class="review-media mt-2 d-flex gap-2 flex-wrap">
 
-                @if($m->file_type == 'image')
-                    <img src="{{ asset('storage/'.$m->file_path) }}">
-                @else
-                    <video controls>
-                        <source src="{{ asset('storage/'.$m->file_path) }}">
-                    </video>
-                @endif
+@foreach($review->media as $m)
 
-            @endforeach
-        </div>
-    @endif
-    {{-- SHOP REPLY --}}
+@if($m->file_type == 'image')
+<img src="{{ asset('storage/'.$m->file_path) }}">
+@else
+<video width="120" controls>
+<source src="{{ asset('storage/'.$m->file_path) }}">
+</video>
+@endif
+
+@endforeach
+
+</div>
+@endif
+
+
 @if($review->admin_reply)
 
-<div class="shop-reply mt-3">
+<div class="shop-reply mt-2">
 
 <div class="fw-semibold text-primary">
 <i class="bi bi-shop"></i>
@@ -585,7 +564,7 @@ Phản hồi từ cửa hàng
 </div>
 
 <div class="small text-muted mb-1">
-{{ $review->replied_at ? $review->replied_at->format('d/m/Y H:i') : '' }}
+{{ $review->replied_at?->format('d/m/Y H:i') }}
 </div>
 
 <div>
@@ -601,127 +580,153 @@ Phản hồi từ cửa hàng
 @empty
 
 <div class="text-center py-4 text-muted">
-    <i class="bi bi-chat-left-text fs-3"></i>
-    <div class="mt-2">
-        Chưa có đánh giá phù hợp với bộ lọc này
-    </div>
+<i class="bi bi-chat-left-text fs-3"></i>
+<div class="mt-2">
+Chưa có đánh giá
+</div>
 </div>
 
 @endforelse
+
+
 <div class="mt-4 d-flex justify-content-center">
-    {{ $reviews->withQueryString()->fragment('product-reviews')->links() }}
+{{ $reviews->withQueryString()->fragment('product-reviews')->links() }}
 </div>
-{{-- ================= HỎI ĐÁP SẢN PHẨM ================= --}}
-<div class="mt-5">
 
-<h5 class="fw-bold mb-3">Hỏi đáp sản phẩm</h5>
+</div>
 
-{{-- FORM HỎI --}}
+
+
+{{-- ================= HỎI ĐÁP ================= --}}
+<div class="section-box">
+
+<h5 class="section-title">
+Hỏi đáp sản phẩm
+</h5>
+
+
 @if(auth()->check())
+
 <form action="{{ route('questions.store') }}" method="POST" class="mb-4">
 @csrf
 
 <input type="hidden" name="product_id" value="{{ $product->id }}">
 
-<textarea name="question"
-          class="form-control"
-          rows="3"
-          placeholder="Đặt câu hỏi về sản phẩm..."
-          required></textarea>
+<textarea
+name="question"
+class="form-control"
+rows="3"
+placeholder="Đặt câu hỏi về sản phẩm..."
+required></textarea>
 
 <button class="btn btn-primary mt-2">
-<i class="bi bi-question-circle"></i> Gửi câu hỏi
+<i class="bi bi-question-circle"></i>
+Gửi câu hỏi
 </button>
 
 </form>
+
 @else
+
 <div class="alert alert-warning">
 Bạn cần <a href="{{ route('login') }}">đăng nhập</a> để đặt câu hỏi.
 </div>
+
 @endif
 
 
-{{-- DANH SÁCH CÂU HỎI --}}
-@forelse($product->questions as $question)
 
-<div class="border rounded p-3 mb-3 bg-white">
+@forelse($product->questions as $index => $question)
 
-    {{-- Người hỏi --}}
-    <div class="fw-semibold">
-        {{ $question->user->name }}
-    </div>
+<div class="qa-item qa-hidden" 
+     style="{{ $index >= 2 ? 'display:none' : '' }}">
 
-    <div class="text-muted small mb-2">
-        {{ $question->created_at->format('d/m/Y H:i') }}
-    </div>
+<div class="fw-semibold">
+{{ $question->user->name }}
+</div>
 
-    <div class="mb-2">
-        {{ $question->question }}
-    </div>
+<div class="small text-muted">
+{{ $question->created_at->format('d/m/Y H:i') }}
+</div>
 
-
-    {{-- CÂU TRẢ LỜI --}}
-    @foreach($question->answers as $answer)
-
-    <div class="ms-4 border-start ps-3 mt-2">
-
-        <strong>
-            {{ $answer->user->name }}
-
-            @if($answer->is_admin)
-            <span class="badge bg-danger">Shop</span>
-            @endif
-        </strong>
-
-        <div class="small text-muted">
-            {{ $answer->created_at->format('d/m/Y H:i') }}
-        </div>
-
-        <div>
-            {{ $answer->answer }}
-        </div>
-
-    </div>
-
-    @endforeach
+<div class="mt-1">
+{{ $question->question }}
+</div>
 
 
-    {{-- FORM TRẢ LỜI --}}
-    @if(auth()->check())
+@foreach($question->answers as $answer)
 
-    <form action="{{ route('questions.answer') }}"
-          method="POST"
-          class="mt-3 ms-4 d-flex gap-2">
+<div class="ms-4 border-start ps-3 mt-2">
 
-        @csrf
+<strong>
+{{ $answer->user->name }}
 
-        <input type="hidden"
-               name="question_id"
-               value="{{ $question->id }}">
+@if($answer->is_admin)
+<span class="badge bg-danger">Shop</span>
+@endif
 
-        <input type="text"
-               name="answer"
-               class="form-control form-control-sm"
-               placeholder="Trả lời câu hỏi..."
-               required>
+</strong>
 
-        <button class="btn btn-sm btn-primary">
-            <i class="bi bi-send"></i> Gửi
-        </button>
+<div class="small text-muted">
+{{ $answer->created_at->format('d/m/Y H:i') }}
+</div>
 
-    </form>
+<div>
+{{ $answer->answer }}
+</div>
 
-    @endif
+</div>
+
+@endforeach
+
+@if(auth()->check())
+
+<form action="{{ route('questions.answer') }}"
+method="POST"
+class="mt-3 ms-4 d-flex gap-2">
+
+@csrf
+
+<input type="hidden"
+name="question_id"
+value="{{ $question->id }}">
+
+<input type="text"
+name="answer"
+class="form-control form-control-sm"
+placeholder="Trả lời câu hỏi..."
+required>
+
+<button class="btn btn-sm btn-primary">
+<i class="bi bi-send"></i>
+Gửi
+</button>
+
+</form>
+
+@endif
 
 </div>
 
 @empty
 
 <div class="text-muted">
-    Chưa có câu hỏi nào về sản phẩm này.
+Chưa có câu hỏi nào về sản phẩm này.
 </div>
 
 @endforelse
+@if($product->questions->count() > 2)
+
+<div class="text-center mt-3">
+
+<button id="toggle-qa" class="btn btn-outline-secondary btn-sm">
+Xem tất cả câu hỏi
+</button>
+
+</div>
+
+@endif
+</div>
 
 </div>
 {{-- ================= SẢN PHẨM LIÊN QUAN ================= --}}
@@ -874,19 +879,22 @@ if (form) {
         .then(data => {
             if (data.success) {
                 // Thông báo
-                showCenterNotify(data.message || 'Đã thêm vào giỏ hàng', 'success');
+                showToast('Đã thêm vào giỏ','success');
 
                 // Cập nhật badge giỏ nếu có
                 if (data.cart_count !== undefined) {
-                    const badge = document.querySelector('.cart-count');
-                    if (badge) badge.innerText = data.cart_count;
+                    const badge = document.querySelector('.cart-badge');
+
+if (badge) {
+    badge.innerText = data.cart_count > 99 ? '99+' : data.cart_count;
+}
                 }
             } else {
-                showCenterNotify(data.message || 'Không thể thêm vào giỏ', 'error');
+                showToast('Số lượng sản phẩm trong giỏ đã đạt tối đa tồn kho', 'error');
             }
         })
         .catch(() => {
-            showCenterNotify('Có lỗi hệ thống, vui lòng thử lại', 'error');
+            showToast('Có lỗi hệ thống, vui lòng thử lại','error');
         });
     });
 }
@@ -944,6 +952,33 @@ document.addEventListener('keydown', function(e){
         closeLightbox();
     }
 });
+/* =====================
+   QA TOGGLE
+===================== */
+
+const qaBtn = document.getElementById('toggle-qa');
+
+if(qaBtn){
+
+let expanded = false;
+
+qaBtn.addEventListener('click', () => {
+
+const hiddenItems = document.querySelectorAll('.qa-hidden');
+
+expanded = !expanded;
+
+hiddenItems.forEach(item => {
+item.style.display = expanded ? 'block' : 'none';
+});
+
+qaBtn.innerText = expanded
+? 'Thu gọn câu hỏi'
+: 'Xem tất cả câu hỏi';
+
+});
+
+}
 </script>
 
 @endpush
