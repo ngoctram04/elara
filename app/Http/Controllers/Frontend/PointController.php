@@ -193,7 +193,7 @@ class PointController extends Controller
 
             return back()->with(
                 'success',
-                "Đổi thành công 🎉 Mã voucher của bạn: {$code}"
+                "Đổi thành công. Mã voucher của bạn: {$code}"
             );
         } catch (\Exception $e) {
 

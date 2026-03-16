@@ -15,14 +15,17 @@ class CheckUserActive
      */
     public function handle(Request $request, Closure $next)
     {
-        // Chỉ xử lý khi user đã đăng nhập
         if (Auth::check()) {
 
             // Lấy user mới nhất từ database
-            $user = User::query()->find(Auth::id());
+            $user = User::find(Auth::id());
 
-            // Nếu user không tồn tại
-            if (! $user) {
+            /*
+            |--------------------------------
+            | USER KHÔNG TỒN TẠI
+            |--------------------------------
+            */
+            if (!$user) {
 
                 Auth::logout();
 
@@ -38,7 +41,7 @@ class CheckUserActive
 
             /*
             |--------------------------------
-            | KIỂM TRA TÀI KHOẢN BỊ KHÓA
+            | TÀI KHOẢN BỊ KHÓA
             |--------------------------------
             */
             if ((int) $user->is_active !== 1) {
@@ -48,7 +51,7 @@ class CheckUserActive
 
                     $lockedUntil = Carbon::parse($user->locked_until);
 
-                    // Nếu chưa hết thời gian khóa
+                    // Nếu vẫn còn bị khóa
                     if (now()->lt($lockedUntil)) {
 
                         Auth::logout();
@@ -59,20 +62,38 @@ class CheckUserActive
                         return redirect()
                             ->route('login')
                             ->withErrors([
-                                'email' => 'Tài khoản của bạn bị khóa đến ngày '
-                                    . $lockedUntil->format('d/m/Y') . '.',
+                                'email' => 'Tài khoản của bạn bị khóa đến ngày ' .
+                                    $lockedUntil->format('d/m/Y') . '.',
                             ]);
                     }
 
                     /*
                     |--------------------------------
-                    | HẾT THỜI GIAN KHÓA → MỞ LẠI
+                    | HẾT HẠN KHÓA → MỞ LẠI TÀI KHOẢN
                     |--------------------------------
                     */
                     $user->is_active = 1;
                     $user->blocked_reason = null;
                     $user->locked_until = null;
                     $user->save();
+                }
+
+                /*
+                |--------------------------------
+                | KHÓA VĨNH VIỄN (KHÔNG CÓ locked_until)
+                |--------------------------------
+                */ else {
+
+                    Auth::logout();
+
+                    $request->session()->invalidate();
+                    $request->session()->regenerateToken();
+
+                    return redirect()
+                        ->route('login')
+                        ->withErrors([
+                            'email' => 'Tài khoản của bạn đã bị khóa.',
+                        ]);
                 }
             }
         }

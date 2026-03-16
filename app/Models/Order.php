@@ -341,7 +341,7 @@ class Order extends Model
                     $order->user->save();
                 }
 
-                // Hoàn tiền VNPAY (chỉ khi huỷ đơn)
+                // Hoàn tiền VNPAY
                 if (
                     $order->payment_method === 'vnpay' &&
                     $order->payment_status == self::PAYMENT_PAID
@@ -352,19 +352,20 @@ class Order extends Model
 
 
             /*
-|--------------------------------------------------------------------------
-| 3. ĐỔI TRẢ → HOÀN KHO + TRỪ ĐÃ BÁN
-|--------------------------------------------------------------------------
-*/
+        |--------------------------------------------------------------------------
+        | 3. ĐỔI TRẢ → HOÀN KHO + TRỪ ĐÃ BÁN + TRỪ ĐIỂM
+        |--------------------------------------------------------------------------
+        */
             if (
                 $order->isDirty('status') &&
                 $order->getOriginal('status') != self::STATUS_RETURNED &&
                 $order->status == self::STATUS_RETURNED
             ) {
 
-                $order->loadMissing('items.variant');
+                $order->loadMissing('items.variant', 'user');
 
                 foreach ($order->items as $item) {
+
                     if ($item->variant) {
 
                         // hoàn tồn kho
@@ -385,6 +386,43 @@ class Order extends Model
                             $item->variant->save();
                         }
                     }
+                }
+
+                /*
+            ---------------------------------------
+            TRỪ ĐIỂM THÀNH VIÊN
+            ---------------------------------------
+            */
+
+                if ($order->user) {
+
+                    $points = floor($order->grand_total / 1000);
+
+                    // tránh bị âm điểm
+                    $newPoints = max(
+                        0,
+                        $order->user->loyalty_points - $points
+                    );
+
+                    $order->user->loyalty_points = $newPoints;
+
+                    // trừ tổng chi tiêu
+                    $order->user->total_spent = max(
+                        0,
+                        $order->user->total_spent - $order->grand_total
+                    );
+
+                    $order->user->save();
+
+                    // lưu lịch sử điểm
+                    \App\Models\UserPointHistory::create([
+                        'user_id' => $order->user->id,
+                        'points' => -$points,
+                        'type' => 'refund',
+                        'description' => 'Trừ điểm do trả hàng đơn #' . $order->id,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
                 }
             }
 

@@ -267,7 +267,53 @@ class OrderController extends Controller
 
             // 2 → 3 (admin xác nhận đã giao)
             if ($oldStatus == Order::STATUS_PROCESSING && $newStatus == Order::STATUS_COMPLETED) {
+
                 $order->delivered_at = now();
+
+                $user = $order->user;
+
+                if ($user) {
+
+                    // 1.000đ = 1 điểm
+                    $points = floor($order->grand_total / 1000);
+
+                    // cộng điểm
+                    $user->loyalty_points += $points;
+
+                    // cộng tổng chi tiêu
+                    $user->total_spent += $order->grand_total;
+
+                    /*
+        |------------------------------
+        | Cập nhật hạng thành viên
+        |------------------------------
+        */
+                    if ($user->total_spent >= 10000000) {
+                        $user->member_level = 'diamond';
+                    } elseif ($user->total_spent >= 5000000) {
+                        $user->member_level = 'gold';
+                    } elseif ($user->total_spent >= 2000000) {
+                        $user->member_level = 'silver';
+                    } else {
+                        $user->member_level = 'bronze';
+                    }
+
+                    $user->save();
+
+                    /*
+        |------------------------------
+        | Lưu lịch sử điểm
+        |------------------------------
+        */
+                    DB::table('user_point_histories')->insert([
+                        'user_id' => $user->id,
+                        'points' => $points,
+                        'type' => 'earn',
+                        'description' => 'Tích điểm từ đơn #' . $order->id,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ]);
+                }
             }
 
             $order->status = $newStatus;
