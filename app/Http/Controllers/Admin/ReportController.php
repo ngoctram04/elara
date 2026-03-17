@@ -367,7 +367,7 @@ END
             )
             ->groupBy('p.id', 'p.name')
             ->orderByDesc('total_sold')
-            ->limit(10)
+            ->limit(5)
             ->get();
 
         /*
@@ -387,7 +387,7 @@ END
             ->groupBy('pv.id', 'p.name', 'pv.stock_quantity')
             ->orderByRaw('MAX(oi.created_at) IS NULL DESC')
             ->orderByRaw('MAX(oi.created_at) ASC')
-            ->limit(10)
+            ->limit(5)
             ->get();
 
         /*
@@ -404,7 +404,7 @@ END
             )
             ->groupBy('p.id', 'p.name')
             ->orderByDesc('total_wishlist')
-            ->limit(10)
+            ->limit(5)
             ->get();
 
         /*
@@ -425,7 +425,7 @@ END
         )
             ->groupBy('users.id', 'users.name')
             ->orderByDesc('spending')
-            ->limit(10)
+            ->limit(5)
             ->get();
 
         /*
@@ -446,7 +446,7 @@ END
         ->where('pv.stock_quantity', '<=', 5)
         ->select('p.name', 'pv.attribute_value', 'pv.stock_quantity')
         ->orderBy('pv.stock_quantity')
-        ->limit(10)
+        ->limit(5)
             ->get();
 
         return [

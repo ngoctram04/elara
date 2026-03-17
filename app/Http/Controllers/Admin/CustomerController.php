@@ -84,9 +84,14 @@ class CustomerController extends Controller
         }
 
         $customers = $query
+        ->withCount(['orders as orders' => function ($q) {
+            $q->where('status', 3);
+        }])
+            ->withSum(['orders as spending' => function ($q) {
+                $q->where('status', 3);
+            }], 'grand_total')
             ->paginate(10)
             ->withQueryString();
-
         /*
         |--------------------------------------------------------------------------
         | ĐẾM ĐƠN HỦY TRONG 7 NGÀY
@@ -115,28 +120,38 @@ class CustomerController extends Controller
         abort_if($user->role !== 'customer', 404);
 
         /*
-        |--------------------------------------------------------------------------
-        | LỊCH SỬ ĐƠN HÀNG
-        |--------------------------------------------------------------------------
-        */
+    |--------------------------------------------------------------------------
+    | LỊCH SỬ ĐƠN HÀNG
+    |--------------------------------------------------------------------------
+    */
         $orders = Order::where('user_id', $user->id)
             ->latest()
             ->get();
 
         /*
-        |--------------------------------------------------------------------------
-        | ĐÁNH GIÁ SẢN PHẨM
-        |--------------------------------------------------------------------------
-        */
+    |--------------------------------------------------------------------------
+    | TỔNG CHI TIÊU (CHỈ TÍNH ĐƠN ĐÃ GIAO)
+    |--------------------------------------------------------------------------
+    */
+        $totalSpent = Order::where('user_id', $user->id)
+            ->where('status', 3) // ✅ chỉ đơn đã giao
+            ->sum('grand_total');
+
+        /*
+    |--------------------------------------------------------------------------
+    | ĐÁNH GIÁ SẢN PHẨM
+    |--------------------------------------------------------------------------
+    */
         $reviews = Review::with('product')
-            ->where('user_id', $user->id)
+        ->where('user_id', $user->id)
             ->latest()
             ->get();
 
         return view('admin.customers.show', compact(
             'user',
             'orders',
-            'reviews'
+            'reviews',
+            'totalSpent' // ✅ thêm biến này
         ));
     }
 

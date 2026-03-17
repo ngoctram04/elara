@@ -146,7 +146,7 @@ Tổng chi tiêu
 </div>
 
 <div class="fw-semibold text-success">
-{{ number_format($user->total_spent) }} đ
+{{ number_format($totalSpent, 0, ',', '.') }} đ
 </div>
 
 </div>

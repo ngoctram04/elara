@@ -14,11 +14,10 @@ $isFavorited = in_array($product->id, $favorites ?? []);
 
 @if ($priceVariant)
 
-<div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+<div class="product-item">
 
     <div class="fs-card js-card"
-         data-href="{{ route('products.show', $product->slug) }}"
-         style="cursor:pointer;">
+         data-href="{{ route('products.show', $product->slug) }}">
 
         <div class="fs-image position-relative">
 
@@ -29,19 +28,19 @@ $isFavorited = in_array($product->id, $favorites ?? []);
                 </span>
             @endif
 
-            {{-- OUT OF STOCK --}}
+            {{-- HẾT HÀNG --}}
             @if ($outOfStock)
                 <span class="fs-badge bg-secondary">Hết hàng</span>
             @endif
 
-            {{-- Wishlist --}}
+            {{-- ❤️ --}}
             <button type="button"
                     class="wishlist-btn btn-wishlist"
                     data-product-id="{{ $product->id }}">
                 <i class="bi {{ $isFavorited ? 'bi-heart-fill text-danger' : 'bi-heart' }}"></i>
             </button>
 
-            {{-- IMAGE (click được) --}}
+            {{-- IMAGE --}}
             <img src="{{ $product->main_image_url }}"
                  alt="{{ $product->name }}"
                  loading="lazy"
@@ -50,25 +49,24 @@ $isFavorited = in_array($product->id, $favorites ?? []);
             {{-- OVERLAY --}}
             <div class="fs-overlay">
 
-                {{-- XEM CHI TIẾT --}}
                 <span class="fs-icon fs-left js-go-detail">
                     <i class="bi bi-eye"></i>
                 </span>
 
-                {{-- BUY NOW --}}
+                {{-- BUY --}}
                 <button type="button"
                         class="fs-buy btn-buy-now"
                         data-variant-id="{{ $addVariant?->id }}"
-                        {{ $outOfStock ? 'disabled' : '' }}>
+                        data-out-stock="{{ $outOfStock ? 1 : 0 }}">
                     <i class="bi bi-lightning-charge-fill"></i>
                     Mua ngay
                 </button>
 
-                {{-- ADD CART --}}
+                {{-- CART --}}
                 <button type="button"
                         class="fs-icon fs-right btn-add-to-cart"
                         data-variant-id="{{ $addVariant?->id }}"
-                        {{ $outOfStock ? 'disabled' : '' }}>
+                        data-out-stock="{{ $outOfStock ? 1 : 0 }}">
                     <i class="bi bi-cart-plus"></i>
                 </button>
 
@@ -81,7 +79,6 @@ $isFavorited = in_array($product->id, $favorites ?? []);
                 {{ $product->brand->name ?? 'Thương hiệu' }}
             </div>
 
-            {{-- TITLE CLICK --}}
             <div class="fs-title js-go-detail">
                 {{ \Illuminate\Support\Str::limit($product->name, 48) }}
             </div>
@@ -129,3 +126,150 @@ $isFavorited = in_array($product->id, $favorites ?? []);
 </div>
 
 @endif
+
+
+{{-- ================= STYLE ================= --}}
+<style>
+.product-item {
+    width: 250px;
+    flex-shrink: 0;
+}
+
+.swiper-slide {
+    width: auto !important;
+}
+
+.fs-card {
+    border-radius: 16px;
+    overflow: hidden;
+    background: #fff;
+    transition: 0.3s;
+    position: relative;
+}
+
+.fs-card:hover {
+    transform: translateY(-6px);
+}
+
+.fs-image img {
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+}
+
+/* overlay */
+.fs-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    background: rgba(0,0,0,0.2);
+    opacity: 0;
+    transition: 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.fs-card:hover .fs-overlay {
+    opacity: 1;
+}
+
+/* button */
+.fs-icon {
+    width: 36px;
+    height: 36px;
+    background: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.fs-buy {
+    background: #1677ff;
+    color: #fff;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+}
+
+/* wishlist */
+.wishlist-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #fff;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 30;
+    box-shadow: 0 4px 12px rgba(0,0,0,.15);
+}
+
+/* rating */
+.rating-stars i {
+    font-size: 14px;
+}
+
+/* ❌ HẾT HÀNG */
+[data-out-stock="1"]{
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* blur ảnh */
+.fs-image:has([data-out-stock="1"]) img {
+    filter: grayscale(40%);
+}
+</style>
+
+
+{{-- ================= SCRIPT ================= --}}
+<script>
+// toast
+function showToast(message){
+    const toast = document.createElement('div');
+    toast.innerText = message;
+
+    toast.style = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: #dc3545;
+        color: #fff;
+        padding: 10px 16px;
+        border-radius: 8px;
+        z-index: 9999;
+    `;
+
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2000);
+}
+
+// 🔥 dùng delegation để không bị lỗi khi load ajax/swiper
+document.addEventListener('click', function(e){
+
+    const btn = e.target.closest('.btn-add-to-cart, .btn-buy-now');
+    if(btn){
+        if(btn.dataset.outStock == "1"){
+            e.preventDefault();
+            e.stopPropagation();
+            showToast('Sản phẩm đã hết hàng!');
+            return;
+        }
+    }
+
+    // click card → chuyển trang
+    const card = e.target.closest('.js-card');
+    if(card && !e.target.closest('button')){
+        window.location.href = card.dataset.href;
+    }
+
+});
+</script>

@@ -9,7 +9,8 @@ use App\Models\PromotionProduct;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\PointReward;
-
+use App\Models\User;
+use App\Notifications\SystemNotification;
 class PromotionController extends Controller
 {
     /* =========================================================
@@ -112,22 +113,26 @@ class PromotionController extends Controller
             'usage_limit'     => 'nullable|integer|min:1',
         ]);
 
+        // ❌ Check trùng product promotion
         if (
             $request->type === 'product'
             && $this->hasActiveProductConflict($request)
         ) {
             return back()
-                ->withErrors([
-                    'products' => 'Một số sản phẩm / biến thể đang có khuyến mãi khác đang diễn ra'
-                ])
-                ->withInput();
+            ->withErrors([
+                'products' => 'Một số sản phẩm / biến thể đang có khuyến mãi khác đang diễn ra'
+            ])
+            ->withInput();
         }
 
-        DB::transaction(function () use ($request) {
+        $promotion = null;
 
+        DB::transaction(function () use ($request, &$promotion) {
+
+            // 🔥 CREATE PROMOTION
             $promotion = Promotion::create([
                 'code'            => $request->type === 'order'
-                    ? strtoupper($request->code)
+                ? strtoupper($request->code)
                     : null,
                 'name'            => $request->name,
                 'type'            => $request->type,
@@ -141,6 +146,7 @@ class PromotionController extends Controller
                 'is_active'       => $request->boolean('is_active'),
             ]);
 
+            // 🔥 PRODUCT PROMOTION
             if ($promotion->type === 'product') {
                 foreach ($request->products ?? [] as $productId => $variantIds) {
                     foreach ($variantIds as $variantId) {
@@ -153,6 +159,25 @@ class PromotionController extends Controller
                 }
             }
         });
+
+        // =========================================
+        // 🔔 NOTIFICATION (SAU COMMIT)
+        // =========================================
+        if ($promotion && $promotion->type === 'order' && $promotion->is_active) {
+
+            User::where('role', 'user')
+            ->chunk(100, function ($users) use ($promotion) {
+
+                foreach ($users as $user) {
+                    $user->notify(new SystemNotification([
+                        'title'   => 'Voucher mới!',
+                        'message' => 'Nhập mã ' . $promotion->code . ' để nhận ưu đãi',
+                        'url'     => route('shop'),
+                        'type'    => 'promotion'
+                    ]));
+                }
+            });
+        }
 
         return redirect()
             ->route('admin.promotions.index')
@@ -298,17 +323,43 @@ class PromotionController extends Controller
             'valid_days'      => 'required|integer|min:1',
         ]);
 
-        PointReward::create([
-            'title'            => $request->name,
-            'points_required'  => $request->points_required,
-            'member_level'     => 'bronze', // hoặc cho chọn
-            'discount_type'    => $request->discount_type,
-            'discount_value'   => $request->discount_value,
-            'min_order_value'  => $request->min_order_value,
-            'max_discount'     => $request->max_discount,
-            'valid_days'       => $request->valid_days,
-            'is_active'        => 1,
-        ]);
+        $reward = null;
+
+        DB::transaction(function () use ($request, &$reward) {
+
+            // 🔥 CREATE REWARD
+            $reward = PointReward::create([
+                'title'            => $request->name,
+                'points_required'  => $request->points_required,
+                'member_level'     => 'bronze', // có thể cho chọn sau
+                'discount_type'    => $request->discount_type,
+                'discount_value'   => $request->discount_value,
+                'min_order_value'  => $request->min_order_value,
+                'max_discount'     => $request->max_discount,
+                'valid_days'       => $request->valid_days,
+                'is_active'        => 1,
+            ]);
+        });
+
+        // =========================================
+        // 🔔 NOTIFICATION (SAU COMMIT)
+        // =========================================
+        if ($reward) {
+
+            User::where('role', 'user')
+            ->where('is_active', 1)
+            ->chunk(100, function ($users) use ($reward) {
+
+                foreach ($users as $user) {
+                    $user->notify(new SystemNotification([
+                        'title'   => 'Quà đổi điểm mới 🎁',
+                        'message' => 'Có phần thưởng "' . $reward->title . '" vừa được thêm',
+                        'url'     => route('points.redeem.page'),
+                        'type'    => 'voucher'
+                    ]));
+                }
+            });
+        }
 
         return redirect()
             ->route('admin.promotions.index')

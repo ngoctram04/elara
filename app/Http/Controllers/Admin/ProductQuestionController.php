@@ -7,7 +7,7 @@ use App\Models\ProductQuestion;
 use App\Models\ProductAnswer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-
+use App\Notifications\SystemNotification;
 class ProductQuestionController extends Controller
 {
 
@@ -105,25 +105,34 @@ class ProductQuestionController extends Controller
 
     public function answer(Request $request)
     {
-
         $request->validate([
             'question_id' => 'required|exists:product_questions,id',
             'answer' => 'required|string|max:2000'
         ]);
 
+        // lấy câu hỏi
+        $question = ProductQuestion::with('user', 'product')->findOrFail($request->question_id);
 
-        ProductAnswer::create([
-
-            'question_id' => $request->question_id,
-
+        // tạo câu trả lời
+        $answer = ProductAnswer::create([
+            'question_id' => $question->id,
             'user_id' => Auth::id(),
-
             'answer' => $request->answer,
-
             'is_admin' => 1
-
         ]);
 
+        // 🔔 GỬI THÔNG BÁO CHO USER
+        if ($question->user) {
+            $question->user->notify(new SystemNotification([
+                'title' => 'Câu hỏi đã được trả lời',
+                'message' => 'Câu hỏi của bạn về "' . $question->product->name . '" đã được phản hồi',
+                'url' => route('products.show', $question->product->slug),
+                'type' => 'question',
+                'meta' => [
+                    'question_id' => $question->id
+                ]
+            ]));
+        }
 
         return back()->with('success', 'Đã trả lời câu hỏi');
     }

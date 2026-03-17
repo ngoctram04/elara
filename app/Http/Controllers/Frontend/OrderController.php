@@ -8,7 +8,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use App\Models\Order;
 use App\Models\Cart;
-
+use App\Notifications\SystemNotification;
+use App\Models\User;
 class OrderController extends Controller
 {
 
@@ -128,6 +129,25 @@ class OrderController extends Controller
 
             DB::commit();
 
+            // 🔔 NOTIFY USER (self)
+            $order->user->notify(new SystemNotification([
+                'title' => 'Bạn đã huỷ đơn',
+                'message' => 'Đơn #' . $order->id . ' đã được huỷ',
+                'url' => route('orders.show', $order->id),
+                'type' => 'order_cancelled'
+            ]));
+
+            // 🔔 NOTIFY ADMIN
+            User::where('role', 'admin')->get()
+            ->each(function ($admin) use ($order) {
+                $admin->notify(new SystemNotification([
+                    'title' => 'Đơn bị huỷ',
+                    'message' => 'Đơn #' . $order->id . ' đã bị khách huỷ',
+                    'url' => route('admin.orders.show', $order->id),
+                    'type' => 'order_cancelled'
+                ]));
+            });
+
             return redirect()
                 ->route('orders.show', $order->id)
                 ->with('success', 'Huỷ đơn hàng thành công.');
@@ -220,7 +240,6 @@ class OrderController extends Controller
                         $cart->quantity + $quantity,
                         $variant->stock_quantity
                     );
-
                     $cart->update([
                         'quantity' => $newQty
                     ]);

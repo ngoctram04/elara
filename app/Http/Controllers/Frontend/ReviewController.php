@@ -9,7 +9,8 @@ use Illuminate\Support\Facades\DB;
 use App\Models\OrderItem;
 use App\Models\Review;
 use App\Models\ReviewMedia;
-
+use App\Models\User;
+use App\Notifications\SystemNotification;
 class ReviewController extends Controller
 {
 
@@ -18,7 +19,6 @@ class ReviewController extends Controller
     | FORM ĐÁNH GIÁ
     |--------------------------------------------------------------------------
     */
-
     public function create($orderItemId)
     {
 
@@ -182,7 +182,26 @@ class ReviewController extends Controller
 
 
             DB::commit();
+            $user = Auth::user();
 
+            // 🔔 THÔNG BÁO CHO USER
+            $user->notify(new SystemNotification([
+                'title' => 'Đánh giá thành công',
+                'message' => 'Bạn đã đánh giá sản phẩm "' . $orderItem->variant->product->name . '"',
+                'url' => route('orders.show', $orderItem->order->id),
+                'type' => 'review',
+            ]));
+
+            // 🔔 THÔNG BÁO CHO ADMIN
+            User::where('role', 'admin')->get()
+            ->each(function ($admin) use ($orderItem, $review) {
+                $admin->notify(new SystemNotification([
+                    'title' => 'Có đánh giá mới',
+                    'message' => 'Sản phẩm "' . $orderItem->variant->product->name . '" vừa được đánh giá',
+                    'url' => route('admin.reviews.show', $review->id),
+                    'type' => 'review',
+                ]));
+            });
 
             return redirect()
                 ->route('orders.show', $orderItem->order_id)

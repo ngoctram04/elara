@@ -120,12 +120,12 @@ class CategoryController extends Controller
             $childrenQuery->where('name', 'like', '%' . $request->keyword . '%');
         }
 
-        // 🔃 Sắp xếp
-        match ($request->sort) {
-            'oldest' => $childrenQuery->orderBy('created_at', 'asc'),
-            'newest' => $childrenQuery->orderBy('created_at', 'desc'),
-            default  => $childrenQuery->orderBy('created_at', 'desc'),
-        };
+        // 🔃 Sắp xếp (CHUẨN)
+        if ($request->sort === 'oldest') {
+            $childrenQuery->orderBy('id', 'asc');
+        } else {
+            $childrenQuery->orderBy('id', 'desc'); // mặc định
+        }
 
         $children = $childrenQuery->get();
 

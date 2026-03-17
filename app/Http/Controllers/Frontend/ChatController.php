@@ -11,7 +11,8 @@ use App\Models\ChatMessage;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\Brand;
-
+use App\Models\User;
+use App\Notifications\SystemNotification;
 class ChatController extends Controller
 {
     /*
@@ -106,7 +107,18 @@ class ChatController extends Controller
             'message' => $text,
             'is_read' => 0
         ]);
-
+        // 🔔 Gửi cho admin
+        User::where('role', 'admin')->each(function ($admin) use ($conversation) {
+            $admin->notify(new SystemNotification([
+                'title' => 'Tin nhắn mới',
+                'message' => 'Khách vừa gửi tin nhắn',
+                'url' => route('admin.messages.show', $conversation->id),
+                'type' => 'chat',
+                'meta' => [
+                    'conversation_id' => $conversation->id
+                ]
+            ]));
+        });
         $conversation->touch();
 
         return response()->json([

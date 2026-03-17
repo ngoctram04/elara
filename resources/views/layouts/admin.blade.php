@@ -256,79 +256,162 @@ Thống kê
 
 <header class="topbar d-flex align-items-center">
 
-<button class="btn btn-light" id="toggleSidebar">
-<i class="bi bi-list"></i>
-</button>
+    {{-- MENU --}}
+    <button class="btn btn-light" id="toggleSidebar">
+        <i class="bi bi-list"></i>
+    </button>
 
-<div class="dropdown ms-auto">
+    {{-- RIGHT SIDE --}}
+    <div class="ms-auto d-flex align-items-center gap-2">
 
-<button
-class="btn btn-light d-flex align-items-center gap-2 rounded-pill dropdown-toggle"
-type="button"
-data-bs-toggle="dropdown">
+        {{-- 🔔 NOTIFICATION --}}
+        <div class="dropdown">
 
-@if (auth()->user()->avatar)
-<img src="{{ asset('storage/' . auth()->user()->avatar) }}"
-class="rounded-circle"
-width="32"
-height="32">
-@else
-<div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
-style="width:32px;height:32px;font-size:14px">
-{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
-</div>
-@endif
+            <a href="#" class="btn btn-light position-relative" data-bs-toggle="dropdown">
+                <i class="bi bi-bell fs-5"></i>
 
-<span class="fw-semibold">
-{{ auth()->user()->name }}
-</span>
+                @php
+                    $unreadCount = auth()->user()->unreadNotifications()->count();
+                @endphp
 
-</button>
+                @if($unreadCount > 0)
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                        {{ $unreadCount > 99 ? '99+' : $unreadCount }}
+                    </span>
+                @endif
+            </a>
 
-<ul class="dropdown-menu dropdown-menu-end shadow">
+            <div class="dropdown-menu dropdown-menu-end p-0 shadow"
+                 style="width: 400px; max-height: 420px; overflow-y: auto; border-radius: 10px;">
 
-<li class="dropdown-header">
-Xin chào, <strong>{{ auth()->user()->name }}</strong>
-</li>
+                <div class="p-3 border-bottom fw-bold">
+                    Thông báo
+                </div>
 
-<li>
-<a class="dropdown-item" href="{{ route('admin.profile.show') }}">
-<i class="bi bi-person me-2"></i>
-Xem thông tin
+                @php
+                    $notifications = auth()->user()->notifications()->latest()->limit(10)->get();
+                @endphp
+
+                @forelse($notifications as $noti)
+
+@php
+    $isUnread = is_null($noti->read_at);
+@endphp
+
+<a href="{{ route('notification.redirect', $noti->id) }}"
+   class="dropdown-item noti-item d-flex gap-3 px-3 py-3 {{ $isUnread ? 'noti-unread' : '' }}">
+
+    {{-- ICON --}}
+    <div class="noti-icon">
+        <i class="bi {{ $noti->data['icon'] ?? 'bi-bell' }}"></i>
+    </div>
+
+    {{-- CONTENT --}}
+    <div class="flex-grow-1">
+
+        <div class="d-flex justify-content-between align-items-center">
+
+            <div class="noti-title">
+                {{ $noti->data['title'] ?? 'Thông báo' }}
+            </div>
+
+            {{-- 🔴 DOT chưa đọc --}}
+            @if($isUnread)
+                <span class="noti-dot"></span>
+            @endif
+
+        </div>
+
+        <div class="noti-message">
+            {{ $noti->data['message'] ?? '' }}
+        </div>
+
+        <div class="noti-time">
+            {{ $noti->created_at->diffForHumans() }}
+        </div>
+
+    </div>
+
 </a>
-</li>
 
-<li>
-<a class="dropdown-item" href="{{ route('admin.profile.edit') }}">
-<i class="bi bi-pencil-square me-2"></i>
-Chỉnh sửa thông tin
-</a>
-</li>
+@empty
 
-<li><hr class="dropdown-divider"></li>
-
-<li>
-<form method="POST" action="{{ route('logout') }}">
-@csrf
-<button class="dropdown-item text-danger">
-<i class="bi bi-box-arrow-right me-2"></i>
-Đăng xuất
-</button>
-</form>
-</li>
-
-</ul>
-
+<div class="p-4 text-center text-muted">
+    Không có thông báo
 </div>
+
+@endforelse
+
+            </div>
+
+        </div>
+
+        {{-- 👤 USER DROPDOWN --}}
+        <div class="dropdown">
+
+            <button
+                class="btn btn-light d-flex align-items-center gap-2 rounded-pill dropdown-toggle"
+                data-bs-toggle="dropdown">
+
+                @if (auth()->user()->avatar)
+                    <img src="{{ asset('storage/' . auth()->user()->avatar) }}"
+                         class="rounded-circle"
+                         width="32" height="32">
+                @else
+                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
+                         style="width:32px;height:32px;font-size:14px">
+                        {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
+                    </div>
+                @endif
+
+                <span class="fw-semibold">
+                    {{ auth()->user()->name }}
+                </span>
+
+            </button>
+
+            <ul class="dropdown-menu dropdown-menu-end shadow">
+
+                <li class="dropdown-header">
+                    Xin chào, <strong>{{ auth()->user()->name }}</strong>
+                </li>
+
+                <li>
+                    <a class="dropdown-item" href="{{ route('admin.profile.show') }}">
+                        <i class="bi bi-person me-2"></i> Xem thông tin
+                    </a>
+                </li>
+
+                <li>
+                    <a class="dropdown-item" href="{{ route('admin.profile.edit') }}">
+                        <i class="bi bi-pencil-square me-2"></i> Chỉnh sửa thông tin
+                    </a>
+                </li>
+
+                <li><hr class="dropdown-divider"></li>
+
+                <li>
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button class="dropdown-item text-danger">
+                            <i class="bi bi-box-arrow-right me-2"></i> Đăng xuất
+                        </button>
+                    </form>
+                </li>
+
+            </ul>
+
+        </div>
+
+    </div>
 
 </header>
 
 <section class="content container-fluid px-4 py-3">
-@yield('content')
+    @yield('content')
 </section>
 
 </main>
-
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>

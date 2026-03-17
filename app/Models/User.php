@@ -8,6 +8,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
 
+
 // Import Models
 use App\Models\Review;
 use App\Models\Order;
@@ -15,7 +16,10 @@ use App\Models\Wishlist;
 use App\Models\Cart;
 use App\Models\UserAddress;
 use App\Models\UserPointHistory;
-
+/**
+ * @method \Illuminate\Notifications\DatabaseNotificationCollection notifications()
+ * @method \Illuminate\Notifications\DatabaseNotificationCollection unreadNotifications()
+ */
 class User extends Authenticatable implements MustVerifyEmail
 {
     use HasFactory, Notifiable;
@@ -201,4 +205,5 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(ChatMessage::class, 'sender_id');
     }
+    
 }

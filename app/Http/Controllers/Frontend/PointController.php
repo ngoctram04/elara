@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
-
+use App\Notifications\SystemNotification;
 class PointController extends Controller
 {
     /*
@@ -140,7 +140,6 @@ class PointController extends Controller
             } else {
                 $user->member_level = 'bronze';
             }
-
             $user->save();
 
             /*
@@ -190,7 +189,16 @@ class PointController extends Controller
             ]);
 
             DB::commit();
-
+            $user->notify(new SystemNotification([
+                'title' => 'Đổi điểm thành công',
+                'message' => 'Bạn đã đổi điểm nhận voucher: ' . $code,
+                'url' => route('promotions.my'), // hoặc trang voucher của user
+                'type' => 'voucher',
+                'meta' => [
+                    'code' => $code,
+                    'discount' => $reward->discount_value
+                ]
+            ]));
             return back()->with(
                 'success',
                 "Đổi thành công. Mã voucher của bạn: {$code}"

@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\ChatConversation;
 use App\Models\ChatMessage;
 use Illuminate\Support\Facades\Auth;
-
+use App\Notifications\SystemNotification;
 class AdminChatController extends Controller
 {
 
@@ -157,19 +157,23 @@ class AdminChatController extends Controller
         ============================
         */
 
-        ChatMessage::create([
+        $msg = ChatMessage::create([
+                'conversation_id' => $conversation->id,
+                'sender_id' => Auth::id(),
+                'message' => $message,
+                'is_read' => 0
+            ]);
 
-            'conversation_id' => $conversation->id,
-
-            'sender_id' => Auth::id(),
-
-            'message' => $message,
-
-            'is_read' => 0
-
-        ]);
-
-
+        // 🔔 THÔNG BÁO CHO USER
+        $conversation->user->notify(new SystemNotification([
+            'title' => 'Tin nhắn mới từ shop',
+            'message' => 'Bạn có tin nhắn mới từ nhân viên',
+            'url' => route('chat.index'),
+            'type' => 'chat',
+            'meta' => [
+                'conversation_id' => $conversation->id
+            ]
+        ]));
         /*
         ============================
         Cập nhật thời gian chat

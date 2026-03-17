@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Order;
 use App\Models\Promotion;
+use App\Notifications\SystemNotification;
 class OrderController extends Controller
 {
     /**
@@ -239,7 +240,11 @@ class OrderController extends Controller
 
         try {
 
-            // 1 → 2 (bắt đầu giao)
+            /*
+        |--------------------------------------------------
+        | 1 → 2 (bắt đầu giao)
+        |--------------------------------------------------
+        */
             if ($oldStatus == Order::STATUS_PENDING && $newStatus == Order::STATUS_PROCESSING) {
 
                 foreach ($order->items as $item) {
@@ -265,7 +270,11 @@ class OrderController extends Controller
                 }
             }
 
-            // 2 → 3 (admin xác nhận đã giao)
+            /*
+        |--------------------------------------------------
+        | 2 → 3 (đã giao)
+        |--------------------------------------------------
+        */
             if ($oldStatus == Order::STATUS_PROCESSING && $newStatus == Order::STATUS_COMPLETED) {
 
                 $order->delivered_at = now();
@@ -280,31 +289,27 @@ class OrderController extends Controller
                     // cộng điểm
                     $user->loyalty_points += $points;
 
-                    // cộng tổng chi tiêu
-                    $user->total_spent += $order->grand_total;
-
                     /*
-        |------------------------------
-        | Cập nhật hạng thành viên
-        |------------------------------
-        */
-                    if ($user->total_spent >= 10000000) {
+                |------------------------------------------
+                | CẬP NHẬT HẠNG THEO ĐIỂM
+                |------------------------------------------
+                */
+                    if ($user->loyalty_points >= 10000) {
                         $user->member_level = 'diamond';
-                    } elseif ($user->total_spent >= 5000000) {
+                    } elseif ($user->loyalty_points >= 3000) {
                         $user->member_level = 'gold';
-                    } elseif ($user->total_spent >= 2000000) {
+                    } elseif ($user->loyalty_points >= 1000) {
                         $user->member_level = 'silver';
                     } else {
                         $user->member_level = 'bronze';
                     }
-
                     $user->save();
 
                     /*
-        |------------------------------
-        | Lưu lịch sử điểm
-        |------------------------------
-        */
+                |------------------------------------------
+                | LƯU LỊCH SỬ ĐIỂM
+                |------------------------------------------
+                */
                     DB::table('user_point_histories')->insert([
                         'user_id' => $user->id,
                         'points' => $points,
@@ -318,7 +323,29 @@ class OrderController extends Controller
 
             $order->status = $newStatus;
             $order->save();
+            // 🔔 THÔNG BÁO USER
+            if ($order->user) {
 
+                $title = 'Cập nhật đơn hàng';
+                $message = 'Đơn #' . $order->id . ' đã được cập nhật';
+
+                if ($newStatus == Order::STATUS_PROCESSING) {
+                    $title = 'Đơn đang được giao';
+                    $message = 'Đơn #' . $order->id . ' đang được giao đến bạn';
+                }
+
+                if ($newStatus == Order::STATUS_COMPLETED) {
+                    $title = 'Đơn đã giao thành công';
+                    $message = 'Đơn #' . $order->id . ' đã được giao thành công';
+                }
+
+                $order->user->notify(new SystemNotification([
+                    'title' => $title,
+                    'message' => $message,
+                    'url' => route('orders.show', $order->id),
+                    'type' => 'order_completed'
+                ]));
+            }
             DB::commit();
 
             return back()->with('success', 'Cập nhật trạng thái thành công!');
@@ -362,6 +389,19 @@ class OrderController extends Controller
             ]);
 
             DB::commit();
+
+            // 🔔 GỬI THÔNG BÁO CHO USER
+            if ($order->user) {
+                $order->user->notify(new SystemNotification([
+                    'title' => 'Đơn hàng bị huỷ',
+                    'message' => 'Đơn #' . $order->id . ' đã bị huỷ bởi cửa hàng',
+                    'url' => route('orders.show', $order->id),
+                    'type' => 'order_cancelled',
+                    'meta' => [
+                        'reason' => $request->cancel_reason
+                    ]
+                ]));
+            }
 
             return back()->with('success', 'Đã huỷ đơn hàng.');
         } catch (\Exception $e) {

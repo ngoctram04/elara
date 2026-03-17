@@ -7,7 +7,6 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\Brand;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class CategoryController extends Controller
@@ -39,8 +38,8 @@ class CategoryController extends Controller
             'mainImage',
             'brand'
         ])
-            ->withAvg('reviews', 'rating')   // sao trung bình
-            ->withCount('reviews')           // số review
+            ->withAvg('reviews', 'rating')
+            ->withCount('reviews')
             ->whereIn('category_id', $categoryIds)
             ->where('is_active', true);
 
@@ -70,44 +69,34 @@ class CategoryController extends Controller
         /* ==================================================
         | SORT
         ================================================== */
-        $sort = $request->sort;
+        switch ($request->sort) {
 
-        switch ($sort) {
-
-                // Giá thấp → cao
             case 'price_asc':
                 $query->orderBy('min_price');
                 break;
 
-                // Giá cao → thấp
             case 'price_desc':
                 $query->orderByDesc('min_price');
                 break;
 
-                // Mới nhất
             case 'newest':
                 $query->latest();
                 break;
 
-                // Đánh giá cao
             case 'rating':
                 $query->orderByDesc('reviews_avg_rating');
                 break;
 
-                // Sản phẩm đang giảm giá
             case 'discount':
-
                 $now = Carbon::now();
 
                 $query->where(function ($q) use ($now) {
 
-                    // Giảm trực tiếp trên variant
                     $q->whereHas('variants', function ($sub) {
                         $sub->whereNotNull('original_price')
                             ->whereColumn('original_price', '>', 'price');
                     });
 
-                    // Hoặc có promotion product đang active
                     $q->orWhereHas('promotions', function ($sub) use ($now) {
                         $sub->where('type', 'product')
                             ->where('is_active', 1)
@@ -116,19 +105,31 @@ class CategoryController extends Controller
                     });
                 });
 
-                // ưu tiên sản phẩm giảm nhiều bán chạy
                 $query->orderByDesc('total_sold');
-
                 break;
 
-                // Mặc định: bán chạy
             default:
                 $query->orderByDesc('total_sold');
                 break;
         }
 
         /* ==================================================
-        | PAGINATE
+        | 🔥 BRAND DYNAMIC (QUAN TRỌNG NHẤT)
+        ================================================== */
+        $filteredQuery = clone $query;
+
+        $brands = Brand::whereIn('id', function ($q) use ($filteredQuery) {
+            $q->select('brand_id')
+                ->fromSub(
+                    $filteredQuery->select('brand_id'),
+                    'filtered_products'
+                );
+        })
+            ->orderBy('name')
+            ->get();
+
+        /* ==================================================
+        | PAGINATE (SAU KHI LẤY BRAND)
         ================================================== */
         $limit = $request->limit ?? 20;
 
@@ -137,17 +138,10 @@ class CategoryController extends Controller
             ->withQueryString();
 
         /* ==================================================
-        | SIDEBAR DATA
+        | SIDEBAR CATEGORY
         ================================================== */
         $allCategories = Category::parents()
             ->with('children')
-            ->orderBy('name')
-            ->get();
-
-        $brands = Brand::whereHas('products', function ($q) use ($categoryIds) {
-            $q->whereIn('category_id', $categoryIds)
-                ->where('is_active', true);
-        })
             ->orderBy('name')
             ->get();
 

@@ -9,21 +9,39 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="fw-bold mb-0">Đơn hàng #{{ $order->id }}</h4>
 
-    @if($order->canCancel())
-        <form action="{{ route('orders.cancel', $order->id) }}"
-      method="POST"
-      class="cancel-form">
-    @csrf
-    @method('PUT')
+    <div class="d-flex gap-2">
 
-    <input type="hidden" name="cancel_reason" class="cancel-reason">
+        {{-- NÚT NHẬN HÀNG --}}
+        @if($order->status == 3 && !$order->customer_confirmed)
+            <form action="{{ route('orders.confirmReceived',$order->id) }}"
+                  method="POST"
+                  class="confirm-form">
+                @csrf
+                <button type="submit"
+                        class="btn btn-success btn-sm btn-confirm">
+                    Đã nhận hàng
+                </button>
+            </form>
+        @endif
 
-    <button type="button"
-            class="btn btn-danger btn-sm btn-cancel">
-        Huỷ đơn
-    </button>
-</form>
-    @endif
+        {{-- NÚT HUỶ --}}
+        @if($order->canCancel())
+            <form action="{{ route('orders.cancel', $order->id) }}"
+                  method="POST"
+                  class="cancel-form">
+                @csrf
+                @method('PUT')
+
+                <input type="hidden" name="cancel_reason" class="cancel-reason">
+
+                <button type="button"
+                        class="btn btn-danger btn-sm btn-cancel">
+                    Huỷ đơn
+                </button>
+            </form>
+        @endif
+
+    </div>
 </div>
 
 
@@ -420,6 +438,36 @@ form.submit();
 });
 
 });
+// =============================
+// XÁC NHẬN ĐÃ NHẬN HÀNG
+// =============================
+document.querySelectorAll('.btn-confirm').forEach(function(btn){
 
+    btn.addEventListener('click',function(e){
+
+        e.preventDefault();
+
+        let form = this.closest('form');
+
+        Swal.fire({
+            title: 'Xác nhận đã nhận hàng?',
+            text: 'Sau khi xác nhận, đơn hàng sẽ hoàn tất.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Đã nhận',
+            cancelButtonText: 'Chưa',
+            confirmButtonColor: '#2ecc71',
+            cancelButtonColor: '#6c757d'
+        }).then((result)=>{
+
+            if(result.isConfirmed){
+                form.submit();
+            }
+
+        });
+
+    });
+
+});
 </script>
 @endsection

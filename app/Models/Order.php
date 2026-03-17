@@ -320,6 +320,11 @@ class Order extends Model
                 $order->status == self::STATUS_CANCELLED
             ) {
 
+                // 🔥 THÊM ĐOẠN NÀY
+                if (!$order->cancelled_at) {
+                    $order->cancelled_at = now();
+                }
+
                 $order->loadMissing('items.variant', 'user');
 
                 // Hoàn tồn kho

@@ -179,8 +179,100 @@ autocomplete="off"
 <div class="header-icons">
 
 @auth
+
+<div class="dropdown me-2">
+
+    {{-- 🔔 ICON --}}
+    <a href="#" class="icon-btn position-relative" data-bs-toggle="dropdown">
+
+        <i class="bi bi-bell fs-5"></i>
+
+        {{-- 🔴 BADGE --}}
+        @php
+            $unreadCount = auth()->user()->unreadNotifications()->count();
+        @endphp
+
+        @if($unreadCount > 0)
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                {{ $unreadCount > 99 ? '99+' : $unreadCount }}
+            </span>
+        @endif
+
+    </a>
+
+    {{-- 📦 DROPDOWN --}}
+    <div class="dropdown-menu dropdown-menu-end p-0 shadow noti-dropdown">
+
+        {{-- HEADER --}}
+        <div class="p-3 border-bottom fw-bold d-flex justify-content-between">
+            <span>Thông báo</span>
+        </div>
+
+        {{-- LIST --}}
+        @php
+            $notifications = auth()->user()
+                ->notifications()
+                ->latest()
+                ->limit(10)
+                ->get();
+        @endphp
+
+        @forelse($notifications as $noti)
+
+            <a href="{{ route('notification.redirect', $noti->id) }}"
+               class="dropdown-item noti-item d-flex gap-2 py-2 {{ is_null($noti->read_at) ? 'unread' : '' }}">
+
+                {{-- ICON --}}
+                <div class="noti-icon">
+                    <i class="bi {{ $noti->data['icon'] ?? 'bi-bell' }} text-{{ $noti->data['color'] ?? 'secondary' }}"></i>
+                </div>
+
+                {{-- CONTENT --}}
+                <div class="flex-grow-1">
+
+                    <div class="noti-title">
+                        {{ $noti->data['title'] ?? 'Thông báo' }}
+
+                        {{-- 🔴 DOT --}}
+                        @if(is_null($noti->read_at))
+                            <span class="noti-dot"></span>
+                        @endif
+                    </div>
+
+                    <div class="noti-message">
+                        {{ $noti->data['message'] ?? '' }}
+                    </div>
+
+                    {{-- TIME --}}
+                    <div class="noti-time">
+                        {{ $noti->created_at->diffForHumans() }}
+                    </div>
+
+                </div>
+
+            </a>
+
+        @empty
+
+            <div class="p-4 text-center text-muted">
+                <i class="bi bi-bell-slash fs-4"></i><br>
+                Không có thông báo
+            </div>
+
+        @endforelse
+
+    </div>
+
+</div>
+
 @include('components.user-dropdown')
-@else <a href="{{ route('login') }}" class="icon-btn"> <i class="bi bi-person"></i> </a>
+
+@else
+
+<a href="{{ route('login') }}" class="icon-btn">
+    <i class="bi bi-person"></i>
+</a>
+
 @endauth
 
 <a href="{{ route('cart.index') }}" class="icon-btn">
@@ -219,7 +311,9 @@ Sản phẩm mới
 <a href="{{ route('blogs.index') }}">
 Tin tức
 </a>
-
+<a href="{{ route('policy') }}">
+Chính sách
+</a>
 @auth <a href="{{ route('orders.history') }}">
 Đơn hàng của tôi </a>
 @endauth

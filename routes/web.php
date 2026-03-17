@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-
+use Illuminate\Support\Facades\Auth;
 /*
 |--------------------------------------------------------------------------
 | FRONTEND CONTROLLERS
@@ -62,6 +62,9 @@ use App\Http\Controllers\Admin\ReviewController as AdminReviewController;
 
 // Home
 Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/policy', function () {
+    return view('frontend.pages.policy');
+})->name('policy');
 // Shop
 Route::get('/products', [ShopController::class, 'index'])->name('shop');
 // Search autocomplete
@@ -747,4 +750,14 @@ Route::get('/test-order-created', function () {
 | AUTH
 |--------------------------------------------------------------------------
 */
+Route::get('/notification/{id}', function ($id) {
+
+    $user = Auth::user(); // ✅ dùng Auth facade
+
+    $noti = $user->notifications()->findOrFail($id);
+
+    $noti->markAsRead();
+
+    return redirect($noti->data['url']);
+})->middleware('auth')->name('notification.redirect');
 require __DIR__ . '/auth.php';

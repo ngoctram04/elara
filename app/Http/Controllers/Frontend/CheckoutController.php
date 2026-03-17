@@ -16,6 +16,7 @@ use App\Models\UserAddress;
 use App\Models\User;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\OrderCreatedMail;
+use App\Notifications\SystemNotification;
 class CheckoutController extends Controller
 {
     /**
@@ -615,9 +616,36 @@ class CheckoutController extends Controller
                     ->whereIn('variant_id', $variantIds)
                     ->delete();
             }
-
             DB::commit();
+            // 🔔 LOAD ADMIN 1 LẦN
+            $admins = User::where('role', 'admin')->get();
 
+            // 🔔 NOTIFY ADMIN
+            foreach ($admins as $admin) {
+                $admin->notify(new SystemNotification([
+                    'title' => 'Đơn hàng mới',
+                    'message' => $order->user->name . ' vừa đặt đơn #' . $order->id,
+                    'url' => route('admin.orders.show', $order->id),
+                    'type' => 'order_created',
+                    'meta' => [
+                        'order_id' => $order->id,
+                        'total' => $order->grand_total
+                    ]
+                ]));
+            }
+
+            // 🔔 NOTIFY USER
+            $user->notify(new SystemNotification([
+                'title' => 'Đặt hàng thành công',
+                'message' => 'Đơn #' . $order->id . ' đã được tạo',
+                'url' => route('orders.show', $order->id),
+                'type' => 'order_created',
+                'meta' => [
+                    'order_id' => $order->id,
+                    'total' => $order->grand_total
+                ]
+            ]));
+            
             if ($request->payment_method === 'vnpay') {
                 return $this->createVNPay($order);
             }
@@ -833,7 +861,12 @@ class CheckoutController extends Controller
                 }
 
                 DB::commit();
-
+                $order->user->notify(new SystemNotification([
+                    'title' => 'Thanh toán thành công',
+                    'message' => 'Đơn #' . $order->id . ' đã thanh toán',
+                    'url' => route('orders.show', $order->id),
+                    'type' => 'order_completed'
+                ]));
                 return redirect()
                     ->route('checkout.success', $order->id)
                     ->with('success', 'Thanh toán VNPay thành công!');
@@ -856,7 +889,9 @@ class CheckoutController extends Controller
 
                 $order->update([
                     'payment_status' => Order::PAYMENT_FAILED,
-                    'status' => Order::STATUS_CANCELLED
+                    'status' => Order::STATUS_CANCELLED,
+                    'cancelled_at' => now(), // 👈 THÊM DÒNG NÀY
+                    'cancelled_by' => 'system',
                 ]);
 
                 // hoàn tồn kho
@@ -948,7 +983,15 @@ class CheckoutController extends Controller
             ]);
 
             DB::commit();
-
+            // 🔔 THÔNG BÁO HUỶ ĐƠN
+            $order->user->notify(new SystemNotification([
+                'title' => 'Đơn đã bị huỷ',
+                'message' => 'Đơn #' . $order->id . ' đã bị huỷ',
+                'url' => route('orders.show',
+                    $order->id
+                ),
+                'type' => 'order_cancelled'
+            ]));
             return back()->with('success', 'Huỷ đơn thành công.');
         } catch (\Throwable $e) {
             DB::rollBack();

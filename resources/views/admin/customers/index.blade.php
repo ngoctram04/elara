@@ -170,7 +170,7 @@ class="btn btn-outline-secondary">
 {{-- TỔNG CHI TIÊU --}}
 <td>
 
-{{ number_format($customer->total_spent,0,',','.') }} ₫
+{{ number_format($customer->spending ?? 0, 0, ',', '.') }} ₫
 
 </td>
 

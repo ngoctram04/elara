@@ -7,6 +7,8 @@ use App\Models\Blog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
+use App\Models\User;
+use App\Notifications\SystemNotification;
 
 class BlogController extends Controller
 {
@@ -66,13 +68,28 @@ class BlogController extends Controller
 
         // upload thumbnail
         if ($request->hasFile('thumbnail')) {
-
             $data['thumbnail'] = $request
                 ->file('thumbnail')
                 ->store('blogs', 'public');
         }
 
-        Blog::create($data);
+        // tạo blog
+        $blog = Blog::create($data);
+
+        // ================= GỬI NOTIFICATION =================
+        User::where('is_active', 1)->chunk(100, function ($users) use ($blog) {
+            foreach ($users as $user) {
+                $user->notify(new SystemNotification([
+                    'title' => 'Bài viết mới',
+                    'message' => 'Shop vừa đăng: ' . $blog->title,
+                    'url' => route('blogs.show', $blog->slug),
+                    'type' => 'blog',
+                    'meta' => [
+                        'blog_id' => $blog->id
+                    ]
+                ]));
+            }
+        });
 
         return redirect()
             ->route('admin.blogs.index')
@@ -171,7 +188,6 @@ class BlogController extends Controller
     // ================= UPLOAD IMAGE / VIDEO FOR TINYMCE =================
     public function uploadImage(Request $request)
     {
-
         $request->validate([
             'file' => 'required|file|max:51200|mimes:jpg,jpeg,png,webp,gif,mp4,webm,mov'
         ]);

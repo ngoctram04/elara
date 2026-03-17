@@ -958,3 +958,77 @@ VOICE POPUP
 .history-row:hover {
     background: #f7f9fb;
 }
+/* dropdown */
+.noti-dropdown {
+    width: 340px;
+    max-height: 420px;
+    overflow-y: auto;
+    border-radius: 14px;
+}
+
+/* item */
+.noti-item {
+    display: flex;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    transition: all 0.2s ease;
+}
+
+/* hover */
+.noti-item:hover {
+    background: #f5f7fb;
+}
+
+/* 🔥 UNREAD */
+.noti-item.unread {
+    background: #eef4ff;
+}
+
+/* icon */
+.noti-icon i {
+    font-size: 18px;
+}
+
+/* title */
+.noti-title {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* 🔥 đậm hơn khi chưa đọc */
+.noti-item.unread .noti-title {
+    font-weight: 700;
+}
+
+/* message */
+.noti-message {
+    font-size: 13px;
+    color: #666;
+}
+
+/* time */
+.noti-time {
+    font-size: 11px;
+    color: #999;
+}
+
+/* 🔴 chấm đỏ */
+.noti-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    background: #ff3b3b;
+    border-radius: 50%;
+    margin-left: 6px;
+}
+
+/* scroll đẹp hơn */
+.noti-dropdown::-webkit-scrollbar {
+    width: 5px;
+}
+
+.noti-dropdown::-webkit-scrollbar-thumb {
+    background: #ddd;
+    border-radius: 10px;
+}
