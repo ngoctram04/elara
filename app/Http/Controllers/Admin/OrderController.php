@@ -336,7 +336,7 @@ class OrderController extends Controller
 
                 if ($newStatus == Order::STATUS_COMPLETED) {
                     $title = 'Đơn đã giao thành công';
-                    $message = 'Đơn #' . $order->id . ' đã được giao thành công';
+                    $message = 'Đơn #' . $order->id . ' đã được giao thành công. Vui lòng xác nhận đã nhận hàng';
                 }
 
                 $order->user->notify(new SystemNotification([
