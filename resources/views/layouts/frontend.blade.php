@@ -297,7 +297,7 @@ autocomplete="off"
 <div class="nav-category">
 
 <a href="#" class="nav-category-trigger">
-<i class="bi bi-list"></i> Danh mục sản phẩm
+<i class="bi bi-list"></i> Danh mục 
 </a>
 
 @include('components.mega-menu')
@@ -331,12 +331,13 @@ Chính sách
 <div class="row">
 
 <!-- ELARA -->
-<div class="col-md-4 mb-4">
+<div class="col-lg-4 col-md-6 mb-4">
 <h5 class="footer-title">ELARA</h5>
 
 <p class="footer-desc">
-ELARA là cửa hàng chuyên cung cấp các sản phẩm chất lượng cao
-với giá tốt và dịch vụ giao hàng nhanh chóng.
+    <span>ELARA là cửa hàng chuyên cung cấp</span><br>
+    <span>các sản phẩm chất lượng cao với giá tốt</span><br>
+    <span>và dịch vụ giao hàng nhanh chóng.</span>
 </p>
 
 <div class="footer-social">
@@ -349,7 +350,7 @@ với giá tốt và dịch vụ giao hàng nhanh chóng.
 
 
 <!-- LIÊN KẾT -->
-<div class="col-md-2 mb-4">
+<div class="col-lg-2 col-md-6 mb-4">
 
 <h6 class="footer-title-sm">Liên kết</h6>
 
@@ -364,7 +365,7 @@ với giá tốt và dịch vụ giao hàng nhanh chóng.
 
 
 <!-- HỖ TRỢ -->
-<div class="col-md-3 mb-4">
+<div class="col-lg-3 col-md-6 mb-4">
 
 <h6 class="footer-title-sm">Hỗ trợ</h6>
 
@@ -379,7 +380,7 @@ với giá tốt và dịch vụ giao hàng nhanh chóng.
 
 
 <!-- LIÊN HỆ -->
-<div class="col-md-3 mb-4">
+<div class="col-lg-3 col-md-6 mb-4">
 
 <h6 class="footer-title-sm">Liên hệ</h6>
 

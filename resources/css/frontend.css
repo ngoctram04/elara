@@ -63,6 +63,7 @@ body {
     border-radius: var(--radius-pill);
     overflow: visible;
 }
+
 .header-box,
 .header-inner {
     overflow: visible !important;
@@ -135,15 +136,18 @@ body {
 .nav-category-trigger:hover {
     background: rgba(255, 255, 255, .15);
 }
+
 /* ================= MEGA MENU – FIX DỨT ĐIỂM ================= */
 .nav-box {
     position: relative;
-    z-index: 900;
+    z-index: 2000;
 }
+
 .header-box {
     position: relative;
-    z-index: 1000;
+    z-index: 3000;
 }
+
 .nav-category {
     position: relative;
 }
@@ -154,7 +158,8 @@ body {
     top: 100%;
     left: 0;
     display: none;
-    z-index: 3000;
+    z-index: 99999;
+    /* 🔥 tăng mạnh */
 }
 
 /* chỉ mở khi hover đúng */
@@ -445,14 +450,48 @@ body {
    RESPONSIVE
 ===================================================== */
 
-@media(max-width:768px) {
+@media (max-width: 768px) {
 
     .footer-inner {
-        text-align: center;
+        text-align: left;
+    }
+
+    /* 🔥 QUAN TRỌNG NHẤT */
+    .footer-inner .row>div {
+        width: 50% !important;
+    }
+
+    .footer-inner .row {
+        row-gap: 20px;
+    }
+
+    .footer-title {
+        font-size: 16px;
+    }
+
+    .footer-title-sm {
+        font-size: 14px;
+    }
+
+    .footer-desc,
+    .footer-links li,
+    .footer-info li {
+        font-size: 13px;
     }
 
     .footer-social {
-        justify-content: center;
+        justify-content: flex-start;
+    }
+
+    .footer-bottom {
+        font-size: 12px;
+        text-align: center;
+    }
+}
+@media (max-width: 480px) {
+
+    .footer-inner .row>div {
+        width: 100% !important;
     }
 
 }
@@ -462,28 +501,94 @@ body {
 ===================================================== */
 @media (max-width: 768px) {
 
+    /* ================= HEADER ================= */
     .header-inner {
+        display: flex;
         flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .logo {
+        flex: 1;
+    }
+
+    .header-icons {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-left: auto;
     }
 
     .search-pill {
+        order: 3;
         width: 100%;
     }
 
-    .nav-inner {
-        flex-wrap: wrap;
-        gap: 16px;
+    /* ================= NAV ================= */
+        .nav-inner {
+            justify-content: flex-start;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            overflow-y: visible;
+            /* 🔥 THÊM DÒNG NÀY */
+            white-space: nowrap;
+            gap: 12px;
+            padding-bottom: 6px;
+        }
+.nav-box {
+    overflow: visible !important;
+}
+    .nav-inner::-webkit-scrollbar {
+        display: none;
     }
 
+    .nav-inner a,
+    .nav-category-trigger {
+        flex-shrink: 0;
+        font-size: 14px;
+        padding: 6px 10px;
+        white-space: nowrap;
+    }
+
+    /* ================= FIX MEGA MENU MOBILE ================= */
+
+    .nav-box {
+        position: relative;
+        z-index: 1000;
+    }
+
+    .nav-category {
+        position: relative;
+    }
+
+.mega-menu {
+    position: fixed;
+    /* 🔥 QUAN TRỌNG */
+    top: 110px;
+    /* chỉnh theo header bạn */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 750px;
+    z-index: 99999;
+}
+
+
+    /* ❗ QUAN TRỌNG: KHÔNG TẮT HOÀN TOÀN */
+    /* xoá display:none; cũ đi */
+
+    .nav-category-trigger:hover+.mega-menu,
+    .mega-menu:hover {
+        display: block;
+    }
+
+    /* ================= HOME ================= */
     .home-banner img {
         height: 260px;
     }
-
-    /* TẮT MEGA MENU MOBILE */
-    .mega-menu {
-        display: none !important;
-    }
 }
+
 .breadcrumb-box {
     display: flex;
     align-items: center;
@@ -583,6 +688,7 @@ body {
 .icon-btn {
     position: relative;
 }
+
 /* =====================================================
    SEARCH DROPDOWN – FULL VERSION
 ===================================================== */
@@ -591,6 +697,7 @@ body {
 .search-pill {
     position: relative;
 }
+
 /* ================= DROPDOWN BOX ================= */
 .search-suggest-box {
     position: absolute;
@@ -652,6 +759,7 @@ body {
     font-size: 16px;
     color: #9aa0a6;
 }
+
 /* nút X bên phải */
 .history-delete {
     font-size: 18px;
@@ -673,6 +781,7 @@ body {
     background: #ddd;
     border-radius: 6px;
 }
+
 /* ================= SEARCH RESULT BANNER ================= */
 
 .search-result-banner {
@@ -722,6 +831,7 @@ body {
     font-size: 22px;
     letter-spacing: 1px;
 }
+
 /* =====================================================
    FLOATING BUTTON (WISHLIST + CHAT)
 ===================================================== */
@@ -807,6 +917,7 @@ body {
 .chat-option:hover {
     background: #e5e7eb;
 }
+
 /* =====================================================
    CHAT DATE DIVIDER
 ===================================================== */
@@ -836,6 +947,7 @@ body {
 .chat-date::after {
     right: 0;
 }
+
 /* ================= CHAT BADGE ================= */
 
 .chat-badge {
@@ -852,6 +964,7 @@ body {
     text-align: center;
     line-height: 1.2;
 }
+
 .ai-msg {
     margin-top: 6px;
     padding: 6px 8px;
@@ -868,6 +981,7 @@ body {
 .ai-msg a:hover {
     text-decoration: underline;
 }
+
 /* ================= DELETE HISTORY BUTTON ================= */
 
 .delete-history {
@@ -881,6 +995,7 @@ body {
 .delete-history:hover {
     color: #e74c3c;
 }
+
 .voice-btn {
     border: none;
     background: transparent;
@@ -892,6 +1007,7 @@ body {
 .voice-btn:hover {
     color: #7ec8ea;
 }
+
 /* ==============================
 VOICE POPUP
 ============================== */
@@ -951,6 +1067,7 @@ VOICE POPUP
 .search-history-item:hover {
     background: #f5f7fa;
 }
+
 .history-row {
     transition: all .2s ease;
 }
@@ -958,6 +1075,7 @@ VOICE POPUP
 .history-row:hover {
     background: #f7f9fb;
 }
+
 /* dropdown */
 .noti-dropdown {
     width: 340px;
@@ -1013,7 +1131,6 @@ VOICE POPUP
     color: #999;
 }
 
-/* 🔴 chấm đỏ */
 .noti-dot {
     display: inline-block;
     width: 7px;
@@ -1023,7 +1140,6 @@ VOICE POPUP
     margin-left: 6px;
 }
 
-/* scroll đẹp hơn */
 .noti-dropdown::-webkit-scrollbar {
     width: 5px;
 }

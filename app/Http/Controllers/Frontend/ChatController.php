@@ -5,21 +5,16 @@ namespace App\Http\Controllers\Frontend;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 
 use App\Models\ChatConversation;
 use App\Models\ChatMessage;
 use App\Models\Product;
-use App\Models\Category;
-use App\Models\Brand;
 use App\Models\User;
 use App\Notifications\SystemNotification;
+
 class ChatController extends Controller
 {
-    /*
-    |--------------------------------------------------------------------------
-    | Trang chat nhân viên
-    |--------------------------------------------------------------------------
-    */
     public function index()
     {
         $conversation = ChatConversation::firstOrCreate([
@@ -29,25 +24,18 @@ class ChatController extends Controller
         return view('frontend.chat.index', compact('conversation'));
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Lấy danh sách tin nhắn
-    |--------------------------------------------------------------------------
-    */
     public function messages()
     {
         $conversation = ChatConversation::where('user_id', Auth::id())->first();
 
-        if (!$conversation) {
-            return response()->json([]);
-        }
+        if (!$conversation) return response()->json([]);
 
         ChatMessage::where('conversation_id', $conversation->id)
             ->where('sender_id', '!=', Auth::id())
             ->update(['is_read' => 1]);
 
         $messages = ChatMessage::with('sender')
-        ->where('conversation_id', $conversation->id)
+            ->where('conversation_id', $conversation->id)
             ->orderBy('created_at', 'asc')
             ->get()
             ->map(function ($msg) {
@@ -68,16 +56,11 @@ class ChatController extends Controller
         return response()->json($messages);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Gửi tin nhắn cho nhân viên
-    |--------------------------------------------------------------------------
-    */
     public function send(Request $request)
     {
         $request->validate([
             'message' => 'nullable|string|max:2000',
-            'file' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120'
+            'file' => 'nullable|image|max:5120'
         ]);
 
         $conversation = ChatConversation::firstOrCreate([
@@ -87,10 +70,7 @@ class ChatController extends Controller
         $text = $request->message;
 
         if ($request->hasFile('file')) {
-
-            $file = $request->file('file');
-            $path = $file->store('chat', 'public');
-
+            $path = $request->file('file')->store('chat', 'public');
             $text = '/storage/' . $path;
         }
 
@@ -107,18 +87,17 @@ class ChatController extends Controller
             'message' => $text,
             'is_read' => 0
         ]);
-        // 🔔 Gửi cho admin
+
         User::where('role', 'admin')->each(function ($admin) use ($conversation) {
             $admin->notify(new SystemNotification([
                 'title' => 'Tin nhắn mới',
                 'message' => 'Khách vừa gửi tin nhắn',
                 'url' => route('admin.messages.show', $conversation->id),
                 'type' => 'chat',
-                'meta' => [
-                    'conversation_id' => $conversation->id
-                ]
+                'meta' => ['conversation_id' => $conversation->id]
             ]));
         });
+
         $conversation->touch();
 
         return response()->json([
@@ -136,288 +115,349 @@ class ChatController extends Controller
     }
 
     /*
-|--------------------------------------------------------------------------
-| AI CHAT LOGIC
-|--------------------------------------------------------------------------
-*/
+    |--------------------------------------------------------------------------
+    | AI LOGIC (DB FIRST)
+    |--------------------------------------------------------------------------
+    */
+    private function normalize($text)
+    {
+        $text = strtolower($text);
+
+        $unicode = [
+            'a' => 'á|à|ả|ã|ạ|ă|ắ|ằ|ẳ|ẵ|ặ|â|ấ|ầ|ẩ|ẫ|ậ',
+            'd' => 'đ',
+            'e' => 'é|è|ẻ|ẽ|ẹ|ê|ế|ề|ể|ễ|ệ',
+            'i' => 'í|ì|ỉ|ĩ|ị',
+            'o' => 'ó|ò|ỏ|õ|ọ|ô|ố|ồ|ổ|ỗ|ộ|ơ|ớ|ờ|ở|ỡ|ợ',
+            'u' => 'ú|ù|ủ|ũ|ụ|ư|ứ|ừ|ử|ữ|ự',
+            'y' => 'ý|ỳ|ỷ|ỹ|ỵ',
+        ];
+
+        foreach ($unicode as $nonAccent => $accent) {
+            $text = preg_replace("/($accent)/i", $nonAccent, $text);
+        }
+
+        return $text;
+    }
 
     private function askAI($message)
     {
-        $msg = strtolower(trim($message));
-
+        $msg = $this->normalize($message);
         /*
 |--------------------------------------------------------------------------
-| FAQ
+| 0.1 CHU TRÌNH DƯỠNG DA
 |--------------------------------------------------------------------------
 */
-
         if (
-            str_contains($msg, 'phí ship') ||
-            str_contains($msg, 'giá ship') ||
-            str_contains($msg, 'ship bao nhiêu')
+            str_contains($msg, 'duong da') ||
+            str_contains($msg, 'skincare') ||
+            str_contains($msg, 'routine') ||
+            str_contains($msg, 'cham soc da')
         ) {
-            return "🚚 Phí ship ELARA khoảng 15.000đ - 35.000đ tùy khu vực.";
-        }
+            return "Chu trình dưỡng da cơ bản:
 
-        if (
-            str_contains($msg, 'giao hàng') ||
-            str_contains($msg, 'bao lâu nhận') ||
-            str_contains($msg, 'mấy ngày tới')
-        ) {
-            return "🚚 ELARA giao hàng toàn quốc từ 2-4 ngày.";
-        }
+Buổi sáng:
+- Sữa rửa mặt
+- Toner
+- Serum (nếu có)
+- Kem dưỡng
+- Kem chống nắng
 
-        if (str_contains($msg, 'đổi trả')) {
-            return "🔄 ELARA hỗ trợ đổi trả trong 7 ngày nếu sản phẩm lỗi.";
-        }
+Buổi tối:
+- Tẩy trang
+- Sữa rửa mặt
+- Toner
+- Serum
+- Kem dưỡng
 
-        if (str_contains($msg, 'thanh toán')) {
-            return "💳 ELARA hỗ trợ COD, chuyển khoản và VNPay.";
+Bạn có thể cho mình biết loại da để mình gợi ý sản phẩm phù hợp hơn.";
         }
-
         /*
 |--------------------------------------------------------------------------
-| ROUTINE SKINCARE
+| 0.2 HẠNG THÀNH VIÊN
 |--------------------------------------------------------------------------
 */
-
-        if (str_contains($msg, 'routine')) {
-
-            return "
-
-Routine skincare cơ bản:
-
-1️⃣ Sữa rửa mặt  
-2️⃣ Toner  
-3️⃣ Serum  
-4️⃣ Kem dưỡng  
-5️⃣ Kem chống nắng
-
-";
-        }
-
-        /*
-|--------------------------------------------------------------------------
-| TƯ VẤN DA
-|--------------------------------------------------------------------------
-*/
-
         if (
-            str_contains($msg, 'da dầu')
+            str_contains($msg, 'hang') ||
+            str_contains($msg, 'thanh vien') ||
+            str_contains($msg, 'bac') ||
+            str_contains($msg, 'vang') ||
+            str_contains($msg, 'kim cuong') ||
+            str_contains($msg, 'diem')
         ) {
-            return $this->suggestProductsByCategory('cham-soc-da-mat');
-        }
+            return "Chính sách hạng thành viên:
 
+Đồng (0 điểm):
+- Không có ưu đãi
+
+Bạc (1.000 điểm):
+- Giảm 5% vào ngày sinh nhật
+
+Vàng (3.000 điểm):
+- Freeship đơn từ 300.000đ
+- Giảm 10% vào ngày sinh nhật
+
+Kim cương (10.000 điểm):
+- Freeship mọi đơn
+- Giảm 15% vào ngày sinh nhật";
+        }
         if (
-            str_contains($msg, 'da khô')
+            str_contains($msg, 'khuyen mai') ||
+            str_contains($msg, 'giam gia') ||
+            str_contains($msg, 'sale')
         ) {
-            return $this->suggestProductsByCategory('cham-soc-da-mat');
-        }
 
-        if (
-            str_contains($msg, 'mụn')
-        ) {
-            return $this->suggestProductsByCategory('cham-soc-da-mat');
-        }
-
-        if (
-            str_contains($msg, 'tẩy trang')
-        ) {
-            return $this->suggestProductsByCategory('tay-trang');
-        }
-
-        /*
-|--------------------------------------------------------------------------
-| TÌM THEO BRAND
-|--------------------------------------------------------------------------
-*/
-
-        $brand = Brand::where('name', 'like', '%' . $msg . '%')->first();
-
-        if ($brand) {
-            return $this->suggestProductsByBrand($brand->id);
-        }
-
-        /*
-|--------------------------------------------------------------------------
-| TÌM THEO CATEGORY
-|--------------------------------------------------------------------------
-*/
-
-        $category = Category::where('name', 'like', '%' . $msg . '%')->first();
-
-        if ($category) {
-            return $this->suggestProductsByCategorySlug($category->slug);
-        }
-
-        /*
-|--------------------------------------------------------------------------
-| SEARCH PRODUCT
-|--------------------------------------------------------------------------
-*/
-
-        return $this->suggestProductsByKeyword($msg);
-    }
-
-
-    /*
-|--------------------------------------------------------------------------
-| SEARCH KEYWORD
-|--------------------------------------------------------------------------
-*/
-
-    private function suggestProductsByKeyword($keyword)
-    {
-
-        $products = Product::with('mainImage')
+            $products = Product::with('mainImage')
             ->where('is_active', 1)
-            ->where(function ($q) use ($keyword) {
-
-                $q->where('name', 'like', '%' . $keyword . '%')
-                    ->orWhere('description', 'like', '%' . $keyword . '%');
+            ->whereHas('promotions', function ($q) {
+                $q->where('is_active', 1)
+                ->where('type', 'product')
+                    ->where('start_date', '<=', now())
+                    ->where('end_date', '>=', now());
             })
             ->limit(3)
             ->get();
 
-        return $this->renderProducts($products);
-    }
+            if ($products->isNotEmpty()) {
+                return "Sản phẩm đang khuyến mãi:<br>" . $this->renderProducts($products);
+            }
 
+            return "Hiện tại chưa có sản phẩm khuyến mãi.
+
+<a href='http://127.0.0.1:8000/chat'>Chat với nhân viên</a>";
+        }
+        /*
+    |--------------------------------------------------------------------------
+    | 1. XỬ LÝ SHIP
+    |--------------------------------------------------------------------------
+    */
+        if (str_contains($msg, 'ship') || str_contains($msg, 'phi')) {
+
+            $vung15 = ['vinh long'];
+
+            $vung25 = [
+                'can tho',
+                'ben tre',
+                'tra vinh',
+                'soc trang',
+                'hau giang',
+                'dong thap',
+                'an giang',
+                'kien giang',
+                'ca mau',
+                'bac lieu',
+                'tien giang'
+            ];
+
+            foreach ($vung15 as $tinh) {
+                if (str_contains($msg, $tinh)) {
+                    return "Phí ship về " . ucfirst($tinh) . ": 15.000đ";
+                }
+            }
+
+            foreach ($vung25 as $tinh) {
+                if (str_contains($msg, $tinh)) {
+                    return "Phí ship về " . ucfirst($tinh) . ": 25.000đ";
+                }
+            }
+
+            return "Phí ship như sau:
+- Vĩnh Long: 15.000đ
+- Cần Thơ, Bến Tre, Trà Vinh, Sóc Trăng, Hậu Giang, Đồng Tháp, An Giang, Kiên Giang, Cà Mau, Bạc Liêu, Tiền Giang: 25.000đ
+- Khu vực khác: 35.000đ
+
+Bạn ở tỉnh nào để mình báo chính xác hơn.";
+        }
+
+        /*
+    |--------------------------------------------------------------------------
+    | 2. DETECT GIÁ + INTENT
+    |--------------------------------------------------------------------------
+    */
+        preg_match('/(\d+)/', $msg, $matches);
+        $price = $matches[1] ?? null;
+
+        // xử lý 100k => 100000
+        if ($price && str_contains($msg, 'k')) {
+            $price = $price * 1000;
+        }
+
+        // detect product
+        $keywords = [
+            'kem',
+            'gel',
+            'serum',
+            'tay',
+            'duong',
+            'sua',
+            'nuoc',
+            'san pham',
+            'sp',
+            'hang',
+            'do'
+        ];
+
+        $isProductSearch = false;
+
+        foreach ($keywords as $kw) {
+            if (str_contains($msg, $kw)) {
+                $isProductSearch = true;
+                break;
+            }
+        }
+
+        // 🔥 QUAN TRỌNG: có giá là search
+        if ($price) {
+            $isProductSearch = true;
+        }
+
+        /*
+    |--------------------------------------------------------------------------
+    | 3. KHÔNG PHẢI PRODUCT → CHAT
+    |--------------------------------------------------------------------------
+    */
+        if (!$isProductSearch) {
+            return "Mình chưa hiểu rõ yêu cầu của bạn.
+
+Bạn có thể mô tả cụ thể hơn hoặc liên hệ nhân viên để được hỗ trợ:
+<a href='http://127.0.0.1:8000/chat'>Chat với nhân viên</a>";
+        }
+
+        /*
+    |--------------------------------------------------------------------------
+    | 4. QUERY SẢN PHẨM
+    |--------------------------------------------------------------------------
+    */
+        $query = Product::with('mainImage')
+        ->where('is_active', 1);
+
+        // lọc giá
+        if ($price) {
+            if (str_contains($msg, 'duoi')) {
+                $query->where('min_price', '<=', $price);
+            } elseif (str_contains($msg, 'tren')) {
+                $query->where('min_price', '>=', $price);
+            }
+        }
+
+        // 🔥 CHỈ filter name khi KHÔNG có giá
+        if (!$price) {
+
+            $ignoreWords = ['duoi', 'tren', 'khoang', 'gia', 'bao', 'nhieu', 'co', 'gi'];
+
+            $query->where(function ($q) use ($msg, $ignoreWords) {
+                foreach (explode(' ', $msg) as $word) {
+                    if (strlen($word) >= 3 && !in_array($word, $ignoreWords)) {
+                        $q->orWhere('name', 'like', "%$word%");
+                    }
+                }
+            });
+        }
+        $products = $query->limit(3)->get();
+
+        if ($products->isNotEmpty()) {
+            return "Mình gợi ý cho bạn:<br>" . $this->renderProducts($products);
+        }
+
+        /*
+    |--------------------------------------------------------------------------
+    | 5. KHÔNG CÓ → CHAT NHÂN VIÊN
+    |--------------------------------------------------------------------------
+    */
+        return "Hiện tại mình chưa tìm thấy sản phẩm phù hợp trong hệ thống.
+
+Bạn có thể mô tả rõ hơn hoặc liên hệ nhân viên để được hỗ trợ nhanh hơn:
+<a href='http://127.0.0.1:8000/chat'>Chat với nhân viên</a>";
+    }
 
     /*
-|--------------------------------------------------------------------------
-| CATEGORY
-|--------------------------------------------------------------------------
-*/
-
-    private function suggestProductsByCategorySlug($slug)
-    {
-
-        $category = Category::where('slug', $slug)->first();
-
-        if (!$category) return "Không tìm thấy sản phẩm.";
-
-        $products = Product::with('mainImage')
-            ->where('category_id', $category->id)
-            ->limit(3)
-            ->get();
-
-        return $this->renderProducts($products);
-    }
-
-    private function suggestProductsByCategory($slug)
-    {
-
-        $category = Category::where('slug', $slug)->first();
-
-        if (!$category) return "Không tìm thấy sản phẩm.";
-
-        $products = Product::with('mainImage')
-            ->where('category_id', $category->id)
-            ->limit(3)
-            ->get();
-
-        return $this->renderProducts($products);
-    }
-
-
-    /*
-|--------------------------------------------------------------------------
-| BRAND
-|--------------------------------------------------------------------------
-*/
-
-    private function suggestProductsByBrand($brand_id)
-    {
-
-        $products = Product::with('mainImage')
-            ->where('brand_id', $brand_id)
-            ->limit(3)
-            ->get();
-
-        return $this->renderProducts($products);
-    }
-
-
-    /*
-|--------------------------------------------------------------------------
-| RENDER PRODUCT
-|--------------------------------------------------------------------------
-*/
-
+    |--------------------------------------------------------------------------
+    | RENDER PRODUCT
+    |--------------------------------------------------------------------------
+    */
     private function renderProducts($products)
     {
-
-        if ($products->isEmpty()) {
-
-            return "
-Xin lỗi, tôi chưa tìm thấy sản phẩm phù hợp.
-
-👉 <a href='/chat'>Chat với nhân viên</a>
-";
-        }
-
-        $reply = "ELARA gợi ý cho bạn:<br><br>";
+        $html = "";
 
         foreach ($products as $p) {
-
             $url = route('products.show', $p->slug);
-
             $img = $p->main_image_url;
-
             $price = number_format($p->min_price, 0, ',', '.') . "₫";
 
-            $reply .= "
-
-<div style='display:flex;margin-bottom:10px'>
-
-<img src='{$img}'
-width='50'
-height='50'
-style='object-fit:cover;border-radius:6px;margin-right:10px'>
-
-<div>
-
-<a href='{$url}'
-style='font-weight:600;color:#2c3e50'>
-
-{$p->name}
-
-</a>
-
-<div style='color:#e74c3c;font-weight:600'>
-{$price}
-</div>
-
-</div>
-
-</div>
-
-";
+            $html .= "
+            <div style='display:flex;margin-bottom:10px'>
+                <img src='{$img}' width='50' height='50'
+                    style='object-fit:cover;border-radius:6px;margin-right:10px'>
+                <div>
+                    <a href='{$url}' style='font-weight:600;color:#2c3e50'>
+                        {$p->name}
+                    </a>
+                    <div style='color:#e74c3c;font-weight:600'>
+                        {$price}
+                    </div>
+                </div>
+            </div>
+            ";
         }
 
-        return $reply;
+        return $html;
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | CALL AI (fallback)
+    |--------------------------------------------------------------------------
+    */
+    private function callAI($message)
+    {
+        try {
+            /** @var \Illuminate\Http\Client\Response $response */
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . env('OPENROUTER_API_KEY'),
+            ])->post('https://openrouter.ai/api/v1/chat/completions', [
+                'model' => 'deepseek/deepseek-chat',
+                'messages' => [
+                    [
+                        'role' => 'system',
+                        'content' => 'Bạn là nhân viên ELARA, trả lời ngắn gọn, KHÔNG bịa sản phẩm.'
+                    ],
+                    [
+                        'role' => 'user',
+                        'content' => $message
+                    ]
+                ]
+            ]);
+
+            $data = $response->json();
+
+            return data_get(
+                $response->json(),
+                'choices.0.message.content',
+                'AI không phản hồi'
+            );
+        } catch (\Exception $e) {
+            return 'AI lỗi: ' . $e->getMessage();
+        }
+    }
 
     /*
-|--------------------------------------------------------------------------
-| API AI CHAT
-|--------------------------------------------------------------------------
-*/
-
+    |--------------------------------------------------------------------------
+    | API
+    |--------------------------------------------------------------------------
+    */
     public function sendAI(Request $request)
     {
-
         $request->validate([
             'message' => 'required|string|max:2000'
         ]);
 
-        $reply = $this->askAI($request->message);
+        $reply = $this->askAI($request->message); // ✅ FIX QUAN TRỌNG
 
         return response()->json([
             'reply' => $reply
         ]);
     }
+
     public function unreadCount()
     {
         $conversation = ChatConversation::where('user_id', Auth::id())->first();
@@ -427,7 +467,7 @@ style='font-weight:600;color:#2c3e50'>
         }
 
         $count = ChatMessage::where('conversation_id', $conversation->id)
-            ->where('sender_id', '!=', Auth::id()) // admin gửi
+            ->where('sender_id', '!=', Auth::id())
             ->where('is_read', 0)
             ->count();
 

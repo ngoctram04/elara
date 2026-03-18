@@ -329,43 +329,54 @@ font-size:14px;
 <p><strong>Thương hiệu:</strong> {{ $product->brand?->name }}</p>
 
 {{-- VARIANTS --}}
+@php
+    $groupedVariants = $product->variants->groupBy('attribute_name');
+@endphp
 @if($hasVariants)
 <div class="mb-4">
-    <strong>Chọn phân loại:</strong>
 
-    <div class="d-flex flex-wrap gap-2 mt-2">
-        @foreach($product->variants as $variant)
-            @php
-                $variantImage = $variant->images->first();
-                $fallback = $product->mainImage
-                    ? asset('storage/'.$product->mainImage->image_path)
-                    : asset('images/no-image.png');
+    @foreach($groupedVariants as $attributeName => $variants)
+        <div class="mb-3">
 
-                $final = $variant->final_price ?? $variant->price;
-                $original = $variant->is_on_sale ? $variant->price : '';
-                $outOfStock = $variant->stock_quantity <= 0;
-            @endphp
+            {{-- Tên phân loại --}}
+            <strong>{{ $attributeName }}:</strong>
 
-            <button type="button"
-                    class="btn btn-outline-secondary variant-btn {{ $outOfStock ? 'variant-out' : '' }}"
-                    data-id="{{ $variant->id }}"
-                    data-final="{{ $final }}"
-                    data-original="{{ $original }}"
-                    data-stock="{{ $variant->stock_quantity }}"
-                    data-image="{{ $variantImage ? asset('storage/'.$variantImage->image_path) : $fallback }}"
-                    {{ $outOfStock ? 'disabled' : '' }}>
+            <div class="d-flex flex-wrap gap-2 mt-2">
+                @foreach($variants as $variant)
+                    @php
+                        $variantImage = $variant->images->first();
+                        $fallback = $product->mainImage
+                            ? asset('storage/'.$product->mainImage->image_path)
+                            : asset('images/no-image.png');
 
-                @if($variantImage)
-                    <img src="{{ asset('storage/'.$variantImage->image_path) }}"
-                         style="width:40px;height:40px;object-fit:cover">
-                @endif
+                        $final = $variant->final_price ?? $variant->price;
+                        $original = $variant->is_on_sale ? $variant->price : '';
+                        $outOfStock = $variant->stock_quantity <= 0;
+                    @endphp
 
-                <div class="small fw-semibold">
-                    {{ $variant->attribute_value }}
-                </div>
-            </button>
-        @endforeach
-    </div>
+                    <button type="button"
+                            class="btn btn-outline-secondary variant-btn {{ $outOfStock ? 'variant-out' : '' }}"
+                            data-id="{{ $variant->id }}"
+                            data-final="{{ $final }}"
+                            data-original="{{ $original }}"
+                            data-stock="{{ $variant->stock_quantity }}"
+                            data-image="{{ $variantImage ? asset('storage/'.$variantImage->image_path) : $fallback }}"
+                            {{ $outOfStock ? 'disabled' : '' }}>
+
+                        @if($variantImage)
+                            <img src="{{ asset('storage/'.$variantImage->image_path) }}"
+                                 style="width:40px;height:40px;object-fit:cover">
+                        @endif
+
+                        <div class="small fw-semibold">
+                            {{ $variant->attribute_value }}
+                        </div>
+                    </button>
+                @endforeach
+            </div>
+
+        </div>
+    @endforeach
 
     <div id="stock-text" class="text-muted mt-2"></div>
 </div>
