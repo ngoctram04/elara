@@ -24,11 +24,11 @@ class SystemNotification extends Notification
      */
     public function via($notifiable)
     {
-        return ['database']; // sau này có thể thêm 'broadcast'
+        return ['database']; // sau này có thể thêm broadcast
     }
 
     /**
-     * Lưu DB (CHUẨN HOÁ DATA)
+     * Lưu DB
      */
     public function toDatabase($notifiable)
     {
@@ -48,7 +48,7 @@ class SystemNotification extends Notification
     }
 
     /**
-     * Hỗ trợ broadcast / array (sau này dùng realtime)
+     * Array (dùng cho broadcast sau này)
      */
     public function toArray($notifiable)
     {
@@ -56,7 +56,7 @@ class SystemNotification extends Notification
     }
 
     /**
-     * Icon mặc định theo type (FULL TYPE)
+     * Icon theo type
      */
     private function getDefaultIcon()
     {
@@ -68,6 +68,10 @@ class SystemNotification extends Notification
             'order_completed' => 'bi-check-circle',
             'order_paid'      => 'bi-credit-card',
 
+            // ===== REVIEW =====
+            'review'         => 'bi-star',
+            'review_reply'   => 'bi-reply',
+
             // ===== OTHER =====
             'chat'       => 'bi-chat-dots',
             'voucher'    => 'bi-ticket-perforated',
@@ -78,7 +82,7 @@ class SystemNotification extends Notification
     }
 
     /**
-     * Màu mặc định theo type
+     * Màu theo type
      */
     private function getDefaultColor()
     {
@@ -89,6 +93,10 @@ class SystemNotification extends Notification
             'order_cancelled' => 'danger',
             'order_completed' => 'success',
             'order_paid'      => 'info',
+
+            // ===== REVIEW =====
+            'review'         => 'warning',
+            'review_reply'   => 'info',
 
             // ===== OTHER =====
             'chat'       => 'success',

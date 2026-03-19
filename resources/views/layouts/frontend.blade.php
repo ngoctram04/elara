@@ -204,16 +204,20 @@ autocomplete="off"
     <div class="dropdown-menu dropdown-menu-end p-0 shadow noti-dropdown">
 
         {{-- HEADER --}}
-        <div class="p-3 border-bottom fw-bold d-flex justify-content-between">
-            <span>Thông báo</span>
-        </div>
+        <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+    <span class="fw-bold">Thông báo</span>
+
+    <button id="markAllRead" class="btn btn-sm btn-light">
+        ✓ Đã đọc tất cả
+    </button>
+</div>
 
         {{-- LIST --}}
         @php
             $notifications = auth()->user()
                 ->notifications()
                 ->latest()
-                ->limit(10)
+                ->limit(100)
                 ->get();
         @endphp
 
@@ -840,7 +844,26 @@ return;
 if(!e.target.closest(".search-pill")){
 box.style.display = "none";
 }
+const markAllBtn = document.getElementById("markAllRead");
 
+if(markAllBtn){
+    markAllBtn.addEventListener("click", function(){
+
+        fetch("{{ route('notifications.markAllRead') }}", {
+            method: "POST",
+            headers: {
+                "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success){
+                location.reload();
+            }
+        });
+
+    });
+}
 });
 </script>
 </body>

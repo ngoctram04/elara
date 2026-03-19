@@ -159,26 +159,6 @@ class PromotionController extends Controller
                 }
             }
         });
-
-        // =========================================
-        // 🔔 NOTIFICATION (SAU COMMIT)
-        // =========================================
-        if ($promotion && $promotion->type === 'order' && $promotion->is_active) {
-
-            User::where('role', 'user')
-            ->chunk(100, function ($users) use ($promotion) {
-
-                foreach ($users as $user) {
-                    $user->notify(new SystemNotification([
-                        'title'   => 'Voucher mới!',
-                        'message' => 'Nhập mã ' . $promotion->code . ' để nhận ưu đãi',
-                        'url'     => route('shop'),
-                        'type'    => 'promotion'
-                    ]));
-                }
-            });
-        }
-
         return redirect()
             ->route('admin.promotions.index')
             ->with('success', 'Tạo khuyến mãi thành công');
@@ -340,26 +320,6 @@ class PromotionController extends Controller
                 'is_active'        => 1,
             ]);
         });
-
-        // =========================================
-        // 🔔 NOTIFICATION (SAU COMMIT)
-        // =========================================
-        if ($reward) {
-
-            User::where('role', 'user')
-            ->where('is_active', 1)
-            ->chunk(100, function ($users) use ($reward) {
-
-                foreach ($users as $user) {
-                    $user->notify(new SystemNotification([
-                        'title'   => 'Quà đổi điểm mới 🎁',
-                        'message' => 'Có phần thưởng "' . $reward->title . '" vừa được thêm',
-                        'url'     => route('points.redeem.page'),
-                        'type'    => 'voucher'
-                    ]));
-                }
-            });
-        }
 
         return redirect()
             ->route('admin.promotions.index')

@@ -121,9 +121,6 @@ class="btn btn-outline-secondary btn-sm">
 
 <tr>
 
-<th style="width:70px" class="text-center">
-STT
-</th>
 
 <th>
 Sản phẩm
@@ -163,9 +160,7 @@ Thời gian
 
 <tr>
 
-<td class="text-center text-muted fw-semibold">
-{{ $logs->firstItem() + $index }}
-</td>
+
 
 <td class="fw-medium">
 {{ $log->variant->product->name ?? '-' }}

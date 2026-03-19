@@ -1078,7 +1078,7 @@ VOICE POPUP
 
 /* dropdown */
 .noti-dropdown {
-    width: 340px;
+    width: 480px;
     max-height: 420px;
     overflow-y: auto;
     border-radius: 14px;

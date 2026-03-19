@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>@yield('title', 'Admin')</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
+<meta name="csrf-token" content="{{ csrf_token() }}">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
@@ -284,12 +284,16 @@ Thống kê
             <div class="dropdown-menu dropdown-menu-end p-0 shadow"
                  style="width: 400px; max-height: 420px; overflow-y: auto; border-radius: 10px;">
 
-                <div class="p-3 border-bottom fw-bold">
-                    Thông báo
-                </div>
+                <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+    <span class="fw-bold">Thông báo</span>
+
+    <button id="markAllReadAdmin" class="btn btn-sm btn-light">
+        ✓ Đọc tất cả
+    </button>
+</div>
 
                 @php
-                    $notifications = auth()->user()->notifications()->latest()->limit(10)->get();
+                    $notifications = auth()->user()->notifications()->latest()->limit(100)->get();
                 @endphp
 
                 @forelse($notifications as $noti)
@@ -416,7 +420,57 @@ Thống kê
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-@stack('scripts')
 
+@stack('scripts')
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+
+    const btn = document.getElementById("markAllReadAdmin");
+
+    if(btn){
+        btn.addEventListener("click", function(){
+
+            fetch("{{ route('notifications.markAllRead') }}", {
+                method: "POST",
+                headers: {
+                    "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
+                    "Accept": "application/json"
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+
+                if(data.success){
+
+                    // ✅ 1. Ẩn badge đỏ (số lượng)
+                    const badge = document.querySelector('.badge.bg-danger');
+                    if(badge){
+                        badge.remove();
+                    }
+
+                    // ✅ 2. Xóa dấu chấm đỏ
+                    document.querySelectorAll('.noti-dot').forEach(e => e.remove());
+
+                    // ✅ 3. Bỏ nền unread
+                    document.querySelectorAll('.noti-unread').forEach(e => {
+                        e.classList.remove('noti-unread');
+                    });
+
+                    // ✅ 4. Disable nút luôn (khỏi bấm lại)
+                    btn.disabled = true;
+                    btn.innerText = "Đã đọc";
+
+                }
+
+            })
+            .catch(err => {
+                console.error("Lỗi mark all read:", err);
+            });
+
+        });
+    }
+
+});
+</script>
 </body>
 </html>

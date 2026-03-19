@@ -5,7 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Review;
-
+use Illuminate\Support\Facades\Notification;
+use App\Notifications\SystemNotification;
 class ReviewController extends Controller
 {
 
@@ -128,23 +129,32 @@ class ReviewController extends Controller
      */
     public function reply(Request $request, $id)
     {
-
         $request->validate([
-
             'admin_reply' => 'required|string|max:1000'
-
         ]);
 
+        // load luôn user + product để dùng notify
+        $review = Review::with(['user', 'product'])->findOrFail($id);
 
-        $review = Review::findOrFail($id);
-
-
+        // lưu reply
         $review->admin_reply = $request->admin_reply;
-
         $review->replied_at = now();
-
         $review->save();
 
+        // =========================================
+        // 🔔 NOTIFY USER
+        // =========================================
+        $user = $review->user;
+        $productName = $review->product->name ?? 'Sản phẩm';
+
+        if ($user) {
+            Notification::send($user, new SystemNotification([
+                'title' => 'Phản hồi đánh giá',
+                'message' => 'Đánh giá của bạn về "' . $productName . '" đã được phản hồi',
+                'url' => route('orders.show', $review->order_id),
+                'type' => 'review_reply',
+            ]));
+        }
 
         return back()->with('success', 'Đã trả lời đánh giá');
     }

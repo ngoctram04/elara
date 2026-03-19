@@ -746,7 +746,10 @@ Route::get('/test-order-created', function () {
 
     return 'Order Created Mail Sent (Customer + Admin)';
 });
-
+Route::post('/notifications/mark-all-read', function () {
+    auth()->user()->unreadNotifications->markAsRead();
+    return response()->json(['success' => true]);
+})->middleware('auth')->name('notifications.markAllRead');
 /*
 |--------------------------------------------------------------------------
 | AUTH

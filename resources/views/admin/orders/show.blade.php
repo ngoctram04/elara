@@ -90,7 +90,15 @@ class="btn btn-outline-secondary btn-sm"> <i class="bi bi-arrow-left"></i> Quay 
 </p>
 
 @endif
+@if($order->delivery_image)
+<div class="mt-2">
+    <strong>Ảnh giao hàng:</strong><br>
 
+    <img src="{{ asset('storage/' . $order->delivery_image) }}"
+         class="rounded border mt-1"
+         style="max-width:100%; max-height:200px;">
+</div>
+@endif
 <hr>
 
 <p class="mb-0">
@@ -114,8 +122,8 @@ class="btn btn-outline-secondary btn-sm"> <i class="bi bi-arrow-left"></i> Quay 
 <div class="card-body">
 
 <form method="POST"
-action="{{ route('admin.orders.updateStatus',$order->id) }}">
-
+action="{{ route('admin.orders.updateStatus',$order->id) }}"
+enctype="multipart/form-data">
 @csrf
 
 <label class="mb-2 fw-semibold">
@@ -123,7 +131,8 @@ Cập nhật trạng thái
 </label>
 
 <select name="status"
-class="form-select form-select-sm mb-3">
+class="form-select form-select-sm mb-3"
+id="status_select">
 
 @if($order->status == 1)
 
@@ -138,7 +147,38 @@ class="form-select form-select-sm mb-3">
 @endif
 
 </select>
+<div id="proof_box" class="mb-3" style="display:none;">
 
+    <label class="mb-2 fw-semibold">Ảnh giao hàng *</label>
+
+    {{-- BOX CHỌN ẢNH --}}
+    <div onclick="document.getElementById('file_input').click()"
+         style="
+            border:2px dashed #ccc;
+            border-radius:10px;
+            padding:20px;
+            text-align:center;
+            cursor:pointer;
+         "
+         id="upload_box">
+
+        <div id="upload_text" class="text-muted">
+            📷 Bấm để chọn ảnh giao hàng
+        </div>
+
+        <img id="preview_img"
+             style="max-width:100%; max-height:150px; display:none; margin-top:10px; border-radius:8px;">
+    </div>
+
+    {{-- INPUT ẨN --}}
+    <input type="file"
+           id="file_input"
+           name="delivery_proof"
+           accept="image/*"
+           style="display:none"
+           onchange="previewImage(event)">
+
+</div>
 <button class="btn btn-success btn-sm w-100">
 Cập nhật
 </button>
@@ -315,5 +355,48 @@ Tổng khách trả:
 
 </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
 
+    const statusSelect = document.getElementById('status_select');
+    const box = document.getElementById('proof_box');
+
+    if (!statusSelect || !box) return;
+
+    function toggleBox() {
+        if (statusSelect.value == 3) {
+            box.style.display = 'block';
+        } else {
+            box.style.display = 'none';
+        }
+    }
+
+    // chạy lần đầu
+    toggleBox();
+
+    // change
+    statusSelect.addEventListener('change', toggleBox);
+});
+
+function previewImage(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const img = document.getElementById('preview_img');
+    const text = document.getElementById('upload_text');
+
+    if (!img) return;
+
+    // set ảnh
+    img.src = URL.createObjectURL(file);
+
+    // 🔥 FIX QUAN TRỌNG (hiện ảnh)
+    img.style.display = 'block';
+
+    // đổi text cho đẹp
+    if (text) {
+        text.innerText = "Đã chọn ảnh ✔";
+    }
+}
+</script>
 @endsection

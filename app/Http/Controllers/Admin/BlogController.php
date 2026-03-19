@@ -9,7 +9,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use App\Models\User;
 use App\Notifications\SystemNotification;
-
+use Illuminate\Support\Facades\Log;
 class BlogController extends Controller
 {
 
@@ -44,6 +44,8 @@ class BlogController extends Controller
 
 
     // ================= STORE =================
+
+
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -53,8 +55,15 @@ class BlogController extends Controller
             'thumbnail' => 'nullable|image|max:2048'
         ]);
 
-        // tạo slug unique
+        /* ======================
+       SLUG
+    ====================== */
         $slug = Str::slug($request->title);
+
+        if (empty($slug)) {
+            $slug = 'blog-' . time();
+        }
+
         $originalSlug = $slug;
         $counter = 1;
 
@@ -66,36 +75,48 @@ class BlogController extends Controller
         $data['slug'] = $slug;
         $data['is_active'] = 1;
 
-        // upload thumbnail
+        /* ======================
+       UPLOAD
+    ====================== */
         if ($request->hasFile('thumbnail')) {
             $data['thumbnail'] = $request
-                ->file('thumbnail')
+            ->file('thumbnail')
                 ->store('blogs', 'public');
         }
 
-        // tạo blog
+        /* ======================
+       CREATE
+    ====================== */
         $blog = Blog::create($data);
 
-        // ================= GỬI NOTIFICATION =================
-        User::where('is_active', 1)->chunk(100, function ($users) use ($blog) {
-            foreach ($users as $user) {
-                $user->notify(new SystemNotification([
-                    'title' => 'Bài viết mới',
-                    'message' => 'Shop vừa đăng: ' . $blog->title,
-                    'url' => route('blogs.show', $blog->slug),
-                    'type' => 'blog',
-                    'meta' => [
-                        'blog_id' => $blog->id
-                    ]
-                ]));
-            }
-        });
+        /* ======================
+       🔥 NOTIFY CHỈ KHÁCH
+    ====================== */
+        User::where('is_active', 1)
+        ->where('role', 'customer') // 🔥 QUAN TRỌNG
+            ->chunk(100, function ($users) use ($blog) {
+
+                foreach ($users as $user) {
+                    try {
+                        $user->notify(new SystemNotification([
+                            'title' => 'Bài viết mới',
+                            'message' => 'Shop vừa đăng: ' . $blog->title,
+                            'url' => route('blogs.show', $blog->slug),
+                            'type' => 'blog',
+                            'meta' => [
+                                'blog_id' => $blog->id
+                            ]
+                        ]));
+                    } catch (\Exception $e) {
+                        Log::error('Notify error: ' . $e->getMessage());
+                    }
+                }
+            });
 
         return redirect()
             ->route('admin.blogs.index')
             ->with('success', 'Thêm bài viết thành công');
     }
-
 
     // ================= EDIT =================
     public function edit($id)

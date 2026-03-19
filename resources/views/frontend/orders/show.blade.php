@@ -137,6 +137,7 @@
 
 
 {{-- ================= THÔNG TIN NHẬN HÀNG ================= --}}
+{{-- ================= THÔNG TIN NHẬN HÀNG ================= --}}
 <div class="card shadow-sm mb-3 border-0">
     <div class="card-body">
         <h6 class="fw-bold mb-3">Thông tin nhận hàng</h6>
@@ -144,6 +145,23 @@
         <p class="mb-1"><b>Người nhận:</b> {{ $order->receiver_name }}</p>
         <p class="mb-1"><b>SĐT:</b> {{ $order->receiver_phone }}</p>
         <p class="mb-1"><b>Địa chỉ:</b> {{ $order->receiver_address }}</p>
+
+        {{-- 👇 ẢNH GIAO HÀNG --}}
+        @if($order->delivery_image)
+
+    <div class="mt-3">
+
+        <a href="javascript:void(0)"
+           class="text-primary fw-semibold view-delivery-image"
+           data-src="{{ asset('storage/' . $order->delivery_image) }}">
+           
+            Xem ảnh xác nhận giao hàng
+        </a>
+
+    </div>
+
+@endif
+
     </div>
 </div>
 
@@ -303,7 +321,6 @@
     </div>
 {{-- ================= REFUND ================= --}}
 @if($order->isCompleted() || $order->refundRequest)
-
 <div class="text-end mt-3">
 
 @php
@@ -464,6 +481,22 @@ document.querySelectorAll('.btn-confirm').forEach(function(btn){
                 form.submit();
             }
 
+        });
+
+    });
+
+});
+document.querySelectorAll('.view-delivery-image').forEach(function(link){
+
+    link.addEventListener('click', function(){
+
+        Swal.fire({
+            imageUrl: this.dataset.src,
+            imageAlt: 'Ảnh giao hàng',
+            showConfirmButton: false,
+            showCloseButton: true,
+            width: 'auto',
+            background: '#fff'
         });
 
     });

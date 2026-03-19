@@ -6,6 +6,8 @@
 @php
     $hasVariants = $product->variants->count() > 0;
 
+    // 🔥 FIX: tính tổng đã bán từ variant
+    $totalSold = $product->variants()->sum('sold_quantity');
     // Variant mặc định: ưu tiên còn hàng
     $defaultVariant = $product->variants->firstWhere('stock_quantity', '>', 0)
                         ?? $product->variants->first();
@@ -351,7 +353,7 @@ font-size:14px;
 
                         $final = $variant->final_price ?? $variant->price;
                         $original = $variant->is_on_sale ? $variant->price : '';
-                        $outOfStock = $variant->stock_quantity <= 0;
+                        $outOfStock = !$variant->isInStock(); 
                     @endphp
 
                     <button type="button"
@@ -359,7 +361,7 @@ font-size:14px;
                             data-id="{{ $variant->id }}"
                             data-final="{{ $final }}"
                             data-original="{{ $original }}"
-                            data-stock="{{ $variant->stock_quantity }}"
+                            data-stock="{{ $variant->availableStock() }}"
                             data-image="{{ $variantImage ? asset('storage/'.$variantImage->image_path) : $fallback }}"
                             {{ $outOfStock ? 'disabled' : '' }}>
 

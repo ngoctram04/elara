@@ -11,7 +11,8 @@ use App\Models\StockImport;
 use App\Models\InventoryLog;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
-
+use App\Models\User;
+use App\Notifications\SystemNotification;
 class StockImportController extends Controller
 {
     /* =======================
@@ -57,13 +58,14 @@ class StockImportController extends Controller
             'expiry_date.*.after' => 'Hạn sử dụng phải lớn hơn ngày hôm nay'
         ]);
 
-        $warnings = []; // 🔥 lưu cảnh báo
+        $warnings = [];
+
+        // 🔥 FIX: đưa code ra ngoài
+        $code = 'NK' . now()->format('YmdHis');
 
         try {
 
-            DB::transaction(function () use ($request, &$warnings) {
-
-                $code = 'NK' . now()->format('YmdHis');
+            DB::transaction(function () use ($request, &$warnings, $code) {
 
                 foreach ($request->variant_id as $index => $variantId) {
 
@@ -74,7 +76,7 @@ class StockImportController extends Controller
                     $exp  = $request->expiry_date[$index] ?? null;
 
                     /* ======================
-                    VALIDATE NGÀY
+                VALIDATE NGÀY
                 ====================== */
                     if ($mfg && $exp) {
                         if (Carbon::parse($exp)->lte(Carbon::parse($mfg))) {
@@ -83,7 +85,7 @@ class StockImportController extends Controller
                     }
 
                     /* ======================
-                    ⚠️ CẢNH BÁO < 6 THÁNG
+                ⚠️ CẢNH BÁO < 6 THÁNG
                 ====================== */
                     if ($exp) {
                         $today = Carbon::today();
@@ -95,14 +97,14 @@ class StockImportController extends Controller
                     }
 
                     /* ======================
-                    LOCK VARIANT
+                LOCK VARIANT
                 ====================== */
                     $variant = ProductVariant::with('product')
                     ->lockForUpdate()
                     ->findOrFail($variantId);
 
                     /* ======================
-                    GIÁ VỐN TRUNG BÌNH
+                GIÁ VỐN TRUNG BÌNH
                 ====================== */
                     $oldStock = $variant->stock_quantity ?? 0;
                     $oldCost  = $variant->cost_price ?? 0;
@@ -117,7 +119,7 @@ class StockImportController extends Controller
                         : $cost;
 
                     /* ======================
-                    UPDATE VARIANT
+                UPDATE VARIANT
                 ====================== */
                     $variant->update([
                         'stock_quantity' => $newStock,
@@ -125,10 +127,9 @@ class StockImportController extends Controller
                     ]);
 
                     /* ======================
-                    UPDATE PRODUCT STOCK
+                UPDATE PRODUCT STOCK
                 ====================== */
                     if ($variant->product) {
-
                         $totalStock = ProductVariant::where('product_id', $variant->product_id)
                             ->sum('stock_quantity');
 
@@ -138,7 +139,7 @@ class StockImportController extends Controller
                     }
 
                     /* ======================
-                    STOCK IMPORT
+                STOCK IMPORT
                 ====================== */
                     $import = StockImport::create([
                         'variant_id'         => $variant->id,
@@ -154,7 +155,7 @@ class StockImportController extends Controller
                     ]);
 
                     /* ======================
-                    INVENTORY LOG
+                INVENTORY LOG
                 ====================== */
                     InventoryLog::create([
                         'variant_id'      => $variant->id,
@@ -175,12 +176,30 @@ class StockImportController extends Controller
         }
 
         /* ======================
-        RETURN + WARNING
+    🔔 NOTIFICATION
+    ====================== */
+        $totalQty = array_sum($request->quantity);
+
+        $admins = User::where('role', 'admin')->get();
+
+        foreach ($admins as $admin) {
+            $admin->notify(new SystemNotification([
+                'title'   => 'Nhập hàng mới',
+                'message' => "Vừa nhập {$totalQty} sản phẩm (mã {$code})",
+                'url' => route('admin.stock.show', $code),
+                'type'    => 'stock_import',
+                'icon'    => 'bi-box-seam',
+                'color'   => 'success',
+            ]));
+        }
+
+        /* ======================
+    RETURN
     ====================== */
         return redirect()
-        ->route('admin.stock.history')
+            ->route('admin.stock.history')
             ->with('success', 'Nhập hàng thành công')
-            ->with('warning', $warnings); // 🔥 thêm warning
+            ->with('warning', $warnings);
     }
 
     /* =======================

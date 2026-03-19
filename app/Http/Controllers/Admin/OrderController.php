@@ -215,12 +215,14 @@ class OrderController extends Controller
         $request->validate([
             'status' => 'required|integer'
         ]);
-
+        
         $order = Order::with(['items.variant', 'user'])->findOrFail($id);
 
         $oldStatus = $order->status;
         $newStatus = (int)$request->status;
-
+        if ($newStatus == Order::STATUS_COMPLETED && !$request->hasFile('delivery_proof') && !$order->delivery_image) {
+            return back()->with('error', 'Phải upload ảnh khi xác nhận đã giao');
+        }
         // Đơn đã huỷ
         if ($oldStatus == Order::STATUS_CANCELLED) {
             return back()->with('error', 'Đơn đã huỷ không thể thay đổi.');
@@ -262,43 +264,39 @@ class OrderController extends Controller
 */
             if ($oldStatus == Order::STATUS_PROCESSING && $newStatus == Order::STATUS_COMPLETED) {
 
+                // ✅ upload ảnh trước
+                if ($request->hasFile('delivery_proof')) {
+                    $path = $request->file('delivery_proof')->store('delivery', 'public');
+                    $order->delivery_image = $path;
+                }
+
                 $order->delivered_at = now();
 
                 /*
     ==========================================
-    ✅ TĂNG SỐ LƯỢNG ĐÃ BÁN (ĐÚNG CHỖ)
+    ✅ TĂNG SỐ LƯỢNG ĐÃ BÁN
     ==========================================
     */
                 foreach ($order->items as $item) {
-
                     if ($item->variant) {
-
-                        $variant = $item->variant;
-
-                        $variant->increment('sold_quantity', $item->quantity);
+                        $item->variant->increment('sold_quantity', $item->quantity);
                     }
                 }
 
                 /*
     ==========================================
-    ✅ CỘNG ĐIỂM KHÁCH HÀNG
+    ✅ CỘNG ĐIỂM
     ==========================================
     */
                 $user = $order->user;
 
                 if ($user) {
-
-                    // 1.000đ = 1 điểm
                     $points = floor($order->grand_total / 1000);
 
                     $user->loyalty_points += $points;
 
-                    /*
-        ======================================
-        CẬP NHẬT HẠNG
-        ======================================
-        */
-                    if ($user->loyalty_points >= 10000) {
+                    if ($user->loyalty_points >= 10000
+                    ) {
                         $user->member_level = 'diamond';
                     } elseif ($user->loyalty_points >= 3000) {
                         $user->member_level = 'gold';
@@ -310,11 +308,6 @@ class OrderController extends Controller
 
                     $user->save();
 
-                    /*
-        ======================================
-        LƯU LỊCH SỬ ĐIỂM
-        ======================================
-        */
                     DB::table('user_point_histories')->insert([
                         'user_id' => $user->id,
                         'points' => $points,

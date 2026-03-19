@@ -11,15 +11,15 @@ class StockImport extends Model
     protected $fillable = [
         'variant_id',
         'quantity',
-        'remaining_quantity',   // 🔥 thêm
-        'imported_quantity',    // 🔥 thêm
-        'expired_quantity',     // 🔥 thêm
+        'remaining_quantity',
+        'imported_quantity',
+        'expired_quantity',
 
         'cost_price',
         'manufacture_date',
         'expiry_date',
 
-        'expired_at',           // 🔥 thêm
+        'expired_at',
 
         'code',
         'supplier',
@@ -30,25 +30,21 @@ class StockImport extends Model
     protected $casts = [
         'manufacture_date' => 'date',
         'expiry_date'      => 'date',
-        'expired_at'       => 'datetime', // 🔥 thêm
+        'expired_at'       => 'datetime',
 
         'created_at'       => 'datetime',
         'updated_at'       => 'datetime',
     ];
 
-    /*
-    |--------------------------------------------------------------------------
-    | RELATIONSHIPS
-    |-------------------------------------------------------------------------- 
-    */
+    /* =====================================================
+        RELATIONS
+    ===================================================== */
 
-    // biến thể sản phẩm
     public function variant()
     {
         return $this->belongsTo(ProductVariant::class, 'variant_id');
     }
 
-    // sản phẩm (thông qua variant)
     public function product()
     {
         return $this->hasOneThrough(
@@ -61,19 +57,16 @@ class StockImport extends Model
         );
     }
 
-    // người tạo phiếu nhập
     public function user()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | ACCESSORS (LOGIC CHÍNH)
-    |-------------------------------------------------------------------------- 
-    */
+    /* =====================================================
+        ACCESSORS
+    ===================================================== */
 
-    // 🔥 SỐ ĐÃ BÁN (không bao giờ âm)
+    // 🔥 số đã bán trong lô
     public function getSoldQuantityAttribute()
     {
         return max(
@@ -84,7 +77,7 @@ class StockImport extends Model
         );
     }
 
-    // 🔥 TRẠNG THÁI LÔ
+    // 🔥 trạng thái lô
     public function getStatusAttribute()
     {
         if ($this->expired_at) {
@@ -103,7 +96,6 @@ class StockImport extends Model
         return 'normal';
     }
 
-    // 🔥 SỐ THÁNG CÒN LẠI
     public function getMonthsLeftAttribute()
     {
         if (!$this->expiry_date) return null;
@@ -111,29 +103,39 @@ class StockImport extends Model
         return now()->diffInMonths($this->expiry_date, false);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | AUTO FIX DATA (OPTIONAL - RẤT HAY)
-    |-------------------------------------------------------------------------- 
-    */
+    /* =====================================================
+        AUTO FIX DATA + AUTO SYNC STOCK
+    ===================================================== */
 
     protected static function booted()
     {
+        /* ===== CREATE ===== */
         static::creating(function ($model) {
 
-            // 🔥 đảm bảo imported luôn đúng
             if (empty($model->imported_quantity)) {
                 $model->imported_quantity = $model->quantity ?? 0;
             }
 
-            // 🔥 đảm bảo remaining luôn có
             if (empty($model->remaining_quantity)) {
                 $model->remaining_quantity = $model->quantity ?? 0;
             }
 
-            // 🔥 expired mặc định = 0
             if (empty($model->expired_quantity)) {
                 $model->expired_quantity = 0;
+            }
+        });
+
+        /* ===== AFTER SAVE ===== */
+        static::saved(function ($model) {
+            if ($model->variant) {
+                $model->variant->syncStockAndStatus(); // 🔥 QUAN TRỌNG
+            }
+        });
+
+        /* ===== AFTER DELETE ===== */
+        static::deleted(function ($model) {
+            if ($model->variant) {
+                $model->variant->syncStockAndStatus(); // 🔥 QUAN TRỌNG
             }
         });
     }

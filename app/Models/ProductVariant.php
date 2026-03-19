@@ -94,12 +94,14 @@ class ProductVariant extends Model
 
     public function availableStock(): int
     {
-        return max(0, $this->stock_quantity - $this->sold_quantity);
+        return $this->batches()
+            ->where('remaining_quantity', '>', 0)
+            ->sum('remaining_quantity');
     }
 
     public function isInStock(): bool
     {
-        return $this->is_active && $this->availableStock() > 0;
+        return $this->availableStock() > 0;
     }
 
     /* =====================================================
@@ -190,14 +192,22 @@ class ProductVariant extends Model
     /* =====================================================
     BATCH (FEFO - HẾT HẠN TRƯỚC BÁN TRƯỚC)
 ===================================================== */
+    public function syncStockAndStatus()
+    {
+        $total = $this->stockImports()->sum('remaining_quantity');
 
+        $this->stock_quantity = $total;
+        $this->is_active = $total > 0 ? 1 : 0;
+
+        $this->save();
+    }
     public function deductByBatch(int $quantity): array
     {
         return DB::transaction(function () use ($quantity) {
 
             $batches = StockImport::where('variant_id', $this->id)
-            ->where('remaining_quantity', '>', 0)
-            ->orderBy('expiry_date', 'asc')
+                ->where('remaining_quantity', '>', 0)
+                ->orderBy('expiry_date', 'asc')
                 ->lockForUpdate()
                 ->get();
 
@@ -211,29 +221,26 @@ class ProductVariant extends Model
 
                 $take = min($remaining, $batch->remaining_quantity);
 
+                // Trừ tồn trong batch
                 $batch->remaining_quantity -= $take;
                 $batch->save();
 
-                $before = $this->stock_quantity;
-                $this->stock_quantity -= $take;
-
+                // Log theo batch (KHÔNG dùng stock_quantity trong loop)
                 \App\Models\InventoryLog::create([
                     'variant_id'      => $this->id,
                     'type'            => 'order',
                     'quantity_change' => -$take,
-                    'stock_before'    => $before,
-                    'stock_after'     => $this->stock_quantity,
+                    'stock_before'    => 0, // optional
+                    'stock_after'     => 0,
                     'reference_type'  => 'batch',
                     'reference_id'    => $batch->id,
                 ]);
 
-                $this->save();
-
                 $usedBatches[] = [
-                        'batch_id'   => $batch->id,
-                        'quantity'   => $take,
-                        'cost_price' => $batch->cost_price,
-                    ];
+                    'batch_id'   => $batch->id,
+                    'quantity'   => $take,
+                    'cost_price' => $batch->cost_price,
+                ];
 
                 $totalCost += $take * $batch->cost_price;
                 $remaining -= $take;
@@ -243,10 +250,17 @@ class ProductVariant extends Model
                 throw new \Exception('Không đủ tồn kho theo lô');
             }
 
+            // ✅ QUAN TRỌNG: sync lại tổng tồn + trạng thái
+            $this->syncStockAndStatus();
+
             return [
                 'batches'    => $usedBatches,
                 'total_cost' => $totalCost
             ];
         });
+    }
+    public function batches()
+    {
+        return $this->hasMany(StockImport::class, 'variant_id');
     }
 }

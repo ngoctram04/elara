@@ -216,9 +216,8 @@ class ProductController extends Controller
             'images',
             'mainImage',
             'variants' => function ($q) {
-                $q->where('is_active', 1)
-                    ->orderBy('id')
-                    ->with('images');
+                $q->orderBy('id')
+                ->with('images');
             },
             'category',
             'brand',

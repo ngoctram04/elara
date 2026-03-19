@@ -39,7 +39,8 @@ class Order extends Model
         'cancelled_by_user_id',
         'delivered_at',
         'customer_confirmed',
-        'received_at'
+        'received_at',
+        'delivery_image'
     ];
 
     protected $casts = [
