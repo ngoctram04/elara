@@ -322,6 +322,8 @@ Route::prefix('admin')
         // ⭐ Sản phẩm được yêu thích
         Route::get('/reports/wishlist', [ReportController::class, 'wishlist'])
             ->name('reports.wishlist');
+        Route::get('reports/cancel-orders', [ReportController::class, 'cancelOrders'])
+    ->name('reports.cancelOrders');
 
 
         /*

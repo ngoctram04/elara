@@ -194,7 +194,12 @@ Hoàn kho </span>
 @case('adjust') <span class="badge bg-info text-dark"> <i class="bi bi-tools me-1"></i>
 Điều chỉnh </span>
 @break
-
+@case('expired_destroy')
+<span class="badge bg-danger">
+    <i class="bi bi-trash me-1"></i>
+    Huỷ cận date
+</span>
+@break
 @default <span class="badge bg-secondary">
 {{ $log->type }} </span>
 

@@ -10,6 +10,7 @@ use App\Models\Order;
 use App\Models\Cart;
 use App\Notifications\SystemNotification;
 use App\Models\User;
+use Illuminate\Support\Facades\Log;
 class OrderController extends Controller
 {
 
@@ -93,10 +94,12 @@ class OrderController extends Controller
     /**
      * Huỷ đơn hàng
      */
+
     public function cancel(Request $request, $id)
     {
-
-        $order = Order::where('id', $id)
+        // 🔥 LOAD đầy đủ items + batches + variant
+        $order = Order::with('items.batches', 'items.variant')
+        ->where('id', $id)
             ->where('user_id', Auth::id())
             ->firstOrFail();
 
@@ -110,7 +113,7 @@ class OrderController extends Controller
 
             $paymentStatus = $order->payment_status;
 
-            // hoàn tiền vnpay
+            // 🔥 VNPay → hoàn tiền
             if (
                 $order->payment_method === 'vnpay'
                 && $order->payment_status == Order::PAYMENT_PAID
@@ -118,6 +121,9 @@ class OrderController extends Controller
                 $paymentStatus = Order::PAYMENT_REFUNDED;
             }
 
+            // =========================
+            // 1. UPDATE ORDER
+            // =========================
             $order->update([
                 'status' => Order::STATUS_CANCELLED,
                 'payment_status' => $paymentStatus,
@@ -127,9 +133,60 @@ class OrderController extends Controller
                 'cancelled_at' => now()
             ]);
 
+            // =========================
+            // 2. 🔥 ROLLBACK THEO BATCH (QUAN TRỌNG NHẤT)
+            // =========================
+            foreach ($order->items as $item) {
+
+                foreach ($item->batches as $batch) {
+
+                    // ❌ tránh rollback 2 lần
+                    if ($batch->is_rolled_back) continue;
+
+                    $stock = \App\Models\StockImport::find($batch->stock_import_id);
+                    if (!$stock) continue;
+
+                    $before = $stock->remaining_quantity;
+
+                    // ✅ hoàn đúng lô
+                    $stock->increment('remaining_quantity', $batch->quantity);
+
+                    // ✅ đánh dấu rollback
+                    $batch->update([
+                        'is_rolled_back' => 1
+                    ]);
+
+                    // ✅ log kho
+                    \App\Models\InventoryLog::create([
+                        'variant_id' => $item->variant_id,
+                        'type' => 'cancel',
+                        'quantity_change' => $batch->quantity,
+                        'stock_before' => $before,
+                        'stock_after' => $before + $batch->quantity,
+                        'reference_type' => 'order',
+                        'reference_id' => $order->id
+                    ]);
+                }
+
+                // =========================
+                // 3. 🔥 SYNC LẠI TỒN VARIANT
+                // =========================
+                $total = \App\Models\StockImport::where('variant_id', $item->variant_id)
+                    ->sum('remaining_quantity');
+
+                \App\Models\ProductVariant::where('id', $item->variant_id)
+                    ->update([
+                        'stock_quantity' => $total
+                    ]);
+            }
+
             DB::commit();
 
-            // 🔔 NOTIFY USER (self)
+            // =========================
+            // 4. NOTIFICATION
+            // =========================
+
+            // 🔔 USER
             $order->user->notify(new SystemNotification([
                 'title' => 'Bạn đã huỷ đơn',
                 'message' => 'Đơn #' . $order->id . ' đã được huỷ',
@@ -137,16 +194,16 @@ class OrderController extends Controller
                 'type' => 'order_cancelled'
             ]));
 
-            // 🔔 NOTIFY ADMIN
+            // 🔔 ADMIN
             User::where('role', 'admin')->get()
-            ->each(function ($admin) use ($order) {
-                $admin->notify(new SystemNotification([
-                    'title' => 'Đơn bị huỷ',
-                    'message' => 'Đơn #' . $order->id . ' đã bị khách huỷ',
-                    'url' => route('admin.orders.show', $order->id),
-                    'type' => 'order_cancelled'
-                ]));
-            });
+                ->each(function ($admin) use ($order) {
+                    $admin->notify(new SystemNotification([
+                        'title' => 'Đơn bị huỷ',
+                        'message' => 'Đơn #' . $order->id . ' đã bị khách huỷ',
+                        'url' => route('admin.orders.show', $order->id),
+                        'type' => 'order_cancelled'
+                    ]));
+                });
 
             return redirect()
                 ->route('orders.show', $order->id)
@@ -155,10 +212,11 @@ class OrderController extends Controller
 
             DB::rollBack();
 
+            Log::error('Cancel order error: ' . $e->getMessage());
+
             return back()->with('error', 'Huỷ đơn thất bại.');
         }
     }
-
 
 
     /**

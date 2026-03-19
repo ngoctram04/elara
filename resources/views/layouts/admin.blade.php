@@ -128,7 +128,7 @@ Báo cáo tồn kho
 <li>
     <a href="{{ route('admin.inventory.near_expiry') }}"
 class="{{ request()->is('admin/inventory/near-expiry*') ? 'active' : '' }}">
-Lô sắp hết hạn
+Quản lý lô hàng
 </a>
 </li>
 </ul>

@@ -10,10 +10,10 @@ use App\Models\ProductVariant;
 use App\Models\StockImport;
 use App\Models\InventoryLog;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 
 class StockImportController extends Controller
 {
-
     /* =======================
         FORM NHẬP HÀNG
     ======================= */
@@ -33,7 +33,6 @@ class StockImportController extends Controller
         return view('admin.stock_imports.create', compact('variants'));
     }
 
-
     /* =======================
         LƯU PHIẾU NHẬP
     ======================= */
@@ -50,144 +49,160 @@ class StockImportController extends Controller
             'cost_price.*' => 'numeric|min:0',
 
             'mfg_date.*'   => 'nullable|date',
-            'expiry_date.*' => 'nullable|date',
+            'expiry_date.*' => 'nullable|date|after:today',
 
             'supplier'     => 'nullable|string|max:255',
             'note'         => 'nullable|string'
+        ], [
+            'expiry_date.*.after' => 'Hạn sử dụng phải lớn hơn ngày hôm nay'
         ]);
 
+        $warnings = []; // 🔥 lưu cảnh báo
 
-        DB::transaction(function () use ($request) {
+        try {
 
-            $code = 'NK' . now()->format('YmdHis');
+            DB::transaction(function () use ($request, &$warnings) {
 
-            foreach ($request->variant_id as $index => $variantId) {
+                $code = 'NK' . now()->format('YmdHis');
 
-                $qty  = $request->quantity[$index] ?? 0;
-                $cost = $request->cost_price[$index] ?? 0;
+                foreach ($request->variant_id as $index => $variantId) {
 
-                $mfg  = $request->mfg_date[$index] ?? null;
-                $exp  = $request->expiry_date[$index] ?? null;
+                    $qty  = (int) ($request->quantity[$index] ?? 0);
+                    $cost = (float) ($request->cost_price[$index] ?? 0);
 
+                    $mfg  = $request->mfg_date[$index] ?? null;
+                    $exp  = $request->expiry_date[$index] ?? null;
 
-                /* ======================
+                    /* ======================
+                    VALIDATE NGÀY
+                ====================== */
+                    if ($mfg && $exp) {
+                        if (Carbon::parse($exp)->lte(Carbon::parse($mfg))) {
+                            throw new \Exception('Hạn sử dụng phải lớn hơn ngày sản xuất');
+                        }
+                    }
+
+                    /* ======================
+                    ⚠️ CẢNH BÁO < 6 THÁNG
+                ====================== */
+                    if ($exp) {
+                        $today = Carbon::today();
+                        $expiry = Carbon::parse($exp);
+
+                        if ($expiry->diffInMonths($today) <= 6) {
+                            $warnings[] = "Sản phẩm ID {$variantId} có hạn sử dụng dưới 6 tháng";
+                        }
+                    }
+
+                    /* ======================
                     LOCK VARIANT
                 ====================== */
-                $variant = ProductVariant::with('product')
+                    $variant = ProductVariant::with('product')
                     ->lockForUpdate()
                     ->findOrFail($variantId);
 
-
-                /* ======================
+                    /* ======================
                     GIÁ VỐN TRUNG BÌNH
                 ====================== */
-                $oldStock = $variant->stock_quantity ?? 0;
-                $oldCost  = $variant->cost_price ?? 0;
+                    $oldStock = $variant->stock_quantity ?? 0;
+                    $oldCost  = $variant->cost_price ?? 0;
 
-                $newStock = $oldStock + $qty;
+                    $newStock = $oldStock + $qty;
 
-                $totalOldValue = $oldStock * $oldCost;
-                $totalNewValue = $qty * $cost;
+                    $totalOldValue = $oldStock * $oldCost;
+                    $totalNewValue = $qty * $cost;
 
-                $avgCost = $newStock > 0
-                    ? ($totalOldValue + $totalNewValue) / $newStock
-                    : $cost;
+                    $avgCost = $newStock > 0
+                        ? ($totalOldValue + $totalNewValue) / $newStock
+                        : $cost;
 
-
-                /* ======================
+                    /* ======================
                     UPDATE VARIANT
                 ====================== */
-                $variant->update([
-                    'stock_quantity' => $newStock,
-                    'cost_price'     => $avgCost
-                ]);
+                    $variant->update([
+                        'stock_quantity' => $newStock,
+                        'cost_price'     => $avgCost
+                    ]);
 
-
-                /* ======================
+                    /* ======================
                     UPDATE PRODUCT STOCK
                 ====================== */
-                if ($variant->product) {
+                    if ($variant->product) {
 
-                    $totalStock = ProductVariant::where('product_id', $variant->product_id)
-                        ->sum('stock_quantity');
+                        $totalStock = ProductVariant::where('product_id', $variant->product_id)
+                            ->sum('stock_quantity');
 
-                    $variant->product->update([
-                        'total_stock' => $totalStock
-                    ]);
-                }
+                        $variant->product->update([
+                            'total_stock' => $totalStock
+                        ]);
+                    }
 
-
-                /* ======================
-                    INVENTORY LOG
-                ====================== */
-                InventoryLog::create([
-                    'variant_id'       => $variant->id,
-                    'type'             => 'import',
-                    'quantity_change'  => $qty,
-                    'stock_before'     => $oldStock,
-                    'stock_after'      => $newStock,
-                    'reference_type'   => 'stock_import',
-                    'reference_id'     => null
-                ]);
-
-
-                /* ======================
+                    /* ======================
                     STOCK IMPORT
                 ====================== */
-                StockImport::create([
-                    'variant_id'       => $variant->id,
-                    'quantity'         => $qty,
-                    'cost_price'       => $cost,
-                    'manufacture_date' => $mfg,
-                    'expiry_date'      => $exp,
-                    'supplier'         => $request->supplier,
-                    'note'             => $request->note,
-                    'code'             => $code,
-                    'created_by'       => Auth::id()
-                ]);
-            }
-        });
+                    $import = StockImport::create([
+                        'variant_id'         => $variant->id,
+                        'quantity'           => $qty,
+                        'remaining_quantity' => $qty,
+                        'cost_price'         => $cost,
+                        'manufacture_date'   => $mfg,
+                        'expiry_date'        => $exp,
+                        'supplier'           => $request->supplier,
+                        'note'               => $request->note,
+                        'code'               => $code,
+                        'created_by'         => Auth::id()
+                    ]);
 
+                    /* ======================
+                    INVENTORY LOG
+                ====================== */
+                    InventoryLog::create([
+                        'variant_id'      => $variant->id,
+                        'type'            => 'import',
+                        'quantity_change' => $qty,
+                        'stock_before'    => $oldStock,
+                        'stock_after'     => $newStock,
+                        'reference_type'  => 'stock_import',
+                        'reference_id'    => $import->id
+                    ]);
+                }
+            });
+        } catch (\Exception $e) {
 
+            return back()
+                ->withInput()
+                ->withErrors($e->getMessage());
+        }
+
+        /* ======================
+        RETURN + WARNING
+    ====================== */
         return redirect()
-            ->route('admin.stock.history')
-            ->with('success', 'Nhập hàng thành công');
+        ->route('admin.stock.history')
+            ->with('success', 'Nhập hàng thành công')
+            ->with('warning', $warnings); // 🔥 thêm warning
     }
-
 
     /* =======================
         LỊCH SỬ NHẬP
     ======================= */
     public function history(Request $request)
     {
-
         $query = StockImport::query();
 
-
-        /* ======================
-            SEARCH
-        ====================== */
         if ($request->keyword) {
-
             $query->where(function ($q) use ($request) {
-
                 $q->where('code', 'like', '%' . $request->keyword . '%')
                     ->orWhere('supplier', 'like', '%' . $request->keyword . '%');
             });
         }
 
-
-        /* ======================
-            DATE FILTER
-        ====================== */
         if ($request->from && $request->to) {
-
             $query->whereBetween('created_at', [
                 $request->from,
                 $request->to
             ]);
         }
-
 
         $imports = $query->select(
             'code',
@@ -201,10 +216,8 @@ class StockImportController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-
         return view('admin.stock_imports.history', compact('imports'));
     }
-
 
     /* =======================
         CHI TIẾT PHIẾU NHẬP
@@ -221,13 +234,11 @@ class StockImportController extends Controller
         return view('admin.stock_imports.show', compact('items', 'code'));
     }
 
-
     /* =======================
-        XUẤT PDF PHIẾU NHẬP
+        XUẤT PDF
     ======================= */
     public function exportPdf($code)
     {
-
         $items = StockImport::with([
             'variant:id,product_id,attribute_value',
             'variant.product:id,name'

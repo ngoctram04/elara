@@ -245,40 +245,45 @@ class OrderController extends Controller
         | 1 → 2 (bắt đầu giao)
         |--------------------------------------------------
         */
-            if ($oldStatus == Order::STATUS_PENDING && $newStatus == Order::STATUS_PROCESSING) {
+            /*
+|--------------------------------------------------
+| 1 → 2 (bắt đầu giao)
+|--------------------------------------------------
+*/
+            // ❌ KHÔNG LÀM GÌ Ở ĐÂY
+            // (đã trừ kho ở checkout rồi, không tăng sold ở bước này)
 
+
+
+            /*
+|--------------------------------------------------
+| 2 → 3 (đã giao)
+|--------------------------------------------------
+*/
+            if ($oldStatus == Order::STATUS_PROCESSING && $newStatus == Order::STATUS_COMPLETED) {
+
+                $order->delivered_at = now();
+
+                /*
+    ==========================================
+    ✅ TĂNG SỐ LƯỢNG ĐÃ BÁN (ĐÚNG CHỖ)
+    ==========================================
+    */
                 foreach ($order->items as $item) {
 
                     if ($item->variant) {
 
                         $variant = $item->variant;
 
-                        $before = $variant->stock_quantity;
-
                         $variant->increment('sold_quantity', $item->quantity);
-
-                        \App\Models\InventoryLog::create([
-                            'variant_id' => $variant->id,
-                            'type' => 'order',
-                            'quantity_change' => -$item->quantity,
-                            'stock_before' => $before,
-                            'stock_after' => $before - $item->quantity,
-                            'reference_type' => 'order',
-                            'reference_id' => $order->id
-                        ]);
                     }
                 }
-            }
 
-            /*
-        |--------------------------------------------------
-        | 2 → 3 (đã giao)
-        |--------------------------------------------------
-        */
-            if ($oldStatus == Order::STATUS_PROCESSING && $newStatus == Order::STATUS_COMPLETED) {
-
-                $order->delivered_at = now();
-
+                /*
+    ==========================================
+    ✅ CỘNG ĐIỂM KHÁCH HÀNG
+    ==========================================
+    */
                 $user = $order->user;
 
                 if ($user) {
@@ -286,14 +291,13 @@ class OrderController extends Controller
                     // 1.000đ = 1 điểm
                     $points = floor($order->grand_total / 1000);
 
-                    // cộng điểm
                     $user->loyalty_points += $points;
 
                     /*
-                |------------------------------------------
-                | CẬP NHẬT HẠNG THEO ĐIỂM
-                |------------------------------------------
-                */
+        ======================================
+        CẬP NHẬT HẠNG
+        ======================================
+        */
                     if ($user->loyalty_points >= 10000) {
                         $user->member_level = 'diamond';
                     } elseif ($user->loyalty_points >= 3000) {
@@ -303,13 +307,14 @@ class OrderController extends Controller
                     } else {
                         $user->member_level = 'bronze';
                     }
+
                     $user->save();
 
                     /*
-                |------------------------------------------
-                | LƯU LỊCH SỬ ĐIỂM
-                |------------------------------------------
-                */
+        ======================================
+        LƯU LỊCH SỬ ĐIỂM
+        ======================================
+        */
                     DB::table('user_point_histories')->insert([
                         'user_id' => $user->id,
                         'points' => $points,
@@ -387,6 +392,50 @@ class OrderController extends Controller
                 'cancelled_by_user_id' => Auth::id(),
                 'cancelled_at' => now()
             ]);
+            $order->load('items.batches');
+
+            foreach ($order->items as $item) {
+
+                foreach ($item->batches as $batch) {
+
+                    // ❌ tránh rollback 2 lần
+                    if ($batch->is_rolled_back) continue;
+
+                    $stock = \App\Models\StockImport::find($batch->stock_import_id);
+
+                    if (!$stock) continue;
+
+                    $before = $stock->remaining_quantity;
+
+                    // ✅ hoàn lại lô
+                    $stock->increment('remaining_quantity', $batch->quantity);
+
+                    // ✅ đánh dấu rollback
+                    $batch->update([
+                        'is_rolled_back' => 1
+                    ]);
+
+                    // ✅ log (nếu bạn dùng log)
+                    \App\Models\InventoryLog::create([
+                        'variant_id' => $item->variant_id,
+                        'type' => 'cancel',
+                        'quantity_change' => $batch->quantity,
+                        'stock_before' => $before,
+                        'stock_after' => $before + $batch->quantity,
+                        'reference_type' => 'order',
+                        'reference_id' => $order->id
+                    ]);
+                }
+
+                // 🔥 SYNC lại tồn variant (QUAN TRỌNG)
+                $total = \App\Models\StockImport::where('variant_id', $item->variant_id)
+                ->sum('remaining_quantity');
+
+                \App\Models\ProductVariant::where('id', $item->variant_id)
+                ->update([
+                    'stock_quantity' => $total
+                ]);
+            }
 
             DB::commit();
 
@@ -411,4 +460,4 @@ class OrderController extends Controller
             return back()->with('error', 'Huỷ đơn thất bại.');
         }
     }
-}
+} 

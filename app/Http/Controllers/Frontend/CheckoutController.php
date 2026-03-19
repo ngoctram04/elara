@@ -17,6 +17,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\OrderCreatedMail;
 use App\Notifications\SystemNotification;
+use App\Models\OrderItemBatch;
 class CheckoutController extends Controller
 {
     /**
@@ -328,7 +329,7 @@ class CheckoutController extends Controller
 
                 $isBuyNow = true;
 
-                if ($variant->stock_quantity < $buyNow['quantity']) {
+                if ($variant->availableStock() < $buyNow['quantity']) {
                     return back()->with('error', 'Sản phẩm không đủ tồn kho.');
                 }
 
@@ -370,7 +371,7 @@ class CheckoutController extends Controller
                     $variant = $cart->variant;
                     if (!$variant) continue;
 
-                    if ($variant->stock_quantity < $cart->quantity) {
+                    if ($variant->availableStock() < $cart->quantity) {
                         DB::rollBack();
                         return back()->with(
                             'error',
@@ -567,29 +568,32 @@ class CheckoutController extends Controller
 
                 $variant = $item['variant'];
 
-                OrderItem::create([
+                $orderItem = OrderItem::create([
                     'order_id'   => $order->id,
                     'variant_id' => $variant->id,
                     'price'      => $item['price'],
-                    'cost_price' => $variant->cost_price,
+                    'cost_price' => 0,
                     'quantity'   => $item['quantity'],
                 ]);
 
-                $before = $variant->stock_quantity;
+                $result = $variant->deductByBatch($item['quantity']);
 
-                $variant->decrement('stock_quantity', $item['quantity']);
+                // 🔥 lưu batch
+                foreach ($result['batches'] as $b) {
+                    OrderItemBatch::create([
+                        'order_item_id'   => $orderItem->id,
+                        'stock_import_id' => $b['batch_id'],
+                        'quantity'        => $b['quantity'],
+                    ]);
+                }
 
-                $variant->refresh();
+                // 🔥 tính cost trung bình
+                $avgCost = $result['total_cost'] / $item['quantity'];
 
-                \App\Models\InventoryLog::create([
-                    'variant_id'       => $variant->id,
-                    'type'             => 'order',
-                    'quantity_change'  => -$item['quantity'],
-                    'stock_before'     => $before,
-                    'stock_after'      => $variant->stock_quantity,
-                    'reference_type'   => 'order',
-                    'reference_id'     => $order->id
+                $orderItem->update([
+                    'cost_price' => $avgCost
                 ]);
+
             }
             // ==================================================
             // 10.5 SEND MAIL (SAU KHI ĐÃ CÓ ORDER ITEMS)
@@ -694,15 +698,15 @@ class CheckoutController extends Controller
         $qty = (int) ($request->quantity ?? 1);
 
         // Hết hàng
-        if ($variant->stock_quantity <= 0) {
+        if ($variant->availableStock() <= 0) {
             return response()->json([
                 'success' => false,
                 'message' => 'Sản phẩm đã hết hàng'
             ]);
         }
 
-        // Vượt tồn kho
-        if ($qty > $variant->stock_quantity) {
+        if ($qty > $variant->availableStock()
+        ) {
             return response()->json([
                 'success' => false,
                 'message' => 'Số lượng vượt quá tồn kho'
@@ -838,8 +842,7 @@ class CheckoutController extends Controller
         $responseCode  = $request->vnp_ResponseCode;
         $transactionNo = $request->vnp_TransactionNo ?? null;
 
-        $order = Order::with('items.variant')->find($orderId);
-
+        $order = Order::with('items.batches', 'items.variant')->find($orderId);
         if (!$order) {
             return redirect()->route('home')
                 ->with('error', 'Đơn hàng không tồn tại');
@@ -897,26 +900,29 @@ class CheckoutController extends Controller
                 // hoàn tồn kho
                 foreach ($order->items as $item) {
 
-                    $variant = $item->variant;
+                    foreach ($item->batches as $batch) {
 
-                    if ($variant) {
+                        if ($batch->is_rolled_back) continue;
 
-                        $before = $variant->stock_quantity;
+                        $stock = \App\Models\StockImport::find($batch->stock_import_id);
 
-                        $variant->increment('stock_quantity', $item->quantity);
+                        if (!$stock) continue;
 
-                        $variant->refresh();
+                        $stock->increment('remaining_quantity', $batch->quantity);
 
-                        \App\Models\InventoryLog::create([
-                            'variant_id'       => $variant->id,
-                            'type'             => 'cancel',
-                            'quantity_change'  => $item->quantity,
-                            'stock_before'     => $before,
-                            'stock_after'      => $variant->stock_quantity,
-                            'reference_type'   => 'order',
-                            'reference_id'     => $order->id
+                        $batch->update([
+                            'is_rolled_back' => 1
                         ]);
                     }
+
+                    // sync lại tồn
+                    $total = \App\Models\StockImport::where('variant_id', $item->variant_id)
+                    ->sum('remaining_quantity');
+
+                    \App\Models\ProductVariant::where('id', $item->variant_id)
+                    ->update([
+                        'stock_quantity' => $total
+                    ]);
                 }
             }
 
@@ -946,17 +952,17 @@ class CheckoutController extends Controller
      */
     public function cancel($id)
     {
-        // Lấy đơn của chính user
-        $order = Order::where('id', $id)
+        // 1. Lấy đơn của user
+        $order = Order::with('items.batches')
+        ->where('id', $id)
             ->where('user_id', Auth::id())
             ->first();
 
-        // Không tìm thấy hoặc không phải của user
         if (!$order) {
             return back()->with('error', 'Đơn hàng không tồn tại.');
         }
 
-        // Chỉ cho huỷ khi đang xử lý (status = 1)
+        // 2. Chỉ huỷ khi đang xử lý
         if ($order->status != Order::STATUS_PENDING) {
             return back()->with('error', 'Chỉ có thể huỷ đơn đang xử lý.');
         }
@@ -964,17 +970,8 @@ class CheckoutController extends Controller
         DB::beginTransaction();
 
         try {
-            /*
-        =================================================
-        CHỈ CẬP NHẬT TRẠNG THÁI
-        =================================================
-        Model Order::booted() sẽ tự:
-        - Hoàn tồn kho
-        - Không tăng đã bán
-        - Nếu VNPay đã thanh toán → chuyển REFUNDED
-        =================================================
-        */
 
+            // 3. Update trạng thái
             $order->update([
                 'status' => Order::STATUS_CANCELLED,
                 'cancelled_by' => 'customer',
@@ -982,24 +979,75 @@ class CheckoutController extends Controller
                 'cancelled_at' => now()
             ]);
 
+            /*
+        =================================================
+        🔥 ROLLBACK THEO BATCH (FEFO CHUẨN)
+        =================================================
+        */
+
+            foreach ($order->items as $item) {
+
+                foreach ($item->batches as $batch) {
+
+                    // ❌ tránh rollback 2 lần
+                    if ($batch->is_rolled_back) continue;
+
+                    $stock = \App\Models\StockImport::find($batch->stock_import_id);
+
+                    if (!$stock) continue;
+
+                    $before = $stock->remaining_quantity;
+
+                    // ✅ hoàn lại lô
+                    $stock->increment('remaining_quantity', $batch->quantity);
+
+                    // ✅ đánh dấu đã rollback
+                    $batch->update([
+                        'is_rolled_back' => 1
+                    ]);
+
+                    // ✅ log kho
+                    \App\Models\InventoryLog::create([
+                        'variant_id' => $item->variant_id,
+                        'type' => 'cancel',
+                        'quantity_change' => $batch->quantity,
+                        'stock_before' => $before,
+                        'stock_after' => $before + $batch->quantity,
+                        'reference_type' => 'order',
+                        'reference_id' => $order->id
+                    ]);
+                }
+
+                // =================================================
+                // ✅ SYNC LẠI TỒN VARIANT (CỰC QUAN TRỌNG)
+                // =================================================
+                $total = \App\Models\StockImport::where('variant_id', $item->variant_id)
+                    ->sum('remaining_quantity');
+
+                \App\Models\ProductVariant::where('id', $item->variant_id)
+                    ->update([
+                        'stock_quantity' => $total
+                    ]);
+            }
+
             DB::commit();
-            // 🔔 THÔNG BÁO HUỶ ĐƠN
+
+            // 🔔 THÔNG BÁO
             $order->user->notify(new SystemNotification([
                 'title' => 'Đơn đã bị huỷ',
                 'message' => 'Đơn #' . $order->id . ' đã bị huỷ',
-                'url' => route('orders.show',
-                    $order->id
-                ),
+                'url' => route('orders.show', $order->id),
                 'type' => 'order_cancelled'
             ]));
+
             return back()->with('success', 'Huỷ đơn thành công.');
         } catch (\Throwable $e) {
+
             DB::rollBack();
 
-            // Log nếu cần debug
             Log::error('Cancel order error: ' . $e->getMessage());
 
-            return back()->with('error', 'Huỷ đơn thất bại, vui lòng thử lại.');
+            return back()->with('error', 'Huỷ đơn thất bại.');
         }
     }
 

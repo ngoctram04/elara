@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\RefundRequest;
 use App\Models\Order;
+use App\Models\StockImport;
+use App\Models\ProductVariant;
+use App\Models\InventoryLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -13,7 +16,6 @@ use App\Notifications\SystemNotification;
 
 class RefundController extends Controller
 {
-
     /**
      * Danh sách yêu cầu hoàn tiền
      */
@@ -36,20 +38,15 @@ class RefundController extends Controller
             $query->where('status', $request->status);
         }
 
-        if ($request->sort == 'old') {
-            $query->orderBy('created_at', 'asc');
-        } else {
-            $query->orderBy('created_at', 'desc');
-        }
+        $query->orderBy('created_at', $request->sort == 'old' ? 'asc' : 'desc');
 
         $refunds = $query->paginate(10)->withQueryString();
 
         return view('admin.refunds.index', compact('refunds'));
     }
 
-
     /**
-     * APPROVE
+     * APPROVE (chỉ duyệt)
      */
     public function approve($id)
     {
@@ -60,6 +57,10 @@ class RefundController extends Controller
             $refund = RefundRequest::with('order.user')
                 ->findOrFail($id);
 
+            if ($refund->status !== 'pending') {
+                throw new \Exception('Yêu cầu không hợp lệ');
+            }
+
             $refund->update([
                 'status' => 'approved'
             ]);
@@ -69,7 +70,6 @@ class RefundController extends Controller
             ]);
         });
 
-        // 🔔 NOTIFY
         if ($refund && $refund->order->user) {
             $refund->order->user->notify(new SystemNotification([
                 'title' => 'Yêu cầu hoàn tiền được chấp nhận',
@@ -82,7 +82,6 @@ class RefundController extends Controller
         return back()->with('success', 'Đã chấp nhận yêu cầu đổi trả');
     }
 
-
     /**
      * REJECT
      */
@@ -94,12 +93,15 @@ class RefundController extends Controller
 
         $refund = RefundRequest::with('user', 'order')->findOrFail($id);
 
+        if ($refund->status !== 'pending') {
+            return back()->with('error', 'Không thể từ chối yêu cầu này');
+        }
+
         $refund->update([
             'status' => 'rejected',
             'admin_note' => $request->admin_note
         ]);
 
-        // 🔔 NOTIFY
         if ($refund->user) {
             $refund->user->notify(new SystemNotification([
                 'title' => 'Yêu cầu hoàn tiền bị từ chối',
@@ -112,9 +114,8 @@ class RefundController extends Controller
         return back()->with('success', 'Đã từ chối yêu cầu hoàn tiền');
     }
 
-
     /**
-     * REFUNDED
+     * REFUNDED (🔥 FIX CHUẨN FEFO)
      */
     public function refunded($id)
     {
@@ -122,11 +123,18 @@ class RefundController extends Controller
 
         DB::transaction(function () use ($id, &$refund) {
 
-            $refund = RefundRequest::with('order.user')
+            // 🔥 load đầy đủ batches
+            $refund = RefundRequest::with('order.items.batches', 'order.user')
                 ->findOrFail($id);
 
             $order = $refund->order;
 
+            // ❌ tránh chạy lại
+            if ($refund->status === 'refunded') {
+                return;
+            }
+
+            // ===== UPDATE STATUS =====
             $refund->update([
                 'status' => 'refunded'
             ]);
@@ -134,6 +142,51 @@ class RefundController extends Controller
             $order->update([
                 'payment_status' => Order::PAYMENT_REFUNDED
             ]);
+
+            // =========================================
+            // 🔥 ROLLBACK THEO BATCH (CHUẨN NHƯ CANCEL)
+            // =========================================
+            foreach ($order->items as $item) {
+
+                foreach ($item->batches as $batch) {
+
+                    if ($batch->is_rolled_back) continue;
+
+                    $stock = StockImport::find($batch->stock_import_id);
+
+                    if (!$stock) continue;
+
+                    $before = $stock->remaining_quantity;
+
+                    // hoàn lại lô
+                    $stock->increment('remaining_quantity', $batch->quantity);
+
+                    // đánh dấu rollback
+                    $batch->update([
+                        'is_rolled_back' => 1
+                    ]);
+
+                    // log kho
+                    InventoryLog::create([
+                        'variant_id' => $item->variant_id,
+                        'type' => 'cancel',
+                        'quantity_change' => $batch->quantity,
+                        'stock_before' => $before,
+                        'stock_after' => $before + $batch->quantity,
+                        'reference_type' => 'order',
+                        'reference_id' => $order->id
+                    ]);
+                }
+
+                // 🔥 sync lại tồn
+                $total = StockImport::where('variant_id', $item->variant_id)
+                    ->sum('remaining_quantity');
+
+                ProductVariant::where('id', $item->variant_id)
+                    ->update([
+                        'stock_quantity' => $total
+                    ]);
+            }
         });
 
         // 🔔 NOTIFICATION
@@ -155,6 +208,6 @@ class RefundController extends Controller
                 ));
         }
 
-        return back()->with('success', 'Đã hoàn tiền và gửi thông báo cho khách');
+        return back()->with('success', 'Đã hoàn tiền và cập nhật kho chính xác');
     }
 }

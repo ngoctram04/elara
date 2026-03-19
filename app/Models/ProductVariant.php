@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Models\Promotion;
-
+use Illuminate\Support\Facades\DB;
+use App\Models\OrderItemBatch;
+use App\Models\StockImport;
 class ProductVariant extends Model
 {
     protected $table = 'product_variants';
@@ -184,5 +186,67 @@ class ProductVariant extends Model
     public function getProfitPerItemAttribute(): float
     {
         return $this->final_price - $this->cost_price;
+    }
+    /* =====================================================
+    BATCH (FEFO - HẾT HẠN TRƯỚC BÁN TRƯỚC)
+===================================================== */
+
+    public function deductByBatch(int $quantity): array
+    {
+        return DB::transaction(function () use ($quantity) {
+
+            $batches = StockImport::where('variant_id', $this->id)
+            ->where('remaining_quantity', '>', 0)
+            ->orderBy('expiry_date', 'asc')
+                ->lockForUpdate()
+                ->get();
+
+            $remaining = $quantity;
+            $usedBatches = [];
+            $totalCost = 0;
+
+            foreach ($batches as $batch) {
+
+                if ($remaining <= 0) break;
+
+                $take = min($remaining, $batch->remaining_quantity);
+
+                $batch->remaining_quantity -= $take;
+                $batch->save();
+
+                $before = $this->stock_quantity;
+                $this->stock_quantity -= $take;
+
+                \App\Models\InventoryLog::create([
+                    'variant_id'      => $this->id,
+                    'type'            => 'order',
+                    'quantity_change' => -$take,
+                    'stock_before'    => $before,
+                    'stock_after'     => $this->stock_quantity,
+                    'reference_type'  => 'batch',
+                    'reference_id'    => $batch->id,
+                ]);
+
+                $this->save();
+
+                $usedBatches[] = [
+                        'batch_id'   => $batch->id,
+                        'quantity'   => $take,
+                        'cost_price' => $batch->cost_price,
+                    ];
+
+                $totalCost += $take * $batch->cost_price;
+                $remaining -= $take;
+            }
+
+            if ($remaining > 0) {
+                throw new \Exception('Không đủ tồn kho theo lô');
+            }
+
+            return [
+                'batches'    => $usedBatches,
+                'total_cost' => $totalCost
+            ];
+        });
     }
 }

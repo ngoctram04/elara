@@ -62,4 +62,8 @@ class OrderItem extends Model
     {
         return $this->hasOne(Review::class);
     }
+    public function batches()
+    {
+        return $this->hasMany(\App\Models\OrderItemBatch::class, 'order_item_id');
+    }
 }

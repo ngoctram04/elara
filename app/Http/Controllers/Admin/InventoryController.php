@@ -10,13 +10,11 @@ use Illuminate\Support\Facades\DB;
 
 class InventoryController extends Controller
 {
-
     /*
     |--------------------------------------------------------------------------
     | LỊCH SỬ THAY ĐỔI KHO
     |--------------------------------------------------------------------------
     */
-
     public function logs(Request $request)
     {
         $query = InventoryLog::with('variant.product');
@@ -39,36 +37,28 @@ class InventoryController extends Controller
             $query->whereDate('created_at', '<=', $request->to);
         }
 
-        $logs = $query
-            ->latest()
-            ->paginate(10)
-            ->withQueryString();
+        $logs = $query->latest()->paginate(10)->withQueryString();
 
         return view('admin.inventory.logs', compact('logs'));
     }
-
 
     /*
     |--------------------------------------------------------------------------
     | BÁO CÁO TỒN KHO
     |--------------------------------------------------------------------------
     */
-
     public function report(Request $request)
     {
         $query = ProductVariant::with('product:id,name');
 
         if ($request->keyword) {
-
             $query->where(function ($q) use ($request) {
-
                 $q->whereHas('product', function ($q2) use ($request) {
                     $q2->where('name', 'like', '%' . $request->keyword . '%');
                 })
-                ->orWhere('attribute_value', 'like', '%' . $request->keyword . '%');
+                    ->orWhere('attribute_value', 'like', '%' . $request->keyword . '%');
             });
         }
-
 
         if ($request->status == 'out') {
             $query->where('stock_quantity', 0);
@@ -86,67 +76,42 @@ class InventoryController extends Controller
             $query->where('stock_quantity', '>', 5);
         }
 
+        $query->orderBy('stock_quantity', $request->sort == 'high' ? 'desc' : 'asc');
 
-        if ($request->sort == 'high') {
-            $query->orderBy('stock_quantity', 'desc');
-        } else {
-            $query->orderBy('stock_quantity', 'asc');
-        }
-
-
-        $variants = $query
-        ->paginate(30)
-            ->withQueryString();
+        $variants = $query->paginate(30)->withQueryString();
 
         return view('admin.inventory.report', compact('variants'));
     }
-
 
     /*
     |--------------------------------------------------------------------------
     | SẢN PHẨM SẮP HẾT HÀNG
     |--------------------------------------------------------------------------
     */
-
     public function lowStock(Request $request)
     {
         $query = ProductVariant::with('product:id,name');
 
-        // SEARCH
         if ($request->filled('keyword')) {
-
             $query->where(function ($q) use ($request) {
-
                 $q->whereHas('product', function ($q2) use ($request) {
                     $q2->where('name', 'like', '%' . $request->keyword . '%');
                 })
-                ->orWhere('attribute_value', 'like', '%' . $request->keyword . '%');
+                    ->orWhere('attribute_value', 'like', '%' . $request->keyword . '%');
             });
         }
 
-        // SORT
         if ($request->sort == 'all') {
-
             $query->orderBy('stock_quantity', 'asc');
         } else {
-
             $query->where('stock_quantity', '<=', 5);
-
-            if ($request->sort == 'high'
-            ) {
-                $query->orderBy('stock_quantity', 'desc');
-            } else {
-                $query->orderBy('stock_quantity', 'asc');
-            }
+            $query->orderBy('stock_quantity', $request->sort == 'high' ? 'desc' : 'asc');
         }
 
-        $variants = $query
-        ->paginate(20)
-        ->withQueryString();
+        $variants = $query->paginate(20)->withQueryString();
 
         return view('admin.inventory.low_stock', compact('variants'));
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -155,161 +120,121 @@ class InventoryController extends Controller
     */
     public function nearExpiry(Request $request)
     {
+        $query = DB::table('stock_imports as si')
+        ->join('product_variants as pv', 'si.variant_id', '=', 'pv.id')
+        ->join('products as p',
+            'pv.product_id',
+            '=',
+            'p.id'
+        )
 
-        /*
-    --------------------------------------------------
-    1. TỰ HUỶ LÔ ≤ 6 THÁNG
-    --------------------------------------------------
-    */
+        ->leftJoin(
+            DB::raw('(SELECT variant_id, MIN(image_path) as image_path FROM variant_images GROUP BY variant_id) as vi'),
+            'pv.id',
+            '=',
+            'vi.variant_id'
+        )
 
-        DB::beginTransaction();
+            ->whereNotNull('si.expiry_date');
 
-        try {
+        // =========================
+        // 🔍 SEARCH
+        // =========================
+        if ($request->filled('keyword')) {
+            $keyword = trim($request->keyword);
 
-            $expiredLots = DB::table('stock_imports')
-            ->whereDate('expiry_date', '<=', now()->addMonths(6))
-            ->whereNull('expired_at')
-                ->get();
+            $query->where(function ($q) use ($keyword) {
+                $q->where('p.name', 'like', "%{$keyword}%")
+                    ->orWhere('si.code', 'like', "%{$keyword}%");
 
-            foreach ($expiredLots as $lot) {
-
-                $variant = ProductVariant::find($lot->variant_id);
-
-                if (!$variant) {
-                    continue;
+                if (is_numeric($keyword)) {
+                    $q->orWhere('p.id', (int)$keyword);
                 }
-
-                $before = $variant->stock_quantity;
-
-                $destroyQty = min($variant->stock_quantity, $lot->quantity);
-
-                if ($destroyQty > 0) {
-
-                    $variant->decrement('stock_quantity', $destroyQty);
-
-                    InventoryLog::create([
-                        'variant_id' => $variant->id,
-                        'type' => 'adjust',
-                        'quantity_change' => -$destroyQty,
-                        'stock_before' => $before,
-                        'stock_after' => $variant->stock_quantity,
-                        'reference_type' => 'expired'
-                    ]);
-                }
-
-                DB::table('stock_imports')
-                ->where('id', $lot->id)
-                ->update([
-                    'expired_at' => now()
-                ]);
-            }
-
-            DB::commit();
-        } catch (\Exception $e) {
-
-            DB::rollBack();
+            });
         }
 
-
-        /*
-    --------------------------------------------------
-    2. QUERY LÔ ≤ 7 THÁNG
-    --------------------------------------------------
-    */
-
-        $query = DB::table('stock_imports')
-            ->join('product_variants', 'stock_imports.variant_id', '=', 'product_variants.id')
-            ->join('products', 'product_variants.product_id', '=',
-                'products.id'
-            )
-
-            ->leftJoin(
-                DB::raw('(SELECT variant_id, MIN(image_path) as image_path FROM variant_images GROUP BY variant_id) as variant_images'),
-                'product_variants.id',
-                '=',
-                'variant_images.variant_id'
-            )
-
-            ->whereDate('stock_imports.expiry_date', '<=', now()->addMonths(7));
-
-
-        /*
-    --------------------------------------------------
-    TÌM KIẾM
-    --------------------------------------------------
-    */
-
-        if ($request->keyword) {
-
-            $query->where('products.name', 'like', '%' . $request->keyword . '%');
+        // =========================
+        // 🎯 FILTER
+        // =========================
+        if ($request->status === 'danger') {
+            $query->whereNull('si.expired_at')
+                ->whereDate('si.expiry_date', '<=', now()->addMonths(6));
+        } elseif ($request->status === 'sale') {
+            $query->whereNull('si.expired_at')
+            ->whereBetween('si.expiry_date', [
+                now()->addMonths(6),
+                now()->addMonths(7)
+            ]);
+        } elseif ($request->status === 'expired') {
+            $query->whereNotNull('si.expired_at');
+        } elseif ($request->status === 'normal') {
+            $query->whereNull('si.expired_at')
+            ->whereDate('si.expiry_date', '>', now()->addMonths(7));
         }
 
+        // =========================
+        // 🔽 SORT (FEFO)
+        // =========================
+        $query->orderBy(
+            'si.expiry_date',
+            $request->sort === 'far' ? 'desc' : 'asc'
+        );
 
-        /*
-    --------------------------------------------------
-    LỌC TRẠNG THÁI
-    --------------------------------------------------
-    */
+        // =========================
+        // 📦 SELECT (🔥 QUAN TRỌNG)
+        // =========================
+        $lots = $query->select(
 
-        if ($request->status == 'expired') {
+            'si.id',
+            'si.code',
 
-            $query->whereNotNull('stock_imports.expired_at');
-        }
+            'si.imported_quantity',
+            'si.remaining_quantity',
+            'si.expired_quantity',
+            'si.cost_price',
 
-        if ($request->status == 'danger') {
+            'si.expiry_date',
+            'si.expired_at',
 
-            $query->whereDate('stock_imports.expiry_date', '<=', now()->addMonths(6))
-                ->whereNull('stock_imports.expired_at');
-        }
+            // 🔥 SOLD
+            DB::raw('
+            GREATEST(
+                si.imported_quantity 
+                - si.remaining_quantity 
+                - si.expired_quantity,
+                0
+            ) as sold_quantity
+        '),
 
-        if ($request->status == 'sale') {
+            // 🔥 STATUS
+            DB::raw("
+            CASE 
+                WHEN si.expired_at IS NOT NULL THEN 'expired'
+                WHEN si.expiry_date <= DATE_ADD(NOW(), INTERVAL 6 MONTH) THEN 'danger'
+                WHEN si.expiry_date <= DATE_ADD(NOW(), INTERVAL 7 MONTH) THEN 'sale'
+                ELSE 'normal'
+            END as batch_status
+        "),
 
-            $query->whereBetween('stock_imports.expiry_date', [now(), now()->addMonths(7)])
-                ->whereNull('stock_imports.expired_at');
-        }
+            // 💰 TIỀN (🔥 QUAN TRỌNG NHẤT)
+            DB::raw('si.imported_quantity * si.cost_price as total_cost'),
+            DB::raw('si.remaining_quantity * si.cost_price as remaining_value'),
+            DB::raw('si.expired_quantity * si.cost_price as expired_value'),
 
+            // PRODUCT
+            'p.id as product_id',
+            'p.name as product_name',
 
-        /*
-    --------------------------------------------------
-    SẮP XẾP
-    --------------------------------------------------
-    */
+            // VARIANT
+            'pv.attribute_name',
+            'pv.attribute_value',
 
-        if ($request->sort == 'far') {
-
-            $query->orderBy('stock_imports.expiry_date', 'desc');
-        } else {
-
-            $query->orderBy('stock_imports.expiry_date', 'asc');
-        }
-
-
-        /*
-    --------------------------------------------------
-    SELECT DATA
-    --------------------------------------------------
-    */
-
-        $lots = $query
-        ->select(
-            'stock_imports.id',
-            'stock_imports.variant_id',
-            'stock_imports.quantity',
-            'stock_imports.expiry_date',
-            'stock_imports.expired_at',
-
-            'products.name as product_name',
-
-            'product_variants.attribute_name',
-            'product_variants.attribute_value',
-
-            'variant_images.image_path'
+            // IMAGE
+            'vi.image_path'
         )
         ->paginate(20)
         ->withQueryString();
 
-
         return view('admin.inventory.near_expiry', compact('lots'));
     }
-    
 }

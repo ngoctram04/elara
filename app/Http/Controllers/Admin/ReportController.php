@@ -13,7 +13,11 @@ class ReportController extends Controller
 
     public function index(Request $request)
     {
+        // 🔥 LẤY DATA CHÍNH
         $data = $this->getReportData($request);
+
+        // 🔥 RANGE
+        $range = $this->getDateRange($request);
 
         /*
     =====================================
@@ -21,17 +25,36 @@ class ReportController extends Controller
     =====================================
     */
 
-        // Doanh thu khách thanh toán
         $data['revenue'] = $data['finance']->revenue ?? 0;
 
-        // Lợi nhuận thực (đã trừ vốn + ship shop trả)
-        $data['profit'] = $data['finance']->profit ?? 0;
+        /*
+    =====================================
+    CHI PHÍ
+    =====================================
+    */
 
-        // Biên lợi nhuận %
-        $data['margin'] = $data['revenue'] > 0
-        ? ($data['profit'] / $data['revenue']) * 100
-            : 0;
+        $data['totalCost']     = $data['finance']->cost ?? 0;
+        $data['totalDiscount'] = $data['finance']->discount_total ?? 0;
 
+        /*
+    =====================================
+    SHIPPING
+    =====================================
+    */
+
+        $data['shippingCollected'] = $data['finance']->shipping_total ?? 0;
+        $data['shippingPaid']      = $data['finance']->shipping_cost_total ?? 0;
+
+        $data['shippingDebt']      = $data['finance']->shipping_debt ?? 0;
+        $data['shippingPaidTotal'] = $data['finance']->shipping_paid_total ?? 0;
+
+        $data['freeShippingLoss'] = max(
+            0,
+            $data['shippingPaid'] - $data['shippingCollected']
+        );
+
+        $data['shippingProfit'] =
+        $data['shippingCollected'] - $data['shippingPaid'];
 
         /*
     =====================================
@@ -39,54 +62,13 @@ class ReportController extends Controller
     =====================================
     */
 
-        // Tổng đơn hoàn thành
         $data['totalOrders'] = $data['orderStats']->completed ?? 0;
 
-        // Tỷ lệ huỷ (để Blade không lỗi)
         $data['cancelRate'] = $data['cancelRate'] ?? 0;
 
-        // Giá trị đơn trung bình (AOV)
         $data['averageOrder'] = $data['totalOrders'] > 0
         ? $data['revenue'] / $data['totalOrders']
         : 0;
-
-
-        /*
-=====================================
-SHIPPING (QUAN TRỌNG)
-=====================================
-*/
-
-        // Khách trả phí ship
-        $data['shippingCollected'] = $data['finance']->shipping_total ?? 0;
-
-        // Shop phải trả cho đơn vị vận chuyển
-        $data['shippingPaid'] = $data['finance']->shipping_cost_total ?? 0;
-
-        // Nợ ship còn lại
-        $data['shippingDebt'] = $data['finance']->shipping_debt ?? 0;
-        $data['shippingPaidTotal'] = $data['finance']->shipping_paid_total ?? 0;
-        // Chi phí freeship shop chịu
-        $data['freeShippingLoss'] = max(
-            0,
-            $data['shippingPaid'] - $data['shippingCollected']
-        );
-
-        // Lãi / lỗ vận chuyển
-        $data['shippingProfit'] =
-        $data['shippingCollected'] - $data['shippingPaid'];
-        /*
-    =====================================
-    CHI PHÍ
-    =====================================
-    */
-
-        // Tổng vốn hàng đã bán
-        $data['totalCost'] = $data['finance']->cost ?? 0;
-
-        // Tổng giảm giá (voucher + sinh nhật)
-        $data['totalDiscount'] = $data['finance']->discount_total ?? 0;
-
 
         /*
     =====================================
@@ -94,21 +76,47 @@ SHIPPING (QUAN TRỌNG)
     =====================================
     */
 
-        // Giá trị tồn kho hiện tại
+        // 🔥 Giá trị tồn kho hiện tại
         $data['inventoryValue'] = $data['inventory']->total_value ?? 0;
 
-        // Tổng vốn nhập (toàn thời gian)
+        // 🔥 Tổng vốn nhập (FIX FIELD)
         $data['totalImport'] = DB::table('stock_imports')
-        ->sum(DB::raw('quantity * cost_price'));
+        ->sum(DB::raw('imported_quantity * cost_price'));
 
-        // Tổng hao hụt kho (hàng hết hạn, hư, thất thoát)
-        $data['inventoryLoss'] = max(
-            0,
-            $data['totalImport'] - ($data['totalCost'] + $data['inventoryValue'])
-        );
+        // 🔥 Hao hụt THEO KHOẢNG THỜI GIAN (FIX LOGIC)
+        $data['inventoryLoss'] = DB::table('stock_imports')
+        ->whereNotNull('expired_at')
+        ->whereBetween('expired_at', [$range['from'], $range['to']])
+            ->sum(DB::raw('expired_quantity * cost_price'));
+
         /*
     =====================================
-    TRẢ VIEW
+    PROFIT
+    =====================================
+    */
+
+        // ✅ Lợi nhuận bán hàng (KHÔNG tính hao hụt)
+        $data['saleProfit'] =
+        $data['revenue'] - $data['totalCost'];
+
+        // ✅ Lợi nhuận thực (CÓ hao hụt)
+        $data['realProfit'] =
+        $data['revenue']
+        - $data['totalCost']
+        - $data['shippingPaidTotal']
+        - $data['inventoryLoss'];
+
+        // 🔥 GÁN PROFIT (QUAN TRỌNG: phải sau khi tính)
+        $data['profit'] = $data['realProfit'];
+
+        // 🔥 Margin
+        $data['margin'] = $data['revenue'] > 0
+        ? ($data['profit'] / $data['revenue']) * 100
+            : 0;
+
+        /*
+    =====================================
+    VIEW
     =====================================
     */
 
@@ -434,11 +442,11 @@ END
     =====================================
     */
 
-        $inventory = DB::table('product_variants')
+        $inventory = DB::table('stock_imports')
         ->selectRaw('
-            SUM(stock_quantity) as total_qty,
-            SUM(stock_quantity * cost_price) as total_value
-        ')
+        SUM(remaining_quantity) as total_qty,
+        SUM(remaining_quantity * cost_price) as total_value
+    ')
         ->first();
 
         $lowStock = DB::table('product_variants as pv')
@@ -448,7 +456,20 @@ END
         ->orderBy('pv.stock_quantity')
         ->limit(5)
             ->get();
-
+        // ================== BOM HÀNG ==================
+        $cancelList = DB::table('orders')
+        ->join('users', 'users.id', '=', 'orders.user_id')
+        ->where('orders.status', Order::STATUS_CANCELLED)
+        ->whereBetween('orders.created_at', [$from, $to])
+        ->select(
+            'orders.id',
+            'users.name as customer_name',
+            'orders.total',
+            'orders.created_at'
+        )
+        ->orderByDesc('orders.created_at')
+        ->limit(5)
+        ->get();
         return [
             'from' => $range['from_date'],
             'to' => $range['to_date'],
@@ -472,8 +493,10 @@ END
             'mostViewed' => $mostViewed,
 
             'inventory' => $inventory,
-            'lowStock' => $lowStock
+            'lowStock' => $lowStock,
+            'cancelList' => $cancelList
         ];
+
     }
 
     /*
@@ -663,5 +686,35 @@ END
 
         return back()->with('success', 'Đã thanh toán tiền ship');
     }
-    
+    public function cancelOrders(Request $request)
+    {
+        $range = $this->getDateRange($request);
+        $keyword = $request->keyword;
+
+        $query = DB::table('orders')
+        ->join('users', 'users.id', '=', 'orders.user_id')
+        ->where('orders.status', Order::STATUS_CANCELLED)
+            ->whereBetween('orders.created_at', [$range['from'], $range['to']])
+            ->select(
+                'orders.id',
+                'users.name as customer_name',
+                'orders.total',
+                'orders.created_at'
+            )
+            ->orderByDesc('orders.created_at');
+
+        // tìm kiếm theo tên khách
+        if ($keyword) {
+            $query->where('users.name', 'like', "%{$keyword}%");
+        }
+
+        $orders = $query->paginate(20)->withQueryString();
+
+        return view('admin.reports.cancel_orders', [
+            'orders' => $orders,
+            'from' => $range['from_date'],
+            'to' => $range['to_date'],
+            'keyword' => $keyword
+        ]);
+    }
 }

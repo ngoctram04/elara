@@ -442,67 +442,117 @@ Doanh thu theo ngày
 
 </div>
 
-
-
 {{-- LOW STOCK --}}
-<div class="card border-0 shadow-sm">
+<div class="row">
 
+{{-- SẮP HẾT HÀNG --}}
+<div class="col-md-6">
+<div class="card border-0 shadow-sm">
 <div class="card-body">
 
 <div class="d-flex justify-content-between mb-2">
-
 <h6 class="fw-semibold mb-0">
 Sắp hết hàng
 </h6>
 
 <a href="{{ route('admin.reports.lowStock') }}"
 class="small">
-
 Xem tất cả
+</a>
+</div>
 
+<table class="table table-sm align-middle mb-0">
+
+@forelse($lowStock as $item)
+<tr>
+<td>{{ $item->name }}</td>
+<td>{{ $item->attribute_value }}</td>
+<td class="text-danger text-center fw-semibold">
+{{ $item->stock_quantity }}
+</td>
+</tr>
+@empty
+<tr>
+<td class="text-center text-muted py-3">
+Không có dữ liệu
+</td>
+</tr>
+@endforelse
+
+</table>
+
+</div>
+</div>
+</div>
+
+
+
+{{-- BOM HÀNG --}}
+<div class="col-md-6">
+<div class="card border-0 shadow-sm">
+<div class="card-body">
+
+<div class="d-flex justify-content-between mb-2">
+
+<h6 class="fw-semibold mb-0 text-danger">
+Bom hàng (đơn huỷ)
+</h6>
+
+<a href="{{ route('admin.orders.index', ['status' => 4]) }}"
+class="small">
+Xem tất cả
 </a>
 
 </div>
 
 <table class="table table-sm align-middle mb-0">
 
-@forelse($lowStock as $item)
+<thead>
+<tr>
+<th>#</th>
+<th>Khách</th>
+<th class="text-center">Tiền</th>
+<th class="text-end">Ngày</th>
+</tr>
+</thead>
 
+<tbody>
+
+@forelse($cancelList as $order)
 <tr>
 
-<td>{{ $item->name }}</td>
+<td>#{{ $order->id }}</td>
 
-<td>{{ $item->attribute_value }}</td>
+<td>
+{{ $order->customer_name ?? '---' }}
+</td>
 
-<td class="text-danger text-center fw-semibold">
-{{ $item->stock_quantity }}
+<td class="text-danger text-center">
+{{ number_format($order->total) }} đ
+</td>
+
+<td class="text-muted text-end">
+{{ \Carbon\Carbon::parse($order->created_at)->format('d/m/Y') }}
 </td>
 
 </tr>
-
 @empty
-
 <tr>
-<td class="text-center text-muted py-3">
+<td colspan="4" class="text-center text-muted py-3">
 Không có dữ liệu
 </td>
 </tr>
-
 @endforelse
+
+</tbody>
 
 </table>
 
 </div>
-
-</div>
-
-
-
 </div>
 </div>
 
-
-
+</div>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>

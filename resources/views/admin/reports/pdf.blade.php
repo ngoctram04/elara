@@ -318,6 +318,68 @@ $margin = $revenue > 0 ? ($profit / $revenue) * 100 : 0;
 </table>
 
 </div>
+{{-- ================= BOM HÀNG ================= --}}
+<div class="section">
 
+<h4>Bom hàng (đơn huỷ)</h4>
+
+@php
+$totalCancelAmount = collect($cancelList)->sum('total');
+@endphp
+
+<table>
+<tr>
+<th>Số đơn huỷ</th>
+<th>Tổng tiền bị bom</th>
+</tr>
+
+<tr>
+<td class="text-center">{{ count($cancelList) }}</td>
+<td class="text-right text-danger">
+{{ number_format($totalCancelAmount) }} đ
+</td>
+</tr>
+</table>
+
+
+<table>
+<tr>
+<th>Mã đơn hàng</th>
+<th>Khách</th>
+<th>Giá trị đơn</th>
+<th>Ngày</th>
+</tr>
+
+@forelse($cancelList as $order)
+
+<tr>
+<td class="text-center">#{{ $order->id }}</td>
+
+<td>
+{{ $order->customer_name ?? '---' }}
+</td>
+
+<td class="text-right text-danger">
+{{ number_format($order->total) }} đ
+</td>
+
+<td class="text-center">
+{{ \Carbon\Carbon::parse($order->created_at)->format('d/m/Y') }}
+</td>
+</tr>
+
+@empty
+
+<tr>
+<td colspan="4" class="text-center">
+Không có dữ liệu
+</td>
+</tr>
+
+@endforelse
+
+</table>
+
+</div>
 </body>
 </html>
