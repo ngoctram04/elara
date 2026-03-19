@@ -118,118 +118,127 @@ class="btn btn-outline-secondary btn-sm">
 <table class="table table-hover align-middle mb-0">
 
 <thead class="table-light">
-
 <tr>
-
-
-<th>
-Sản phẩm
-</th>
-
-<th>
-Biến thể
-</th>
-
-<th style="width:150px" class="text-center">
-Loại
-</th>
-
-<th style="width:120px" class="text-center">
-Thay đổi
-</th>
-
-<th style="width:120px" class="text-center">
-Tồn trước
-</th>
-
-<th style="width:120px" class="text-center">
-Tồn sau
-</th>
-
-<th style="width:180px" class="text-center">
-Thời gian
-</th>
-
+    <th>Sản phẩm</th>
+    <th>Biến thể</th>
+    <th class="text-center" style="width:150px">Loại</th>
+    <th class="text-center" style="width:120px">Thay đổi</th>
+    <th class="text-center" style="width:120px">Tồn trước</th>
+    <th class="text-center" style="width:120px">Tồn sau</th>
+    <th class="text-center" style="width:180px">Thời gian</th>
 </tr>
-
 </thead>
 
 <tbody>
 
-@forelse($logs as $index => $log)
+@forelse($logs as $log)
 
 <tr>
 
-
-
-<td class="fw-medium">
-{{ $log->variant->product->name ?? '-' }}
-</td>
-
+{{-- 🔥 SẢN PHẨM + ẢNH + MÃ --}}
 <td>
-{{ $log->variant->attribute_value ?? '-' }}
+    <div class="d-flex align-items-center gap-2">
+
+        @php
+            $img = $log->variant->images->first()->image_path ?? null;
+        @endphp
+
+        {{-- ẢNH --}}
+        @if($img)
+            <img src="{{ asset('storage/'.$img) }}"
+                 width="45"
+                 height="45"
+                 class="rounded border"
+                 style="object-fit:cover">
+        @else
+            <div class="bg-light border rounded d-flex align-items-center justify-content-center"
+                 style="width:45px;height:45px;">
+                <i class="bi bi-image text-muted"></i>
+            </div>
+        @endif
+
+        {{-- TÊN + MÃ --}}
+        <div>
+            <div class="fw-medium">
+                {{ $log->variant->product->name ?? '-' }}
+            </div>
+            <small class="text-muted">
+                #{{ $log->variant->product->id ?? '-' }}
+            </small>
+        </div>
+
+    </div>
 </td>
 
-<td class="text-center">
+{{-- BIẾN THỂ --}}
+<td>
+    {{ $log->variant->attribute_value ?? '-' }}
+</td>
 
+{{-- LOẠI --}}
+<td class="text-center">
 @switch($log->type)
 
-@case('import') <span class="badge bg-success"> <i class="bi bi-box-arrow-in-down me-1"></i>
-Nhập kho </span>
+@case('import')
+<span class="badge bg-success">
+    <i class="bi bi-box-arrow-in-down me-1"></i> Nhập kho
+</span>
 @break
 
-@case('order') <span class="badge bg-primary"> <i class="bi bi-cart-check me-1"></i>
-Bán hàng </span>
+@case('order')
+<span class="badge bg-primary">
+    <i class="bi bi-cart-check me-1"></i> Bán hàng
+</span>
 @break
 
-@case('cancel') <span class="badge bg-warning text-dark"> <i class="bi bi-arrow-counterclockwise me-1"></i>
-Hoàn kho </span>
+@case('cancel')
+<span class="badge bg-warning text-dark">
+    <i class="bi bi-arrow-counterclockwise me-1"></i> Hoàn kho
+</span>
 @break
 
-@case('adjust') <span class="badge bg-info text-dark"> <i class="bi bi-tools me-1"></i>
-Điều chỉnh </span>
+@case('adjust')
+<span class="badge bg-info text-dark">
+    <i class="bi bi-tools me-1"></i> Điều chỉnh
+</span>
 @break
+
 @case('expired_destroy')
 <span class="badge bg-danger">
-    <i class="bi bi-trash me-1"></i>
-    Huỷ cận date
+    <i class="bi bi-trash me-1"></i> Huỷ cận date
 </span>
 @break
-@default <span class="badge bg-secondary">
-{{ $log->type }} </span>
+
+@default
+<span class="badge bg-secondary">
+    {{ $log->type }}
+</span>
 
 @endswitch
-
 </td>
 
+{{-- THAY ĐỔI --}}
 <td class="text-center fw-bold">
-
-@if($log->quantity_change > 0)
-
-<span class="text-success">
-+{{ $log->quantity_change }}
-</span>
-
-@else
-
-<span class="text-danger">
-{{ $log->quantity_change }}
-</span>
-
-@endif
-
+    @if($log->quantity_change > 0)
+        <span class="text-success">+{{ $log->quantity_change }}</span>
+    @else
+        <span class="text-danger">{{ $log->quantity_change }}</span>
+    @endif
 </td>
 
+{{-- TỒN TRƯỚC --}}
 <td class="text-center text-muted">
-{{ $log->stock_before }}
+    {{ $log->stock_before }}
 </td>
 
+{{-- TỒN SAU --}}
 <td class="text-center fw-semibold">
-{{ $log->stock_after }}
+    {{ $log->stock_after }}
 </td>
 
+{{-- THỜI GIAN --}}
 <td class="text-center text-muted small">
-{{ optional($log->created_at)->format('d/m/Y H:i') }}
+    {{ optional($log->created_at)->format('d/m/Y H:i') }}
 </td>
 
 </tr>
@@ -237,15 +246,10 @@ Hoàn kho </span>
 @empty
 
 <tr>
-
-<td colspan="8"
-class="text-center text-muted py-4">
-
-<i class="bi bi-inbox me-1"></i>
-Không có lịch sử tồn kho
-
+<td colspan="7" class="text-center text-muted py-4">
+    <i class="bi bi-inbox me-1"></i>
+    Không có lịch sử tồn kho
 </td>
-
 </tr>
 
 @endforelse

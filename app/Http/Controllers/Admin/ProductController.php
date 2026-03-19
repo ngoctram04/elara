@@ -230,6 +230,7 @@ class ProductController extends Controller
                 'category_id' => $data['category_id'],
                 'brand_id'    => $data['brand_id'],
                 'description' => $data['description'] ?? null,
+                'is_featured' => $request->boolean('is_featured'),
             ]);
 
             /* ==================================================

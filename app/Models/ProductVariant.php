@@ -205,7 +205,19 @@ class ProductVariant extends Model
     {
         return DB::transaction(function () use ($quantity) {
 
-            $batches = StockImport::where('variant_id', $this->id)
+            // 🔒 Reload + lock row variant (tránh race condition)
+            $variant = self::where('id', $this->id)->lockForUpdate()->first();
+
+            // ❗ CHẶN BÁN KHI KHÔNG ĐỦ HÀNG
+            if ($variant->stock_quantity < $quantity) {
+                throw new \Exception('Không đủ hàng trong kho');
+            }
+
+            // ✅ TỒN TRƯỚC
+            $before = $variant->stock_quantity;
+
+            // 🔍 Lấy batch theo FEFO
+            $batches = StockImport::where('variant_id', $variant->id)
                 ->where('remaining_quantity', '>', 0)
                 ->orderBy('expiry_date', 'asc')
                 ->lockForUpdate()
@@ -221,20 +233,9 @@ class ProductVariant extends Model
 
                 $take = min($remaining, $batch->remaining_quantity);
 
-                // Trừ tồn trong batch
+                // ➖ Trừ tồn batch
                 $batch->remaining_quantity -= $take;
                 $batch->save();
-
-                // Log theo batch (KHÔNG dùng stock_quantity trong loop)
-                \App\Models\InventoryLog::create([
-                    'variant_id'      => $this->id,
-                    'type'            => 'order',
-                    'quantity_change' => -$take,
-                    'stock_before'    => 0, // optional
-                    'stock_after'     => 0,
-                    'reference_type'  => 'batch',
-                    'reference_id'    => $batch->id,
-                ]);
 
                 $usedBatches[] = [
                     'batch_id'   => $batch->id,
@@ -246,12 +247,28 @@ class ProductVariant extends Model
                 $remaining -= $take;
             }
 
+            // ❌ Không đủ hàng theo lô
             if ($remaining > 0) {
                 throw new \Exception('Không đủ tồn kho theo lô');
             }
 
-            // ✅ QUAN TRỌNG: sync lại tổng tồn + trạng thái
-            $this->syncStockAndStatus();
+            // ✅ Sync lại tồn tổng (QUAN TRỌNG)
+            $variant->syncStockAndStatus();
+
+            // 🔄 Reload lại sau khi sync
+            $variant->refresh();
+
+            // ✅ TỒN SAU
+            $after = $variant->stock_quantity;
+
+            // 📝 LOG 1 LẦN DUY NHẤT (ĐÚNG CHUẨN)
+            \App\Models\InventoryLog::create([
+                'variant_id'      => $variant->id,
+                'type'            => 'order',
+                'quantity_change' => -$quantity,
+                'stock_before'    => $before,
+                'stock_after'     => $after,
+            ]);
 
             return [
                 'batches'    => $usedBatches,

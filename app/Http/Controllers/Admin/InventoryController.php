@@ -17,27 +17,75 @@ class InventoryController extends Controller
     */
     public function logs(Request $request)
     {
-        $query = InventoryLog::with('variant.product');
+        $baseQuery = InventoryLog::query();
 
+        // =========================
+        // 🔍 SEARCH (Tên + ID + #ID)
+        // =========================
         if ($request->filled('keyword')) {
-            $query->whereHas('variant.product', function ($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->keyword . '%');
+            $keyword = trim($request->keyword);
+
+            $baseQuery->where(function ($query) use ($keyword) {
+
+                // 👉 search dạng #15
+                if (str_starts_with($keyword, '#')) {
+                    $id = substr($keyword, 1);
+
+                    if (is_numeric($id)) {
+                        $query->whereHas('variant.product', function ($q) use ($id) {
+                            $q->where('id', (int)$id);
+                        });
+                    }
+                } else {
+                    $query->whereHas('variant.product', function ($q) use ($keyword) {
+                        $q->where('name', 'like', "%{$keyword}%");
+
+                        // 👉 search theo ID
+                        if (is_numeric($keyword)) {
+                            $q->orWhere('id', (int)$keyword);
+                        }
+                    });
+                }
             });
         }
 
+        // =========================
+        // 🎯 FILTER TYPE
+        // =========================
         if ($request->filled('type')) {
-            $query->where('type', $request->type);
+            $baseQuery->where('type', $request->type);
         }
 
+        // =========================
+        // 📅 FILTER DATE
+        // =========================
         if ($request->filled('from')) {
-            $query->whereDate('created_at', '>=', $request->from);
+            $baseQuery->whereDate('created_at', '>=', $request->from);
         }
 
         if ($request->filled('to')) {
-            $query->whereDate('created_at', '<=', $request->to);
+            $baseQuery->whereDate('created_at', '<=', $request->to);
         }
 
-        $logs = $query->latest()->paginate(10)->withQueryString();
+        // =========================
+        // 🔥 ANTI TRÙNG (lấy log mới nhất)
+        // =========================
+        $latestIds = $baseQuery
+            ->selectRaw('MAX(id) as id')
+            ->groupBy('variant_id', 'type')
+            ->pluck('id');
+
+        // =========================
+        // 📦 LOAD DATA
+        // =========================
+        $logs = InventoryLog::with([
+            'variant.product:id,name',
+            'variant.images:id,variant_id,image_path'
+        ])
+        ->whereIn('id', $latestIds)
+        ->latest()
+            ->paginate(10)
+            ->withQueryString();
 
         return view('admin.inventory.logs', compact('logs'));
     }

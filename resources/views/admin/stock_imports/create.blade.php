@@ -408,18 +408,18 @@ document.addEventListener('input',function(e){
 // ======================
 // REMOVE ROW
 // ======================
-document.addEventListener('click',function(e){
+document.addEventListener('click', function(e){
 
-    if(e.target.closest('.removeRow')){
+    let btn = e.target.closest('.removeRow');
+    if(!btn) return;
 
-        let rows = document.querySelectorAll('#importTable tbody tr');
+    let row = btn.closest('tr');
+    let tbody = document.querySelector('#importTable tbody');
 
-        if(rows.length > 1){
-            e.target.closest('tr').remove();
-            calculateTotal();
-            checkDuplicateVariant(); // 🔥 cập nhật lại
-        }
-
+    if(tbody.querySelectorAll('tr').length > 1){
+        row.remove();
+        calculateTotal();
+        checkDuplicateVariant();
     }
 
 });

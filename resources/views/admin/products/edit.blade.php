@@ -56,11 +56,13 @@
     </div>
 
     <div class="form-check mb-3">
-        <input type="checkbox"
-               class="form-check-input"
-               name="is_featured"
-               value="1"
-               {{ $product->is_featured ? 'checked' : '' }}>
+       <input type="hidden" name="is_featured" value="0">
+
+<input type="checkbox"
+       class="form-check-input"
+       name="is_featured"
+       value="1"
+       {{ $product->is_featured ? 'checked' : '' }}>
         <label class="form-check-label">Sản phẩm nổi bật</label>
     </div>
 
