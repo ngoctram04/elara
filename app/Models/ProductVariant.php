@@ -280,4 +280,42 @@ class ProductVariant extends Model
     {
         return $this->hasMany(StockImport::class, 'variant_id');
     }
+    public function restoreStock(int $quantity): void
+    {
+        DB::transaction(function () use ($quantity) {
+
+            // 🔒 lock variant
+            $variant = self::where('id', $this->id)->lockForUpdate()->first();
+
+            // ✅ TỒN TRƯỚC (LUÔN LẤY TỔNG)
+            $before = $variant->stock_quantity;
+
+            // =====================================================
+            // ⚠️ KHÔNG HOÀN THEO LÔ (để tránh sai mapping)
+            // =====================================================
+            // 👉 chỉ cộng tổng
+            $variant->stock_quantity += $quantity;
+            $variant->save();
+
+            // =====================================================
+            // 🔄 (OPTION) nếu bạn muốn vẫn sync lại từ lô
+            // thì bỏ dòng trên và dùng:
+            // $variant->syncStockAndStatus();
+            // =====================================================
+
+            // ✅ reload
+            $variant->refresh();
+
+            $after = $variant->stock_quantity;
+
+            // 📝 LOG CHUẨN (THEO TỔNG)
+            \App\Models\InventoryLog::create([
+                'variant_id'      => $variant->id,
+                'type'            => 'cancel',
+                'quantity_change' => $quantity,
+                'stock_before'    => $before,
+                'stock_after'     => $after,
+            ]);
+        });
+    }
 }

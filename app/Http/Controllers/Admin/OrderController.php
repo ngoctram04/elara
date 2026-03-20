@@ -367,7 +367,7 @@ class OrderController extends Controller
             'cancel_reason' => 'required|string|max:500'
         ]);
 
-        $order = Order::findOrFail($id);
+        $order = Order::with('items.batches')->findOrFail($id);
 
         // Chỉ huỷ khi đang xử lý
         if ($order->status != Order::STATUS_PENDING) {
@@ -385,54 +385,64 @@ class OrderController extends Controller
                 'cancelled_by_user_id' => Auth::id(),
                 'cancelled_at' => now()
             ]);
-            $order->load('items.batches');
 
             foreach ($order->items as $item) {
 
+                // 🔒 lock variant
+                $variant = \App\Models\ProductVariant::where('id', $item->variant_id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$variant) continue;
+
+                // ✅ TỒN TRƯỚC (REALTIME từ batch)
+                $before = \App\Models\StockImport::where('variant_id', $item->variant_id)
+                    ->sum('remaining_quantity');
+
+                $change = 0;
+
                 foreach ($item->batches as $batch) {
 
-                    // ❌ tránh rollback 2 lần
                     if ($batch->is_rolled_back) continue;
 
                     $stock = \App\Models\StockImport::find($batch->stock_import_id);
-
                     if (!$stock) continue;
 
-                    $before = $stock->remaining_quantity;
-
-                    // ✅ hoàn lại lô
+                    // ✅ hoàn theo lô
                     $stock->increment('remaining_quantity', $batch->quantity);
 
-                    // ✅ đánh dấu rollback
                     $batch->update([
                         'is_rolled_back' => 1
                     ]);
 
-                    // ✅ log (nếu bạn dùng log)
-                    \App\Models\InventoryLog::create([
-                        'variant_id' => $item->variant_id,
-                        'type' => 'cancel',
-                        'quantity_change' => $batch->quantity,
-                        'stock_before' => $before,
-                        'stock_after' => $before + $batch->quantity,
-                        'reference_type' => 'order',
-                        'reference_id' => $order->id
-                    ]);
+                    // ✅ cộng change
+                    $change += $batch->quantity;
                 }
 
-                // 🔥 SYNC lại tồn variant (QUAN TRỌNG)
-                $total = \App\Models\StockImport::where('variant_id', $item->variant_id)
-                ->sum('remaining_quantity');
+                // ✅ TỒN SAU (REALTIME)
+                $after = \App\Models\StockImport::where('variant_id', $item->variant_id)
+                    ->sum('remaining_quantity');
 
-                \App\Models\ProductVariant::where('id', $item->variant_id)
-                ->update([
-                    'stock_quantity' => $total
+                // 🔄 sync lại variant
+                $variant->update([
+                    'stock_quantity' => $after
+                ]);
+
+                // ✅ LOG CHUẨN
+                \App\Models\InventoryLog::create([
+                    'variant_id' => $variant->id,
+                    'type' => 'cancel',
+                    'quantity_change' => $change,
+                    'stock_before' => $before,
+                    'stock_after' => $after,
+                    'reference_type' => 'order',
+                    'reference_id' => $order->id
                 ]);
             }
 
             DB::commit();
 
-            // 🔔 GỬI THÔNG BÁO CHO USER
+            // 🔔 notify user
             if ($order->user) {
                 $order->user->notify(new SystemNotification([
                     'title' => 'Đơn hàng bị huỷ',

@@ -981,53 +981,62 @@ class CheckoutController extends Controller
 
             /*
         =================================================
-        🔥 ROLLBACK THEO BATCH (FEFO CHUẨN)
+        🔥 ROLLBACK THEO BATCH + LOG CHUẨN
         =================================================
         */
 
             foreach ($order->items as $item) {
 
+                // 🔒 lock variant
+                $variant = \App\Models\ProductVariant::where('id', $item->variant_id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$variant) continue;
+
+                // ✅ LẤY TỒN TRƯỚC REALTIME (QUAN TRỌNG)
+                $before = \App\Models\StockImport::where('variant_id', $item->variant_id)
+                    ->sum('remaining_quantity');
+
+                $change = 0;
+
                 foreach ($item->batches as $batch) {
 
-                    // ❌ tránh rollback 2 lần
                     if ($batch->is_rolled_back) continue;
 
                     $stock = \App\Models\StockImport::find($batch->stock_import_id);
-
                     if (!$stock) continue;
 
-                    $before = $stock->remaining_quantity;
-
-                    // ✅ hoàn lại lô
+                    // ✅ hoàn lại đúng lô
                     $stock->increment('remaining_quantity', $batch->quantity);
 
-                    // ✅ đánh dấu đã rollback
                     $batch->update([
                         'is_rolled_back' => 1
                     ]);
 
-                    // ✅ log kho
-                    \App\Models\InventoryLog::create([
-                        'variant_id' => $item->variant_id,
-                        'type' => 'cancel',
-                        'quantity_change' => $batch->quantity,
-                        'stock_before' => $before,
-                        'stock_after' => $before + $batch->quantity,
-                        'reference_type' => 'order',
-                        'reference_id' => $order->id
-                    ]);
+                    // ✅ cộng change
+                    $change += $batch->quantity;
                 }
 
-                // =================================================
-                // ✅ SYNC LẠI TỒN VARIANT (CỰC QUAN TRỌNG)
-                // =================================================
-                $total = \App\Models\StockImport::where('variant_id', $item->variant_id)
+                // ✅ LẤY TỒN SAU REALTIME
+                $after = \App\Models\StockImport::where('variant_id', $item->variant_id)
                     ->sum('remaining_quantity');
 
-                \App\Models\ProductVariant::where('id', $item->variant_id)
-                    ->update([
-                        'stock_quantity' => $total
-                    ]);
+                // 🔄 update lại variant
+                $variant->update([
+                    'stock_quantity' => $after
+                ]);
+
+                // ✅ LOG CHUẨN
+                \App\Models\InventoryLog::create([
+                    'variant_id' => $variant->id,
+                    'type' => 'cancel',
+                    'quantity_change' => $change,
+                    'stock_before' => $before,
+                    'stock_after' => $after,
+                    'reference_type' => 'order',
+                    'reference_id' => $order->id
+                ]);
             }
 
             DB::commit();

@@ -97,7 +97,6 @@ class OrderController extends Controller
 
     public function cancel(Request $request, $id)
     {
-        // 🔥 LOAD đầy đủ items + batches + variant
         $order = Order::with('items.batches', 'items.variant')
         ->where('id', $id)
             ->where('user_id', Auth::id())
@@ -134,50 +133,61 @@ class OrderController extends Controller
             ]);
 
             // =========================
-            // 2. 🔥 ROLLBACK THEO BATCH (QUAN TRỌNG NHẤT)
+            // 2. 🔥 ROLLBACK THEO BATCH
             // =========================
             foreach ($order->items as $item) {
 
+                // 🔒 lock variant
+                $variant = \App\Models\ProductVariant::where('id', $item->variant_id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$variant) continue;
+
+                // 🔥 LẤY TỒN TRƯỚC REALTIME (QUAN TRỌNG NHẤT)
+                $before = \App\Models\StockImport::where('variant_id', $item->variant_id)
+                    ->sum('remaining_quantity');
+
+                $change = 0;
+
                 foreach ($item->batches as $batch) {
 
-                    // ❌ tránh rollback 2 lần
                     if ($batch->is_rolled_back) continue;
 
                     $stock = \App\Models\StockImport::find($batch->stock_import_id);
                     if (!$stock) continue;
 
-                    $before = $stock->remaining_quantity;
-
-                    // ✅ hoàn đúng lô
+                    // ✅ hoàn theo lô
                     $stock->increment('remaining_quantity', $batch->quantity);
 
-                    // ✅ đánh dấu rollback
                     $batch->update([
                         'is_rolled_back' => 1
                     ]);
 
-                    // ✅ log kho
-                    \App\Models\InventoryLog::create([
-                        'variant_id' => $item->variant_id,
-                        'type' => 'cancel',
-                        'quantity_change' => $batch->quantity,
-                        'stock_before' => $before,
-                        'stock_after' => $before + $batch->quantity,
-                        'reference_type' => 'order',
-                        'reference_id' => $order->id
-                    ]);
+                    $change += $batch->quantity;
                 }
 
-                // =========================
-                // 3. 🔥 SYNC LẠI TỒN VARIANT
-                // =========================
-                $total = \App\Models\StockImport::where('variant_id', $item->variant_id)
+                // 🔥 LẤY TỒN SAU REALTIME
+                $after = \App\Models\StockImport::where('variant_id', $item->variant_id)
                     ->sum('remaining_quantity');
 
-                \App\Models\ProductVariant::where('id', $item->variant_id)
-                    ->update([
-                        'stock_quantity' => $total
-                    ]);
+                // 🔄 sync lại variant
+                $variant->update([
+                    'stock_quantity' => $after
+                ]);
+
+                // =========================
+                // 3. 📝 LOG CHUẨN 100%
+                // =========================
+                \App\Models\InventoryLog::create([
+                    'variant_id' => $variant->id,
+                    'type' => 'cancel',
+                    'quantity_change' => $change,
+                    'stock_before' => $before,
+                    'stock_after' => $after,
+                    'reference_type' => 'order',
+                    'reference_id' => $order->id
+                ]);
             }
 
             DB::commit();
@@ -185,8 +195,6 @@ class OrderController extends Controller
             // =========================
             // 4. NOTIFICATION
             // =========================
-
-            // 🔔 USER
             $order->user->notify(new SystemNotification([
                 'title' => 'Bạn đã huỷ đơn',
                 'message' => 'Đơn #' . $order->id . ' đã được huỷ',
@@ -194,7 +202,6 @@ class OrderController extends Controller
                 'type' => 'order_cancelled'
             ]));
 
-            // 🔔 ADMIN
             User::where('role', 'admin')->get()
                 ->each(function ($admin) use ($order) {
                     $admin->notify(new SystemNotification([

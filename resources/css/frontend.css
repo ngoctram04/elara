@@ -1148,3 +1148,10 @@ VOICE POPUP
     background: #ddd;
     border-radius: 10px;
 }
+.modal {
+    z-index: 100000 !important;
+}
+
+.modal-backdrop {
+    z-index: 99990 !important;
+}
