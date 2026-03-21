@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use App\Models\Order;
+
 class ReportController extends Controller
 {
 
@@ -54,7 +55,7 @@ class ReportController extends Controller
         );
 
         $data['shippingProfit'] =
-        $data['shippingCollected'] - $data['shippingPaid'];
+            $data['shippingCollected'] - $data['shippingPaid'];
 
         /*
     =====================================
@@ -67,8 +68,8 @@ class ReportController extends Controller
         $data['cancelRate'] = $data['cancelRate'] ?? 0;
 
         $data['averageOrder'] = $data['totalOrders'] > 0
-        ? $data['revenue'] / $data['totalOrders']
-        : 0;
+            ? $data['revenue'] / $data['totalOrders']
+            : 0;
 
         /*
     =====================================
@@ -81,12 +82,12 @@ class ReportController extends Controller
 
         // 🔥 Tổng vốn nhập (FIX FIELD)
         $data['totalImport'] = DB::table('stock_imports')
-        ->sum(DB::raw('imported_quantity * cost_price'));
+            ->sum(DB::raw('imported_quantity * cost_price'));
 
         // 🔥 Hao hụt THEO KHOẢNG THỜI GIAN (FIX LOGIC)
         $data['inventoryLoss'] = DB::table('stock_imports')
-        ->whereNotNull('expired_at')
-        ->whereBetween('expired_at', [$range['from'], $range['to']])
+            ->whereNotNull('expired_at')
+            ->whereBetween('expired_at', [$range['from'], $range['to']])
             ->sum(DB::raw('expired_quantity * cost_price'));
 
         /*
@@ -97,21 +98,21 @@ class ReportController extends Controller
 
         // ✅ Lợi nhuận bán hàng (KHÔNG tính hao hụt)
         $data['saleProfit'] =
-        $data['revenue'] - $data['totalCost'];
+            $data['revenue'] - $data['totalCost'];
 
         // ✅ Lợi nhuận thực (CÓ hao hụt)
         $data['realProfit'] =
-        $data['revenue']
-        - $data['totalCost']
-        - $data['shippingPaidTotal']
-        - $data['inventoryLoss'];
+            $data['revenue']
+            - $data['totalCost']
+            - $data['shippingPaidTotal']
+            - $data['inventoryLoss'];
 
         // 🔥 GÁN PROFIT (QUAN TRỌNG: phải sau khi tính)
         $data['profit'] = $data['realProfit'];
 
         // 🔥 Margin
         $data['margin'] = $data['revenue'] > 0
-        ? ($data['profit'] / $data['revenue']) * 100
+            ? ($data['profit'] / $data['revenue']) * 100
             : 0;
 
         /*
@@ -158,39 +159,39 @@ class ReportController extends Controller
 
         // Doanh thu khách trả (tiền sản phẩm)
         $revenue = DB::table('orders')
-        ->where('status', Order::STATUS_COMPLETED)
-        ->where('payment_status', '!=', Order::PAYMENT_REFUNDED)
-        ->whereBetween('created_at', [$from, $to])
-        ->sum(DB::raw('total + shipping_fee'));
+            ->where('status', Order::STATUS_COMPLETED)
+            ->where('payment_status', '!=', Order::PAYMENT_REFUNDED)
+            ->whereBetween('delivered_at', [$from, $to])
+            ->sum(DB::raw('total + shipping_fee'));
         // Ship khách trả
         $shippingTotal = DB::table('orders')
-        ->where(function ($q) {
-            $q->whereIn('status', [
-                Order::STATUS_COMPLETED,
-                Order::STATUS_RETURNED
-            ])
-            ->orWhere(function ($sub) {
-                $sub->where('status', Order::STATUS_CANCELLED)
-                ->whereNotNull('delivered_at');
-            });
-        })
-        ->whereBetween('created_at', [$from, $to])
-        ->sum(DB::raw('COALESCE(shipping_fee,0)'));
+            ->where(function ($q) {
+                $q->whereIn('status', [
+                    Order::STATUS_COMPLETED,
+                    Order::STATUS_RETURNED
+                ])
+                    ->orWhere(function ($sub) {
+                        $sub->where('status', Order::STATUS_CANCELLED)
+                            ->whereNotNull('delivered_at');
+                    });
+            })
+            ->whereBetween('delivered_at', [$from, $to])
+            ->sum(DB::raw('COALESCE(shipping_fee,0)'));
 
         // Ship thực tế phải trả cho đơn vị vận chuyển
         $shippingCostTotal = DB::table('orders')
-        ->where(function ($q) {
-            $q->whereIn('status', [
-                Order::STATUS_COMPLETED,
-                Order::STATUS_RETURNED
-            ])
-            ->orWhere(function ($sub) {
-                $sub->where('status', Order::STATUS_CANCELLED)
-                    ->whereNotNull('delivered_at');
-            });
-        })
-        ->whereBetween('created_at', [$from, $to])
-        ->sum(DB::raw('
+            ->where(function ($q) {
+                $q->whereIn('status', [
+                    Order::STATUS_COMPLETED,
+                    Order::STATUS_RETURNED
+                ])
+                    ->orWhere(function ($sub) {
+                        $sub->where('status', Order::STATUS_CANCELLED)
+                            ->whereNotNull('delivered_at');
+                    });
+            })
+            ->whereBetween('delivered_at', [$from, $to])
+            ->sum(DB::raw('
 CASE 
 WHEN shipping_cost > 0 THEN shipping_cost
 ELSE shipping_fee
@@ -198,20 +199,21 @@ END
 '));
         // Tổng giảm giá
         $discountTotal = DB::table('orders')
-        ->where('status', Order::STATUS_COMPLETED)
-        ->where('payment_status', '!=', Order::PAYMENT_REFUNDED)
-        ->whereBetween('created_at', [$from, $to])
-        ->sum('discount');
+            ->where('status', Order::STATUS_COMPLETED)
+            ->where('payment_status', '!=', Order::PAYMENT_REFUNDED)
+            ->whereBetween('delivered_at', [$from, $to])
+            ->sum('discount');
 
         // Giá vốn
         $cost = DB::table('order_items as oi')
-        ->join('orders as o', 'o.id', '=', 'oi.order_id')
-        ->where('o.status', Order::STATUS_COMPLETED)
-        ->where('o.payment_status',
-            '!=',
-            Order::PAYMENT_REFUNDED
-        )
-            ->whereBetween('o.created_at', [$from, $to])
+            ->join('orders as o', 'o.id', '=', 'oi.order_id')
+            ->where('o.status', Order::STATUS_COMPLETED)
+            ->where(
+                'o.payment_status',
+                '!=',
+                Order::PAYMENT_REFUNDED
+            )
+            ->whereBetween('o.delivered_at', [$from, $to])
             ->sum(DB::raw('oi.quantity * oi.cost_price'));
 
         /*
@@ -243,18 +245,18 @@ END
     */
 
         $finance = (object)[
-                'revenue' => $revenue,
-                'cost' => $cost,
-                'profit' => $profit,
+            'revenue' => $revenue,
+            'cost' => $cost,
+            'profit' => $profit,
 
-                // ship
-                'shipping_total' => $shippingTotal,
-                'shipping_cost_total' => $shippingCostTotal,
-                'shipping_paid_total' => $shipPaid,
-                'shipping_debt' => $shippingDebt,
+            // ship
+            'shipping_total' => $shippingTotal,
+            'shipping_cost_total' => $shippingCostTotal,
+            'shipping_paid_total' => $shipPaid,
+            'shipping_debt' => $shippingDebt,
 
-                'discount_total' => $discountTotal
-            ];
+            'discount_total' => $discountTotal
+        ];
 
         /*
     =====================================
@@ -268,13 +270,13 @@ END
         $prevTo = (clone $from)->subSecond();
 
         $previousRevenue = DB::table('orders')
-        ->where('status', Order::STATUS_COMPLETED)
-        ->where('payment_status', '!=', Order::PAYMENT_REFUNDED)
-        ->whereBetween('created_at', [$prevFrom, $prevTo])
-        ->sum(DB::raw('total + shipping_fee'));
+            ->where('status', Order::STATUS_COMPLETED)
+            ->where('payment_status', '!=', Order::PAYMENT_REFUNDED)
+            ->whereBetween('delivered_at', [$prevFrom, $prevTo]) // ✅ FIX
+            ->sum(DB::raw('total + shipping_fee'));
 
         $growth = $previousRevenue > 0
-        ? (($revenue - $previousRevenue) / $previousRevenue) * 100
+            ? (($revenue - $previousRevenue) / $previousRevenue) * 100
             : 0;
 
         /*
@@ -284,19 +286,71 @@ END
     */
 
         $orderStats = DB::table('orders')
-        ->whereBetween('created_at', [$from, $to])
         ->selectRaw('
-            COUNT(*) as total,
-            SUM(status = 1) as pending,
-            SUM(status = 2) as shipping,
-            SUM(status = 3) as completed,
-            SUM(status = 4) as cancelled,
-            SUM(status = 5) as returned
-        ')
+    /* Tổng đơn tạo trong khoảng */
+    COUNT(CASE 
+        WHEN created_at BETWEEN ? AND ? 
+        THEN 1 
+    END) as total,
+
+    /* Đang xử lý */
+    SUM(CASE 
+        WHEN status = 1 
+        AND created_at BETWEEN ? AND ? 
+        THEN 1 ELSE 0 END) as pending,
+
+    /* Đang giao */
+    SUM(CASE 
+        WHEN status = 2 
+        AND created_at BETWEEN ? AND ? 
+        THEN 1 ELSE 0 END) as shipping,
+
+    /* Đã giao */
+    SUM(CASE 
+        WHEN status = 3 
+        AND delivered_at BETWEEN ? AND ? 
+        THEN 1 ELSE 0 END) as completed,
+
+    /* ❗ ĐÃ HUỶ → dùng updated_at */
+    SUM(CASE 
+        WHEN status = 4 
+        AND updated_at BETWEEN ? AND ? 
+        THEN 1 ELSE 0 END) as cancelled,
+
+    /* ❗ HOÀN HÀNG → cũng dùng updated_at */
+    SUM(CASE 
+        WHEN status = 5 
+        AND updated_at BETWEEN ? AND ? 
+        THEN 1 ELSE 0 END) as returned
+', [
+            $from,
+            $to,   // total
+            $from,
+            $to,   // pending
+            $from,
+            $to,   // shipping
+            $from,
+            $to,   // completed
+            $from,
+            $to,   // cancelled
+            $from,
+            $to    // returned
+        ])
         ->first();
 
-        $cancelRate = $orderStats->total > 0
-        ? (($orderStats->cancelled + $orderStats->returned) / $orderStats->total) * 100
+        /*
+=====================================
+TỶ LỆ HUỶ CHUẨN
+=====================================
+*/
+
+        $validTotal =
+        ($orderStats->completed ?? 0)
+        + ($orderStats->cancelled ?? 0)
+        + ($orderStats->returned ?? 0);
+
+        $cancelRate = $validTotal > 0
+        ? (($orderStats->cancelled + $orderStats->returned) / $validTotal) * 100
         : 0;
 
         /*
@@ -319,40 +373,44 @@ END
     */
 
         $dailyRevenue = DB::table('orders')
-            ->where('status',
+            ->where(
+                'status',
                 Order::STATUS_COMPLETED
             )
             ->where('payment_status', '!=', Order::PAYMENT_REFUNDED)
-            ->whereBetween('created_at', [$from, $to])
-            ->selectRaw('DATE(created_at) as date, SUM(total + shipping_fee) as revenue')
+            ->whereBetween('delivered_at', [
+                $from,
+                $to
+            ])
+            ->selectRaw('DATE(delivered_at) as date, SUM(total + shipping_fee) as revenue') // ✅ FIX
             ->groupBy('date')
             ->orderBy('date')
             ->get();
         $weeklyRevenue = DB::table('orders')
-        ->where('status', Order::STATUS_COMPLETED)
-        ->where('payment_status', '!=', Order::PAYMENT_REFUNDED)
-        ->whereBetween('created_at', [$from, $to])
-        ->selectRaw('YEARWEEK(created_at) as week, SUM(total + shipping_fee) as revenue')
-        ->groupBy('week')
-        ->orderBy('week')
-        ->get();
+            ->where('status', Order::STATUS_COMPLETED)
+            ->where('payment_status', '!=', Order::PAYMENT_REFUNDED)
+            ->whereBetween('delivered_at', [$from, $to])
+            ->selectRaw('YEARWEEK(delivered_at) as week, SUM(total + shipping_fee) as revenue')
+            ->groupBy('week')
+            ->orderBy('week')
+            ->get();
 
         $monthlyRevenue = DB::table('orders')
-        ->where('status', Order::STATUS_COMPLETED)
-        ->where('payment_status', '!=', Order::PAYMENT_REFUNDED)
-        ->whereBetween('created_at', [$from, $to])
-        ->selectRaw('DATE_FORMAT(created_at,"%Y-%m") as month, SUM(total + shipping_fee) as revenue')
-        ->groupBy('month')
-        ->orderBy('month')
-        ->get();
+            ->where('status', Order::STATUS_COMPLETED)
+            ->where('payment_status', '!=', Order::PAYMENT_REFUNDED)
+            ->whereBetween('delivered_at', [$from, $to])
+            ->selectRaw('DATE_FORMAT(delivered_at,"%Y-%m") as month, SUM(total + shipping_fee) as revenue')
+            ->groupBy('month')
+            ->orderBy('month')
+            ->get();
 
         $yearlyRevenue = DB::table('orders')
-        ->where('status', Order::STATUS_COMPLETED)
-        ->where('payment_status', '!=', Order::PAYMENT_REFUNDED)
-        ->selectRaw('YEAR(created_at) as year, SUM(total + shipping_fee) as revenue')
-        ->groupBy('year')
-        ->orderBy('year')
-        ->get();
+            ->where('status', Order::STATUS_COMPLETED)
+            ->where('payment_status', '!=', Order::PAYMENT_REFUNDED)
+            ->selectRaw('YEAR(delivered_at) as year, SUM(total + shipping_fee) as revenue')
+            ->groupBy('year')
+            ->orderBy('year')
+            ->get();
 
         /*
     =====================================
@@ -366,7 +424,7 @@ END
             ->join('products as p', 'p.id', '=', 'pv.product_id')
             ->where('o.status', 3)
             ->where('o.payment_status', '!=', 3)
-            ->whereBetween('o.created_at', [$from, $to])
+            ->whereBetween('o.delivered_at', [$from, $to])
             ->select(
                 'p.name',
                 DB::raw('SUM(oi.quantity) as total_sold'),
@@ -422,15 +480,15 @@ END
     */
 
         $topCustomers = DB::table('orders')
-        ->join('users', 'users.id', '=', 'orders.user_id')
+            ->join('users', 'users.id', '=', 'orders.user_id')
             ->where('orders.status', Order::STATUS_COMPLETED)
             ->where('orders.payment_status', '!=', Order::PAYMENT_REFUNDED)
-        ->whereBetween('orders.created_at', [$from, $to])
-        ->select(
-            'users.name',
-            DB::raw('COUNT(*) as orders'),
-            DB::raw('SUM(total + shipping_fee) as spending')
-        )
+            ->whereBetween('orders.delivered_at', [$from, $to])
+            ->select(
+                'users.name',
+                DB::raw('COUNT(*) as orders'),
+                DB::raw('SUM(total + shipping_fee) as spending')
+            )
             ->groupBy('users.id', 'users.name')
             ->orderByDesc('spending')
             ->limit(5)
@@ -443,33 +501,33 @@ END
     */
 
         $inventory = DB::table('stock_imports')
-        ->selectRaw('
+            ->selectRaw('
         SUM(remaining_quantity) as total_qty,
         SUM(remaining_quantity * cost_price) as total_value
     ')
-        ->first();
+            ->first();
 
         $lowStock = DB::table('product_variants as pv')
-        ->join('products as p', 'p.id', '=', 'pv.product_id')
-        ->where('pv.stock_quantity', '<=', 5)
-        ->select('p.name', 'pv.attribute_value', 'pv.stock_quantity')
-        ->orderBy('pv.stock_quantity')
-        ->limit(5)
+            ->join('products as p', 'p.id', '=', 'pv.product_id')
+            ->where('pv.stock_quantity', '<=', 5)
+            ->select('p.name', 'pv.attribute_value', 'pv.stock_quantity')
+            ->orderBy('pv.stock_quantity')
+            ->limit(5)
             ->get();
         // ================== BOM HÀNG ==================
         $cancelList = DB::table('orders')
-        ->join('users', 'users.id', '=', 'orders.user_id')
-        ->where('orders.status', Order::STATUS_CANCELLED)
-        ->whereBetween('orders.created_at', [$from, $to])
-        ->select(
-            'orders.id',
-            'users.name as customer_name',
-            'orders.total',
-            'orders.created_at'
-        )
-        ->orderByDesc('orders.created_at')
-        ->limit(5)
-        ->get();
+            ->join('users', 'users.id', '=', 'orders.user_id')
+            ->where('orders.status', Order::STATUS_CANCELLED)
+            ->whereBetween(DB::raw('COALESCE(orders.updated_at, orders.created_at)'), [$from, $to])
+            ->select(
+                'orders.id',
+                'users.name as customer_name',
+                DB::raw('orders.total + COALESCE(orders.shipping_fee,0) as total'), // ✅ đúng
+                DB::raw('COALESCE(orders.updated_at, orders.created_at) as created_at')
+            )
+            ->orderByDesc('orders.created_at')
+            ->limit(5)
+            ->get();
         return [
             'from' => $range['from_date'],
             'to' => $range['to_date'],
@@ -496,7 +554,6 @@ END
             'lowStock' => $lowStock,
             'cancelList' => $cancelList
         ];
-
     }
 
     /*
@@ -514,7 +571,7 @@ END
 
         // Load view PDF
         $pdf = Pdf::loadView('admin.reports.pdf', $data)
-        ->setPaper('a4', 'portrait');
+            ->setPaper('a4', 'portrait');
 
         // Tên file
         $fileName = "bao-cao-{$data['from']}-den-{$data['to']}.pdf";
@@ -527,17 +584,17 @@ END
         $keyword = $request->keyword;
 
         $query = DB::table('order_items as oi')
-        ->join('orders as o', 'o.id', '=', 'oi.order_id')
-        ->join('product_variants as pv', 'pv.id', '=', 'oi.variant_id')
-        ->join('products as p', 'p.id', '=', 'pv.product_id')
+            ->join('orders as o', 'o.id', '=', 'oi.order_id')
+            ->join('product_variants as pv', 'pv.id', '=', 'oi.variant_id')
+            ->join('products as p', 'p.id', '=', 'pv.product_id')
             ->where('o.status', Order::STATUS_COMPLETED)
             ->where('o.payment_status', '!=', Order::PAYMENT_REFUNDED)
-        ->whereBetween('o.created_at', [$range['from'], $range['to']])
-        ->select(
-            'p.name',
-            DB::raw('SUM(oi.quantity) as total_sold'),
-            DB::raw('SUM(oi.quantity * oi.price) as revenue')
-        )
+            ->whereBetween('o.created_at', [$range['from'], $range['to']])
+            ->select(
+                'p.name',
+                DB::raw('SUM(oi.quantity) as total_sold'),
+                DB::raw('SUM(oi.quantity * oi.price) as revenue')
+            )
             ->groupBy('p.id', 'p.name')
             ->orderByDesc('total_sold');
 
@@ -569,7 +626,7 @@ END
             ->select(
                 'users.name',
                 DB::raw('COUNT(*) as orders'),
-            DB::raw('SUM(total + shipping_fee) as spending')
+                DB::raw('SUM(total + shipping_fee) as spending')
             )
             ->groupBy('users.id', 'users.name')
             ->orderByDesc('spending');
@@ -581,11 +638,11 @@ END
         $customers = $query->paginate(20)->withQueryString();
 
         return view('admin.reports.customers', [
-                'customers' => $customers,
-                'from' => $range['from_date'],
-                'to' => $range['to_date'],
-                'keyword' => $keyword
-            ]);
+            'customers' => $customers,
+            'from' => $range['from_date'],
+            'to' => $range['to_date'],
+            'keyword' => $keyword
+        ]);
     }
 
     public function slowProducts(Request $request)
@@ -594,8 +651,8 @@ END
         $days = $request->days;
 
         $query = DB::table('product_variants as pv')
-        ->join('products as p', 'p.id', '=', 'pv.product_id')
-        ->leftJoin('order_items as oi', 'oi.variant_id', '=', 'pv.id')
+            ->join('products as p', 'p.id', '=', 'pv.product_id')
+            ->leftJoin('order_items as oi', 'oi.variant_id', '=', 'pv.id')
             ->select(
                 'p.name',
                 'pv.stock_quantity',
@@ -617,7 +674,7 @@ END
         }
 
         $query->orderByRaw('MAX(oi.created_at) IS NULL DESC')
-        ->orderByRaw('MAX(oi.created_at) ASC');
+            ->orderByRaw('MAX(oi.created_at) ASC');
 
         $products = $query->paginate(20)->withQueryString();
 
@@ -634,8 +691,8 @@ END
         $maxStock = $request->max_stock ?? 100;
 
         $query = DB::table('product_variants as pv')
-        ->join('products as p', 'p.id', '=', 'pv.product_id')
-        ->where('pv.stock_quantity', '<=', $maxStock)
+            ->join('products as p', 'p.id', '=', 'pv.product_id')
+            ->where('pv.stock_quantity', '<=', $maxStock)
             ->select('p.name', 'pv.attribute_value', 'pv.stock_quantity')
             ->orderBy('pv.stock_quantity');
 
@@ -657,11 +714,11 @@ END
         $keyword = $request->keyword;
 
         $query = DB::table('wishlists as w')
-        ->join('products as p', 'p.id', '=', 'w.product_id')
-        ->select(
-            'p.name',
-            DB::raw('COUNT(w.id) as total_wishlist')
-        )
+            ->join('products as p', 'p.id', '=', 'w.product_id')
+            ->select(
+                'p.name',
+                DB::raw('COUNT(w.id) as total_wishlist')
+            )
             ->groupBy('p.id', 'p.name')
             ->orderByDesc('total_wishlist');
 
@@ -692,8 +749,8 @@ END
         $keyword = $request->keyword;
 
         $query = DB::table('orders')
-        ->join('users', 'users.id', '=', 'orders.user_id')
-        ->where('orders.status', Order::STATUS_CANCELLED)
+            ->join('users', 'users.id', '=', 'orders.user_id')
+            ->where('orders.status', Order::STATUS_CANCELLED)
             ->whereBetween('orders.created_at', [$range['from'], $range['to']])
             ->select(
                 'orders.id',

@@ -545,7 +545,6 @@ Không có dữ liệu
 @endforelse
 
 </tbody>
-
 </table>
 
 </div>
