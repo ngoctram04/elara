@@ -135,63 +135,55 @@ color:#475569;
 <div class="row align-items-center g-3">
 
 {{-- SEARCH --}}
-
 <div class="col-md-5">
+    <div class="input-group search-box">
+        <span class="input-group-text">
+            <i class="bi bi-search"></i>
+        </span>
 
-<div class="input-group search-box">
-
-<span class="input-group-text">
-<i class="bi bi-search"></i>
-</span>
-
-<input
-type="text"
-name="keyword"
-value="{{ request('keyword') }}"
-class="form-control"
-placeholder="Nhập mã đơn..."
-oninput="autoSearch()">
-
-</div>
-
+        <input
+            type="text"
+            name="keyword"
+            value="{{ request('keyword') }}"
+            class="form-control"
+            placeholder="Nhập mã đơn..."
+            oninput="autoSearch()">
+    </div>
 </div>
 
 {{-- TABS --}}
-
 <div class="col-md-7">
+    <div class="order-tabs d-flex flex-wrap gap-2 justify-content-md-end">
 
-<div class="order-tabs d-flex flex-wrap gap-2 justify-content-md-end">
+        <a href="{{ route('orders.history') }}"
+           class="tab {{ request('status')==''?'active':'' }}">
+            Tất cả
+        </a>
 
-<a href="{{ route('orders.history') }}"
-class="tab {{ request('status')==''?'active':'' }}">
-Tất cả </a>
+        <a href="{{ route('orders.history',['status'=>'processing']) }}"
+           class="tab {{ request('status')=='processing'?'active':'' }}">
+            Đang xử lý
+        </a>
 
-<a href="{{ route('orders.history',['status'=>'processing']) }}"
-class="tab {{ request('status')=='processing'?'active':'' }}">
-Đang xử lý </a>
+        <a href="{{ route('orders.history',['status'=>'shipping']) }}"
+           class="tab {{ request('status')=='shipping'?'active':'' }}">
+            Đang giao
+        </a>
 
-<a href="{{ route('orders.history',['status'=>'shipping']) }}"
-class="tab {{ request('status')=='shipping'?'active':'' }}">
-Đang giao </a>
+        <a href="{{ route('orders.history',['status'=>'completed']) }}"
+           class="tab {{ request('status')=='completed'?'active':'' }}">
+            Đã giao
+        </a>
 
-<a href="{{ route('orders.history',['status'=>'completed']) }}"
-class="tab {{ request('status')=='completed'?'active':'' }}">
-Đã giao </a>
+        <a href="{{ route('orders.history',['status'=>'cancelled']) }}"
+           class="tab {{ request('status')=='cancelled'?'active':'' }}">
+            Đã huỷ
+        </a>
 
-<a href="{{ route('orders.history',['status'=>'cancelled']) }}"
-class="tab {{ request('status')=='cancelled'?'active':'' }}">
-Đã huỷ </a>
-
-<a href="{{ route('orders.history',['status'=>'return']) }}"
-class="tab {{ request('status')=='return'?'active':'' }}">
-Trả hàng / Hoàn tiền</a>
-
+    </div>
 </div>
 
 </div>
-
-</div>
-
 </form>
 
 </div>
@@ -394,10 +386,11 @@ Trả hàng / Hoàn tiền</a>
                 {{-- YÊU CẦU TRẢ HÀNG / HOÀN TIỀN --}}
                 @if($order->isCompleted() && !$order->refundRequest)
 
-<a href="{{ route('refund.create',$order->id) }}"
-   class="btn btn-outline-danger btn-sm btn-action">
+<button type="button"
+        class="btn btn-outline-danger btn-sm btn-action btn-refund"
+        data-url="{{ route('refund.create',$order->id) }}">
    Trả hàng / Hoàn tiền
-</a>
+</button>
 
 @endif
 @if($order->refundRequest)
@@ -554,7 +547,53 @@ form.submit();
 });
 
 </script>
+<script>
+// =============================
+// POPUP ĐIỀU KHOẢN TRẢ HÀNG
+// =============================
+document.querySelectorAll('.btn-refund').forEach(function(btn){
 
+    btn.addEventListener('click', function(){
+
+        let url = this.getAttribute('data-url');
+
+        Swal.fire({
+            title: 'Điều khoản trả hàng',
+            html: `
+                <div style="text-align:left;font-size:14px;line-height:1.6">
+                    <p><b>Vui lòng đọc kỹ trước khi tiếp tục:</b></p>
+
+                    <p>• Sản phẩm phải còn nguyên vẹn, chưa qua sử dụng</p>
+                    <p>• Còn đầy đủ hộp, phụ kiện (nếu có)</p>
+                    <p>• Không áp dụng với sản phẩm hư hỏng do người dùng</p>
+                    <p>• Shop có quyền từ chối nếu không đủ điều kiện</p>
+
+                    <p style="margin-top:10px;color:#666">
+                        Khi nhấn "Đồng ý & Tiếp tục", bạn cam kết thông tin là đúng.
+                    </p>
+                </div>
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Đồng ý & Tiếp tục',
+            cancelButtonText: 'Không đồng ý',
+            confirmButtonColor: '#1677a0',
+            cancelButtonColor: '#6c757d',
+            allowOutsideClick: false,
+            reverseButtons: true
+        }).then((result)=>{
+
+            if(result.isConfirmed){
+                window.location.href = url;
+            }
+
+        });
+
+    });
+
+});
+
+</script>
 {{-- THÔNG BÁO SUCCESS --}}
 @if(session('success'))
 

@@ -16,7 +16,6 @@ use App\Notifications\SystemNotification;
 
 class RefundController extends Controller
 {
-
     /**
      * Form yêu cầu hoàn tiền
      */
@@ -34,6 +33,9 @@ class RefundController extends Controller
             return back()->with('error', 'Đơn hàng này đã gửi yêu cầu hoàn tiền');
         }
 
+        // load items + product + variant
+        $order->load('items.variant.product');
+
         return view('frontend.refund.create', compact('order'));
     }
 
@@ -44,25 +46,35 @@ class RefundController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'order_id' => 'required|exists:orders,id',
-            'reason'   => 'required|string|max:1000',
-            'images.*' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
-            'video'    => 'nullable|mimes:mp4,mov,avi|max:20480'
+            'order_id'   => 'required|exists:orders,id',
+            'reason'     => 'required|string|max:1000',
+            'items'      => 'required|array|min:1',
+            'items.*'    => 'exists:order_items,id',
+            'images.*'   => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'video'      => 'nullable|mimes:mp4,mov,avi|max:20480'
         ]);
 
         DB::beginTransaction();
 
         try {
-
-            $order = Order::with('user')->findOrFail($request->order_id);
+            $order = Order::with('items')->findOrFail($request->order_id);
 
             if ($order->user_id != Auth::id()) {
                 abort(403);
             }
 
+            // kiểm tra item thuộc order
+            $validItemIds = $order->items->pluck('id')->toArray();
+
+            foreach ($request->items as $itemId) {
+                if (!in_array($itemId, $validItemIds)) {
+                    throw new \Exception('Sản phẩm không hợp lệ');
+                }
+            }
+
             /*
             |------------------------------------
-            | Tạo yêu cầu hoàn tiền
+            | Tạo refund
             |------------------------------------
             */
             $refund = RefundRequest::create([
@@ -72,6 +84,12 @@ class RefundController extends Controller
                 'status'   => 'pending'
             ]);
 
+            /*
+            |------------------------------------
+            | Lưu item được chọn
+            |------------------------------------
+            */
+            $refund->items()->sync($request->items);
 
             /*
             |------------------------------------
@@ -92,7 +110,6 @@ class RefundController extends Controller
                 }
             }
 
-
             /*
             |------------------------------------
             | Upload video
@@ -112,19 +129,17 @@ class RefundController extends Controller
                 }
             }
 
-
             /*
             |------------------------------------
-            | Gửi email admin
+            | Email
             |------------------------------------
             */
             Mail::to(config('mail.from.address'))
                 ->send(new RefundRequestMail($order, $refund));
 
-
             /*
             |------------------------------------
-            | 🔔 NOTIFY ADMIN
+            | Notify admin
             |------------------------------------
             */
             User::where('role', 'admin')->each(function ($admin) use ($order) {
@@ -136,16 +151,13 @@ class RefundController extends Controller
                 ]));
             });
 
-
             DB::commit();
 
             return redirect()
                 ->route('orders.show', $order->id)
                 ->with('success', 'Yêu cầu hoàn tiền đã được gửi');
         } catch (\Exception $e) {
-
             DB::rollBack();
-
             return back()->with('error', $e->getMessage());
         }
     }

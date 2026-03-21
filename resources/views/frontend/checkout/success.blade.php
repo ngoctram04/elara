@@ -79,19 +79,6 @@ body{
 
 <div class="success-card p-4 p-md-5 text-center">
 
-    {{-- FLASH --}}
-    @if(session('success'))
-        <div class="alert alert-success">
-            {{ session('success') }}
-        </div>
-    @endif
-
-    @if(session('error'))
-        <div class="alert alert-danger">
-            {{ session('error') }}
-        </div>
-    @endif
-
     {{-- ICON --}}
     <div class="success-icon {{ session('error') ? 'error-icon' : '' }}">
         {{ session('error') ? '✕' : '✓' }}

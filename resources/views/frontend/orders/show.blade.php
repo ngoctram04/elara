@@ -330,10 +330,11 @@ $refund = $order->refundRequest;
 {{-- CHƯA GỬI --}}
 @if(!$refund)
 
-<a href="{{ route('refund.create',$order->id) }}"
-class="btn btn-outline-danger btn-sm">
-Yêu cầu trả hàng / hoàn tiền
-</a>
+<button type="button"
+        class="btn btn-outline-danger btn-sm btn-refund"
+        data-url="{{ route('refund.create',$order->id) }}">
+    Yêu cầu trả hàng / hoàn tiền
+</button>
 
 @else
 
@@ -497,6 +498,50 @@ document.querySelectorAll('.view-delivery-image').forEach(function(link){
             showCloseButton: true,
             width: 'auto',
             background: '#fff'
+        });
+
+    });
+
+});
+// =============================
+// POPUP ĐIỀU KHOẢN TRẢ HÀNG
+// =============================
+document.querySelectorAll('.btn-refund').forEach(function(btn){
+
+    btn.addEventListener('click', function(){
+
+        let url = this.getAttribute('data-url');
+
+        Swal.fire({
+            title: 'Điều khoản trả hàng',
+            html: `
+                <div style="text-align:left;font-size:14px;line-height:1.6">
+                    <p><b>Vui lòng đọc kỹ trước khi tiếp tục:</b></p>
+
+                    <p>• Sản phẩm còn nguyên vẹn, chưa qua sử dụng</p>
+                    <p>• Còn đầy đủ hộp, phụ kiện (nếu có)</p>
+                    <p>• Không áp dụng với sản phẩm hư hỏng do người dùng</p>
+                    <p>• Shop có quyền từ chối nếu không đủ điều kiện</p>
+
+                    <p style="margin-top:10px;color:#666">
+                        Khi nhấn "Đồng ý & Tiếp tục", bạn cam kết thông tin là đúng.
+                    </p>
+                </div>
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Đồng ý & Tiếp tục',
+            cancelButtonText: 'Không đồng ý',
+            confirmButtonColor: '#1677a0',
+            cancelButtonColor: '#6c757d',
+            allowOutsideClick: false,
+            reverseButtons: true
+        }).then((result)=>{
+
+            if(result.isConfirmed){
+                window.location.href = url;
+            }
+
         });
 
     });

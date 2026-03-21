@@ -12,63 +12,57 @@
 @csrf
 
 <input type="hidden" name="order_id" value="{{ $order->id }}">
+@foreach($order->items as $item)
 
 @php
-$item = $order->items->first();
-
 $variant = $item->variant ?? null;
 $product = $variant->product ?? null;
-
-
 
 $image = null;
 
 if($variant && $variant->mainImage){
-$image = $variant->mainImage->path
-?? $variant->mainImage->image_path
-?? null;
+    $image = $variant->mainImage->path
+    ?? $variant->mainImage->image_path
+    ?? null;
 }
 
 if(!$image && $product && $product->mainImage){
-$image = $product->mainImage->path
-?? $product->mainImage->image_path
-?? null;
+    $image = $product->mainImage->path
+    ?? $product->mainImage->image_path
+    ?? null;
 }
 
 $imageUrl = $image
 ? asset('storage/'.$image)
 : 'https://via.placeholder.com/70x70?text=No+Image';
-
 @endphp
 
-{{-- PRODUCT --}}
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body d-flex align-items-center gap-3">
 
-<div class="card border-0 shadow-sm mb-4">
-<div class="card-body d-flex align-items-center gap-3">
+        <img
+        src="{{ $imageUrl }}"
+        width="60"
+        height="60"
+        style="object-fit:cover;border-radius:8px;border:1px solid #eee"
+        >
 
-<img
-src="{{ $imageUrl }}"
-width="60"
-height="60"
-style="object-fit:cover;border-radius:8px;border:1px solid #eee"
+        <div>
+            <div class="fw-semibold">
+                {{ $product->name ?? 'Sản phẩm' }}
+            </div>
 
->
+            <div class="text-muted small">
+                #PK{{ $variant->id ?? '' }}
+                × {{ $item->quantity ?? 1 }}
+            </div>
+        </div>
 
-<div>
-
-<div class="fw-semibold">
-{{ $product->name ?? 'Sản phẩm' }}
+    </div>
 </div>
 
-<div class="text-muted small">
-#PK{{ $variant->id ?? '' }}
-× {{ $item->quantity ?? 1 }}
-</div>
+@endforeach
 
-</div>
-
-</div>
-</div>
 
 {{-- REASON --}}
 
