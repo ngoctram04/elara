@@ -63,10 +63,11 @@
                     </label>
 
                     <input type="text"
-                           name="supplier"
-                           value="{{ old('supplier') }}"
-                           class="form-control form-control-sm"
-                           placeholder="Ví dụ: Cocoon Việt Nam">
+       name="supplier"
+       value="{{ old('supplier') }}"
+       class="form-control form-control-sm"
+       placeholder="Ví dụ: Cocoon Việt Nam"
+       required>
                 </div>
 
                 <div class="col-md-6">

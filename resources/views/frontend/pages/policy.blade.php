@@ -65,7 +65,6 @@
                     <li>Tôn trọng hệ thống và các người dùng khác</li>
                 </ul>
 
-                {{-- 🚨 CẢNH BÁO HỦY ĐƠN --}}
                 <div class="policy-warning mt-3">
                     <i class="bi bi-exclamation-triangle-fill"></i>
                     <div>
@@ -86,13 +85,19 @@
                     <span>Chính sách thành viên</span>
                 </div>
 
+                <div class="policy-note mb-3">
+                    <i class="bi bi-info-circle-fill me-1"></i>
+                    Hạng thành viên được xét theo <b>tổng chi tiêu trong năm</b>. 
+                    Điểm tích lũy vẫn được giữ để <b>đổi voucher / quà tặng</b>.
+                </div>
+
                 <div class="table-responsive">
                     <table class="table text-center align-middle mt-3">
 
                         <thead class="table-light">
                             <tr>
                                 <th>Hạng</th>
-                                <th>Điểm tích lũy</th>
+                                <th>Tổng chi tiêu năm</th>
                                 <th>Ưu đãi</th>
                             </tr>
                         </thead>
@@ -104,7 +109,7 @@
                                         <i class="bi bi-person"></i> Đồng
                                     </span>
                                 </td>
-                                <td>0 điểm</td>
+                                <td>Dưới 1.000.000đ</td>
                                 <td>Không ưu đãi</td>
                             </tr>
 
@@ -114,7 +119,7 @@
                                         <i class="bi bi-award"></i> Bạc
                                     </span>
                                 </td>
-                                <td>1.000 điểm</td>
+                                <td>Từ 1.000.000đ đến dưới 3.000.000đ</td>
                                 <td>Giảm 5% vào ngày sinh nhật</td>
                             </tr>
 
@@ -124,7 +129,7 @@
                                         <i class="bi bi-award-fill"></i> Vàng
                                     </span>
                                 </td>
-                                <td>3.000 điểm</td>
+                                <td>Từ 3.000.000đ đến dưới 10.000.000đ</td>
                                 <td>
                                     Freeship đơn từ 300.000đ <br>
                                     + Giảm 10% ngày sinh nhật
@@ -133,11 +138,11 @@
 
                             <tr>
                                 <td>
-                                    <span class="badge bg-danger px-3 py-2">
-                                        <i class="bi bi-gem"></i> Kim cương
+                                    <span class="badge bg-info text-dark px-3 py-2">
+                                        <i class="bi bi-gem"></i> Bạch kim
                                     </span>
                                 </td>
-                                <td>10.000 điểm</td>
+                                <td>Từ 10.000.000đ trở lên</td>
                                 <td>
                                     Freeship mọi đơn <br>
                                     + Giảm 15% ngày sinh nhật
@@ -146,6 +151,16 @@
                         </tbody>
 
                     </table>
+                </div>
+
+                <div class="voucher-note mt-3">
+                    <div class="fw-semibold mb-1">
+                        <i class="bi bi-ticket-perforated me-1"></i> Điểm tích lũy
+                    </div>
+                    <div>
+                        Điểm tích lũy không dùng để xét hạng thành viên. 
+                        Điểm được sử dụng để <b>đổi voucher ưu đãi</b> hoặc các quyền lợi khác theo chương trình của ELARA.
+                    </div>
                 </div>
 
             </div>
@@ -160,8 +175,6 @@
 
 @push('styles')
 <style>
-
-/* SIDEBAR */
 .policy-sidebar{
     position: sticky;
     top: 90px;
@@ -185,7 +198,6 @@
     color:white;
 }
 
-/* CARD */
 .policy-card{
     background:white;
     padding:20px;
@@ -193,7 +205,6 @@
     box-shadow:0 2px 10px rgba(0,0,0,0.05);
 }
 
-/* HEADER */
 .policy-header{
     font-weight:600;
     font-size:18px;
@@ -204,7 +215,6 @@
     color:#0d6efd;
 }
 
-/* LIST */
 .policy-list{
     padding-left:18px;
 }
@@ -213,7 +223,6 @@
     margin-bottom:6px;
 }
 
-/* WARNING BOX */
 .policy-warning{
     display:flex;
     gap:10px;
@@ -229,24 +238,38 @@
     font-size:20px;
 }
 
-/* TABLE */
+.policy-note{
+    background:#eef6ff;
+    color:#0b5ed7;
+    border:1px solid #cfe2ff;
+    padding:12px;
+    border-radius:10px;
+    font-size:14px;
+}
+
+.voucher-note{
+    background:#f8f9fa;
+    border:1px solid #e9ecef;
+    padding:12px;
+    border-radius:10px;
+    font-size:14px;
+    color:#495057;
+}
+
 .table td, .table th{
     vertical-align:middle;
 }
-
 </style>
 @endpush
 
 
 @push('scripts')
 <script>
-
 document.querySelectorAll('.policy-link').forEach(link => {
     link.addEventListener('click', function(){
         document.querySelectorAll('.policy-link').forEach(a => a.classList.remove('active'));
         this.classList.add('active');
     });
 });
-
 </script>
 @endpush

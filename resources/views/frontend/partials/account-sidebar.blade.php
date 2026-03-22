@@ -1,91 +1,82 @@
 @php
-$user = auth()->user();
-$points = $user->loyalty_points ?? 0;
+    $user = auth()->user();
 
-/*
-|--------------------------------------------------------------------------
-| MỐC HẠNG THEO ĐIỂM
-|--------------------------------------------------------------------------
-*/
-$levels = [
-    'bronze'  => 0,
-    'silver'  => 1000,
-    'gold'    => 5000,
-    'diamond' => 20000,
-];
+    $points = $user->loyalty_points ?? 0;
+    $spent = (float) ($user->yearly_spent ?? 0);
+    $level = strtolower($user->member_level ?? 'bronze');
 
-$levelNames = [
-    'bronze'  => 'Đồng',
-    'silver'  => 'Bạc',
-    'gold'    => 'Vàng',
-    'diamond' => 'Kim cương',
-];
+    /*
+    |--------------------------------------------------------------------------
+    | MỐC HẠNG THEO CHI TIÊU
+    |--------------------------------------------------------------------------
+    */
+    $levels = [
+        'bronze'   => 0,
+        'silver'   => 1000000,
+        'gold'     => 3000000,
+        'platinum' => 10000000,
+    ];
 
-$colors = [
-    'bronze'  => '#cd7f32',
-    'silver'  => '#6c757d',
-    'gold'    => '#f1c40f',
-    'diamond' => '#0d6efd',
-];
+    $levelNames = [
+        'bronze'   => 'Đồng',
+        'silver'   => 'Bạc',
+        'gold'     => 'Vàng',
+        'platinum' => 'Bạch kim',
+    ];
 
-$benefits = [
-    'bronze' => [
-        'Không có ưu đãi'
-    ],
-    'silver' => [
-        'Giảm 5% vào ngày sinh nhật'
-    ],
-    'gold' => [
-        'Miễn phí vận chuyển đơn trên 300.000đ',
-        'Giảm 10% vào ngày sinh nhật'
-    ],
-    'diamond' => [
-        'Miễn phí vận chuyển mọi đơn',
-        'Giảm 15% vào ngày sinh nhật'
-    ],
-];
+    $colors = [
+        'bronze'   => '#cd7f32',
+        'silver'   => '#6c757d',
+        'gold'     => '#f1c40f',
+        'platinum' => '#0dcaf0',
+    ];
 
-/*
-|--------------------------------------------------------------------------
-| XÁC ĐỊNH HẠNG HIỆN TẠI
-|--------------------------------------------------------------------------
-*/
-$level = 'bronze';
+    $benefits = [
+        'bronze' => [
+            'Không có ưu đãi',
+        ],
+        'silver' => [
+            'Giảm 5% vào ngày sinh nhật',
+        ],
+        'gold' => [
+            'Miễn phí vận chuyển đơn trên 300.000đ',
+            'Giảm 10% vào ngày sinh nhật',
+        ],
+        'platinum' => [
+            'Miễn phí vận chuyển mọi đơn',
+            'Giảm 15% vào ngày sinh nhật',
+        ],
+    ];
 
-foreach ($levels as $name => $value) {
-    if ($points >= $value) {
-        $level = $name;
+    /*
+    |--------------------------------------------------------------------------
+    | TÌM HẠNG TIẾP THEO
+    |--------------------------------------------------------------------------
+    */
+    $nextLevel = null;
+    $nextValue = null;
+
+    foreach ($levels as $name => $value) {
+        if ($spent < $value) {
+            $nextLevel = $name;
+            $nextValue = $value;
+            break;
+        }
     }
-}
 
-/*
-|--------------------------------------------------------------------------
-| TÌM HẠNG TIẾP THEO
-|--------------------------------------------------------------------------
-*/
-$nextLevel = null;
-$nextValue = null;
+    /*
+    |--------------------------------------------------------------------------
+    | TÍNH PROGRESS THEO CHI TIÊU
+    |--------------------------------------------------------------------------
+    */
+    $progress = 100;
 
-foreach ($levels as $name => $value) {
-    if ($points < $value) {
-        $nextLevel = $name;
-        $nextValue = $value;
-        break;
+    if ($nextLevel) {
+        $currentValue = $levels[$level] ?? 0;
+        $range = $nextValue - $currentValue;
+        $progress = $range > 0 ? (($spent - $currentValue) / $range) * 100 : 100;
+        $progress = max(0, min(100, $progress));
     }
-}
-
-/*
-|--------------------------------------------------------------------------
-| TÍNH PROGRESS
-|--------------------------------------------------------------------------
-*/
-$progress = 100;
-
-if ($nextLevel) {
-    $currentValue = $levels[$level];
-    $progress = (($points - $currentValue) / ($nextValue - $currentValue)) * 100;
-    $progress = max(0, min(100, $progress));
-}
 @endphp
 
 <div class="col-md-3 mb-4">
@@ -106,7 +97,7 @@ if ($nextLevel) {
     background:#fff;border-radius:10px;
     box-shadow:0 6px 18px rgba(0,0,0,0.1);
     padding:10px 12px;font-size:13px;
-    width:200px;display:none;z-index:10;
+    width:220px;display:none;z-index:10;
 }
 .member-hover:hover .member-hover-box{display:block;}
 </style>
@@ -155,8 +146,18 @@ if ($nextLevel) {
 </div>
 
 <div class="mt-2 fw-semibold">
-    {{ number_format($points) }} điểm
+    {{ number_format($spent, 0, ',', '.') }} đ
 </div>
+<small class="text-muted d-block">
+    Chi tiêu năm nay
+</small>
+
+<div class="mt-2 fw-semibold" style="color:#8b5e34;">
+    {{ number_format($points, 0, ',', '.') }} điểm
+</div>
+<small class="text-muted d-block">
+    Điểm hiện có
+</small>
 
 @if($nextLevel)
 <div class="mt-2">
@@ -166,7 +167,7 @@ if ($nextLevel) {
         </div>
     </div>
     <small class="text-muted">
-        Còn {{ number_format($nextValue - $points) }} điểm để lên {{ $levelNames[$nextLevel] }}
+        Còn {{ number_format($nextValue - $spent, 0, ',', '.') }} đ để lên {{ $levelNames[$nextLevel] }}
     </small>
 </div>
 @else

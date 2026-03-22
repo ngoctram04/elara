@@ -11,9 +11,9 @@ use App\Models\Cart;
 use App\Notifications\SystemNotification;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
+
 class OrderController extends Controller
 {
-
     /**
      * Danh sách đơn hàng
      */
@@ -29,16 +29,12 @@ class OrderController extends Controller
             ->where('user_id', Auth::id())
             ->latest();
 
-        // tìm kiếm mã đơn
         if ($request->filled('keyword')) {
             $query->where('id', 'like', '%' . $request->keyword . '%');
         }
 
-        // lọc trạng thái
         if ($request->filled('status')) {
-
             switch ($request->status) {
-
                 case 'processing':
                     $query->whereIn('status', [1, 2]);
                     break;
@@ -66,14 +62,11 @@ class OrderController extends Controller
         return view('frontend.orders.index', compact('orders'));
     }
 
-
-
     /**
      * Chi tiết đơn hàng
      */
     public function show($id)
     {
-
         $order = Order::with([
             'items.variant.product',
             'items.variant.mainImage',
@@ -89,16 +82,13 @@ class OrderController extends Controller
         return view('frontend.orders.show', compact('order'));
     }
 
-
-
     /**
      * Huỷ đơn hàng
      */
-
     public function cancel(Request $request, $id)
     {
         $order = Order::with('items.batches', 'items.variant')
-        ->where('id', $id)
+            ->where('id', $id)
             ->where('user_id', Auth::id())
             ->firstOrFail();
 
@@ -109,10 +99,8 @@ class OrderController extends Controller
         DB::beginTransaction();
 
         try {
-
             $paymentStatus = $order->payment_status;
 
-            // 🔥 VNPay → hoàn tiền
             if (
                 $order->payment_method === 'vnpay'
                 && $order->payment_status == Order::PAYMENT_PAID
@@ -120,9 +108,6 @@ class OrderController extends Controller
                 $paymentStatus = Order::PAYMENT_REFUNDED;
             }
 
-            // =========================
-            // 1. UPDATE ORDER
-            // =========================
             $order->update([
                 'status' => Order::STATUS_CANCELLED,
                 'payment_status' => $paymentStatus,
@@ -132,32 +117,30 @@ class OrderController extends Controller
                 'cancelled_at' => now()
             ]);
 
-            // =========================
-            // 2. 🔥 ROLLBACK THEO BATCH
-            // =========================
             foreach ($order->items as $item) {
-
-                // 🔒 lock variant
                 $variant = \App\Models\ProductVariant::where('id', $item->variant_id)
                     ->lockForUpdate()
                     ->first();
 
-                if (!$variant) continue;
+                if (!$variant) {
+                    continue;
+                }
 
-                // 🔥 LẤY TỒN TRƯỚC REALTIME (QUAN TRỌNG NHẤT)
                 $before = \App\Models\StockImport::where('variant_id', $item->variant_id)
                     ->sum('remaining_quantity');
 
                 $change = 0;
 
                 foreach ($item->batches as $batch) {
-
-                    if ($batch->is_rolled_back) continue;
+                    if ($batch->is_rolled_back) {
+                        continue;
+                    }
 
                     $stock = \App\Models\StockImport::find($batch->stock_import_id);
-                    if (!$stock) continue;
+                    if (!$stock) {
+                        continue;
+                    }
 
-                    // ✅ hoàn theo lô
                     $stock->increment('remaining_quantity', $batch->quantity);
 
                     $batch->update([
@@ -167,18 +150,13 @@ class OrderController extends Controller
                     $change += $batch->quantity;
                 }
 
-                // 🔥 LẤY TỒN SAU REALTIME
                 $after = \App\Models\StockImport::where('variant_id', $item->variant_id)
                     ->sum('remaining_quantity');
 
-                // 🔄 sync lại variant
                 $variant->update([
                     'stock_quantity' => $after
                 ]);
 
-                // =========================
-                // 3. 📝 LOG CHUẨN 100%
-                // =========================
                 \App\Models\InventoryLog::create([
                     'variant_id' => $variant->id,
                     'type' => 'cancel',
@@ -192,9 +170,6 @@ class OrderController extends Controller
 
             DB::commit();
 
-            // =========================
-            // 4. NOTIFICATION
-            // =========================
             $order->user->notify(new SystemNotification([
                 'title' => 'Bạn đã huỷ đơn',
                 'message' => 'Đơn #' . $order->id . ' đã được huỷ',
@@ -216,7 +191,6 @@ class OrderController extends Controller
                 ->route('orders.show', $order->id)
                 ->with('success', 'Huỷ đơn hàng thành công.');
         } catch (\Exception $e) {
-
             DB::rollBack();
 
             Log::error('Cancel order error: ' . $e->getMessage());
@@ -225,23 +199,20 @@ class OrderController extends Controller
         }
     }
 
-
     /**
      * Khách xác nhận đã nhận hàng
      */
     public function confirmReceived($id)
     {
-
-        $order = Order::where('id', $id)
+        $order = Order::with('user')
+            ->where('id', $id)
             ->where('user_id', Auth::id())
             ->firstOrFail();
 
-        // chỉ xác nhận khi admin đã giao
         if ($order->status != Order::STATUS_COMPLETED) {
             return back()->with('error', 'Đơn hàng chưa được giao.');
         }
 
-        // tránh xác nhận nhiều lần
         if ($order->customer_confirmed) {
             return back()->with('error', 'Bạn đã xác nhận đơn này.');
         }
@@ -249,31 +220,38 @@ class OrderController extends Controller
         DB::beginTransaction();
 
         try {
-
             $order->update([
                 'customer_confirmed' => 1,
                 'received_at' => now()
             ]);
 
+            $user = $order->user;
+
+            $user->increment('yearly_spent', (float) $order->grand_total);
+
+            $user->refresh();
+            $user->updateMemberLevel();
+
             DB::commit();
 
             return back()->with('success', 'Đã xác nhận nhận hàng.');
         } catch (\Exception $e) {
-
             DB::rollBack();
+
+            Log::error('Confirm received error: ' . $e->getMessage(), [
+                'order_id' => $id,
+                'user_id' => Auth::id(),
+            ]);
 
             return back()->with('error', 'Xác nhận thất bại.');
         }
     }
-
-
 
     /**
      * Mua lại đơn hàng
      */
     public function reorder($id)
     {
-
         $userId = Auth::id();
 
         $order = Order::with('items.variant')
@@ -284,9 +262,7 @@ class OrderController extends Controller
         DB::beginTransaction();
 
         try {
-
             foreach ($order->items as $item) {
-
                 $variant = $item->variant;
 
                 if (!$variant || $variant->stock_quantity <= 0) {
@@ -300,16 +276,15 @@ class OrderController extends Controller
                     ->first();
 
                 if ($cart) {
-
                     $newQty = min(
                         $cart->quantity + $quantity,
                         $variant->stock_quantity
                     );
+
                     $cart->update([
                         'quantity' => $newQty
                     ]);
                 } else {
-
                     Cart::create([
                         'user_id' => $userId,
                         'variant_id' => $variant->id,
@@ -324,8 +299,9 @@ class OrderController extends Controller
                 ->route('cart.index')
                 ->with('success', 'Đã thêm sản phẩm vào giỏ hàng!');
         } catch (\Exception $e) {
-
             DB::rollBack();
+
+            Log::error('Reorder error: ' . $e->getMessage());
 
             return back()->with('error', 'Mua lại thất bại.');
         }

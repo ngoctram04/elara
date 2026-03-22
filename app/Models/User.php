@@ -8,27 +8,10 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
 
-
-// Import Models
-use App\Models\Review;
-use App\Models\Order;
-use App\Models\Wishlist;
-use App\Models\Cart;
-use App\Models\UserAddress;
-use App\Models\UserPointHistory;
-/**
- * @method \Illuminate\Notifications\DatabaseNotificationCollection notifications()
- * @method \Illuminate\Notifications\DatabaseNotificationCollection unreadNotifications()
- */
 class User extends Authenticatable implements MustVerifyEmail
 {
     use HasFactory, Notifiable;
 
-    /*
-    |--------------------------------------------------------------------------
-    | Mass Assignment
-    |--------------------------------------------------------------------------
-    */
     protected $fillable = [
         'name',
         'email',
@@ -40,31 +23,20 @@ class User extends Authenticatable implements MustVerifyEmail
         'role',
         'is_active',
         'blocked_reason',
-
-        // Loyalty System
         'loyalty_points',
         'total_spent',
+        'yearly_spent',
         'member_level',
+        'membership_year',
         'birthday_discount_year',
-
         'email_verified_at',
     ];
 
-    /*
-    |--------------------------------------------------------------------------
-    | Hidden Fields
-    |--------------------------------------------------------------------------
-    */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /*
-    |--------------------------------------------------------------------------
-    | Casts
-    |--------------------------------------------------------------------------
-    */
     protected $casts = [
         'email_verified_at'      => 'datetime',
         'password'               => 'hashed',
@@ -73,65 +45,65 @@ class User extends Authenticatable implements MustVerifyEmail
         'birthday_discount_year' => 'integer',
         'loyalty_points'         => 'integer',
         'total_spent'            => 'float',
+        'yearly_spent'           => 'float',
+        'membership_year'        => 'integer',
     ];
 
-    /*
-    |--------------------------------------------------------------------------
-    | RELATIONSHIPS
-    |--------------------------------------------------------------------------
-    */
-
-    // Đơn hàng
     public function orders()
     {
         return $this->hasMany(Order::class);
     }
 
-    // Giỏ hàng
     public function carts()
     {
         return $this->hasMany(Cart::class);
     }
 
-    // Wishlist
     public function wishlists()
     {
         return $this->hasMany(Wishlist::class);
     }
 
-    // Đánh giá
     public function reviews()
     {
         return $this->hasMany(Review::class);
     }
 
-    // Sổ địa chỉ
     public function addresses()
     {
         return $this->hasMany(UserAddress::class);
     }
 
-    // 🔥 LỊCH SỬ ĐIỂM (FIX LỖI Undefined method pointHistories)
     public function pointHistories()
     {
         return $this->hasMany(UserPointHistory::class);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | ACCESSORS
-    |--------------------------------------------------------------------------
-    */
-
-    // Tuổi
-    public function getAgeAttribute()
+    public function refundRequests()
     {
-        return $this->date_of_birth
-            ? $this->date_of_birth->age
-            : null;
+        return $this->hasMany(RefundRequest::class);
     }
 
-    // Avatar URL
+    public function conversations()
+    {
+        return $this->hasMany(ChatConversation::class, 'user_id');
+    }
+
+    public function adminConversations()
+    {
+        return $this->hasMany(ChatConversation::class, 'admin_id');
+    }
+
+    public function sentMessages()
+    {
+        return $this->hasMany(ChatMessage::class, 'sender_id');
+    }
+
+    public function getAgeAttribute()
+    {
+        return $this->date_of_birth ? $this->date_of_birth->age : null;
+    }
+
     public function getAvatarUrlAttribute()
     {
         if ($this->avatar && Storage::disk('public')->exists($this->avatar)) {
@@ -140,12 +112,6 @@ class User extends Authenticatable implements MustVerifyEmail
 
         return asset('images/avatar-default.png');
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | HELPER FUNCTIONS
-    |--------------------------------------------------------------------------
-    */
 
     public function isAdmin()
     {
@@ -157,53 +123,44 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->is_active;
     }
 
-    // Kiểm tra đã dùng ưu đãi sinh nhật năm nay chưa
     public function hasUsedBirthdayDiscount()
     {
         return $this->birthday_discount_year == now()->year;
     }
 
-    // Đánh dấu đã dùng ưu đãi sinh nhật
     public function markBirthdayDiscountUsed()
     {
         $this->birthday_discount_year = now()->year;
         $this->save();
     }
+
     public function getMemberLevelAttribute()
     {
-        $points = $this->loyalty_points;
+        $spent = (float) ($this->yearly_spent ?? 0);
 
-        if ($points >= 20000) return 'diamond';
-        if ($points >= 5000) return 'gold';
-        if ($points >= 1000) return 'silver';
+        if ($spent >= 10000000) return 'platinum';
+        if ($spent >= 3000000) return 'gold';
+        if ($spent >= 1000000) return 'silver';
         return 'bronze';
     }
-    public function refundRequests()
-    {
-        return $this->hasMany(RefundRequest::class);
-    }
-    /*
-|--------------------------------------------------------------------------
-| Chat
-|--------------------------------------------------------------------------
-*/
 
-    // Conversation của khách
-    public function conversations()
+    public function updateMemberLevel()
     {
-        return $this->hasMany(ChatConversation::class, 'user_id');
-    }
+        $spent = (float) ($this->yearly_spent ?? 0);
 
-    // Conversation của admin
-    public function adminConversations()
-    {
-        return $this->hasMany(ChatConversation::class, 'admin_id');
-    }
+        if ($spent >= 10000000) {
+            $level = 'platinum';
+        } elseif ($spent >= 3000000) {
+            $level = 'gold';
+        } elseif ($spent >= 1000000) {
+            $level = 'silver';
+        } else {
+            $level = 'bronze';
+        }
 
-    // Tin nhắn gửi
-    public function sentMessages()
-    {
-        return $this->hasMany(ChatMessage::class, 'sender_id');
+        $this->forceFill([
+            'member_level' => $level,
+            'membership_year' => now()->year,
+        ])->save();
     }
-    
 }

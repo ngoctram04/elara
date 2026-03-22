@@ -52,9 +52,10 @@ class StockImportController extends Controller
             'mfg_date.*'   => 'nullable|date',
             'expiry_date.*' => 'nullable|date|after:today',
 
-            'supplier'     => 'nullable|string|max:255',
+            'supplier'     => 'required|string|max:255',
             'note'         => 'nullable|string'
         ], [
+            'supplier.required' => 'Vui lòng nhập nhà cung cấp',
             'expiry_date.*.after' => 'Hạn sử dụng phải lớn hơn ngày hôm nay'
         ]);
 
