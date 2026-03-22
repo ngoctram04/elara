@@ -14,25 +14,26 @@ use Carbon\Carbon;
 
 class ShopController extends Controller
 {
-    /* ==================================================
-    | MAIN SHOP PAGE
-    ================================================== */
     public function index(Request $request)
     {
-        $query = Product::with([
+        /* ==================================================
+        | BASE QUERY: CHỈ FILTER, CHƯA SORT
+        ================================================== */
+        $baseQuery = Product::with([
             'mainImage',
             'variants',
             'brand'
         ])
             ->withAvg('reviews', 'rating')
             ->withCount('reviews')
+            ->withSum('variants as variants_total_sold', 'sold_quantity')
             ->where('is_active', 1);
 
         /* ================= SEARCH ================= */
         if ($request->filled('q')) {
             $keyword = trim($request->q);
 
-            $query->where(function ($q) use ($keyword) {
+            $baseQuery->where(function ($q) use ($keyword) {
                 $q->where('name', 'like', "%{$keyword}%")
                     ->orWhere('slug', 'like', "%{$keyword}%")
                     ->orWhereHas('brand', function ($b) use ($keyword) {
@@ -43,7 +44,6 @@ class ShopController extends Controller
                     });
             });
 
-            /* ===== LƯU HISTORY USER (DATABASE) ===== */
             if (Auth::check()) {
                 SearchHistory::updateOrCreate(
                     [
@@ -54,7 +54,6 @@ class ShopController extends Controller
                 );
             }
 
-            /* ===== LƯU HISTORY GUEST (SESSION) ===== */
             $history = session()->get('search_history', []);
             $history = array_diff($history, [$keyword]);
             array_unshift($history, $keyword);
@@ -64,41 +63,57 @@ class ShopController extends Controller
 
         /* ================= FILTER ================= */
         if ($request->filled('category')) {
-            $query->where('category_id', $request->category);
+            $baseQuery->where('category_id', $request->category);
         }
 
         if ($request->filled('price')) {
             match ($request->price) {
-                '0-500' => $query->whereBetween('min_price', [0, 500000]),
-                '500-1000' => $query->whereBetween('min_price', [500000, 1000000]),
-                '1000+' => $query->where('min_price', '>=', 1000000),
+                '0-500'    => $baseQuery->whereBetween('min_price', [0, 500000]),
+                '500-1000' => $baseQuery->whereBetween('min_price', [500000, 1000000]),
+                '1000+'    => $baseQuery->where('min_price', '>=', 1000000),
+                default    => null,
             };
         }
 
         if ($request->filled('brands') && is_array($request->brands)) {
-            $query->whereIn('brand_id', $request->brands);
+            $baseQuery->whereIn('brand_id', $request->brands);
         }
 
-        /* ================= SORT ================= */
+        /* ==================================================
+        | QUERY CHÍNH: CLONE RA RỒI MỚI SORT
+        ================================================== */
+        $query = clone $baseQuery;
+
         switch ($request->sort) {
+            case 'bestseller':
+            case 'best_selling':
+                $query->orderByDesc('variants_total_sold')
+                    ->orderByDesc('id');
+                break;
+
             case 'price_asc':
-                $query->orderBy('min_price');
+                $query->orderBy('min_price')
+                    ->orderByDesc('id');
                 break;
 
             case 'price_desc':
-                $query->orderByDesc('min_price');
+                $query->orderByDesc('min_price')
+                    ->orderByDesc('id');
                 break;
 
-            case 'bestseller':
-                $query->orderByDesc('total_sold');
+            case 'newest':
+                $query->orderByDesc('created_at')
+                    ->orderByDesc('id');
                 break;
 
             case 'rating':
-                $query->orderByDesc('reviews_avg_rating');
+                $query->orderByDesc('reviews_avg_rating')
+                    ->orderByDesc('id');
                 break;
 
             case 'discount':
                 $now = Carbon::now();
+
                 $query->where(function ($q) use ($now) {
                     $q->whereHas('variants', function ($sub) {
                         $sub->whereNotNull('original_price')
@@ -111,11 +126,14 @@ class ShopController extends Controller
                                 ->where('end_date', '>=', $now);
                         });
                 })
-                    ->orderByDesc('total_sold');
+                    ->orderByDesc('variants_total_sold')
+                    ->orderByDesc('id');
                 break;
 
             default:
-                $query->orderByDesc('created_at');
+                $query->orderByDesc('created_at')
+                    ->orderByDesc('id');
+                break;
         }
 
         /* ================= PAGINATION ================= */
@@ -149,9 +167,6 @@ class ShopController extends Controller
         ));
     }
 
-    /* ==================================================
-    | AUTOCOMPLETE
-    ================================================== */
     public function suggest(Request $request)
     {
         $keyword = $request->q;
@@ -173,12 +188,8 @@ class ShopController extends Controller
         );
     }
 
-    /* ==================================================
-    | GET SEARCH HISTORY
-    ================================================== */
     public function history()
     {
-        // User login → lấy DB
         if (Auth::check()) {
             return response()->json(
                 SearchHistory::where('user_id', Auth::id())
@@ -188,15 +199,11 @@ class ShopController extends Controller
             );
         }
 
-        // Guest → session
         return response()->json(
             session()->get('search_history', [])
         );
     }
 
-    /* ==================================================
-    | DELETE 1 HISTORY
-    ================================================== */
     public function deleteHistory(Request $request)
     {
         $keyword = $request->keyword;

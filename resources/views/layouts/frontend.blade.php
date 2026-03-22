@@ -81,8 +81,8 @@ background:#7ec8ea;
 position:fixed;
 bottom:90px;
 left:20px;
-width:320px;
-height:420px;
+width:360px;
+height:550px;
 background:white;
 border-radius:12px;
 box-shadow:0 5px 20px rgba(0,0,0,0.2);
@@ -125,7 +125,12 @@ background:#7ec8ea;
 color:white;
 padding:10px 15px;
 }
-
+.ai-msg{
+margin-top:6px;
+padding:6px 8px;
+background:#f1f1f1;
+border-radius:8px;
+}
 </style>
 
 @stack('styles')
@@ -510,7 +515,6 @@ if(box.style.display === "flex"){
 /* ==============================
    GỬI CÂU HỎI AI
 ============================== */
-
 function sendAI(){
 
 let input = document.getElementById("ai-input");
@@ -520,63 +524,63 @@ if(!msg) return;
 
 let chat = document.getElementById("ai-messages");
 
-/* hiển thị tin nhắn user */
+/* ===== USER ===== */
 
-chat.innerHTML += `<div><b>Bạn:</b> ${msg}</div>`;
+chat.innerHTML += `<div><b>Bạn:</b> ${escapeHtml(msg)}</div>`;
 
 input.value = "";
-
-/* auto scroll */
-
 chat.scrollTop = chat.scrollHeight;
 
-
-/* loading AI */
+/* ===== LOADING ===== */
 
 let loading = document.createElement("div");
 loading.innerHTML = "<b>AI:</b> Đang tư vấn...";
 chat.appendChild(loading);
 
-chat.scrollTop = chat.scrollHeight;
-
-
-/* gửi request */
-
-fetch('/ai-chat/send',{
-
+fetch('/ai-chat/send', {
 method:'POST',
-
 headers:{
 'Content-Type':'application/json',
 'X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content
 },
-
-body:JSON.stringify({
-message: msg
+body: JSON.stringify({ message: msg })
 })
+.then(async res => {
+    const data = await res.json();
 
+    if (!res.ok) {
+        throw new Error(data.reply || 'Server error');
+    }
+
+    return data;
 })
-.then(res => res.json())
 .then(data => {
 
-loading.remove();
+    loading.remove();
 
-/* hiển thị trả lời AI */
+    chat.innerHTML += `<div class="ai-msg"><b>AI:</b> ${data.reply}</div>`;
 
-chat.innerHTML += `<div class="ai-msg"><b>AI:</b> ${data.reply}</div>`;
+    if (data.products) {
+        data.products.forEach(p => {
+            chat.innerHTML += `
+            <div style="display:flex;gap:8px;margin-top:6px;">
+                <img src="${p.image}" style="width:50px;height:50px;border-radius:6px;object-fit:cover;">
+                <div>
+                    <a href="${p.url}" target="_blank">${p.name}</a>
+                    <div style="color:#e74c3c;font-weight:600;">
+                        ${p.formatted_price}
+                    </div>
+                </div>
+            </div>
+            `;
+        });
+    }
 
-
-/* auto scroll */
-
-chat.scrollTop = chat.scrollHeight;
-
+    chat.scrollTop = chat.scrollHeight;
 })
-.catch(() => {
-
-loading.innerHTML = "<b>AI:</b> Chatbot đang lỗi.";
-
+.catch((err) => {
+    loading.innerHTML = `<b>AI:</b> ${escapeHtml(err.message)}`;
 });
-
 }
 
 /* ==============================
@@ -863,6 +867,18 @@ if(markAllBtn){
         });
 
     });
+}
+});
+function escapeHtml(text){
+return text
+.replace(/&/g,"&amp;")
+.replace(/</g,"&lt;")
+.replace(/>/g,"&gt;");
+}
+document.getElementById("ai-input")
+.addEventListener("keydown", function(e){
+if(e.key === "Enter"){
+sendAI();
 }
 });
 </script>

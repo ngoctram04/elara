@@ -101,11 +101,10 @@
                     <span class="toolbar-label">Sắp xếp:</span>
 
                     {{-- Bán chạy --}}
-                    <a href="{{ request()->fullUrlWithQuery(['sort'=>null]) }}"
-                       class="toolbar-btn {{ !request('sort') ? 'active' : '' }}">
-                        Bán chạy
-                    </a>
-
+                    <a href="{{ request()->fullUrlWithQuery(['sort'=>'best_selling']) }}"
+   class="toolbar-btn {{ request('sort', 'best_selling') === 'best_selling' ? 'active' : '' }}">
+    Bán chạy
+</a>
                     {{-- Mới nhất --}}
                     <a href="{{ request()->fullUrlWithQuery(['sort'=>'newest']) }}"
                        class="toolbar-btn {{ request('sort')==='newest' ? 'active' : '' }}">

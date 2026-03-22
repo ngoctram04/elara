@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Frontend;
 
 use App\Http\Controllers\Controller;
+use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\Brand;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -19,7 +19,7 @@ class CategoryController extends Controller
         $category = Category::where('slug', $slug)->firstOrFail();
 
         /* ==================================================
-        | CATEGORY IDS (cha → lấy cả con)
+        | CATEGORY IDS (cha -> lấy cả con)
         ================================================== */
         if ($category->parent_id) {
             $categoryIds = [$category->id];
@@ -31,15 +31,16 @@ class CategoryController extends Controller
         }
 
         /* ==================================================
-        | BASE PRODUCT QUERY
+        | BASE QUERY: CHỈ FILTER, CHƯA SORT
         ================================================== */
-        $query = Product::with([
+        $baseQuery = Product::with([
             'variants',
             'mainImage',
-            'brand'
+            'brand',
         ])
             ->withAvg('reviews', 'rating')
             ->withCount('reviews')
+            ->withSum('variants as variants_total_sold', 'sold_quantity')
             ->whereIn('category_id', $categoryIds)
             ->where('is_active', true);
 
@@ -48,14 +49,10 @@ class CategoryController extends Controller
         ================================================== */
         if ($request->filled('price')) {
             match ($request->price) {
-                '0-500' =>
-                $query->whereBetween('min_price', [0, 500000]),
-
-                '500-1000' =>
-                $query->whereBetween('min_price', [500000, 1000000]),
-
-                '1000+' =>
-                $query->where('min_price', '>=', 1000000),
+                '0-500'    => $baseQuery->whereBetween('min_price', [0, 500000]),
+                '500-1000' => $baseQuery->whereBetween('min_price', [500000, 1000000]),
+                '1000+'    => $baseQuery->where('min_price', '>=', 1000000),
+                default    => null,
             };
         }
 
@@ -63,35 +60,59 @@ class CategoryController extends Controller
         | BRAND FILTER
         ================================================== */
         if ($request->filled('brands') && is_array($request->brands)) {
-            $query->whereIn('brand_id', $request->brands);
+            $baseQuery->whereIn('brand_id', $request->brands);
         }
 
         /* ==================================================
-        | SORT
+        | LẤY BRAND DYNAMIC TỪ QUERY CHƯA SORT
         ================================================== */
+        $filteredQuery = clone $baseQuery;
+
+        $brands = Brand::whereIn('id', function ($q) use ($filteredQuery) {
+            $q->select('brand_id')
+                ->fromSub(
+                    $filteredQuery->select('brand_id')->distinct(),
+                    'filtered_products'
+                );
+        })
+            ->orderBy('name')
+            ->get();
+
+        /* ==================================================
+        | QUERY CHÍNH: CLONE RA RỒI MỚI SORT
+        ================================================== */
+        $query = clone $baseQuery;
+
         switch ($request->sort) {
+            case 'best_selling':
+                $query->orderByDesc('variants_total_sold')
+                    ->orderByDesc('id');
+                break;
 
             case 'price_asc':
-                $query->orderBy('min_price');
+                $query->orderBy('min_price')
+                    ->orderByDesc('id');
                 break;
 
             case 'price_desc':
-                $query->orderByDesc('min_price');
+                $query->orderByDesc('min_price')
+                    ->orderByDesc('id');
                 break;
 
             case 'newest':
-                $query->latest();
+                $query->orderByDesc('created_at')
+                    ->orderByDesc('id');
                 break;
 
             case 'rating':
-                $query->orderByDesc('reviews_avg_rating');
+                $query->orderByDesc('reviews_avg_rating')
+                    ->orderByDesc('id');
                 break;
 
             case 'discount':
                 $now = Carbon::now();
 
                 $query->where(function ($q) use ($now) {
-
                     $q->whereHas('variants', function ($sub) {
                         $sub->whereNotNull('original_price')
                             ->whereColumn('original_price', '>', 'price');
@@ -105,33 +126,20 @@ class CategoryController extends Controller
                     });
                 });
 
-                $query->orderByDesc('total_sold');
+                $query->orderByDesc('variants_total_sold')
+                    ->orderByDesc('id');
                 break;
 
             default:
-                $query->orderByDesc('total_sold');
+                $query->orderByDesc('variants_total_sold')
+                    ->orderByDesc('id');
                 break;
         }
 
         /* ==================================================
-        | 🔥 BRAND DYNAMIC (QUAN TRỌNG NHẤT)
+        | PAGINATE
         ================================================== */
-        $filteredQuery = clone $query;
-
-        $brands = Brand::whereIn('id', function ($q) use ($filteredQuery) {
-            $q->select('brand_id')
-                ->fromSub(
-                    $filteredQuery->select('brand_id'),
-                    'filtered_products'
-                );
-        })
-            ->orderBy('name')
-            ->get();
-
-        /* ==================================================
-        | PAGINATE (SAU KHI LẤY BRAND)
-        ================================================== */
-        $limit = $request->limit ?? 20;
+        $limit = (int) $request->get('limit', 20);
 
         $products = $query
             ->paginate($limit)
