@@ -454,7 +454,15 @@ select option:disabled{
                                     <div class="small text-muted">
                                         Mã: {{ $promo->code }}
                                     </div>
+                                    @if($promo->end_date)
+    @php
+        $daysLeft = now()->diffInDays($promo->end_date, false);
+    @endphp
 
+    <div class="small {{ $daysLeft <= 3 ? 'text-danger fw-semibold' : 'text-muted' }}">
+        Hết hạn: {{ $promo->end_date->format('d/m/Y') }}
+    </div>
+@endif
                                     @if(!empty($promo->min_order_value))
                                         <div class="small text-muted">
                                             Đơn tối thiểu: {{ number_format($promo->min_order_value) }}đ

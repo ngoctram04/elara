@@ -8,9 +8,11 @@ use App\Models\Promotion;
 use App\Models\PromotionProduct;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use App\Models\PointReward;
 use App\Models\User;
 use App\Notifications\SystemNotification;
+
 class PromotionController extends Controller
 {
     /* =========================================================
@@ -19,7 +21,6 @@ class PromotionController extends Controller
     public function index()
     {
         $promotions = Promotion::latest()->paginate(10);
-
         $rewards = PointReward::latest()->paginate(10);
 
         return view('admin.promotions.index', compact('promotions', 'rewards'));
@@ -39,15 +40,11 @@ class PromotionController extends Controller
     }
 
     /* =========================================================
-        CREATE – REWARD (🔥 FIX LỖI Ở ĐÂY)
+        CREATE – REWARD
     ========================================================= */
     public function createReward()
     {
-        // Nếu bạn có view riêng:
         return view('admin.promotions.create_reward');
-
-        // Nếu bạn muốn dùng chung với order:
-        // return view('admin.promotions.create_order');
     }
 
     /* =========================================================
@@ -81,7 +78,7 @@ class PromotionController extends Controller
     }
 
     /* =========================================================
-        STORE
+        STORE PROMOTION
     ========================================================= */
     public function store(Request $request)
     {
@@ -113,26 +110,24 @@ class PromotionController extends Controller
             'usage_limit'     => 'nullable|integer|min:1',
         ]);
 
-        // ❌ Check trùng product promotion
+        // Check trùng product promotion
         if (
             $request->type === 'product'
             && $this->hasActiveProductConflict($request)
         ) {
             return back()
-            ->withErrors([
-                'products' => 'Một số sản phẩm / biến thể đang có khuyến mãi khác đang diễn ra'
-            ])
-            ->withInput();
+                ->withErrors([
+                    'products' => 'Một số sản phẩm / biến thể đang có khuyến mãi khác đang diễn ra'
+                ])
+                ->withInput();
         }
 
         $promotion = null;
 
         DB::transaction(function () use ($request, &$promotion) {
-
-            // 🔥 CREATE PROMOTION
             $promotion = Promotion::create([
                 'code'            => $request->type === 'order'
-                ? strtoupper($request->code)
+                    ? strtoupper($request->code)
                     : null,
                 'name'            => $request->name,
                 'type'            => $request->type,
@@ -146,7 +141,7 @@ class PromotionController extends Controller
                 'is_active'       => $request->boolean('is_active'),
             ]);
 
-            // 🔥 PRODUCT PROMOTION
+            // PRODUCT PROMOTION
             if ($promotion->type === 'product') {
                 foreach ($request->products ?? [] as $productId => $variantIds) {
                     foreach ($variantIds as $variantId) {
@@ -159,6 +154,29 @@ class PromotionController extends Controller
                 }
             }
         });
+
+        /*
+        |--------------------------------------------------------------------------
+        | THÔNG BÁO CHO KHÁCH HÀNG KHI TẠO MÃ KHUYẾN MÃI
+        |--------------------------------------------------------------------------
+        */
+        if ($promotion && $promotion->type === 'order'
+        ) {
+            $this->notifyCustomers(new SystemNotification([
+                'title'   => 'Mã khuyến mãi mới',
+                'message' => 'Cửa hàng vừa tạo mã khuyến mãi "' . $promotion->code . '" - giảm ' . $promotion->discount_value . '%.',
+                'url'     => route('cart.index'),
+                'type'    => 'promotion',
+                'meta'    => [
+                    'promotion_id'   => $promotion->id,
+                    'code'           => $promotion->code,
+                    'discount_value' => $promotion->discount_value,
+                    'start_date'     => $promotion->start_date,
+                    'end_date'       => $promotion->end_date,
+                ]
+            ]));
+        }
+
         return redirect()
             ->route('admin.promotions.index')
             ->with('success', 'Tạo khuyến mãi thành công');
@@ -170,7 +188,6 @@ class PromotionController extends Controller
     public function edit(Promotion $promotion)
     {
         if ($promotion->type === 'product') {
-
             $products = Product::with('variants')->get();
             $selected = $promotion->promotionProducts;
 
@@ -222,7 +239,6 @@ class PromotionController extends Controller
         }
 
         DB::transaction(function () use ($request, $promotion) {
-
             $promotion->update([
                 'name'            => $request->name,
                 'discount_type'   => 'percent',
@@ -291,6 +307,10 @@ class PromotionController extends Controller
             })
             ->exists();
     }
+
+    /* =========================================================
+        STORE REWARD
+    ========================================================= */
     public function storeReward(Request $request)
     {
         $request->validate([
@@ -306,36 +326,61 @@ class PromotionController extends Controller
         $reward = null;
 
         DB::transaction(function () use ($request, &$reward) {
-
-            // 🔥 CREATE REWARD
             $reward = PointReward::create([
-                'title'            => $request->name,
-                'points_required'  => $request->points_required,
-                'member_level'     => 'bronze', // có thể cho chọn sau
-                'discount_type'    => $request->discount_type,
-                'discount_value'   => $request->discount_value,
-                'min_order_value'  => $request->min_order_value,
-                'max_discount'     => $request->max_discount,
-                'valid_days'       => $request->valid_days,
-                'is_active'        => 1,
+                'title'           => $request->name,
+                'points_required' => $request->points_required,
+                'member_level'    => 'bronze',
+                'discount_type'   => $request->discount_type,
+                'discount_value'  => $request->discount_value,
+                'min_order_value' => $request->min_order_value,
+                'max_discount'    => $request->max_discount,
+                'valid_days'      => $request->valid_days,
+                'is_active'       => 1,
             ]);
         });
+
+        /*
+        |--------------------------------------------------------------------------
+        | THÔNG BÁO CHO KHÁCH HÀNG KHI TẠO VOUCHER ĐỔI ĐIỂM
+        |--------------------------------------------------------------------------
+        */
+        if ($reward) {
+            $discountText = $reward->discount_type === 'percent'
+                ? $reward->discount_value . '%'
+                : number_format($reward->discount_value, 0, ',', '.') . 'đ';
+
+            $this->notifyCustomers(new SystemNotification([
+                'title'   => 'Voucher đổi điểm mới',
+                'message' => 'Cửa hàng vừa thêm voucher đổi điểm "' . $reward->title . '" - giảm ' . $discountText . '.',
+                'url'     => route('points.redeem.page'),
+                'type'    => 'voucher',
+                'meta'    => [
+                    'reward_id'        => $reward->id,
+                    'title'            => $reward->title,
+                    'points_required'  => $reward->points_required,
+                    'discount_type'    => $reward->discount_type,
+                    'discount_value'   => $reward->discount_value,
+                    'valid_days'       => $reward->valid_days,
+                ]
+            ]));
+        }
 
         return redirect()
             ->route('admin.promotions.index')
             ->with('success', 'Tạo voucher đổi điểm thành công');
     }
+
     /* =========================================================
-    EDIT REWARD
-========================================================= */
+        EDIT REWARD
+    ========================================================= */
     public function editReward(PointReward $reward)
     {
         return view('admin.promotions.edit_reward', compact('reward'));
     }
 
     /* =========================================================
-    UPDATE REWARD
-========================================================= */
+        UPDATE REWARD
+    ========================================================= */
     public function updateReward(Request $request, PointReward $reward)
     {
         $request->validate([
@@ -359,13 +404,13 @@ class PromotionController extends Controller
         ]);
 
         return redirect()
-        ->route('admin.promotions.index')
-        ->with('success', 'Cập nhật voucher thành công');
+            ->route('admin.promotions.index')
+            ->with('success', 'Cập nhật voucher thành công');
     }
 
     /* =========================================================
-    TOGGLE REWARD
-========================================================= */
+        TOGGLE REWARD
+    ========================================================= */
     public function toggleReward(PointReward $reward)
     {
         $reward->update([
@@ -373,5 +418,44 @@ class PromotionController extends Controller
         ]);
 
         return back()->with('success', 'Đã cập nhật trạng thái voucher');
+    }
+
+    /* =========================================================
+        CHỈ LẤY KHÁCH HÀNG, KHÔNG LẤY ADMIN
+    ========================================================= */
+    private function customerQuery()
+    {
+        $query = User::query();
+
+        // Trường hợp bảng users có cột is_admin
+        if (Schema::hasColumn('users', 'is_admin')) {
+            $query->where('is_admin', 0);
+        }
+
+        // Trường hợp bảng users có cột role
+        if (Schema::hasColumn('users', 'role')) {
+            $query->where('role', '!=', 'admin');
+        }
+
+        // Trường hợp bảng users có cột user_type
+        if (Schema::hasColumn('users', 'user_type')) {
+            $query->where('user_type', '!=', 'admin');
+        }
+
+        return $query;
+    }
+
+    /* =========================================================
+        GỬI THÔNG BÁO CHO KHÁCH HÀNG
+    ========================================================= */
+    private function notifyCustomers(SystemNotification $notification): void
+    {
+        $this->customerQuery()
+            ->select('id')
+            ->chunkById(100, function ($users) use ($notification) {
+                foreach ($users as $user) {
+                    $user->notify($notification);
+                }
+            });
     }
 }
