@@ -29,14 +29,17 @@ class CustomerController extends Controller
         |--------------------------------------------------------------------------
         */
         if ($request->filled('keyword')) {
-
             $keyword = trim($request->keyword);
+            $numberKeyword = preg_replace('/\D/', '', $keyword);
 
-            $query->where(function ($q) use ($keyword) {
-
+            $query->where(function ($q) use ($keyword, $numberKeyword) {
                 $q->where('name', 'like', "%{$keyword}%")
-                    ->orWhere('email', 'like', "%{$keyword}%")
-                    ->orWhere('phone', 'like', "%{$keyword}%");
+                ->orWhere('email', 'like', "%{$keyword}%")
+                ->orWhereRaw("CONCAT('KH', LPAD(id, 4, '0')) LIKE ?", ['%' . $keyword . '%']);
+
+                if ($numberKeyword !== '') {
+                    $q->orWhere('id', (int) $numberKeyword);
+                }
             });
         }
 

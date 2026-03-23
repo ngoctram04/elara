@@ -190,7 +190,7 @@ Lịch sử mua hàng
 
 <tr class="order-row {{ $key >= 5 ? 'd-none extra-order' : '' }}">
 
-<td>#{{ $order->id }}</td>
+<td>DH{{ str_pad($order->id, 5, '0', STR_PAD_LEFT) }}</td>
 
 <td>
 {{ $order->created_at->format('d/m/Y') }}

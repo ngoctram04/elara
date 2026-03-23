@@ -87,7 +87,7 @@ Khuyến mãi hệ thống
 <tr>
 
 <td class="text-center text-muted fw-semibold">
-#{{ $promo->id }}
+    KM{{ str_pad($promo->id, 4, '0', STR_PAD_LEFT) }}
 </td>
 
 <td>
@@ -262,7 +262,7 @@ Voucher đổi điểm
 
 <tr>
 
-<th style="width:60px">#</th>
+<th style="width:60px">STT</th>
 
 <th>Tên</th>
 

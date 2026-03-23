@@ -7,7 +7,9 @@
 
 {{-- HEADER --}}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="fw-bold mb-0">Đơn hàng #{{ $order->id }}</h4>
+    <h4 class="fw-bold mb-0">
+    Đơn hàng DH{{ str_pad($order->id, 5, '0', STR_PAD_LEFT) }}
+</h4>
 
     <div class="d-flex gap-2">
 

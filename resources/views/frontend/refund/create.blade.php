@@ -53,9 +53,9 @@ $imageUrl = $image
             </div>
 
             <div class="text-muted small">
-                #PK{{ $variant->id ?? '' }}
-                × {{ $item->quantity ?? 1 }}
-            </div>
+    BT{{ str_pad($variant->id ?? 0, 5, '0', STR_PAD_LEFT) }}
+    × {{ $item->quantity ?? 1 }}
+</div>
         </div>
 
     </div>

@@ -379,10 +379,10 @@ Chính sách
 <h6 class="footer-title-sm">Hỗ trợ</h6>
 
 <ul class="footer-links">
-<li><a href="#">Chính sách đổi trả</a></li>
-<li><a href="#">Chính sách bảo mật</a></li>
-<li><a href="#">Điều khoản dịch vụ</a></li>
-<li><a href="#">Hướng dẫn mua hàng</a></li>
+    <li><a href="{{ url('/policy') }}">Chính sách đổi trả</a></li>
+    <li><a href="{{ url('/policy') }}">Chính sách bảo mật</a></li>
+    <li><a href="{{ url('/policy') }}">Điều khoản dịch vụ</a></li>
+    <li><a href="{{ url('/policy') }}">Hướng dẫn mua hàng</a></li>
 </ul>
 
 </div>

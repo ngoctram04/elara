@@ -30,7 +30,7 @@ Quản lý các đánh giá của khách hàng
 <input type="text"
 name="keyword"
 class="form-control form-control-sm"
-placeholder="Tìm khách hàng, sản phẩm..."
+placeholder="Tìm mã đơn hàng hoặc sản phẩm..."
 value="{{ request('keyword') }}">
 </div>
 
@@ -106,7 +106,11 @@ class="btn btn-outline-secondary btn-sm">
 
 {{-- ĐƠN HÀNG --}}
 <td>
-#{{ $review->order_id ?? 'N/A' }}
+    @if($review->order_id)
+        DH{{ str_pad($review->order_id, 5, '0', STR_PAD_LEFT) }}
+    @else
+        N/A
+    @endif
 </td>
 
 

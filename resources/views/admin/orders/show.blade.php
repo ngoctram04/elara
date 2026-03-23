@@ -10,7 +10,9 @@
 
 <div>
 <h5 class="fw-bold mb-1">Chi tiết đơn hàng</h5>
-<small class="text-muted">Đơn hàng #{{ $order->id }}</small>
+<small class="text-muted">
+    Đơn hàng DH{{ str_pad($order->id, 5, '0', STR_PAD_LEFT) }}
+</small>
 </div>
 
 <a href="{{ route('admin.orders.index') }}"
@@ -296,8 +298,23 @@ style="object-fit:cover">
 </small>
 
 <div class="text-muted">
-Số lượng: {{ $item->quantity }}
+    Số lượng: {{ $item->quantity }}
 </div>
+
+@if($item->batches && $item->batches->count())
+    <div class="mt-2">
+        <small class="fw-semibold text-dark">Lấy từ lô:</small>
+        <ul class="mb-0 ps-3">
+            @foreach($item->batches as $batch)
+                <li class="small text-muted">
+                    Mã lô:
+                    <strong>{{ optional($batch->stockImport)->lot_code ?? ('L' . $batch->stock_import_id) }}</strong>
+                    - SL lấy: {{ $batch->quantity }}
+                </li>
+            @endforeach
+        </ul>
+    </div>
+@endif
 
 </div>
 

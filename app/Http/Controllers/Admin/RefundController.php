@@ -24,13 +24,20 @@ class RefundController extends Controller
         $query = RefundRequest::with(['user', 'media', 'order']);
 
         if ($request->filled('search')) {
-            $search = $request->search;
+            $search = trim($request->search);
+            $numberSearch = preg_replace('/\D/', '', $search);
 
-            $query->where(function ($q) use ($search) {
-                $q->where('order_id', $search)
-                    ->orWhereHas('user', function ($u) use ($search) {
-                        $u->where('name', 'like', '%' . $search . '%');
-                    });
+            $query->where(function ($q) use ($search, $numberSearch) {
+                $q->orWhereHas('user', function ($u) use ($search) {
+                    $u->where('name', 'like', '%' . $search . '%');
+                })
+                ->orWhereRaw("CONCAT('HT', LPAD(id, 5, '0')) LIKE ?", ['%' . $search . '%'])
+                ->orWhereRaw("CONCAT('DH', LPAD(order_id, 5, '0')) LIKE ?", ['%' . $search . '%']);
+
+                if ($numberSearch !== '') {
+                    $q->orWhere('id', (int) $numberSearch)
+                        ->orWhere('order_id', (int) $numberSearch);
+                }
             });
         }
 

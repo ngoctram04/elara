@@ -155,6 +155,9 @@ class StockImportController extends Controller
                         'created_by'         => Auth::id()
                     ]);
 
+                    $import->lot_code = 'L' . $import->id;
+                    $import->save();
+
                     /* ======================
                 INVENTORY LOG
                 ====================== */

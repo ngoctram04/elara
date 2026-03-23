@@ -26,35 +26,20 @@ class OrderController extends Controller
     */
 
         if ($request->filled('keyword')) {
-
             $keyword = trim($request->keyword);
+            $numberKeyword = preg_replace('/\D/', '', $keyword);
 
-            // nhập dạng #59
-            if (str_starts_with($keyword, '#')) {
+            $query->where(function ($q) use ($keyword, $numberKeyword) {
+                $q->where('receiver_name', 'like', "%{$keyword}%")
+                ->orWhereHas('user', function ($u) use ($keyword) {
+                    $u->where('name', 'like', "%{$keyword}%");
+                })
+                ->orWhereRaw("CONCAT('DH', LPAD(id, 5, '0')) LIKE ?", ['%' . $keyword . '%']);
 
-                $id = str_replace('#', '', $keyword);
-
-                $query->where('id', $id);
-            }
-
-            // nhập số 59
-            elseif (is_numeric($keyword)) {
-
-                $query->where('id', $keyword);
-            }
-
-            // nhập chữ → tìm tên / sđt
-            else {
-
-                $query->where(function ($q) use ($keyword) {
-
-                    $q->where('receiver_name', 'like', "%{$keyword}%")
-                    ->orWhere('receiver_phone', 'like', "%{$keyword}%")
-                    ->orWhereHas('user', function ($u) use ($keyword) {
-                        $u->where('name', 'like', "%{$keyword}%");
-                    });
-                });
-            }
+                if ($numberKeyword !== '') {
+                    $q->orWhere('id', (int) $numberKeyword);
+                }
+            });
         }
 
         /*
@@ -200,8 +185,13 @@ class OrderController extends Controller
         $order = Order::with([
             'user',
             'cancelledByUser',
-            'items.variant.images',
-            'items.variant.product.images'
+            'items' => function ($q) {
+                $q->with([
+                    'variant.images',
+                    'variant.product.images',
+                    'batches.stockImport'
+                ]);
+            }
         ])->findOrFail($id);
 
         return view('admin.orders.show', compact('order'));

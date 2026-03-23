@@ -24,20 +24,24 @@ class ReviewController extends Controller
          * 🔎 TÌM KIẾM
          */
         if ($request->filled('keyword')) {
+            $keyword = trim($request->keyword);
+            $numberKeyword = preg_replace('/\D/', '', $keyword);
 
-            $keyword = $request->keyword;
-
-            $query->where(function ($q) use ($keyword) {
-
+            $query->where(function ($q) use ($keyword, $numberKeyword) {
                 $q->where('comment', 'like', '%' . $keyword . '%')
-
                     ->orWhereHas('user', function ($q2) use ($keyword) {
                         $q2->where('name', 'like', '%' . $keyword . '%');
                     })
-
                     ->orWhereHas('product', function ($q3) use ($keyword) {
                         $q3->where('name', 'like', '%' . $keyword . '%');
-                    });
+                    })
+                    ->orWhereRaw("CONCAT('DG', LPAD(id, 5, '0')) LIKE ?", ['%' . $keyword . '%'])
+                    ->orWhereRaw("CONCAT('DH', LPAD(order_id, 5, '0')) LIKE ?", ['%' . $keyword . '%']);
+
+                if ($numberKeyword !== '') {
+                    $q->orWhere('id', (int) $numberKeyword)
+                        ->orWhere('order_id', (int) $numberKeyword);
+                }
             });
         }
 

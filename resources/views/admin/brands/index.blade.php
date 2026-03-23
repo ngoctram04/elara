@@ -42,7 +42,7 @@ type="text"
 name="keyword"
 value="{{ request('keyword') }}"
 class="form-control form-control-sm"
-placeholder="Tìm theo tên thương hiệu..."
+placeholder="Tìm theo tên thương hiệu hoặc mã..."
 
 >
 
@@ -129,7 +129,7 @@ Hành động
 <tr>
 
 <td class="text-center text-muted fw-semibold">
-#{{ $brand->id }}
+    TH{{ str_pad($brand->id, 4, '0', STR_PAD_LEFT) }}
 </td>
 
 <td class="fw-medium">

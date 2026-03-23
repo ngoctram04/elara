@@ -20,7 +20,7 @@
 name="keyword"
 value="{{ request('keyword') }}"
 class="form-control form-control-sm"
-placeholder="Mã đơn / tên / SĐT">
+placeholder="Tìm mã đơn hoặc tên khách hàng">
 </div>
 
 <div class="col-md-2">
@@ -124,7 +124,9 @@ class="btn btn-outline-secondary btn-sm">
 
 <tr>
 
-<td class="fw-semibold">#{{ $order->id }}</td>
+<td class="fw-semibold">
+    DH{{ str_pad($order->id, 5, '0', STR_PAD_LEFT) }}
+</td>
 
 <td>
 

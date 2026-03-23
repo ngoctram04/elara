@@ -42,7 +42,7 @@ type="text"
 name="keyword"
 value="{{ request('keyword') }}"
 class="form-control form-control-sm"
-placeholder="Tìm theo tên danh mục nhỏ..."
+placeholder="Tìm theo tên danh mục nhỏ hoặc mã..."
 
 >
 
@@ -125,7 +125,7 @@ Hành động
 {{-- MÃ --}}
 
 <td class="text-center text-muted fw-semibold">
-#{{ $child->id }}
+    DMC{{ str_pad($child->id, 4, '0', STR_PAD_LEFT) }}
 </td>
 
 {{-- TÊN --}}
@@ -133,7 +133,6 @@ Hành động
 <td class="fw-medium">
 {{ $child->name }}
 </td>
-
 {{-- SỐ SẢN PHẨM --}}
 
 <td class="text-center fw-semibold">

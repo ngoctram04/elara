@@ -26,9 +26,8 @@
                        name="keyword"
                        value="{{ request('keyword') }}"
                        class="form-control form-control-sm"
-                       placeholder="Tìm theo tên danh mục...">
+                       placeholder="Tìm theo tên danh mục hoặc mã...">
             </div>
-
             <div class="col-md-3">
                 <select name="sort" class="form-select form-select-sm">
                     <option value="">Sắp xếp theo</option>
@@ -72,8 +71,8 @@
                     <tr>
                         {{-- ID --}}
                         <td class="text-center text-muted fw-semibold">
-                            #{{ $category->id }}
-                        </td>
+    DM{{ str_pad($category->id, 4, '0', STR_PAD_LEFT) }}
+</td>
 
                         {{-- NAME --}}
                         <td class="fw-medium">

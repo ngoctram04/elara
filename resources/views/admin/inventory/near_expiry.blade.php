@@ -26,7 +26,7 @@
         <input type="text" name="keyword"
             value="{{ request('keyword') }}"
             class="form-control form-control-sm"
-            placeholder="Tên SP / Mã SP / Mã lô...">
+            placeholder="Tên SP / Mã SP / Mã biến thể / Mã lô...">
     </div>
 
     <div class="col-md-3">
@@ -61,12 +61,26 @@
 </form>
 
 {{-- ALERT --}}
-<div class="alert alert-warning mb-4">
-    <b>Quy tắc hệ thống:</b><br>
-    🟢 Bình thường (> 7 tháng)<br>
-    🟡 ≤ 7 tháng → nên sale<br>
-    🔴 ≤ 6 tháng → sắp huỷ<br>
-    ⚫ Lô huỷ vẫn hiển thị
+<div class="alert alert-warning mb-4 py-2">
+
+    <i class="bi bi-info-circle me-1"></i>
+    <b>Quy tắc:</b>
+
+    <span class="ms-2">
+        <i class="bi bi-check-circle-fill text-success me-1"></i>
+        > 7 tháng
+    </span>
+
+    <span class="ms-3">
+        <i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>
+        ≤ 7 tháng
+    </span>
+
+    <span class="ms-3">
+        <i class="bi bi-x-circle-fill text-danger me-1"></i>
+        ≤ 6 tháng
+    </span>
+
 </div>
 
 {{-- TABLE --}}
@@ -91,15 +105,14 @@
 @forelse($lots as $lot)
 
 @php
-$expiry = \Carbon\Carbon::parse($lot->expiry_date);
-$now = now();
-$days = $now->diffInDays($expiry, false);
-$months = $days / 30;
+    $expiry = \Carbon\Carbon::parse($lot->expiry_date);
+    $now = now();
+    $days = $now->diffInDays($expiry, false);
+    $months = $days / 30;
 
-// 💰 TÍNH TIỀN
-$totalCost = $lot->imported_quantity * $lot->cost_price;
-$remainingValue = $lot->remaining_quantity * $lot->cost_price;
-$expiredValue = $lot->expired_quantity * $lot->cost_price;
+    $totalCost = $lot->imported_quantity * $lot->cost_price;
+    $remainingValue = $lot->remaining_quantity * $lot->cost_price;
+    $expiredValue = $lot->expired_quantity * $lot->cost_price;
 @endphp
 
 <tr class="
@@ -111,38 +124,60 @@ $expiredValue = $lot->expired_quantity * $lot->cost_price;
 
 <td>
     @if($lot->image_path)
-        <img src="{{ asset('storage/'.$lot->image_path) }}" width="50" class="rounded border">
+        <img src="{{ asset('storage/'.$lot->image_path) }}"
+             width="50"
+             height="50"
+             class="rounded border"
+             style="object-fit:cover">
+    @else
+        <div class="bg-light border rounded d-inline-flex align-items-center justify-content-center"
+             style="width:50px;height:50px;">
+            <i class="bi bi-image text-muted"></i>
+        </div>
     @endif
 </td>
 
 <td>
     <span class="badge bg-dark">
-        {{ $lot->code }}
+        {{ $lot->lot_code }}
     </span>
 </td>
 
 <td class="fw-medium">
     {{ $lot->product_name }}<br>
-    <small class="text-muted">#{{ $lot->product_id }}</small>
+    <small class="text-muted">
+        SP{{ str_pad($lot->product_id, 5, '0', STR_PAD_LEFT) }}
+    </small>
 </td>
 
-<td>{{ $lot->attribute_value }}</td>
+<td>
+    <div class="fw-semibold text-muted">
+        BT{{ str_pad($lot->variant_id, 5, '0', STR_PAD_LEFT) }}
+    </div>
 
-{{-- SỐ LƯỢNG --}}
+    <div>
+        {{ $lot->attribute_value }}
+    </div>
+
+    @if($lot->attribute_name)
+        <small class="text-muted">
+            {{ $lot->attribute_name }}
+        </small>
+    @endif
+</td>
+
 <td class="text-center small">
     <div>Nhập: <b>{{ $lot->imported_quantity }}</b></div>
     <div class="text-success">Bán: {{ $lot->sold_quantity }}</div>
     <div class="text-muted">Huỷ: {{ $lot->expired_quantity }}</div>
 </td>
 
-{{-- GIÁ TRỊ --}}
 <td class="text-end small">
     <div>Nhập: <b>{{ number_format($totalCost) }}đ</b></div>
     <div class="text-success">Còn: {{ number_format($remainingValue) }}đ</div>
     <div class="text-danger">Hao hụt: {{ number_format($expiredValue) }}đ</div>
 </td>
 
-{{-- HSD --}}
 <td class="text-center small">
     <div>{{ $expiry->format('d/m/Y') }}</div>
     <div class="text-muted">
@@ -150,7 +185,6 @@ $expiredValue = $lot->expired_quantity * $lot->cost_price;
     </div>
 </td>
 
-{{-- TRẠNG THÁI --}}
 <td class="text-center">
     @if($lot->expired_at)
         <span class="badge bg-secondary">Đã huỷ</span>

@@ -195,7 +195,8 @@ class="product-thumb">
 </div>
 
 <div class="small text-muted">
-ID: {{ $q->product_id }}
+    Mã sản phẩm:
+    SP{{ str_pad($q->product_id, 5, '0', STR_PAD_LEFT) }}
 </div>
 
 </div>

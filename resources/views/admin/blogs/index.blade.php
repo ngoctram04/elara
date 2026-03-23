@@ -101,7 +101,7 @@ class="btn btn-outline-secondary btn-sm">
 <tr>
 
 <th style="width:70px">
-ID
+STT
 </th>
 
 <th style="width:120px">

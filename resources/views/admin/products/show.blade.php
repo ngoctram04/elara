@@ -148,7 +148,7 @@ $attributeName = $product->variants->first()?->attribute_name;
 <table class="table table-bordered align-middle">
 <thead class="table-light text-center">
 <tr>
-    <th width="60">STT</th>
+    <th width="150">Mã biến thể</th>
     <th>Giá trị</th>
     <th width="160">Giá bán</th>
     <th width="110">Tồn kho</th>
@@ -161,7 +161,9 @@ $attributeName = $product->variants->first()?->attribute_name;
 @forelse($product->variants as $index => $variant)
 <tr class="text-center">
 
-<td>{{ $index + 1 }}</td>
+<td class="fw-semibold text-muted">
+    BT{{ str_pad($variant->id, 5, '0', STR_PAD_LEFT) }}
+</td>
 
 <td class="fw-semibold">
     {{ $variant->attribute_value }}

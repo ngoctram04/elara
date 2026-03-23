@@ -26,7 +26,7 @@
 name="keyword"
 class="form-control"
 style="max-width:260px"
-placeholder="Tìm theo tên, email, SĐT..."
+placeholder="Tìm theo tên, mã hoặc email"
 value="{{ request('keyword') }}">
 
 {{-- HẠNG THÀNH VIÊN --}}
@@ -133,7 +133,7 @@ class="btn btn-outline-secondary">
 
 <tr>
 
-<td>#{{ $customer->id }}</td>
+<td>KH{{ str_pad($customer->id, 4, '0', STR_PAD_LEFT) }}</td>
 
 <td>{{ $customer->name }}</td>
 

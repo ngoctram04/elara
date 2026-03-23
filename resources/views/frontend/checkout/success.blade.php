@@ -98,8 +98,10 @@ body{
         <div class="row">
             <div class="col-6 label">Mã đơn hàng:</div>
             <div class="col-6 text-end">
-                <strong>#{{ $order->id }}</strong>
-            </div>
+    <strong class="fs-5">
+        DH{{ str_pad($order->id, 5, '0', STR_PAD_LEFT) }}
+    </strong>
+</div>
         </div>
 
         <div class="row">

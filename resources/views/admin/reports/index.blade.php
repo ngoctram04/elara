@@ -498,7 +498,7 @@ Không có dữ liệu
 Bom hàng (đơn huỷ)
 </h6>
 
-<a href="{{ route('admin.orders.index', ['status' => 4]) }}"
+<a href="{{ route('admin.reports.cancelOrders', ['status' => 4]) }}"
 class="small">
 Xem tất cả
 </a>
@@ -509,7 +509,7 @@ Xem tất cả
 
 <thead>
 <tr>
-<th>#</th>
+<th>Mã đơn hàng</th>
 <th>Khách</th>
 <th class="text-center">Tiền</th>
 <th class="text-end">Ngày</th>
@@ -521,7 +521,9 @@ Xem tất cả
 @forelse($cancelList as $order)
 <tr>
 
-<td>#{{ $order->id }}</td>
+<td>
+    DH{{ str_pad($order->id, 5, '0', STR_PAD_LEFT) }}
+</td>
 
 <td>
 {{ $order->customer_name ?? '---' }}

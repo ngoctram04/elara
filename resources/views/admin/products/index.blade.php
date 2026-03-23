@@ -34,7 +34,7 @@
            name="keyword"
            value="{{ request('keyword') }}"
            class="form-control form-control-sm"
-           placeholder="Tìm tên sản phẩm...">
+           placeholder="Tìm tên sản phẩm hoặc mã...">
 </div>
 
 <div class="col-md-2">
@@ -116,7 +116,7 @@
 <tr>
 
 <td class="text-center text-muted fw-semibold">
-    #{{ $product->id }}
+    SP{{ str_pad($product->id, 5, '0', STR_PAD_LEFT) }}
 </td>
 
 <td class="text-center">

@@ -37,7 +37,7 @@ Tổng: {{ $logs->total() }}
 <input type="text"
 name="keyword"
 class="form-control form-control-sm"
-placeholder="Tìm theo tên sản phẩm..."
+placeholder="Tìm theo tên sản phẩm hoặc mã..."
 value="{{ request('keyword') }}">
 
 </div>
@@ -163,8 +163,12 @@ class="btn btn-outline-secondary btn-sm">
                 {{ $log->variant->product->name ?? '-' }}
             </div>
             <small class="text-muted">
-                #{{ $log->variant->product->id ?? '-' }}
-            </small>
+    @if($log->variant && $log->variant->product)
+        SP{{ str_pad($log->variant->product->id, 5, '0', STR_PAD_LEFT) }}
+    @else
+        -
+    @endif
+</small>
         </div>
 
     </div>
@@ -172,7 +176,16 @@ class="btn btn-outline-secondary btn-sm">
 
 {{-- BIẾN THỂ --}}
 <td>
-    {{ $log->variant->attribute_value ?? '-' }}
+    @if($log->variant)
+        <div class="fw-semibold">
+            BT{{ str_pad($log->variant->id, 5, '0', STR_PAD_LEFT) }}
+        </div>
+        <small class="text-muted">
+            {{ $log->variant->attribute_name }}: {{ $log->variant->attribute_value }}
+        </small>
+    @else
+        -
+    @endif
 </td>
 
 {{-- LOẠI --}}

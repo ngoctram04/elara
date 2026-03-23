@@ -120,9 +120,9 @@ class="btn btn-outline-secondary btn-sm">
 </td>
 
 <td>
-<a href="{{ route('admin.orders.show',$refund->order_id) }}">
-#{{ $refund->order_id }}
-</a>
+    <a href="{{ route('admin.orders.show',$refund->order_id) }}">
+        DH{{ str_pad($refund->order_id, 5, '0', STR_PAD_LEFT) }}
+    </a>
 </td>
 
 <td>{{ $refund->user->name }}</td>
@@ -263,7 +263,8 @@ tabindex="-1">
 
 <div class="modal-header">
 <h5 class="modal-title">
-Chi tiết yêu cầu hoàn tiền #{{ $refund->id }}
+    Chi tiết yêu cầu hoàn tiền
+    HT{{ str_pad($refund->id, 5, '0', STR_PAD_LEFT) }}
 </h5>
 
 <button class="btn-close"
@@ -274,7 +275,7 @@ data-bs-dismiss="modal"></button>
 
 <p>
 <b>Đơn hàng:</b>
-#{{ $refund->order_id }}
+DH{{ str_pad($refund->order_id, 5, '0', STR_PAD_LEFT) }}
 </p>
 
 <p>

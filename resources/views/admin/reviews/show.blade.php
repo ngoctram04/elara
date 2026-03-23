@@ -51,8 +51,14 @@ Quay lại
 <div class="row mb-2">
 
 <div class="col-md-6">
-<strong>Đơn hàng:</strong>
-#{{ $review->order_id ?? 'N/A' }}
+    <strong>Đơn hàng:</strong>
+
+    @if($review->order_id)
+        DH{{ str_pad($review->order_id, 5, '0', STR_PAD_LEFT) }}
+    @else
+        N/A
+    @endif
+
 </div>
 
 <div class="col-md-6">

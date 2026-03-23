@@ -26,7 +26,17 @@ class ProductController extends Controller
         ]);
 
         if ($request->filled('keyword')) {
-            $query->where('name', 'like', '%' . $request->keyword . '%');
+            $keyword = trim($request->keyword);
+            $numberKeyword = preg_replace('/\D/', '', $keyword);
+
+            $query->where(function ($q) use ($keyword, $numberKeyword) {
+                $q->where('name', 'like', '%' . $keyword . '%')
+                    ->orWhereRaw("CONCAT('SP', LPAD(id, 5, '0')) LIKE ?", ['%' . $keyword . '%']);
+
+                if ($numberKeyword !== '') {
+                    $q->orWhere('id', (int) $numberKeyword);
+                }
+            });
         }
 
         if ($request->filled('category_id')) {

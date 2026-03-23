@@ -204,7 +204,7 @@ color:#475569;
     {{-- HEADER --}}
     <div class="order-header">
         <div>
-            Mã đơn: <b>#{{ $order->id }}</b> |
+            Mã đơn: <b>DH{{ str_pad($order->id, 5, '0', STR_PAD_LEFT) }}</b> |
             {{ $order->created_at->format('d/m/Y H:i') }}
 
             @if($order->isCompleted() && $order->delivered_at)

@@ -190,7 +190,7 @@ data-id="{{ $item['variant_id'] }}">
             <button class="btn btn-outline-primary btn-sm"
                 data-bs-toggle="modal"
                 data-bs-target="#voucherModal">
-                🎟 Chọn mã
+                Chọn mã
             </button>
 
             <div class="small text-success mt-1 d-none" id="voucher-applied"></div>

@@ -19,7 +19,12 @@ class BrandController extends Controller
         }
 
         if ($request->filled('keyword')) {
-            $query->where('name', 'like', '%' . $request->keyword . '%');
+            $keyword = trim($request->keyword);
+
+            $query->where(function ($q) use ($keyword) {
+                $q->where('name', 'like', '%' . $keyword . '%')
+                    ->orWhereRaw("CONCAT('TH', LPAD(id, 4, '0')) LIKE ?", ['%' . $keyword . '%']);
+            });
         }
 
         if ($request->sort === 'oldest') {
