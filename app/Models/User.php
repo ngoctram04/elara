@@ -113,6 +113,21 @@ class User extends Authenticatable implements MustVerifyEmail
         return asset('images/avatar-default.png');
     }
 
+    public function getYearlySpentCalculatedAttribute()
+    {
+        return $this->orders()
+            ->where('status', 3)
+            ->whereYear('created_at', now()->year)
+            ->sum('grand_total');
+    }
+
+    public function getTotalSpentCalculatedAttribute()
+    {
+        return $this->orders()
+            ->where('status', 3)
+            ->sum('grand_total');
+    }
+
     public function isAdmin()
     {
         return $this->role === 'admin';
@@ -134,9 +149,9 @@ class User extends Authenticatable implements MustVerifyEmail
         $this->save();
     }
 
-    public function getMemberLevelAttribute()
+    public function getMemberLevelAttribute($value)
     {
-        $spent = (float) ($this->yearly_spent ?? 0);
+        $spent = (float) $this->yearly_spent_calculated;
 
         if ($spent >= 10000000) return 'platinum';
         if ($spent >= 3000000) return 'gold';
@@ -146,7 +161,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function updateMemberLevel()
     {
-        $spent = (float) ($this->yearly_spent ?? 0);
+        $spent = (float) $this->yearly_spent_calculated;
 
         if ($spent >= 10000000) {
             $level = 'platinum';

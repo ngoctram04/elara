@@ -548,31 +548,50 @@ $variantsForJs = $variants->map(function ($v) {
     }
 
     function searchVariants(keyword) {
-        const q = normalizeText(keyword);
+    const q = normalizeText(keyword);
 
-        if (!q) {
-            return variantsData.slice(0, 12);
-        }
+    if (!q) {
+        return [...variantsData]
+            .sort((a, b) => {
+                // Hết hàng lên đầu
+                if (a.stock_quantity === 0 && b.stock_quantity > 0) return -1;
+                if (a.stock_quantity > 0 && b.stock_quantity === 0) return 1;
 
-        const tokens = q.split(' ').filter(Boolean);
-
-        let results = variantsData
-            .map(item => {
-                const haystack = getVariantSearchText(item);
-                const label = normalizeText(item.label);
-                const startsWithFull = label.startsWith(q) ? 1 : 0;
-                const exactWords = tokens.filter(token => haystack.includes(token)).length;
-
-                return {
-                    ...item,
-                    score: (startsWithFull * 100) + exactWords
-                };
+                // Sau đó ưu tiên tồn ít lên trước
+                return a.stock_quantity - b.stock_quantity;
             })
-            .filter(item => tokens.every(token => getVariantSearchText(item).includes(token)))
-            .sort((a, b) => b.score - a.score);
-
-        return results.slice(0, 12);
+            .slice(0, 20);
     }
+
+    const tokens = q.split(' ').filter(Boolean);
+
+    let results = variantsData
+        .map(item => {
+            const haystack = getVariantSearchText(item);
+            const label = normalizeText(item.label);
+            const startsWithFull = label.startsWith(q) ? 1 : 0;
+            const exactWords = tokens.filter(token => haystack.includes(token)).length;
+
+            return {
+                ...item,
+                score: (startsWithFull * 100) + exactWords
+            };
+        })
+        .filter(item => tokens.every(token => getVariantSearchText(item).includes(token)))
+        .sort((a, b) => {
+            // Khi search cũng ưu tiên hết hàng trước
+            if (a.stock_quantity === 0 && b.stock_quantity > 0) return -1;
+            if (a.stock_quantity > 0 && b.stock_quantity === 0) return 1;
+
+            // Cùng trạng thái kho thì sort theo độ khớp
+            if (b.score !== a.score) return b.score - a.score;
+
+            // Nếu score bằng nhau thì tồn ít lên trước
+            return a.stock_quantity - b.stock_quantity;
+        });
+
+    return results.slice(0, 15);
+}
 
     function getImageHtml(src, className = 'variant-thumb', placeholderClass = 'variant-thumb-placeholder') {
         if (src) {

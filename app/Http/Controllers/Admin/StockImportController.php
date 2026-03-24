@@ -33,7 +33,6 @@ class StockImportController extends Controller
 
         return view('admin.stock_imports.create', compact('variants'));
     }
-
     /* =======================
         LƯU PHIẾU NHẬP
     ======================= */

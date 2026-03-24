@@ -93,6 +93,10 @@ class CustomerController extends Controller
             ->withSum(['orders as spending' => function ($q) {
                 $q->where('status', 3);
             }], 'grand_total')
+            ->withSum(['orders as yearly_spending' => function ($q) {
+                $q->where('status', 3)
+                ->whereYear('created_at', now()->year);
+            }], 'grand_total')
             ->paginate(10)
             ->withQueryString();
         /*

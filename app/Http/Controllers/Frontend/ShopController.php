@@ -68,10 +68,11 @@ class ShopController extends Controller
 
         if ($request->filled('price')) {
             match ($request->price) {
-                '0-500'    => $baseQuery->whereBetween('min_price', [0, 500000]),
-                '500-1000' => $baseQuery->whereBetween('min_price', [500000, 1000000]),
-                '1000+'    => $baseQuery->where('min_price', '>=', 1000000),
-                default    => null,
+                '0-100'   => $baseQuery->whereBetween('min_price', [0, 100000]),
+                '100-200' => $baseQuery->where('min_price', '>', 100000)->where('min_price', '<=', 200000),
+                '200-300' => $baseQuery->where('min_price', '>', 200000)->where('min_price', '<=', 300000),
+                '300+'    => $baseQuery->where('min_price', '>', 300000),
+                default   => null,
             };
         }
 
@@ -137,8 +138,15 @@ class ShopController extends Controller
         }
 
         /* ================= PAGINATION ================= */
-        $products = $query->paginate($request->limit ?? 20)
-            ->withQueryString();
+        $allowedLimits = [9, 18, 36];
+        $limit = (int) $request->get('limit', 9);
+
+        if (!in_array($limit, $allowedLimits)) {
+            $limit = 9;
+        }
+
+        $products = $query->paginate($limit)
+        ->withQueryString();
 
         /* ================= SIDEBAR ================= */
         $categories = Category::whereNull('parent_id')

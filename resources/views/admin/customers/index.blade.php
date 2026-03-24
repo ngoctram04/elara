@@ -111,17 +111,17 @@ class="btn btn-outline-secondary">
 
 <th>Email</th>
 
-<th width="100">Hạng</th>
+<th width="80">Hạng</th>
 
 <th width="150">Tổng chi tiêu</th>
+<th width="150">Chi tiêu năm nay</th>
+<th width="100">Tổng điểm hiện tại</th>
 
-<th width="140">Tổng điểm hiện tại</th>
-
-<th width="120">Trạng thái</th>
+<th width="100">Trạng thái</th>
 <th width="100">Cảnh báo</th>
-<th width="90" class="text-center">Chi tiết</th>
+<th width="70" class="text-center">Chi tiết</th>
 
-<th width="90" class="text-center">Thao tác</th>
+<th width="70" class="text-center">Thao tác</th>
 
 </tr>
 
@@ -173,7 +173,9 @@ class="btn btn-outline-secondary">
 {{ number_format($customer->spending ?? 0, 0, ',', '.') }} ₫
 
 </td>
-
+<td>
+{{ number_format($customer->yearly_spending ?? 0, 0, ',', '.') }} ₫
+</td>
 {{-- ĐIỂM --}}
 <td>
 

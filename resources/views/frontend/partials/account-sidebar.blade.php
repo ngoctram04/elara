@@ -2,7 +2,7 @@
     $user = auth()->user();
 
     $points = $user->loyalty_points ?? 0;
-    $spent = (float) ($user->yearly_spent ?? 0);
+    $spent = (float) ($user->yearly_spent_calculated ?? 0);
     $level = strtolower($user->member_level ?? 'bronze');
 
     /*
@@ -92,122 +92,126 @@
 .progress-bar{border-radius:20px;}
 .member-hover{position:relative;display:inline-block;cursor:pointer;}
 .member-hover-box{
-    position:absolute;top:110%;left:50%;
+    position:absolute;
+    top:110%;
+    left:50%;
     transform:translateX(-50%);
-    background:#fff;border-radius:10px;
+    background:#fff;
+    border-radius:10px;
     box-shadow:0 6px 18px rgba(0,0,0,0.1);
-    padding:10px 12px;font-size:13px;
-    width:220px;display:none;z-index:10;
+    padding:10px 12px;
+    font-size:13px;
+    width:220px;
+    display:none;
+    z-index:10;
 }
 .member-hover:hover .member-hover-box{display:block;}
 </style>
 
 <div class="card profile-card border-0 shadow">
+    <div style="background:linear-gradient(135deg, {{ $colors[$level] }}, #ffffff); height:90px;"></div>
 
-<div style="background:linear-gradient(135deg, {{ $colors[$level] }}, #ffffff); height:90px;"></div>
+    <div class="card-body text-center pt-0">
 
-<div class="card-body text-center pt-0">
+        <img
+            src="{{ $user->avatar ? asset('storage/'.$user->avatar) : asset('images/avatar-default.png') }}"
+            class="rounded-circle profile-avatar"
+            width="95"
+            height="95"
+            style="object-fit:cover; margin-top:-48px;"
+        >
 
-<img
-    src="{{ $user->avatar ? asset('storage/'.$user->avatar) : asset('images/avatar-default.png') }}"
-    class="rounded-circle profile-avatar"
-    width="95" height="95"
-    style="object-fit:cover; margin-top:-48px;"
->
+        <h6 class="mt-2 mb-0 fw-bold">{{ $user->name }}</h6>
+        <small class="text-muted">Thành viên ELARA</small>
 
-<h6 class="mt-2 mb-0 fw-bold">{{ $user->name }}</h6>
-<small class="text-muted">Thành viên ELARA</small>
+        @if($user->email_verified_at)
+            <div class="mt-2">
+                <span class="badge bg-success-subtle text-success border">
+                    <i class="bi bi-check-circle me-1"></i> Email đã xác thực
+                </span>
+            </div>
+        @endif
 
-@if($user->email_verified_at)
-<div class="mt-2">
-    <span class="badge bg-success-subtle text-success border">
-        <i class="bi bi-check-circle me-1"></i> Email đã xác thực
-    </span>
-</div>
-@endif
+        <div class="mt-2 member-hover">
+            <span class="member-badge px-3 py-1"
+                  style="background: {{ $colors[$level] }}20; color: {{ $colors[$level] }};">
+                Hạng {{ $levelNames[$level] }}
+                <i class="bi bi-info-circle ms-1"></i>
+            </span>
 
-<div class="mt-2 member-hover">
-    <span class="member-badge px-3 py-1"
-          style="background: {{ $colors[$level] }}20; color: {{ $colors[$level] }};">
-        Hạng {{ $levelNames[$level] }}
-        <i class="bi bi-info-circle ms-1"></i>
-    </span>
-
-    <div class="member-hover-box text-start">
-        <div class="fw-semibold mb-1">
-            Quyền lợi hạng {{ $levelNames[$level] }}
+            <div class="member-hover-box text-start">
+                <div class="fw-semibold mb-1">
+                    Quyền lợi hạng {{ $levelNames[$level] }}
+                </div>
+                <ul class="mb-0 ps-3">
+                    @foreach($benefits[$level] as $b)
+                        <li>{{ $b }}</li>
+                    @endforeach
+                </ul>
+            </div>
         </div>
-        <ul class="mb-0 ps-3">
-            @foreach($benefits[$level] as $b)
-                <li>{{ $b }}</li>
-            @endforeach
-        </ul>
-    </div>
-</div>
 
-<div class="mt-2 fw-semibold">
-    {{ number_format($spent, 0, ',', '.') }} đ
-</div>
-<small class="text-muted d-block">
-    Chi tiêu năm nay
-</small>
+        <div class="mt-2 fw-semibold">
+            {{ number_format($spent, 0, ',', '.') }} đ
+        </div>
+        <small class="text-muted d-block">
+            Chi tiêu năm nay
+        </small>
 
-<div class="mt-2 fw-semibold" style="color:#8b5e34;">
-    {{ number_format($points, 0, ',', '.') }} điểm
-</div>
-<small class="text-muted d-block">
-    Điểm hiện có
-</small>
+        <div class="mt-2 fw-semibold" style="color:#8b5e34;">
+            {{ number_format($points, 0, ',', '.') }} điểm
+        </div>
+        <small class="text-muted d-block">
+            Điểm hiện có
+        </small>
 
-@if($nextLevel)
-<div class="mt-2">
-    <div class="progress" style="height:8px;">
-        <div class="progress-bar"
-             style="width: {{ $progress }}%; background: {{ $colors[$level] }};">
+        @if($nextLevel)
+            <div class="mt-2">
+                <div class="progress" style="height:8px;">
+                    <div class="progress-bar"
+                         style="width: {{ $progress }}%; background: {{ $colors[$level] }};">
+                    </div>
+                </div>
+                <small class="text-muted">
+                    Còn {{ number_format($nextValue - $spent, 0, ',', '.') }} đ để lên {{ $levelNames[$nextLevel] }}
+                </small>
+            </div>
+        @else
+            <small class="text-success d-block mt-2">
+                Hạng cao nhất
+            </small>
+        @endif
+
+        <hr>
+
+        <div class="profile-menu text-start small">
+            <a class="d-block text-decoration-none {{ request()->routeIs('orders.*') ? 'fw-semibold text-primary' : 'text-dark' }}"
+               href="{{ route('orders.history') }}">
+                <i class="bi bi-box-seam me-2"></i> Đơn hàng của tôi
+            </a>
+
+            <a class="d-block text-decoration-none {{ request()->routeIs('profile.index') ? 'fw-semibold text-primary' : 'text-dark' }}"
+               href="{{ route('profile.index') }}">
+                <i class="bi bi-person me-2"></i> Thông tin tài khoản
+            </a>
+
+            <a class="d-block text-decoration-none {{ request()->routeIs('addresses.*') ? 'fw-semibold text-primary' : 'text-dark' }}"
+               href="{{ route('addresses.index') }}">
+                <i class="bi bi-geo-alt me-2"></i> Sổ địa chỉ
+            </a>
+
+            <a class="d-block text-decoration-none {{ request()->routeIs('points.*') ? 'fw-semibold text-primary' : 'text-dark' }}"
+               href="{{ route('points.history') }}">
+                <i class="bi bi-star me-2"></i> Lịch sử điểm
+            </a>
+
+            <form method="POST" action="{{ route('logout') }}" class="mt-3">
+                @csrf
+                <button class="btn btn-outline-danger w-100 btn-sm">
+                    <i class="bi bi-box-arrow-right me-1"></i> Đăng xuất
+                </button>
+            </form>
         </div>
     </div>
-    <small class="text-muted">
-        Còn {{ number_format($nextValue - $spent, 0, ',', '.') }} đ để lên {{ $levelNames[$nextLevel] }}
-    </small>
-</div>
-@else
-<small class="text-success d-block mt-2">
-    Hạng cao nhất
-</small>
-@endif
-
-<hr>
-
-<div class="profile-menu text-start small">
-
-<a class="d-block text-decoration-none {{ request()->routeIs('orders.*') ? 'fw-semibold text-primary' : 'text-dark' }}"
-   href="{{ route('orders.history') }}">
-    <i class="bi bi-box-seam me-2"></i> Đơn hàng của tôi
-</a>
-
-<a class="d-block text-decoration-none {{ request()->routeIs('profile.index') ? 'fw-semibold text-primary' : 'text-dark' }}"
-   href="{{ route('profile.index') }}">
-    <i class="bi bi-person me-2"></i> Thông tin tài khoản
-</a>
-
-<a class="d-block text-decoration-none {{ request()->routeIs('addresses.*') ? 'fw-semibold text-primary' : 'text-dark' }}"
-   href="{{ route('addresses.index') }}">
-    <i class="bi bi-geo-alt me-2"></i> Sổ địa chỉ
-</a>
-
-<a class="d-block text-decoration-none {{ request()->routeIs('points.*') ? 'fw-semibold text-primary' : 'text-dark' }}"
-   href="{{ route('points.history') }}">
-    <i class="bi bi-star me-2"></i> Lịch sử điểm
-</a>
-
-<form method="POST" action="{{ route('logout') }}" class="mt-3">
-@csrf
-<button class="btn btn-outline-danger w-100 btn-sm">
-    <i class="bi bi-box-arrow-right me-1"></i> Đăng xuất
-</button>
-</form>
-
-</div>
-</div>
 </div>
 </div>
