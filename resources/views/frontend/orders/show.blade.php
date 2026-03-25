@@ -469,24 +469,50 @@ form.submit();
 // =============================
 document.querySelectorAll('.btn-confirm').forEach(function(btn){
 
-    btn.addEventListener('click',function(e){
+    btn.addEventListener('click', function(e){
 
         e.preventDefault();
 
         let form = this.closest('form');
 
         Swal.fire({
-            title: 'Xác nhận đã nhận hàng?',
-            text: 'Sau khi xác nhận, đơn hàng sẽ hoàn tất.',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'Đã nhận',
-            cancelButtonText: 'Chưa',
-            confirmButtonColor: '#2ecc71',
-            cancelButtonColor: '#6c757d'
-        }).then((result)=>{
 
-            if(result.isConfirmed){
+            title: 'Xác nhận đã nhận hàng?',
+
+            html: `
+                Sau khi xác nhận, đơn hàng sẽ hoàn tất.<br><br>
+
+                <div style="
+                    background:#f8f9fa;
+                    border:1px solid #dee2e6;
+                    padding:14px;
+                    border-radius:8px;
+                    font-size:14px;
+                    text-align:left;
+                    line-height:1.5;
+                ">
+                    <b>Lưu ý:</b><br>
+                    Vui lòng quay video quá trình mở kiện hàng để làm bằng chứng
+                    trong trường hợp sản phẩm bị lỗi, thiếu hoặc hư hỏng.
+                    Cửa hàng có thể từ chối hỗ trợ nếu không có bằng chứng.
+                </div>
+            `,
+
+            showCancelButton: true,
+
+            confirmButtonText: 'Đã nhận',
+
+            cancelButtonText: 'Chưa',
+
+            confirmButtonColor: '#2ecc71',
+
+            cancelButtonColor: '#6c757d',
+
+            reverseButtons: true
+
+        }).then((result) => {
+
+            if (result.isConfirmed) {
                 form.submit();
             }
 

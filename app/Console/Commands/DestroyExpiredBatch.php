@@ -109,12 +109,12 @@ class DestroyExpiredBatch extends Command
 
             DB::commit();
 
-            $this->info('✅ Đã huỷ lô cận date thành công');
+            $this->info('Đã huỷ lô cận date thành công');
         } catch (\Exception $e) {
 
             DB::rollBack();
 
-            $this->error('❌ Lỗi: ' . $e->getMessage());
+            $this->error('Lỗi: ' . $e->getMessage());
         }
     }
 }

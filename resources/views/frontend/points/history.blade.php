@@ -135,8 +135,10 @@
                                             </td>
 
                                             <td class="text-muted">
-                                                {{ $history->description }}
-                                            </td>
+    {{ preg_replace_callback('/#(\d+)/', function ($matches) {
+        return 'DH' . str_pad($matches[1], 5, '0', STR_PAD_LEFT);
+    }, $history->description) }}
+</td>
                                         </tr>
                                     @endforeach
                                 </tbody>

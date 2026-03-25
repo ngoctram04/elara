@@ -2,57 +2,166 @@
 
 @section('title', 'Chi tiết phiếu hoàn tiền')
 
+@push('styles')
+<style>
+.refund-wrapper{max-width:900px;margin:auto}
+.refund-card{border-radius:16px;border:0;box-shadow:0 8px 20px rgba(0,0,0,.06)}
+.refund-header{border-bottom:1px solid #eee;padding-bottom:12px;margin-bottom:18px}
+.refund-code{font-size:20px;font-weight:700;color:#0d6efd}
+.refund-row{margin-bottom:12px}
+.refund-label{font-weight:600;color:#555;width:160px;display:inline-block}
+
+.product-box{
+    display:flex;gap:14px;
+    border:1px solid #eee;
+    border-radius:12px;
+    padding:10px;margin-bottom:10px;
+    align-items:center;
+}
+.product-box img{
+    width:70px;height:70px;
+    object-fit:cover;border-radius:10px;
+}
+
+.gallery img{
+    width:120px;height:120px;
+    object-fit:cover;
+    border-radius:10px;
+    border:1px solid #eee;
+    margin-right:10px;margin-bottom:10px;
+}
+</style>
+@endpush
+
 @section('content')
-<div class="container py-4">
+<div class="container py-4 refund-wrapper">
 
-    <h4 class="mb-3">Phiếu yêu cầu hoàn tiền</h4>
+<h4 class="mb-3 fw-bold">Phiếu yêu cầu hoàn tiền</h4>
 
-    <div class="card shadow-sm">
-        <div class="card-body">
+<div class="card refund-card">
+<div class="card-body">
 
-            <p><b>Mã phiếu:</b> RH{{ str_pad($refund->id, 5, '0', STR_PAD_LEFT) }}</p>
+{{-- HEADER --}}
+<div class="refund-header d-flex justify-content-between align-items-center">
+    <div>
+        <div class="refund-code">
+            RH{{ str_pad($refund->id,5,'0',STR_PAD_LEFT) }}
+        </div>
+        <small class="text-muted">
+            Ngày gửi: {{ $refund->created_at->format('d/m/Y H:i') }}
+        </small>
+    </div>
 
-            <p>
-                <b>Đơn hàng:</b>
-                <a href="{{ route('orders.show', $refund->order_id) }}">
-                    #{{ $refund->order_id }}
-                </a>
-            </p>
+    <div>
+        <span class="badge {{ $refund->status_badge_class }}">
+            {{ $refund->status_label }}
+        </span>
+    </div>
+</div>
 
-            <p><b>Lý do:</b> {{ $refund->reason }}</p>
+{{-- ĐƠN HÀNG --}}
+<div class="refund-row">
+    <span class="refund-label">Đơn hàng:</span>
+    <a href="{{ route('orders.show',$refund->order_id) }}">
+        #{{ $refund->order_id }}
+    </a>
+</div>
 
-            <p><b>Tình trạng hàng:</b> {{ $refund->condition }}</p>
+{{-- ⭐ SẢN PHẨM HOÀN --}}
+@if($refund->items->count())
+<div class="mb-3">
+    <div class="fw-semibold mb-2">Sản phẩm hoàn tiền:</div>
 
-            <p><b>Số tiền hoàn:</b> {{ number_format($refund->amount) }}₫</p>
+    @foreach($refund->items as $item)
 
-            <p><b>Trạng thái:</b>
-                @if($refund->status == 'pending')
-                    <span class="badge bg-warning">Chờ duyệt</span>
-                @elseif($refund->status == 'approved')
-                    <span class="badge bg-info">Đã duyệt</span>
-                @elseif($refund->status == 'rejected')
-                    <span class="badge bg-danger">Từ chối</span>
-                @elseif($refund->status == 'refunded')
-                    <span class="badge bg-success">Đã hoàn tiền</span>
-                @endif
-            </p>
+    @php
+        $variant = $item->variant ?? null;
+        $product = $variant->product ?? null;
+        $img = $variant->mainImage->image_path
+                ?? $product->mainImage->image_path
+                ?? null;
 
-            <p><b>Ngày gửi:</b> {{ $refund->created_at->format('d/m/Y H:i') }}</p>
+        $condition = $item->pivot->condition_status ?? 'sealed';
 
-            {{-- Ảnh --}}
-            @if($refund->images)
-                <div class="mt-3">
-                    <b>Ảnh đính kèm:</b><br>
-                    @foreach(json_decode($refund->images) as $img)
-                        <img src="{{ asset('storage/'.$img) }}"
-                             width="120"
-                             class="me-2 mb-2 border rounded">
-                    @endforeach
-                </div>
-            @endif
+        $conditionText = match($condition) {
+            'sealed'  => 'Còn nguyên seal',
+            'damaged' => 'Bị vỡ',
+            default   => 'Không xác định'
+        };
+
+        $refundMoney = $item->pivot->refund_amount ?? 0;
+    @endphp
+
+    <div class="product-box">
+
+        <img src="{{ $img ? asset('storage/'.$img) : 'https://via.placeholder.com/70' }}">
+
+        <div>
+
+            <div class="fw-semibold">
+                {{ $product->name ?? 'Sản phẩm' }}
+            </div>
+
+            <small class="text-muted">
+                {{ $variant->attribute_name ?? 'Phân loại' }}:
+                {{ $variant->attribute_value ?? '-' }}
+            </small><br>
+
+            <small>Số lượng hoàn: {{ $item->pivot->quantity }}</small><br>
+
+            <small>Tình trạng: {{ $conditionText }}</small><br>
+
+            <span class="text-danger fw-bold">
+                Hoàn: {{ number_format($refundMoney) }}₫
+            </span>
 
         </div>
+
     </div>
+
+    @endforeach
+</div>
+
+@endif
+
+
+{{-- ⭐ TỔNG TIỀN HOÀN --}}
+@php
+$totalRefund = $refund->items->sum(fn($i) => $i->pivot->refund_amount ?? 0);
+@endphp
+
+<div class="refund-row">
+    <span class="refund-label">Tổng tiền hoàn:</span>
+    <span class="text-danger fw-bold">
+        {{ number_format($totalRefund) }}₫
+    </span>
+</div>
+
+
+{{-- LÝ DO --}}
+<div class="refund-row">
+    <span class="refund-label">Lý do:</span>
+    {{ $refund->reason }}
+</div>
+
+
+{{-- ẢNH MINH CHỨNG --}}
+@if($refund->media->where('type','image')->count())
+
+<div class="mt-3">
+    <div class="fw-semibold mb-2">Ảnh minh chứng:</div>
+
+    <div class="gallery">
+        @foreach($refund->media->where('type','image') as $media)
+            <img src="{{ asset('storage/'.$media->file_path) }}">
+        @endforeach
+    </div>
+</div>
+
+@endif
+
+</div>
+</div>
 
 </div>
 @endsection
