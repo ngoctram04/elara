@@ -1,14 +1,12 @@
 <!DOCTYPE html>
-
 <html>
 <head>
 <meta charset="utf-8">
 
 <style>
-
 body{
     font-family: DejaVu Sans;
-    font-size:14px;
+    font-size:13px;
 }
 
 .title{
@@ -20,6 +18,11 @@ body{
 
 .info{
     margin-bottom:20px;
+    line-height:1.6;
+}
+
+.info p{
+    margin:2px 0;
 }
 
 table{
@@ -29,20 +32,35 @@ table{
 
 table th, table td{
     border:1px solid #000;
-    padding:8px;
+    padding:6px;
+    vertical-align:middle;
 }
 
 th{
     background:#f2f2f2;
+    text-align:center;
+}
+
+.text-center{
+    text-align:center;
+}
+
+.text-right{
+    text-align:right;
 }
 
 .total{
     text-align:right;
     margin-top:15px;
     font-weight:bold;
-    font-size:16px;
+    font-size:15px;
 }
 
+.footer{
+    margin-top:40px;
+    text-align:right;
+    font-size:13px;
+}
 </style>
 
 </head>
@@ -50,8 +68,12 @@ th{
 <body>
 
 <div class="title">
-PHIẾU NHẬP KHO
+    PHIẾU NHẬP KHO
 </div>
+
+@php
+    $first = $items->first();
+@endphp
 
 <div class="info">
 
@@ -62,22 +84,32 @@ PHIẾU NHẬP KHO
 
 <p>
 <b>Nhà cung cấp:</b>
-{{ $items->first()->supplier ?? '-' }}
+{{ $first->supplier ?? '-' }}
+</p>
+
+<p>
+<b>Số điện thoại:</b>
+{{ $first->supplier_phone ?? '-' }}
+</p>
+
+<p>
+<b>Địa chỉ:</b>
+{{ $first->supplier_address ?? '-' }}
 </p>
 
 <p>
 <b>Ngày nhập:</b>
-{{ $items->first()->created_at->format('d/m/Y') }}
+{{ optional($first->created_at)->format('d/m/Y H:i') ?? '-' }}
 </p>
 
 <p>
 <b>Người nhập:</b>
-{{ auth()->user()->name ?? 'Admin' }}
+{{ $first->user->name ?? 'Admin' }}
 </p>
 
 <p>
 <b>Ghi chú:</b>
-{{ $items->first()->note ?? '-' }}
+{{ $first->note ?? '-' }}
 </p>
 
 </div>
@@ -85,18 +117,14 @@ PHIẾU NHẬP KHO
 <table>
 
 <thead>
-
 <tr>
-
 <th width="50">STT</th>
 <th>Sản phẩm</th>
 <th>Biến thể</th>
-<th width="80">SL</th>
+<th width="90">Số lượng</th>
 <th width="120">Giá nhập</th>
-<th width="120">Thành tiền</th>
-
+<th width="140">Thành tiền</th>
 </tr>
-
 </thead>
 
 <tbody>
@@ -116,7 +144,9 @@ $totalQty += $item->quantity;
 
 <tr>
 
-<td>{{ $index + 1 }}</td>
+<td class="text-center">
+{{ $index + 1 }}
+</td>
 
 <td>
 {{ $item->variant->product->name ?? '-' }}
@@ -126,15 +156,15 @@ $totalQty += $item->quantity;
 {{ $item->variant->attribute_value ?? '-' }}
 </td>
 
-<td>
-{{ $item->quantity }}
+<td class="text-center">
+{{ number_format($item->quantity) }}
 </td>
 
-<td>
+<td class="text-right">
 {{ number_format($item->cost_price) }} đ
 </td>
 
-<td>
+<td class="text-right">
 {{ number_format($sub) }} đ
 </td>
 
@@ -149,13 +179,17 @@ $totalQty += $item->quantity;
 <div class="total">
 
 <p>
-Tổng số lượng: {{ $totalQty }}
+Tổng số lượng: {{ number_format($totalQty) }}
 </p>
 
 <p>
 Tổng tiền: {{ number_format($total) }} đ
 </p>
 
+</div>
+
+<div class="footer">
+Ngày in: {{ now()->format('d/m/Y H:i') }}
 </div>
 
 </body>

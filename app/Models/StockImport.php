@@ -23,6 +23,8 @@ class StockImport extends Model
 
         'code',
         'supplier',
+        'supplier_phone',
+        'supplier_address',
         'note',
         'created_by'
     ];
@@ -66,7 +68,6 @@ class StockImport extends Model
         ACCESSORS
     ===================================================== */
 
-    // 🔥 số đã bán trong lô
     public function getSoldQuantityAttribute()
     {
         return max(
@@ -77,7 +78,6 @@ class StockImport extends Model
         );
     }
 
-    // 🔥 trạng thái lô
     public function getStatusAttribute()
     {
         if ($this->expired_at) {
@@ -109,9 +109,7 @@ class StockImport extends Model
 
     protected static function booted()
     {
-        /* ===== CREATE ===== */
         static::creating(function ($model) {
-
             if (empty($model->imported_quantity)) {
                 $model->imported_quantity = $model->quantity ?? 0;
             }
@@ -125,17 +123,15 @@ class StockImport extends Model
             }
         });
 
-        /* ===== AFTER SAVE ===== */
         static::saved(function ($model) {
             if ($model->variant) {
-                $model->variant->syncStockAndStatus(); // 🔥 QUAN TRỌNG
+                $model->variant->syncStockAndStatus();
             }
         });
 
-        /* ===== AFTER DELETE ===== */
         static::deleted(function ($model) {
             if ($model->variant) {
-                $model->variant->syncStockAndStatus(); // 🔥 QUAN TRỌNG
+                $model->variant->syncStockAndStatus();
             }
         });
     }

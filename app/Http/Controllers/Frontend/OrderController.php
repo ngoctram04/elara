@@ -10,6 +10,7 @@ use App\Models\Order;
 use App\Models\Cart;
 use App\Notifications\SystemNotification;
 use App\Models\User;
+use App\Models\RefundRequest;
 use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
@@ -29,14 +30,32 @@ class OrderController extends Controller
             ->where('user_id', Auth::id())
             ->latest();
 
+        // =========================
+        // TÌM KIẾM MÃ ĐƠN
+        // =========================
         if ($request->filled('keyword')) {
-            $query->where('id', 'like', '%' . $request->keyword . '%');
+            $keyword = trim($request->keyword);
+            $numberKeyword = preg_replace('/\D/', '', $keyword);
+
+            $query->where(function ($q) use ($keyword, $numberKeyword) {
+                if (!empty($numberKeyword)) {
+                    $q->where('id', 'like', '%' . $numberKeyword . '%');
+                }
+
+                $q->orWhereRaw(
+                    "CONCAT('DH', LPAD(id, 5, '0')) LIKE ?",
+                    ['%' . $keyword . '%']
+                );
+            });
         }
 
+        // =========================
+        // LỌC TRẠNG THÁI
+        // =========================
         if ($request->filled('status')) {
             switch ($request->status) {
                 case 'processing':
-                    $query->whereIn('status', [1, 2]);
+                    $query->where('status', 1);
                     break;
 
                 case 'shipping':
@@ -57,9 +76,32 @@ class OrderController extends Controller
             }
         }
 
-        $orders = $query->paginate(5);
+        $orders = $query->paginate(5)->withQueryString();
 
         return view('frontend.orders.index', compact('orders'));
+    }
+    public function showRefund($id)
+    {
+        $refund = RefundRequest::with([
+            'order',
+            'order.user',
+            'order.items',
+            'order.items.variant',
+            'order.items.variant.product',
+            'order.items.variant.mainImage',
+            'media',
+            'items',
+            'items.variant',
+            'items.variant.product',
+            'items.variant.mainImage',
+        ])
+        ->where('id', $id)
+        ->whereHas('order', function ($q) {
+            $q->where('user_id', Auth::id());
+        })
+        ->firstOrFail();
+
+        return view('frontend.refund.show', compact('refund'));
     }
 
     /**

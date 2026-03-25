@@ -28,11 +28,11 @@ class RefundController extends Controller
             $numberSearch = preg_replace('/\D/', '', $search);
 
             $query->where(function ($q) use ($search, $numberSearch) {
-                $q->orWhereHas('user', function ($u) use ($search) {
+                $q->whereHas('user', function ($u) use ($search) {
                     $u->where('name', 'like', '%' . $search . '%');
                 })
-                ->orWhereRaw("CONCAT('HT', LPAD(id, 5, '0')) LIKE ?", ['%' . $search . '%'])
-                ->orWhereRaw("CONCAT('DH', LPAD(order_id, 5, '0')) LIKE ?", ['%' . $search . '%']);
+                    ->orWhereRaw("CONCAT('HT', LPAD(id, 5, '0')) LIKE ?", ['%' . $search . '%'])
+                    ->orWhereRaw("CONCAT('DH', LPAD(order_id, 5, '0')) LIKE ?", ['%' . $search . '%']);
 
                 if ($numberSearch !== '') {
                     $q->orWhere('id', (int) $numberSearch)
@@ -53,36 +53,30 @@ class RefundController extends Controller
     }
 
     /**
-     * APPROVE (chỉ duyệt)
+     * Duyệt yêu cầu hoàn tiền
      */
     public function approve($id)
     {
         $refund = null;
 
         DB::transaction(function () use ($id, &$refund) {
-
-            $refund = RefundRequest::with('order.user')
-                ->findOrFail($id);
+            $refund = RefundRequest::with('order.user')->findOrFail($id);
 
             if ($refund->status !== 'pending') {
                 throw new \Exception('Yêu cầu không hợp lệ');
             }
 
             $refund->update([
-                'status' => 'approved'
-            ]);
-
-            $refund->order->update([
-                'status' => Order::STATUS_RETURNED
+                'status' => 'approved',
             ]);
         });
 
-        if ($refund && $refund->order->user) {
+        if ($refund && $refund->order && $refund->order->user) {
             $refund->order->user->notify(new SystemNotification([
-                'title' => 'Yêu cầu hoàn tiền được chấp nhận',
+                'title'   => 'Yêu cầu hoàn tiền được chấp nhận',
                 'message' => 'Đơn #' . $refund->order->id . ' đã được duyệt hoàn tiền',
-                'url' => route('orders.show', $refund->order->id),
-                'type' => 'refund'
+                'url'     => route('orders.show', $refund->order->id),
+                'type'    => 'refund',
             ]));
         }
 
@@ -90,12 +84,12 @@ class RefundController extends Controller
     }
 
     /**
-     * REJECT
+     * Từ chối yêu cầu
      */
     public function reject(Request $request, $id)
     {
         $request->validate([
-            'admin_note' => 'required|string|max:1000'
+            'admin_note' => 'required|string|max:1000',
         ]);
 
         $refund = RefundRequest::with('user', 'order')->findOrFail($id);
@@ -105,16 +99,16 @@ class RefundController extends Controller
         }
 
         $refund->update([
-            'status' => 'rejected',
-            'admin_note' => $request->admin_note
+            'status'     => 'rejected',
+            'admin_note' => $request->admin_note,
         ]);
 
         if ($refund->user) {
             $refund->user->notify(new SystemNotification([
-                'title' => 'Yêu cầu hoàn tiền bị từ chối',
+                'title'   => 'Yêu cầu hoàn tiền bị từ chối',
                 'message' => $request->admin_note,
-                'url' => route('orders.show', $refund->order_id),
-                'type' => 'refund'
+                'url'     => route('orders.show', $refund->order_id),
+                'type'    => 'refund',
             ]));
         }
 
@@ -122,92 +116,212 @@ class RefundController extends Controller
     }
 
     /**
-     * REFUNDED (🔥 FIX CHUẨN FEFO)
+     * Xác nhận đã hoàn tiền
+     *
+     * sealed => hoàn kho + hoàn lô + hoàn tiền
+     * broken => không hoàn kho, không hoàn lô, hoàn tiền + ghi nhận hao hụt giá nhập
      */
-    public function refunded($id)
+    public function refunded(Request $request, $id)
     {
+        $request->validate([
+            'admin_note' => 'nullable|string|max:1000',
+        ]);
+
         $refund = null;
+        $totalLoss = 0;
+        $restockQty = 0;
+        $damagedQty = 0;
 
-        DB::transaction(function () use ($id, &$refund) {
-
-            // 🔥 load đầy đủ batches
-            $refund = RefundRequest::with('order.items.batches', 'order.user')
-                ->findOrFail($id);
+        DB::transaction(function () use ($request, $id, &$refund, &$totalLoss, &$restockQty, &$damagedQty) {
+            $refund = RefundRequest::with([
+                'items.batches',
+                'order.user',
+            ])->findOrFail($id);
 
             $order = $refund->order;
 
-            // ❌ tránh chạy lại
+            if (!$order) {
+                throw new \Exception('Không tìm thấy đơn hàng');
+            }
+
             if ($refund->status === 'refunded') {
                 return;
             }
 
-            // ===== UPDATE STATUS =====
+            $finalNote = trim(implode(' | ', array_filter([
+                $refund->admin_note,
+                $request->input('admin_note'),
+            ])));
+
+            /*
+        |--------------------------------------------------------------------------
+        | 1. Cập nhật refund ban đầu
+        |--------------------------------------------------------------------------
+        */
             $refund->update([
-                'status' => 'refunded'
+                'status'      => 'refunded',
+                'admin_note'  => $finalNote ?: null,
+                'loss_amount' => 0,
             ]);
 
+            /*
+        |--------------------------------------------------------------------------
+        | 2. Cập nhật order
+        |--------------------------------------------------------------------------
+        */
             $order->update([
-                'payment_status' => Order::PAYMENT_REFUNDED
+                'status'         => Order::STATUS_RETURNED,
+                'payment_status' => Order::PAYMENT_REFUNDED,
             ]);
 
-            // =========================================
-            // 🔥 ROLLBACK THEO BATCH (CHUẨN NHƯ CANCEL)
-            // =========================================
-            foreach ($order->items as $item) {
+            /*
+        |--------------------------------------------------------------------------
+        | 3. Xử lý theo từng item khách đã chọn hoàn tiền
+        |--------------------------------------------------------------------------
+        */
+            foreach ($refund->items as $item) {
+                $conditionStatus = $item->pivot->condition_status ?? 'sealed';
 
-                foreach ($item->batches as $batch) {
+                $isRestockable = $conditionStatus === 'sealed';
 
-                    if ($batch->is_rolled_back) continue;
+                if ($isRestockable) {
+                    foreach ($item->batches as $batch) {
+                        if ($batch->is_rolled_back) {
+                            continue;
+                        }
 
-                    $stock = StockImport::find($batch->stock_import_id);
+                        $stock = StockImport::find($batch->stock_import_id);
 
-                    if (!$stock) continue;
+                        if (!$stock) {
+                            continue;
+                        }
 
-                    $before = $stock->remaining_quantity;
+                        $before = (int) $stock->remaining_quantity;
+                        $after  = $before + (int) $batch->quantity;
 
-                    // hoàn lại lô
-                    $stock->increment('remaining_quantity', $batch->quantity);
+                        $stock->increment('remaining_quantity', $batch->quantity);
 
-                    // đánh dấu rollback
-                    $batch->update([
-                        'is_rolled_back' => 1
-                    ]);
+                        $batch->update([
+                            'is_rolled_back' => 1,
+                        ]);
 
-                    // log kho
-                    InventoryLog::create([
-                        'variant_id' => $item->variant_id,
-                        'type' => 'cancel',
-                        'quantity_change' => $batch->quantity,
-                        'stock_before' => $before,
-                        'stock_after' => $before + $batch->quantity,
-                        'reference_type' => 'order',
-                        'reference_id' => $order->id
-                    ]);
+                        InventoryLog::create([
+                            'variant_id'      => $item->variant_id,
+                            'stock_import_id' => $batch->stock_import_id,
+                            'type'            => 'return_restock',
+                            'quantity_change' => (int) $batch->quantity,
+                            'stock_before'    => $before,
+                            'stock_after'     => $after,
+                            'unit_cost'       => (float) ($stock->cost_price ?? 0),
+                            'loss_amount'     => 0,
+                            'reference_type'  => 'refund',
+                            'reference_id'    => $refund->id,
+                            'note'            => 'Hoàn kho do khách trả hàng còn nguyên seal',
+                        ]);
+
+                        $restockQty += (int) $batch->quantity;
+                    }
+                } else {
+                    foreach ($item->batches as $batch) {
+                        $stock = StockImport::find($batch->stock_import_id);
+
+                        if (!$stock) {
+                            continue;
+                        }
+
+                        $unitCost = (float) ($stock->cost_price ?? 0);
+                        $loss     = $unitCost * (int) $batch->quantity;
+
+                        $totalLoss += $loss;
+                        $damagedQty += (int) $batch->quantity;
+
+                        InventoryLog::create([
+                            'variant_id'      => $item->variant_id,
+                            'stock_import_id' => $batch->stock_import_id,
+                            'type'            => 'return_damaged',
+                            'quantity_change' => (int) $batch->quantity,
+                            'stock_before'    => (int) $stock->remaining_quantity,
+                            'stock_after'     => (int) $stock->remaining_quantity,
+                            'unit_cost'       => $unitCost,
+                            'loss_amount'     => $loss,
+                            'reference_type'  => 'refund',
+                            'reference_id'    => $refund->id,
+                            'note'            => 'Khách trả hàng bị vỡ, không nhập lại kho',
+                        ]);
+                    }
                 }
 
-                // 🔥 sync lại tồn
                 $total = StockImport::where('variant_id', $item->variant_id)
                     ->sum('remaining_quantity');
 
                 ProductVariant::where('id', $item->variant_id)
                     ->update([
-                        'stock_quantity' => $total
+                        'stock_quantity' => $total,
                     ]);
             }
+
+            /*
+        |--------------------------------------------------------------------------
+        | 4. Cập nhật tổng hao hụt / số lượng
+        |--------------------------------------------------------------------------
+        */
+            $extraNote = [];
+
+            if ($restockQty > 0) {
+                $extraNote[] = "Hoàn kho: {$restockQty} sản phẩm";
+            }
+
+            if ($damagedQty > 0) {
+                $extraNote[] = "Không hoàn kho: {$damagedQty} sản phẩm";
+            }
+
+            if ($totalLoss > 0) {
+                $extraNote[] = 'Hao hụt giá nhập: ' . number_format($totalLoss, 0, ',', '.') . 'đ';
+            }
+
+            $mergedNote = trim(implode(' | ', array_filter([
+                $finalNote,
+                implode(' | ', $extraNote),
+            ])));
+
+            $refund->update([
+                'admin_note'         => $mergedNote ?: null,
+                'loss_amount'        => $totalLoss,
+                'restock_total_qty'  => $restockQty,
+                'damaged_total_qty'  => $damagedQty,
+            ]);
         });
 
-        // 🔔 NOTIFICATION
-        if ($refund && $refund->order->user) {
+        /*
+    |--------------------------------------------------------------------------
+    | 5. Notification
+    |--------------------------------------------------------------------------
+    */
+        if ($refund && $refund->order && $refund->order->user) {
+            $message = 'Đơn #' . $refund->order->id . ' đã được hoàn tiền thành công';
+
+            if (($refund->restock_total_qty ?? 0) > 0 && ($refund->damaged_total_qty ?? 0) > 0) {
+                $message .= ', một phần hàng đã hoàn kho và một phần không nhập lại kho';
+            } elseif (($refund->restock_total_qty ?? 0) > 0) {
+                $message .= ' và hàng đã được hoàn lại kho';
+            } else {
+                $message .= ' và hàng không được nhập lại kho';
+            }
+
             $refund->order->user->notify(new SystemNotification([
-                'title' => 'Đã hoàn tiền',
-                'message' => 'Đơn #' . $refund->order->id . ' đã được hoàn tiền thành công',
-                'url' => route('orders.show', $refund->order->id),
-                'type' => 'refund'
+                'title'   => 'Đã hoàn tiền',
+                'message' => $message,
+                'url'     => route('orders.show', $refund->order->id),
+                'type'    => 'refund',
             ]));
         }
 
-        // 📧 EMAIL
-        if ($refund && $refund->order->user && $refund->order->user->email) {
+        /*
+    |--------------------------------------------------------------------------
+    | 6. Email
+    |--------------------------------------------------------------------------
+    */
+        if ($refund && $refund->order && $refund->order->user && $refund->order->user->email) {
             Mail::to($refund->order->user->email)
                 ->send(new RefundCompletedMail(
                     $refund->order,
@@ -215,6 +329,38 @@ class RefundController extends Controller
                 ));
         }
 
-        return back()->with('success', 'Đã hoàn tiền và cập nhật kho chính xác');
+        return back()->with('success', 'Đã hoàn tiền và xử lý tồn kho theo từng sản phẩm');
+    }
+
+    /**
+     * Xác định có được hoàn kho không
+     */
+    private function shouldRestock(string $condition): bool
+    {
+        return $condition === 'sealed';
+    }
+
+    /**
+     * Ghép ghi chú admin để lưu lại tình trạng xử lý
+     */
+    private function buildAdminNote(?string $oldNote, ?string $newNote, string $condition, bool $shouldRestock): string
+    {
+        $conditionText = match ($condition) {
+            'sealed' => 'Hàng còn nguyên seal',
+            'broken' => 'Hàng bị vỡ',
+            default  => 'Không xác định',
+        };
+
+        $systemNote = $shouldRestock
+            ? $conditionText . ' - hoàn kho, hoàn lô'
+            : $conditionText . ' - không hoàn kho, không hoàn lô, ghi nhận hao hụt giá nhập';
+
+        $parts = array_filter([
+            $oldNote,
+            $newNote,
+            $systemNote,
+        ]);
+
+        return implode(' | ', $parts);
     }
 }

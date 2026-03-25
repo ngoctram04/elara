@@ -272,6 +272,11 @@ color:#475569;
             Đã huỷ
         </a>
 
+        <a href="{{ route('orders.history',['status'=>'return']) }}"
+           class="tab {{ request('status')=='return'?'active':'' }}">
+            Trả hàng / Hoàn tiền
+        </a>
+
     </div>
 </div>
 
@@ -435,6 +440,12 @@ color:#475569;
                    class="btn btn-outline-secondary btn-sm btn-action">
                     Chi tiết
                 </a>
+                @if($order->refundRequest)
+    <a href="{{ route('refund.show', $order->refundRequest->id) }}"
+       class="btn btn-outline-danger btn-sm btn-action">
+        Xem phiếu hoàn tiền
+    </a>
+@endif
                 {{-- KHÁCH XÁC NHẬN ĐÃ NHẬN HÀNG --}}
 @if($order->status == 3 && !$order->customer_confirmed)
 <form action="{{ route('orders.confirmReceived',$order->id) }}"
@@ -645,41 +656,56 @@ form.submit();
 // =============================
 // POPUP ĐIỀU KHOẢN TRẢ HÀNG
 // =============================
-document.querySelectorAll('.btn-refund').forEach(function(btn){
+document.addEventListener('DOMContentLoaded', function () {
 
-    btn.addEventListener('click', function(){
+    const refundButtons = document.querySelectorAll('.btn-refund');
 
-        let url = this.getAttribute('data-url');
+    refundButtons.forEach(function (btn) {
 
-        Swal.fire({
-            title: 'Điều khoản trả hàng',
-            html: `
-                <div style="text-align:left;font-size:14px;line-height:1.6">
-                    <p><b>Vui lòng đọc kỹ trước khi tiếp tục:</b></p>
+        btn.addEventListener('click', function () {
 
-                    <p>• Sản phẩm phải còn nguyên vẹn, chưa qua sử dụng</p>
-                    <p>• Còn đầy đủ hộp, phụ kiện (nếu có)</p>
-                    <p>• Không áp dụng với sản phẩm hư hỏng do người dùng</p>
-                    <p>• Shop có quyền từ chối nếu không đủ điều kiện</p>
+            const url = this.getAttribute('data-url');
 
-                    <p style="margin-top:10px;color:#666">
-                        Khi nhấn "Đồng ý & Tiếp tục", bạn cam kết thông tin là đúng.
-                    </p>
-                </div>
-            `,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Đồng ý & Tiếp tục',
-            cancelButtonText: 'Không đồng ý',
-            confirmButtonColor: '#1677a0',
-            cancelButtonColor: '#6c757d',
-            allowOutsideClick: false,
-            reverseButtons: true
-        }).then((result)=>{
+            if (!url) return;
 
-            if(result.isConfirmed){
-                window.location.href = url;
-            }
+            Swal.fire({
+                title: 'Điều khoản trả hàng / hoàn tiền',
+                html: `
+    <div style="text-align:left;font-size:14px;line-height:1.6">
+        <p><b>Vui lòng đọc kỹ trước khi tiếp tục:</b></p>
+
+        <p>• Chỉ áp dụng cho đơn hàng đã giao thành công</p>
+
+        <p>• Khách hàng có thể gửi yêu cầu trả hàng / hoàn tiền khi sản phẩm có vấn đề hoặc không đúng như mô tả</p>
+
+        <p>• Nếu sản phẩm còn nguyên seal, shop sẽ kiểm tra để xem xét nhập lại kho theo quy định</p>
+
+        <p>• Nếu sản phẩm bị vỡ, hư hỏng hoặc không đủ điều kiện nhập lại kho, shop vẫn xem xét hoàn tiền theo chính sách nhưng sẽ không hoàn kho</p>
+
+        <p>• Vui lòng cung cấp hình ảnh/video rõ ràng để xác minh tình trạng sản phẩm</p>
+
+        <p>• Shop sẽ kiểm tra và phản hồi kết quả trong thời gian sớm nhất</p>
+
+        <p style="margin-top:10px;color:#666">
+            Khi nhấn "Đồng ý & Tiếp tục", bạn xác nhận thông tin cung cấp là chính xác.
+        </p>
+    </div>
+`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Đồng ý & Tiếp tục',
+                cancelButtonText: 'Không đồng ý',
+                confirmButtonColor: '#1677a0',
+                cancelButtonColor: '#6c757d',
+                allowOutsideClick: false,
+                reverseButtons: true
+            }).then((result) => {
+
+                if (result.isConfirmed) {
+                    window.location.href = url;
+                }
+
+            });
 
         });
 

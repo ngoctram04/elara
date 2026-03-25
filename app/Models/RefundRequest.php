@@ -4,6 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class RefundRequest extends Model
 {
@@ -16,56 +19,95 @@ class RefundRequest extends Model
         'user_id',
         'reason',
         'status',
-        'admin_note'
+        'admin_note',
+        'loss_amount',
     ];
 
-    /*
-    |--------------------------------------------------------------------------
-    | RELATIONSHIPS
-    |--------------------------------------------------------------------------
-    */
+    protected $casts = [
+        'loss_amount' => 'float',
+        'created_at'  => 'datetime',
+        'updated_at'  => 'datetime',
+    ];
 
-    // Đơn hàng
-    public function order()
+    public const STATUS_PENDING  = 'pending';
+    public const STATUS_APPROVED = 'approved';
+    public const STATUS_REJECTED = 'rejected';
+    public const STATUS_REFUNDED = 'refunded';
+
+    public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
     }
 
-    // Người gửi yêu cầu
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    // Ảnh / video minh chứng
-    public function media()
+    public function media(): HasMany
     {
         return $this->hasMany(RefundMedia::class, 'refund_request_id');
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | STATUS HELPERS
-    |--------------------------------------------------------------------------
-    */
-
-    public function isPending()
+    public function items(): BelongsToMany
     {
-        return $this->status === 'pending';
+        return $this->belongsToMany(
+            OrderItem::class,
+            'refund_request_items',
+            'refund_request_id',
+            'order_item_id'
+        )->withPivot([
+            'variant_id',
+            'quantity',
+            'condition_status',
+            'restockable',
+            'returned_to_stock',
+            'refund_amount',
+            'unit_cost',
+            'loss_amount',
+            'note',
+        ]);
     }
 
-    public function isApproved()
+    public function isPending(): bool
     {
-        return $this->status === 'approved';
+        return $this->status === self::STATUS_PENDING;
     }
 
-    public function isRejected()
+    public function isApproved(): bool
     {
-        return $this->status === 'rejected';
+        return $this->status === self::STATUS_APPROVED;
     }
 
-    public function isRefunded()
+    public function isRejected(): bool
     {
-        return $this->status === 'refunded';
+        return $this->status === self::STATUS_REJECTED;
+    }
+
+    public function isRefunded(): bool
+    {
+        return $this->status === self::STATUS_REFUNDED;
+    }
+
+    public function getStatusLabelAttribute(): string
+    {
+        return match ($this->status) {
+            self::STATUS_PENDING  => 'Đang chờ xử lý',
+            self::STATUS_APPROVED => 'Đã duyệt',
+            self::STATUS_REJECTED => 'Đã từ chối',
+            self::STATUS_REFUNDED => 'Đã hoàn tiền',
+            default               => 'Không xác định',
+        };
+    }
+
+    public function getStatusBadgeClassAttribute(): string
+    {
+        return match ($this->status) {
+            self::STATUS_PENDING  => 'bg-warning',
+            self::STATUS_APPROVED => 'bg-primary',
+            self::STATUS_REJECTED => 'bg-danger',
+            self::STATUS_REFUNDED => 'bg-success',
+            default               => 'bg-secondary',
+        };
     }
 }

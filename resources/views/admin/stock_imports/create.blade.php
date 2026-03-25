@@ -54,150 +54,171 @@
 
         {{-- FORM --}}
         <form action="{{ route('admin.stock.store') }}" method="POST" id="importForm">
-            @csrf
+    @csrf
 
-            <div class="row g-3 mb-4">
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold">
-                        <i class="bi bi-building me-1"></i>Nhà cung cấp
-                    </label>
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <label class="form-label fw-semibold">
+                <i class="bi bi-building me-1"></i>Nhà cung cấp
+            </label>
 
-                    <input type="text"
-       name="supplier"
-       value="{{ old('supplier') }}"
-       class="form-control form-control-sm"
-       placeholder="Ví dụ: Cocoon Việt Nam"
-       required>
-                </div>
+            <input type="text"
+                   name="supplier"
+                   value="{{ old('supplier') }}"
+                   class="form-control form-control-sm"
+                   placeholder="Ví dụ: Cocoon Việt Nam"
+                   required>
+        </div>
 
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold">
-                        <i class="bi bi-pencil-square me-1"></i>Ghi chú
-                    </label>
+        <div class="col-md-4">
+            <label class="form-label fw-semibold">
+                <i class="bi bi-telephone me-1"></i>Số điện thoại
+            </label>
 
-                    <input type="text"
-                           name="note"
-                           value="{{ old('note') }}"
-                           class="form-control form-control-sm"
-                           placeholder="Ghi chú cho lô hàng">
-                </div>
-            </div>
+            <input type="text"
+                   name="supplier_phone"
+                   value="{{ old('supplier_phone') }}"
+                   class="form-control form-control-sm"
+                   placeholder="Ví dụ: 0901234567">
+        </div>
 
-            <hr class="mb-4">
+        <div class="col-md-4">
+            <label class="form-label fw-semibold">
+                <i class="bi bi-geo-alt me-1"></i>Địa chỉ
+            </label>
 
-            <h6 class="fw-bold mb-3">Danh sách sản phẩm nhập</h6>
+            <input type="text"
+                   name="supplier_address"
+                   value="{{ old('supplier_address') }}"
+                   class="form-control form-control-sm"
+                   placeholder="Ví dụ: Ninh Kiều, Cần Thơ">
+        </div>
 
-            <div class="table-responsive stock-import-table-wrap">
-                <table class="table table-hover align-middle mb-0" id="importTable">
-                    <thead class="table-light">
-                        <tr>
-                            <th style="width:34%">Biến thể</th>
-                            <th style="width:120px">SL</th>
-                            <th style="width:150px">Giá nhập</th>
-                            <th style="width:170px">Ngày sản xuất</th>
-                            <th style="width:170px">Hạn sử dụng</th>
-                            <th style="width:60px"></th>
-                        </tr>
-                    </thead>
+        <div class="col-12">
+            <label class="form-label fw-semibold">
+                <i class="bi bi-pencil-square me-1"></i>Ghi chú
+            </label>
 
-                    <tbody>
-                        <tr class="import-row">
-                            <td>
-                                <div class="cell-wrapper">
-                                    <div class="variant-search-box">
-                                        <input type="hidden"
-                                               name="variant_id[]"
-                                               class="variant-id"
-                                               required>
+            <input type="text"
+                   name="note"
+                   value="{{ old('note') }}"
+                   class="form-control form-control-sm"
+                   placeholder="Ghi chú cho lô hàng">
+        </div>
+    </div>
 
-                                        <input type="text"
-                                               class="form-control form-control-sm variant-keyword"
-                                               placeholder="Tìm theo tên / biến thể"
-                                               autocomplete="off">
+    <hr class="mb-4">
 
-                                        <div class="variant-dropdown d-none"></div>
-                                    </div>
+    <h6 class="fw-bold mb-3">Danh sách sản phẩm nhập</h6>
 
-                                    <div class="selected-variant-info small text-muted mt-2"></div>
-                                    <div class="cell-helper"></div>
-                                </div>
-                            </td>
+    <div class="table-responsive stock-import-table-wrap">
+        <table class="table table-hover align-middle mb-0" id="importTable">
+            <thead class="table-light">
+                <tr>
+                    <th style="width:34%">Biến thể</th>
+                    <th style="width:120px">SL</th>
+                    <th style="width:150px">Giá nhập</th>
+                    <th style="width:170px">Ngày sản xuất</th>
+                    <th style="width:170px">Hạn sử dụng</th>
+                    <th style="width:60px"></th>
+                </tr>
+            </thead>
 
-                            <td>
-                                <div class="cell-wrapper">
-                                    <input type="number"
-                                           name="quantity[]"
-                                           class="form-control form-control-sm qty"
-                                           min="1"
-                                           required>
-                                    <div class="cell-helper"></div>
-                                </div>
-                            </td>
+            <tbody>
+                <tr class="import-row">
+                    <td>
+                        <div class="cell-wrapper">
+                            <div class="variant-search-box">
+                                <input type="hidden"
+                                       name="variant_id[]"
+                                       class="variant-id"
+                                       required>
 
-                            <td>
-                                <div class="cell-wrapper">
-                                    <input type="number"
-                                           name="cost_price[]"
-                                           class="form-control form-control-sm price"
-                                           min="0"
-                                           required>
-                                    <div class="cell-helper"></div>
-                                </div>
-                            </td>
+                                <input type="text"
+                                       class="form-control form-control-sm variant-keyword"
+                                       placeholder="Tìm theo tên / biến thể"
+                                       autocomplete="off">
 
-                            <td>
-                                <div class="cell-wrapper">
-                                    <input type="date"
-                                           name="mfg_date[]"
-                                           class="form-control form-control-sm mfg">
-                                    <div class="cell-helper"></div>
-                                </div>
-                            </td>
+                                <div class="variant-dropdown d-none"></div>
+                            </div>
 
-                            <td>
-                                <div class="cell-wrapper">
-                                    <input type="date"
-                                           name="expiry_date[]"
-                                           class="form-control form-control-sm exp">
-                                    <div class="expiry-warning"></div>
-                                </div>
-                            </td>
+                            <div class="selected-variant-info small text-muted mt-2"></div>
+                            <div class="cell-helper"></div>
+                        </div>
+                    </td>
 
-                            <td class="text-center align-middle">
-                                <button type="button"
-                                        class="btn btn-sm btn-outline-danger removeRow">
-                                    <i class="bi bi-x-lg"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+                    <td>
+                        <div class="cell-wrapper">
+                            <input type="number"
+                                   name="quantity[]"
+                                   class="form-control form-control-sm qty"
+                                   min="1"
+                                   required>
+                            <div class="cell-helper"></div>
+                        </div>
+                    </td>
 
-            {{-- ADD ROW --}}
-            <div class="mt-3 mb-3">
-                <button type="button"
-                        id="addRow"
-                        class="btn btn-primary btn-sm">
-                    <i class="bi bi-plus-lg me-1"></i>
-                    Thêm biến thể
-                </button>
-            </div>
+                    <td>
+                        <div class="cell-wrapper">
+                            <input type="number"
+                                   name="cost_price[]"
+                                   class="form-control form-control-sm price"
+                                   min="0"
+                                   required>
+                            <div class="cell-helper"></div>
+                        </div>
+                    </td>
 
-            {{-- TOTAL --}}
-            <div class="text-end fw-semibold mb-4">
-                Tổng tiền nhập:
-                <span id="totalCost" class="text-danger">0</span> đ
-            </div>
+                    <td>
+                        <div class="cell-wrapper">
+                            <input type="date"
+                                   name="mfg_date[]"
+                                   class="form-control form-control-sm mfg">
+                            <div class="cell-helper"></div>
+                        </div>
+                    </td>
 
-            {{-- ACTION --}}
-            <div class="d-flex gap-2">
-                <button class="btn btn-success btn-sm px-4">
-                    <i class="bi bi-check-circle me-1"></i>
-                    Lưu phiếu nhập
-                </button>
-            </div>
-        </form>
+                    <td>
+                        <div class="cell-wrapper">
+                            <input type="date"
+                                   name="expiry_date[]"
+                                   class="form-control form-control-sm exp">
+                            <div class="expiry-warning"></div>
+                        </div>
+                    </td>
+
+                    <td class="text-center align-middle">
+                        <button type="button"
+                                class="btn btn-sm btn-outline-danger removeRow">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mt-3 mb-3">
+        <button type="button"
+                id="addRow"
+                class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg me-1"></i>
+            Thêm biến thể
+        </button>
+    </div>
+
+    <div class="text-end fw-semibold mb-4">
+        Tổng tiền nhập:
+        <span id="totalCost" class="text-danger">0</span> đ
+    </div>
+
+    <div class="d-flex gap-2">
+        <button class="btn btn-success btn-sm px-4">
+            <i class="bi bi-check-circle me-1"></i>
+            Lưu phiếu nhập
+        </button>
+    </div>
+</form>
 
     </div>
 </div>

@@ -19,10 +19,6 @@ class InventoryController extends Controller
     {
         $query = InventoryLog::query();
 
-        // =========================
-        // 🔍 SEARCH
-        // Tên sản phẩm / mã SP / mã biến thể
-        // =========================
         if ($request->filled('keyword')) {
             $keyword = trim($request->keyword);
             $numberKeyword = preg_replace('/\D/', '', $keyword);
@@ -30,32 +26,26 @@ class InventoryController extends Controller
             $query->where(function ($q) use ($keyword, $numberKeyword) {
                 $q->whereHas('variant.product', function ($sub) use ($keyword, $numberKeyword) {
                     $sub->where('name', 'like', "%{$keyword}%")
-                    ->orWhereRaw("CONCAT('SP', LPAD(id, 5, '0')) LIKE ?", ['%' . $keyword . '%']);
+                        ->orWhereRaw("CONCAT('SP', LPAD(id, 5, '0')) LIKE ?", ['%' . $keyword . '%']);
 
                     if ($numberKeyword !== '') {
                         $sub->orWhere('id', (int) $numberKeyword);
                     }
                 })
-                ->orWhereHas('variant', function ($sub) use ($keyword, $numberKeyword) {
-                    $sub->whereRaw("CONCAT('BT', LPAD(id, 5, '0')) LIKE ?", ['%' . $keyword . '%']);
+                    ->orWhereHas('variant', function ($sub) use ($keyword, $numberKeyword) {
+                        $sub->whereRaw("CONCAT('BT', LPAD(id, 5, '0')) LIKE ?", ['%' . $keyword . '%']);
 
-                    if ($numberKeyword !== '') {
-                        $sub->orWhere('id', (int) $numberKeyword);
-                    }
-                });
+                        if ($numberKeyword !== '') {
+                            $sub->orWhere('id', (int) $numberKeyword);
+                        }
+                    });
             });
         }
 
-        // =========================
-        // 🎯 FILTER TYPE
-        // =========================
         if ($request->filled('type')) {
             $query->where('type', $request->type);
         }
 
-        // =========================
-        // 📅 FILTER DATE
-        // =========================
         if ($request->filled('from')) {
             $query->whereDate('created_at', '>=', $request->from);
         }
@@ -64,14 +54,11 @@ class InventoryController extends Controller
             $query->whereDate('created_at', '<=', $request->to);
         }
 
-        // =========================
-        // 📦 LOAD DATA
-        // =========================
         $logs = $query->with([
             'variant.product:id,name',
             'variant.images:id,variant_id,image_path'
         ])
-        ->orderByDesc('id') // nhanh hơn latest()
+            ->orderByDesc('id')
             ->paginate(10)
             ->withQueryString();
 
@@ -97,14 +84,14 @@ class InventoryController extends Controller
             $query->where(function ($q) use ($keyword, $numberKeyword) {
                 $q->whereHas('product', function ($q2) use ($keyword, $numberKeyword) {
                     $q2->where('name', 'like', '%' . $keyword . '%')
-                    ->orWhereRaw("CONCAT('SP', LPAD(id, 5, '0')) LIKE ?", ['%' . $keyword . '%']);
+                        ->orWhereRaw("CONCAT('SP', LPAD(id, 5, '0')) LIKE ?", ['%' . $keyword . '%']);
 
                     if ($numberKeyword !== '') {
                         $q2->orWhere('id', (int) $numberKeyword);
                     }
                 })
-                ->orWhere('attribute_value', 'like', '%' . $keyword . '%')
-                ->orWhereRaw("CONCAT('BT', LPAD(id, 5, '0')) LIKE ?", ['%' . $keyword . '%']);
+                    ->orWhere('attribute_value', 'like', '%' . $keyword . '%')
+                    ->orWhereRaw("CONCAT('BT', LPAD(id, 5, '0')) LIKE ?", ['%' . $keyword . '%']);
 
                 if ($numberKeyword !== '') {
                     $q->orWhere('id', (int) $numberKeyword);
@@ -154,14 +141,14 @@ class InventoryController extends Controller
             $query->where(function ($q) use ($keyword, $numberKeyword) {
                 $q->whereHas('product', function ($q2) use ($keyword, $numberKeyword) {
                     $q2->where('name', 'like', '%' . $keyword . '%')
-                    ->orWhereRaw("CONCAT('SP', LPAD(id, 5, '0')) LIKE ?", ['%' . $keyword . '%']);
+                        ->orWhereRaw("CONCAT('SP', LPAD(id, 5, '0')) LIKE ?", ['%' . $keyword . '%']);
 
                     if ($numberKeyword !== '') {
                         $q2->orWhere('id', (int) $numberKeyword);
                     }
                 })
-                ->orWhere('attribute_value', 'like', '%' . $keyword . '%')
-                ->orWhereRaw("CONCAT('BT', LPAD(id, 5, '0')) LIKE ?", ['%' . $keyword . '%']);
+                    ->orWhere('attribute_value', 'like', '%' . $keyword . '%')
+                    ->orWhereRaw("CONCAT('BT', LPAD(id, 5, '0')) LIKE ?", ['%' . $keyword . '%']);
 
                 if ($numberKeyword !== '') {
                     $q->orWhere('id', (int) $numberKeyword);
@@ -170,9 +157,7 @@ class InventoryController extends Controller
         }
 
         if ($request->sort == 'all') {
-            $query->orderBy('stock_quantity',
-                'asc'
-            );
+            $query->orderBy('stock_quantity', 'asc');
         } else {
             $query->where('stock_quantity', '<=', 5);
             $query->orderBy('stock_quantity', $request->sort == 'high' ? 'desc' : 'asc');
@@ -203,12 +188,25 @@ class InventoryController extends Controller
             '=',
             'vi.variant_id'
         )
+            ->leftJoin(
+                DB::raw("
+                (
+                    SELECT
+                        stock_import_id,
+                        SUM(ABS(quantity_change)) as damaged_qty,
+                        SUM(COALESCE(loss_amount, 0)) as damaged_loss
+                    FROM inventory_logs
+                    WHERE type = 'return_damaged'
+                      AND stock_import_id IS NOT NULL
+                    GROUP BY stock_import_id
+                ) as rd
+            "),
+                'si.id',
+                '=',
+                'rd.stock_import_id'
+            )
             ->whereNotNull('si.expiry_date');
 
-        // =========================
-        // 🔍 SEARCH
-        // Tên SP / mã SP / mã lô / mã biến thể
-        // =========================
         if ($request->filled('keyword')) {
             $keyword = trim($request->keyword);
             $numberKeyword = preg_replace('/\D/', '', $keyword);
@@ -222,18 +220,14 @@ class InventoryController extends Controller
 
                 if ($numberKeyword !== '') {
                     $q->orWhere('p.id', (int) $numberKeyword)
-                        ->orWhere('pv.id', (int) $numberKeyword);
+                    ->orWhere('pv.id', (int) $numberKeyword);
                 }
             });
         }
 
-        // =========================
-        // 🎯 FILTER
-        // =========================
-        if ($request->status === 'danger'
-        ) {
+        if ($request->status === 'danger') {
             $query->whereNull('si.expired_at')
-                ->whereDate('si.expiry_date', '<=', now()->addMonths(6));
+            ->whereDate('si.expiry_date', '<=', now()->addMonths(6));
         } elseif ($request->status === 'sale') {
             $query->whereNull('si.expired_at')
                 ->whereBetween('si.expiry_date', [
@@ -247,17 +241,11 @@ class InventoryController extends Controller
                 ->whereDate('si.expiry_date', '>', now()->addMonths(7));
         }
 
-        // =========================
-        // 🔽 SORT
-        // =========================
         $query->orderBy(
             'si.expiry_date',
             $request->sort === 'far' ? 'desc' : 'asc'
         );
 
-        // =========================
-        // 📦 SELECT
-        // =========================
         $lots = $query->select(
             'si.id',
             'si.code',
@@ -276,9 +264,15 @@ class InventoryController extends Controller
             GREATEST(
                 si.imported_quantity
                 - si.remaining_quantity
-                - si.expired_quantity,
+                - COALESCE(si.expired_quantity, 0)
+                - COALESCE(rd.damaged_qty, 0),
                 0
             ) as sold_quantity
+        '),
+
+            DB::raw('
+            COALESCE(si.expired_quantity, 0) + COALESCE(rd.damaged_qty, 0)
+            as damaged_quantity
         '),
 
             DB::raw("
@@ -292,7 +286,9 @@ class InventoryController extends Controller
 
             DB::raw('si.imported_quantity * si.cost_price as total_cost'),
             DB::raw('si.remaining_quantity * si.cost_price as remaining_value'),
-            DB::raw('si.expired_quantity * si.cost_price as expired_value'),
+            DB::raw('COALESCE(si.expired_quantity, 0) * si.cost_price as expired_value'),
+            DB::raw('COALESCE(rd.damaged_loss, 0) as damaged_loss_value'),
+            DB::raw('COALESCE(si.expired_quantity, 0) * si.cost_price + COALESCE(rd.damaged_loss, 0) as total_loss_value'),
 
             'p.id as product_id',
             'p.name as product_name',

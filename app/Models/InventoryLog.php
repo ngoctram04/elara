@@ -13,20 +13,27 @@ class InventoryLog extends Model
 
     protected $fillable = [
         'variant_id',
+        'stock_import_id',
         'type',
         'quantity_change',
         'stock_before',
         'stock_after',
+        'unit_cost',
+        'loss_amount',
         'reference_type',
-        'reference_id'
+        'reference_id',
+        'note',
     ];
 
     protected $casts = [
-        'variant_id' => 'integer',
+        'variant_id'      => 'integer',
+        'stock_import_id' => 'integer',
         'quantity_change' => 'integer',
-        'stock_before' => 'integer',
-        'stock_after' => 'integer',
-        'reference_id' => 'integer'
+        'stock_before'    => 'integer',
+        'stock_after'     => 'integer',
+        'unit_cost'       => 'float',
+        'loss_amount'     => 'float',
+        'reference_id'    => 'integer',
     ];
 
     /**
@@ -50,5 +57,13 @@ class InventoryLog extends Model
             'variant_id',
             'product_id'
         );
+    }
+
+    /**
+     * Quan hệ lô hàng
+     */
+    public function stockImport()
+    {
+        return $this->belongsTo(StockImport::class, 'stock_import_id');
     }
 }

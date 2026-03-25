@@ -182,13 +182,15 @@ Route::middleware('auth')->group(function () {
     Route::post('/points/redeem', [PointController::class, 'redeem'])
         ->name('points.redeem');
 });
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'check_active'])->prefix('refund')->name('refund.')->group(function () {
+    Route::get('/create/{order}', [RefundController::class, 'create'])
+        ->name('create');
 
-    Route::get('/refund/{order}', [RefundController::class, 'create'])
-        ->name('refund.create');
+    Route::post('/store', [RefundController::class, 'store'])
+        ->name('store');
 
-    Route::post('/refund/store', [RefundController::class, 'store'])
-        ->name('refund.store');
+    Route::get('/{id}', [OrderController::class, 'showRefund'])
+        ->name('show');
 });
 /*
 |--------------------------------------------------------------------------
@@ -421,6 +423,7 @@ Route::prefix('admin')
 
         Route::get('/refunds', [AdminRefundController::class, 'index'])
             ->name('refunds.index');
+            
 
         Route::post('/refunds/{id}/approve', [AdminRefundController::class, 'approve'])
             ->name('refunds.approve');

@@ -20,17 +20,17 @@ class ChatbotService
 
         if ($this->isGreeting($msg)) {
             return $this->text(
-                "Xin chào! Mình là trợ lý tư vấn của ELARA 💄\n" .
+                "Xin chào! Mình là trợ lý tư vấn của ELARA.\n" .
                     "Bạn có thể hỏi về sản phẩm, giá, khuyến mãi, phí ship, routine skincare hoặc tình trạng da nhé."
             );
         }
 
         if ($this->isThanks($msg)) {
-            return $this->text('Dạ không có gì ạ 💖 Nếu bạn cần mình gợi ý sản phẩm phù hợp nữa thì cứ nhắn nhé.');
+            return $this->text('Dạ không có gì ạ. Nếu bạn cần mình gợi ý sản phẩm phù hợp nữa thì cứ nhắn nhé.');
         }
 
         if ($this->isFarewell($msg)) {
-            return $this->text('Cảm ơn bạn đã ghé ELARA nhé 💕 Khi nào cần tư vấn thêm mình luôn sẵn sàng.');
+            return $this->text('Cảm ơn bạn đã ghé ELARA. Khi nào cần tư vấn thêm mình luôn sẵn sàng.');
         }
 
         if ($this->isHumanSupport($msg)) {
@@ -43,7 +43,7 @@ class ChatbotService
             if (!empty($promo['products'])) {
                 return [
                     'type' => 'product_list',
-                    'reply' => 'Hiện shop đang có một số sản phẩm khuyến mãi nổi bật nè 👇',
+                    'reply' => 'Hiện shop đang có một số sản phẩm khuyến mãi nổi bật như sau:',
                     'products' => $promo['products'],
                 ];
             }
@@ -71,7 +71,7 @@ class ChatbotService
                 return $this->text("Phí ship dự kiến đến {$shipping['province']} là {$shipping['formatted_fee']}.");
             }
 
-            return $this->text('Phí ship thường từ 15.000₫ đến 35.000₫ tùy khu vực. Bạn cho mình xin tỉnh/thành để báo chính xác hơn nhé.');
+            return $this->text('Phí ship thường từ 15.000đ đến 35.000đ tùy khu vực. Bạn cho mình xin tỉnh/thành để báo chính xác hơn nhé.');
         }
 
         if ($this->isRoutineQuestion($msg)) {
@@ -88,7 +88,7 @@ class ChatbotService
             if (!empty($concerns['concerns'])) {
                 $text = 'Mình thấy bạn đang quan tâm đến: ' . implode(', ', $concerns['concerns']) . ".\n";
                 $text .= "Routine cơ bản mình gợi ý là:\n- " . implode("\n- ", $routine['routine']);
-                $text .= "\n\nBạn cũng có thể nhắn rõ hơn như “da dầu mụn”, “da khô nhạy cảm” để mình gợi ý sát hơn nhé.";
+                $text .= "\n\nBạn cũng có thể nhắn rõ hơn như \"da dầu mụn\", \"da khô nhạy cảm\" để mình gợi ý sát hơn nhé.";
                 return $this->text($text);
             }
 
@@ -98,6 +98,7 @@ class ChatbotService
         $budget = $this->extractBudget($msg);
         $keyword = $this->extractProductKeyword($original);
         $intent = $this->detectSearchIntent($msg, $keyword, $budget);
+
         if ($intent === 'list_by_price_only') {
             $result = $this->tools->searchProducts([
                 'keyword' => '',
@@ -111,7 +112,7 @@ class ChatbotService
             if (!empty($products)) {
                 return [
                     'type' => 'product_list',
-                    'reply' => 'Mình tìm được một số sản phẩm phù hợp với mức giá bạn cần nè 👇',
+                    'reply' => 'Mình tìm được một số sản phẩm phù hợp với mức giá bạn cần:',
                     'products' => $products,
                 ];
             }
@@ -167,7 +168,7 @@ class ChatbotService
                 if (($result['mode'] ?? '') === 'exact' && !empty($result['products'])) {
                     return [
                         'type' => 'product_list',
-                        'reply' => 'Mình tìm thấy đúng sản phẩm bạn đang cần 👇',
+                        'reply' => 'Mình tìm thấy đúng sản phẩm bạn đang cần:',
                         'products' => $result['products'],
                     ];
                 }
@@ -175,7 +176,7 @@ class ChatbotService
                 if (!empty($result['suggestions'])) {
                     return [
                         'type' => 'product_list',
-                        'reply' => 'Mình chưa thấy đúng chính xác sản phẩm bạn nhập. Đây là một số gợi ý gần đúng để bạn tham khảo nhé 👇',
+                        'reply' => 'Mình chưa thấy đúng chính xác sản phẩm bạn nhập. Đây là một số gợi ý gần đúng để bạn tham khảo nhé:',
                         'products' => $result['suggestions'],
                     ];
                 }
@@ -185,16 +186,16 @@ class ChatbotService
         if ($budget['min'] !== null || $budget['max'] !== null) {
             return $this->text(
                 "Hiện mình chưa tìm thấy sản phẩm đúng với mức giá bạn cần.\n" .
-                    'Bạn có thể thử tăng ngân sách hoặc nhập tên sản phẩm cụ thể hơn nhé.'
+                    'Bạn có thể thử tăng/giảm ngân sách hoặc nhập tên sản phẩm cụ thể hơn nhé.'
             );
         }
 
         if ($this->isPriceQuestion($msg)) {
-            return $this->text('Bạn hãy nhắn tên sản phẩm hoặc nhóm sản phẩm, mình sẽ tìm giá giúp bạn nhé. Ví dụ: “serum”, “nước tẩy trang”, “kem chống nắng dưới 300k”.');
+            return $this->text('Bạn hãy nhắn tên sản phẩm hoặc nhóm sản phẩm, mình sẽ tìm giá giúp bạn nhé. Ví dụ: "serum", "nước tẩy trang", "kem chống nắng dưới 300k".');
         }
 
         if ($this->isOrderQuestion($msg)) {
-            return $this->text('Nếu bạn cần kiểm tra đơn hàng, bạn hãy vào mục “Đơn hàng của tôi” hoặc nhắn nhân viên để được hỗ trợ nhanh nhé.');
+            return $this->text('Nếu bạn cần kiểm tra đơn hàng, bạn hãy vào mục "Đơn hàng của tôi" hoặc nhắn nhân viên để được hỗ trợ nhanh nhé.');
         }
 
         if ($this->isPolicyQuestion($msg)) {
@@ -336,31 +337,18 @@ class ChatbotService
         $min = null;
         $max = null;
 
-        // từ 100k đến 200k
         if (preg_match('/tu\s*(\d+)\s*(k|ngan|trieu)?\s*(den|toi)\s*(\d+)\s*(k|ngan|trieu)?/u', $msg, $m)) {
             $min = $this->parseMoneyValue($m[1], $m[2] ?? null);
             $max = $this->parseMoneyValue($m[4], $m[5] ?? null);
-        }
-
-        // 100k đến 200k
-        elseif (preg_match('/(\d+)\s*(k|ngan|trieu)?\s*(den|toi)\s*(\d+)\s*(k|ngan|trieu)?/u', $msg, $m)) {
+        } elseif (preg_match('/(\d+)\s*(k|ngan|trieu)?\s*(den|toi)\s*(\d+)\s*(k|ngan|trieu)?/u', $msg, $m)) {
             $min = $this->parseMoneyValue($m[1], $m[2] ?? null);
             $max = $this->parseMoneyValue($m[4], $m[5] ?? null);
-        }
-
-        // khoảng 100k - 200k
-        elseif (preg_match('/(\d+)\s*-\s*(\d+)\s*(k|ngan|trieu)?/u', $msg, $m)) {
+        } elseif (preg_match('/(\d+)\s*-\s*(\d+)\s*(k|ngan|trieu)?/u', $msg, $m)) {
             $min = $this->parseMoneyValue($m[1], $m[3] ?? null);
             $max = $this->parseMoneyValue($m[2], $m[3] ?? null);
-        }
-
-        // dưới 200k
-        elseif (preg_match('/duoi\s*(\d+)\s*(k|ngan|trieu)?/u', $msg, $m)) {
+        } elseif (preg_match('/duoi\s*(\d+)\s*(k|ngan|trieu)?/u', $msg, $m)) {
             $max = $this->parseMoneyValue($m[1], $m[2] ?? null);
-        }
-
-        // trên 100k
-        elseif (preg_match('/tren\s*(\d+)\s*(k|ngan|trieu)?/u', $msg, $m)) {
+        } elseif (preg_match('/tren\s*(\d+)\s*(k|ngan|trieu)?/u', $msg, $m)) {
             $min = $this->parseMoneyValue($m[1], $m[2] ?? null);
         }
 
@@ -421,7 +409,6 @@ class ChatbotService
             $cleaned = str_replace($phrase, ' ', $cleaned);
         }
 
-        // xóa cụm ngân sách
         $cleaned = preg_replace('/tu\s*\d+\s*(k|ngan|trieu)?\s*(den|toi)\s*\d+\s*(k|ngan|trieu)?/u', ' ', $cleaned);
         $cleaned = preg_replace('/\d+\s*(k|ngan|trieu)?\s*(den|toi)\s*\d+\s*(k|ngan|trieu)?/u', ' ', $cleaned);
         $cleaned = preg_replace('/duoi\s*\d+\s*(k|ngan|trieu)?/u', ' ', $cleaned);
@@ -514,9 +501,9 @@ class ChatbotService
     protected function buildListReply(array $budget): string
     {
         if ($budget['min'] !== null || $budget['max'] !== null) {
-            return 'Mình tìm được một số sản phẩm phù hợp với mức giá bạn cần nè 👇';
+            return 'Mình tìm được một số sản phẩm phù hợp với mức giá bạn cần:';
         }
 
-        return 'Mình gợi ý một số sản phẩm phù hợp để bạn tham khảo nhé 👇';
+        return 'Mình gợi ý một số sản phẩm phù hợp để bạn tham khảo nhé:';
     }
 }

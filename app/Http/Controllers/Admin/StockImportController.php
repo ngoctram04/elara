@@ -12,7 +12,9 @@ use App\Models\InventoryLog;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use App\Models\User;
+use Illuminate\Support\Facades\Schema;
 use App\Notifications\SystemNotification;
+
 class StockImportController extends Controller
 {
     /* =======================
@@ -33,6 +35,7 @@ class StockImportController extends Controller
 
         return view('admin.stock_imports.create', compact('variants'));
     }
+
     /* =======================
         LƯU PHIẾU NHẬP
     ======================= */
@@ -40,44 +43,53 @@ class StockImportController extends Controller
     {
         $request->validate([
             'variant_id'   => 'required|array',
-            'variant_id.*' => 'exists:product_variants,id',
+            'variant_id.*' => 'required|exists:product_variants,id',
 
             'quantity'     => 'required|array',
-            'quantity.*'   => 'integer|min:1',
+            'quantity.*'   => 'required|integer|min:1',
 
             'cost_price'   => 'required|array',
-            'cost_price.*' => 'numeric|min:0',
+            'cost_price.*' => 'required|numeric|min:0',
 
+            'mfg_date'     => 'nullable|array',
             'mfg_date.*'   => 'nullable|date',
+
+            'expiry_date'   => 'nullable|array',
             'expiry_date.*' => 'nullable|date|after:today',
 
-            'supplier'     => 'required|string|max:255',
-            'note'         => 'nullable|string'
+            'supplier'         => 'required|string|max:255',
+            'supplier_phone'   => 'nullable|string|max:20',
+            'supplier_address' => 'nullable|string|max:255',
+            'note'             => 'nullable|string'
         ], [
-            'supplier.required' => 'Vui lòng nhập nhà cung cấp',
-            'expiry_date.*.after' => 'Hạn sử dụng phải lớn hơn ngày hôm nay'
+            'supplier.required'      => 'Vui lòng nhập nhà cung cấp',
+            'expiry_date.*.after'    => 'Hạn sử dụng phải lớn hơn ngày hôm nay',
+            'variant_id.required'    => 'Vui lòng chọn ít nhất 1 biến thể',
+            'variant_id.*.required'  => 'Vui lòng chọn biến thể hợp lệ',
+            'variant_id.*.exists'    => 'Biến thể không tồn tại',
+            'quantity.*.required'    => 'Vui lòng nhập số lượng',
+            'quantity.*.integer'     => 'Số lượng phải là số nguyên',
+            'quantity.*.min'         => 'Số lượng phải lớn hơn 0',
+            'cost_price.*.required'  => 'Vui lòng nhập giá nhập',
+            'cost_price.*.numeric'   => 'Giá nhập phải là số',
+            'cost_price.*.min'       => 'Giá nhập không được âm',
         ]);
 
         $warnings = [];
-
-        // 🔥 FIX: đưa code ra ngoài
         $code = 'NK' . now()->format('YmdHis');
 
         try {
-
             DB::transaction(function () use ($request, &$warnings, $code) {
-
                 foreach ($request->variant_id as $index => $variantId) {
-
                     $qty  = (int) ($request->quantity[$index] ?? 0);
                     $cost = (float) ($request->cost_price[$index] ?? 0);
 
-                    $mfg  = $request->mfg_date[$index] ?? null;
-                    $exp  = $request->expiry_date[$index] ?? null;
+                    $mfg = $request->mfg_date[$index] ?? null;
+                    $exp = $request->expiry_date[$index] ?? null;
 
                     /* ======================
-                VALIDATE NGÀY
-                ====================== */
+                        VALIDATE NGÀY
+                    ====================== */
                     if ($mfg && $exp) {
                         if (Carbon::parse($exp)->lte(Carbon::parse($mfg))) {
                             throw new \Exception('Hạn sử dụng phải lớn hơn ngày sản xuất');
@@ -85,10 +97,10 @@ class StockImportController extends Controller
                     }
 
                     /* ======================
-                ⚠️ CẢNH BÁO < 6 THÁNG
-                ====================== */
+                        CẢNH BÁO < 6 THÁNG
+                    ====================== */
                     if ($exp) {
-                        $today = Carbon::today();
+                        $today  = Carbon::today();
                         $expiry = Carbon::parse($exp);
 
                         if ($expiry->diffInMonths($today) <= 6) {
@@ -97,15 +109,15 @@ class StockImportController extends Controller
                     }
 
                     /* ======================
-                LOCK VARIANT
-                ====================== */
+                        LOCK VARIANT
+                    ====================== */
                     $variant = ProductVariant::with('product')
-                    ->lockForUpdate()
-                    ->findOrFail($variantId);
+                        ->lockForUpdate()
+                        ->findOrFail($variantId);
 
                     /* ======================
-                GIÁ VỐN TRUNG BÌNH
-                ====================== */
+                        GIÁ VỐN TRUNG BÌNH
+                    ====================== */
                     $oldStock = $variant->stock_quantity ?? 0;
                     $oldCost  = $variant->cost_price ?? 0;
 
@@ -119,16 +131,16 @@ class StockImportController extends Controller
                         : $cost;
 
                     /* ======================
-                UPDATE VARIANT
-                ====================== */
+                        UPDATE VARIANT
+                    ====================== */
                     $variant->update([
                         'stock_quantity' => $newStock,
                         'cost_price'     => $avgCost
                     ]);
 
                     /* ======================
-                UPDATE PRODUCT STOCK
-                ====================== */
+                        UPDATE PRODUCT STOCK
+                    ====================== */
                     if ($variant->product) {
                         $totalStock = ProductVariant::where('product_id', $variant->product_id)
                             ->sum('stock_quantity');
@@ -139,27 +151,37 @@ class StockImportController extends Controller
                     }
 
                     /* ======================
-                STOCK IMPORT
-                ====================== */
+                        STOCK IMPORT
+                    ====================== */
                     $import = StockImport::create([
                         'variant_id'         => $variant->id,
                         'quantity'           => $qty,
                         'remaining_quantity' => $qty,
+                        'imported_quantity'  => $qty,
+                        'expired_quantity'   => 0,
+
                         'cost_price'         => $cost,
                         'manufacture_date'   => $mfg,
                         'expiry_date'        => $exp,
+
                         'supplier'           => $request->supplier,
+                        'supplier_phone'     => $request->supplier_phone,
+                        'supplier_address'   => $request->supplier_address,
                         'note'               => $request->note,
+
                         'code'               => $code,
                         'created_by'         => Auth::id()
                     ]);
 
-                    $import->lot_code = 'L' . $import->id;
-                    $import->save();
+                    // Chỉ dùng nếu bảng stock_imports có cột lot_code
+                    if (isset($import->lot_code) || Schema::hasColumn('stock_imports', 'lot_code')) {
+                        $import->lot_code = 'L' . $import->id;
+                        $import->save();
+                    }
 
                     /* ======================
-                INVENTORY LOG
-                ====================== */
+                        INVENTORY LOG
+                    ====================== */
                     InventoryLog::create([
                         'variant_id'      => $variant->id,
                         'type'            => 'import',
@@ -172,15 +194,14 @@ class StockImportController extends Controller
                 }
             });
         } catch (\Exception $e) {
-
             return back()
                 ->withInput()
                 ->withErrors($e->getMessage());
         }
 
         /* ======================
-    🔔 NOTIFICATION
-    ====================== */
+            NOTIFICATION
+        ====================== */
         $totalQty = array_sum($request->quantity);
 
         $admins = User::where('role', 'admin')->get();
@@ -189,7 +210,7 @@ class StockImportController extends Controller
             $admin->notify(new SystemNotification([
                 'title'   => 'Nhập hàng mới',
                 'message' => "Vừa nhập {$totalQty} sản phẩm (mã {$code})",
-                'url' => route('admin.stock.show', $code),
+                'url'     => route('admin.stock.show', $code),
                 'type'    => 'stock_import',
                 'icon'    => 'bi-box-seam',
                 'color'   => 'success',
@@ -197,8 +218,8 @@ class StockImportController extends Controller
         }
 
         /* ======================
-    RETURN
-    ====================== */
+            RETURN
+        ====================== */
         return redirect()
             ->route('admin.stock.history')
             ->with('success', 'Nhập hàng thành công')
@@ -213,16 +234,20 @@ class StockImportController extends Controller
         $query = StockImport::query();
 
         if ($request->keyword) {
-            $query->where(function ($q) use ($request) {
-                $q->where('code', 'like', '%' . $request->keyword . '%')
-                    ->orWhere('supplier', 'like', '%' . $request->keyword . '%');
+            $keyword = trim($request->keyword);
+
+            $query->where(function ($q) use ($keyword) {
+                $q->where('code', 'like', '%' . $keyword . '%')
+                    ->orWhere('supplier', 'like', '%' . $keyword . '%')
+                    ->orWhere('supplier_phone', 'like', '%' . $keyword . '%')
+                    ->orWhere('supplier_address', 'like', '%' . $keyword . '%');
             });
         }
 
         if ($request->from && $request->to) {
             $query->whereBetween('created_at', [
-                $request->from,
-                $request->to
+                $request->from . ' 00:00:00',
+                $request->to . ' 23:59:59'
             ]);
         }
 
@@ -231,10 +256,12 @@ class StockImportController extends Controller
             DB::raw('MAX(created_at) as created_at'),
             DB::raw('COUNT(DISTINCT variant_id) as total_items'),
             DB::raw('SUM(quantity) as total_qty'),
-            DB::raw('MAX(supplier) as supplier')
+            DB::raw('MAX(supplier) as supplier'),
+            DB::raw('MAX(supplier_phone) as supplier_phone'),
+            DB::raw('MAX(supplier_address) as supplier_address')
         )
             ->groupBy('code')
-            ->orderByDesc('created_at')
+            ->orderByDesc(DB::raw('MAX(created_at)'))
             ->paginate(20)
             ->withQueryString();
 
