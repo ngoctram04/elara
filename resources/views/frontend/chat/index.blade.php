@@ -1,7 +1,10 @@
 @extends('layouts.frontend')
 
 @section('content')
-
+<x-breadcrumb :items="[
+    ['label' => 'Trang chủ', 'url' => url('/')],
+    ['label' => 'Chat với nhân viên']
+]" />
 <div class="container py-4">
 
 <h4 class="mb-3">

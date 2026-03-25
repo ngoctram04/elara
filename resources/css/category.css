@@ -191,7 +191,9 @@
 .price-pill.yellow {
     background: #fff9c4;
 }
-
+.price-pill.orange {
+    background: #ffe7d6;
+}
 /* =====================================================
    BRAND FILTER
 ===================================================== */

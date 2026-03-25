@@ -2,7 +2,10 @@
 @section('title', 'Giỏ hàng')
 
 @section('content')
-
+<x-breadcrumb :items="[
+    ['label' => 'Trang chủ', 'url' => url('/')],
+    ['label' => 'Giỏ hàng']
+]" />
 <div class="container py-4">
 
 <h4 class="mb-4 fw-bold d-flex justify-content-between align-items-center">

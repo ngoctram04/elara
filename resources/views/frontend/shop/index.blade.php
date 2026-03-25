@@ -6,6 +6,7 @@
 <div class="shop-page">
 
 <x-breadcrumb :items="[
+    ['label' => 'Trang chủ', 'url' => url('/')],
     ['label' => 'Danh mục', 'url' => route('shop')],
     ['label' => request('q') ? 'Kết quả tìm kiếm' : 'Tất cả sản phẩm']
 ]" />
@@ -104,7 +105,7 @@
         200.000đ – 300.000đ
     </label>
 
-    <label class="price-pill green">
+    <label class="price-pill orange">
         <input type="radio" name="price" value="300+" hidden {{ $price == '300+' ? 'checked' : '' }}>
         Trên 300.000đ
     </label>
@@ -300,6 +301,7 @@
     .custom-pagination li.arrow span {
         font-size: 20px;
     }
+    
 </style>
 @endpush
 

@@ -57,7 +57,7 @@ class OrderController extends Controller
             }
         }
 
-        $orders = $query->paginate(10);
+        $orders = $query->paginate(5);
 
         return view('frontend.orders.index', compact('orders'));
     }

@@ -4,6 +4,7 @@
 @section('content')
 
 <x-breadcrumb :items="[
+    ['label' => 'Trang chủ', 'url' => url('/')],
     ['label' => 'Danh mục', 'url' => route('shop')],
     ['label' => $category->name]
 ]" />
@@ -66,7 +67,7 @@
         200.000đ – 300.000đ
     </label>
 
-    <label class="price-pill green">
+    <label class="price-pill orange">
         <input type="radio" name="price" value="300+" hidden {{ $price === '300+' ? 'checked' : '' }}>
         Trên 300.000đ
     </label>

@@ -3,7 +3,13 @@
 
 @section('content')
 
-<div class="container py-4">
+<x-breadcrumb :items="[
+    ['label' => 'Trang chủ', 'url' => url('/')],
+    ['label' => 'Lịch sử đơn hàng', 'url' => route('orders.history')],
+    ['label' => 'Chi tiết đơn hàng']
+]" />
+
+<div class="container pb-4">
 
 {{-- HEADER --}}
 <div class="d-flex justify-content-between align-items-center mb-4">

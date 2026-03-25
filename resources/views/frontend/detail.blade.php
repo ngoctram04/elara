@@ -3,6 +3,10 @@
 @section('title', $product->name)
 
 @section('content')
+<x-breadcrumb :items="[
+    ['label' => 'Trang chủ', 'url' => url('/')],
+    ['label' => 'Chi tiết sản phẩm']
+]" />
 @php
     $hasVariants = $product->variants->count() > 0;
 

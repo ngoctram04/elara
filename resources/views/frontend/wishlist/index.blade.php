@@ -3,38 +3,82 @@
 @section('title', 'Sản phẩm yêu thích')
 
 @section('content')
-<div class="container py-4">
 
-    <h4 class="mb-4">
-        <i class="bi bi-heart-fill text-danger me-2"></i>
-        Sản phẩm yêu thích
-    </h4>
+<x-breadcrumb :items="[
+    ['label' => 'Trang chủ', 'url' => url('/')],
+    ['label' => 'Sản phẩm yêu thích']
+]" />
+
+<div class="container pb-4">
 
     @if($wishlists->count() == 0)
-        <div class="alert alert-info">
-            Bạn chưa có sản phẩm yêu thích.
+        <div class="wishlist-empty-box text-center">
+            <div class="wishlist-empty-icon mb-3">
+                <i class="bi bi-heart"></i>
+            </div>
+
+            <h5 class="mb-2">Chưa có sản phẩm yêu thích</h5>
+            <p class="text-muted mb-3">
+                Bạn chưa thêm sản phẩm nào vào danh sách yêu thích.
+            </p>
+
+            <a href="{{ route('shop') }}" class="btn btn-primary px-4">
+                Khám phá sản phẩm
+            </a>
         </div>
     @else
 
-    <div class="row">
-        @foreach($wishlists as $item)
-            @php
-                $product = $item->product;
-            @endphp
+        <div class="wishlist-grid">
+            <div class="row g-4">
+                @foreach($wishlists as $item)
+                    @php
+                        $product = $item->product;
+                    @endphp
 
-            {{-- DÙNG PARTIAL CHUẨN CỦA HỆ THỐNG --}}
-            @include('frontend.partials.product-card-common', [
-                'product' => $product,
-                'favorites' => $favorites ?? []
-            ])
-        @endforeach
-    </div>
+                    @include('frontend.partials.product-card-common', [
+                        'product' => $product,
+                        'favorites' => $favorites ?? []
+                    ])
+                @endforeach
+            </div>
+        </div>
 
-    <div class="mt-4">
-        {{ $wishlists->links() }}
-    </div>
+        <div class="mt-4 wishlist-pagination">
+            {{ $wishlists->links() }}
+        </div>
 
     @endif
 
 </div>
+
+<style>
+    .wishlist-grid {
+        margin-top: 8px;
+    }
+
+    .wishlist-empty-box {
+        background: #fff;
+        border: 1px dashed #d1d5db;
+        border-radius: 20px;
+        padding: 60px 20px;
+    }
+
+    .wishlist-empty-icon {
+        font-size: 52px;
+        color: #0d6efd;
+        line-height: 1;
+    }
+
+    .wishlist-pagination nav {
+        display: flex;
+        justify-content: center;
+    }
+
+    @media (max-width: 767.98px) {
+        .wishlist-empty-box {
+            padding: 44px 16px;
+            border-radius: 16px;
+        }
+    }
+</style>
 @endsection

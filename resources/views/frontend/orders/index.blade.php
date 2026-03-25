@@ -3,7 +3,80 @@
 
 @section('content')
 
+<x-breadcrumb :items="[
+    ['label' => 'Trang chủ', 'url' => url('/')],
+    ['label' => 'Lịch sử đơn hàng']
+]" />
+
 <style>
+.custom-pagination-wrap{
+    display:flex;
+    justify-content:center;
+    margin-top:24px;
+}
+
+.custom-pagination{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:12px;
+    list-style:none;
+    padding:0;
+    margin:0;
+    flex-wrap:wrap;
+}
+
+.custom-pagination li{
+    margin:0;
+    padding:0;
+}
+
+.custom-pagination li a,
+.custom-pagination li span{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-width:42px;
+    height:42px;
+    padding:0 12px;
+    border-radius:999px;
+    text-decoration:none;
+    font-size:16px;
+    font-weight:600;
+    border:none;
+    background:transparent;
+    color:#2563eb;
+    transition:all 0.2s ease;
+}
+
+.custom-pagination li a:hover{
+    background:#dbeafe;
+    color:#1d4ed8;
+}
+
+.custom-pagination li.active span{
+    background:#2563eb;
+    color:#fff;
+    box-shadow:0 8px 18px rgba(37, 99, 235, 0.22);
+}
+
+.custom-pagination li.dots span{
+    min-width:auto;
+    height:42px;
+    padding:0 4px;
+    color:#374151;
+    background:transparent;
+}
+
+.custom-pagination li.disabled span{
+    color:#9ca3af;
+    background:transparent;
+}
+
+.custom-pagination li.arrow a,
+.custom-pagination li.arrow span{
+    font-size:20px;
+}
 body{background:#f5f6fa;}
 
 .order-box{
@@ -121,6 +194,25 @@ border:1px solid #cbd5e1;
 border-radius:8px;
 padding:6px 16px;
 color:#475569;
+}
+.order-expand-wrap{
+    border-bottom:1px solid #f7f7f7;
+}
+
+.btn-toggle-items{
+    border:none;
+    background:transparent;
+    color:#2563eb;
+    font-size:14px;
+    font-weight:600;
+    padding:6px 12px;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.btn-toggle-items:hover{
+    color:#1d4ed8;
+    text-decoration:underline;
 }
 </style>
 
@@ -244,10 +336,7 @@ color:#475569;
 </div>
     </div>
 
-
-    {{-- ITEMS --}}
-    {{-- ITEMS --}}
-@foreach($order->items as $item)
+@foreach($order->items as $index => $item)
     @php
         $variant = $item->variant;
         $product = $variant->product ?? null;
@@ -260,8 +349,7 @@ color:#475569;
             : asset('images/no-image.png');
     @endphp
 
-    <div class="order-item">
-
+    <div class="order-item {{ $index >= 1 ? 'extra-item d-none' : '' }}">
         <img src="{{ $imageUrl }}" class="order-img">
 
         <div style="flex:1">
@@ -274,9 +362,7 @@ color:#475569;
                 x{{ $item->quantity }}
             </div>
 
-            {{-- ===== ĐÁNH GIÁ ===== --}}
             @if($order->status == 3 && $order->customer_confirmed)
-
                 @if(!$item->review)
                     <a href="{{ route('reviews.create', $item->id) }}"
                        class="btn btn-warning btn-sm mt-2">
@@ -287,17 +373,25 @@ color:#475569;
                         Đã đánh giá
                     </span>
                 @endif
-
             @endif
         </div>
 
         <div class="order-price">
             {{ number_format($item->price) }}đ
         </div>
-
     </div>
 @endforeach
 
+@if($order->items->count() > 1)
+    <div class="order-expand-wrap text-center py-2">
+        <button type="button"
+                class="btn-toggle-items"
+                data-more="Xem thêm {{ $order->items->count() - 1 }} sản phẩm"
+                data-less="Thu gọn">
+            Xem thêm {{ $order->items->count() - 1 }} sản phẩm
+        </button>
+    </div>
+@endif
 
     {{-- FOOTER --}}
     <div class="order-footer">
@@ -441,8 +535,8 @@ color:#475569;
 </div>
 @endforelse
 
-<div class="mt-3">
-    {{ $orders->links() }}
+<div class="mt-4">
+    {{ $orders->withQueryString()->links('vendor.pagination.custom-blue') }}
 </div>
 
 </div>
@@ -610,16 +704,32 @@ confirmButtonColor: '#3085d6'
 
 {{-- THÔNG BÁO ERROR --}}
 @if(session('error'))
-
 <script>
 Swal.fire({
-icon: 'error',
-title: 'Lỗi',
-text: '{{ session('error') }}',
-confirmButtonColor: '#d33'
+    icon: 'error',
+    title: 'Lỗi',
+    text: '{{ session('error') }}',
+    confirmButtonColor: '#d33'
 });
 </script>
-
 @endif
+
+<script>
+document.querySelectorAll('.btn-toggle-items').forEach(function(button){
+    button.addEventListener('click', function(){
+        const orderBox = this.closest('.order-box');
+        const extraItems = orderBox.querySelectorAll('.extra-item');
+        const isHidden = Array.from(extraItems).some(item => item.classList.contains('d-none'));
+
+        if (isHidden) {
+            extraItems.forEach(item => item.classList.remove('d-none'));
+            this.textContent = this.dataset.less;
+        } else {
+            extraItems.forEach(item => item.classList.add('d-none'));
+            this.textContent = this.dataset.more;
+        }
+    });
+});
+</script>
 
 @endpush
