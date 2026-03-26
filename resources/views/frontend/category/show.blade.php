@@ -21,7 +21,7 @@
         <aside class="col-md-3 mb-4">
             <form method="GET" class="sidebar-box">
 
-                {{-- giữ sort --}}
+                {{-- GIỮ SORT --}}
                 <input type="hidden" name="sort" value="{{ request('sort') }}">
 
                 {{-- CATEGORY --}}
@@ -48,42 +48,45 @@
 
                 {{-- PRICE --}}
                 <div class="sidebar-section">
-    <div class="sidebar-title">Khoảng giá</div>
+                    <div class="sidebar-title">Khoảng giá</div>
 
-    @php $price = request('price'); @endphp
+                    @php $price = request('price'); @endphp
 
-    <label class="price-pill pink">
-        <input type="radio" name="price" value="0-100" hidden {{ $price === '0-100' ? 'checked' : '' }}>
-        0 – 100.000đ
-    </label>
+                    <label class="price-pill pink">
+                        <input type="radio" name="price" value="0-100" hidden {{ $price === '0-100' ? 'checked' : '' }}>
+                        0 – 100.000đ
+                    </label>
 
-    <label class="price-pill blue">
-        <input type="radio" name="price" value="100-200" hidden {{ $price === '100-200' ? 'checked' : '' }}>
-        100.000đ – 200.000đ
-    </label>
+                    <label class="price-pill blue">
+                        <input type="radio" name="price" value="100-200" hidden {{ $price === '100-200' ? 'checked' : '' }}>
+                        100.000đ – 200.000đ
+                    </label>
 
-    <label class="price-pill yellow">
-        <input type="radio" name="price" value="200-300" hidden {{ $price === '200-300' ? 'checked' : '' }}>
-        200.000đ – 300.000đ
-    </label>
+                    <label class="price-pill yellow">
+                        <input type="radio" name="price" value="200-300" hidden {{ $price === '200-300' ? 'checked' : '' }}>
+                        200.000đ – 300.000đ
+                    </label>
 
-    <label class="price-pill orange">
-        <input type="radio" name="price" value="300+" hidden {{ $price === '300+' ? 'checked' : '' }}>
-        Trên 300.000đ
-    </label>
-</div>
+                    <label class="price-pill orange">
+                        <input type="radio" name="price" value="300+" hidden {{ $price === '300+' ? 'checked' : '' }}>
+                        Trên 300.000đ
+                    </label>
+                </div>
 
                 {{-- BRAND --}}
                 @if($brands->count())
                     <div class="sidebar-section">
                         <div class="sidebar-title">Thương hiệu</div>
+
                         <div class="brand-list">
                             @foreach($brands as $brand)
                                 <label class="brand-item">
-                                    <input type="checkbox"
-                                           name="brands[]"
-                                           value="{{ $brand->id }}"
-                                           {{ in_array($brand->id, request()->brands ?? []) ? 'checked' : '' }}>
+                                    <input
+                                        type="checkbox"
+                                        name="brands[]"
+                                        value="{{ $brand->id }}"
+                                        {{ in_array($brand->id, request()->brands ?? []) ? 'checked' : '' }}
+                                    >
                                     {{ $brand->name }}
                                 </label>
                             @endforeach
@@ -179,89 +182,20 @@
 
 @endsection
 
-@push('styles')
-<style>
-    .custom-pagination-wrap {
-        display: flex;
-        justify-content: center;
-        margin-top: 24px;
-    }
-
-    .custom-pagination {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 12px;
-        list-style: none;
-        padding: 0;
-        margin: 0;
-        flex-wrap: wrap;
-    }
-
-    .custom-pagination li {
-        margin: 0;
-        padding: 0;
-    }
-
-    .custom-pagination li a,
-    .custom-pagination li span {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 42px;
-        height: 42px;
-        padding: 0 12px;
-        border-radius: 999px;
-        text-decoration: none;
-        font-size: 16px;
-        font-weight: 600;
-        border: none;
-        background: transparent;
-        color: #1d4ed8;
-        transition: all 0.2s ease;
-    }
-
-    .custom-pagination li a:hover {
-        background: #dbeafe;
-        color: #1d4ed8;
-    }
-
-    .custom-pagination li.active span {
-        background: #2563eb;
-        color: #fff;
-        box-shadow: 0 8px 18px rgba(37, 99, 235, 0.22);
-    }
-
-    .custom-pagination li.dots span {
-        min-width: auto;
-        height: 42px;
-        padding: 0 4px;
-        color: #374151;
-        background: transparent;
-    }
-
-    .custom-pagination li.disabled span {
-        color: #9ca3af;
-        background: transparent;
-    }
-
-    .custom-pagination li.arrow a,
-    .custom-pagination li.arrow span {
-        font-size: 20px;
-    }
-</style>
-@endpush
-
 @push('scripts')
 <script>
-document.querySelectorAll('.accordion-header').forEach(btn => {
-    btn.addEventListener('click', () => {
-        btn.closest('.accordion-item').classList.toggle('active');
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.accordion-header').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            btn.closest('.accordion-item').classList.toggle('active');
+        });
     });
-});
 
-document.querySelectorAll('.sidebar-box input').forEach(i => {
-    i.addEventListener('change', () => i.form.submit());
+    document.querySelectorAll('.sidebar-box input').forEach(function (input) {
+        input.addEventListener('change', function () {
+            this.form.submit();
+        });
+    });
 });
 </script>
 @endpush

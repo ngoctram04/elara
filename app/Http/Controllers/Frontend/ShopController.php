@@ -22,7 +22,8 @@ class ShopController extends Controller
         $baseQuery = Product::with([
             'mainImage',
             'variants',
-            'brand'
+            'brand',
+            'category'
         ])
             ->withAvg('reviews', 'rating')
             ->withCount('reviews')
@@ -36,11 +37,16 @@ class ShopController extends Controller
             $baseQuery->where(function ($q) use ($keyword) {
                 $q->where('name', 'like', "%{$keyword}%")
                     ->orWhere('slug', 'like', "%{$keyword}%")
+
                     ->orWhereHas('brand', function ($b) use ($keyword) {
                         $b->where('name', 'like', "%{$keyword}%");
                     })
+
                     ->orWhereHas('category', function ($c) use ($keyword) {
-                        $c->where('name', 'like', "%{$keyword}%");
+                        $c->where('name', 'like', "%{$keyword}%")
+                            ->orWhereHas('parent', function ($parent) use ($keyword) {
+                                $parent->where('name', 'like', "%{$keyword}%");
+                            });
                     });
             });
 
@@ -145,8 +151,7 @@ class ShopController extends Controller
             $limit = 9;
         }
 
-        $products = $query->paginate($limit)
-        ->withQueryString();
+        $products = $query->paginate($limit)->withQueryString();
 
         /* ================= SIDEBAR ================= */
         $categories = Category::whereNull('parent_id')
@@ -177,22 +182,30 @@ class ShopController extends Controller
 
     public function suggest(Request $request)
     {
-        $keyword = $request->q;
+        $keyword = trim($request->q);
 
-        $products = Product::when($keyword, function ($q) use ($keyword) {
-            $q->where('name', 'like', "%{$keyword}%");
-        })
+        if (!$keyword) {
+            return response()->json([]);
+        }
+
+        $products = Product::where('name', 'like', "%{$keyword}%")
             ->limit(5)
             ->pluck('name');
 
-        $brands = Brand::when($keyword, function ($q) use ($keyword) {
-            $q->where('name', 'like', "%{$keyword}%");
-        })
+        $brands = Brand::where('name', 'like', "%{$keyword}%")
             ->limit(3)
             ->pluck('name');
 
+        $categories = Category::where('name', 'like', "%{$keyword}%")
+            ->limit(5)
+            ->pluck('name');
+
         return response()->json(
-            $products->merge($brands)->unique()->values()
+            $products
+                ->merge($brands)
+                ->merge($categories)
+                ->unique()
+                ->values()
         );
     }
 

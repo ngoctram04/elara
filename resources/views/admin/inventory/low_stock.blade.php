@@ -10,10 +10,7 @@
         {{-- HEADER --}}
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h5 class="fw-bold mb-1">
-                    Sản phẩm sắp hết hàng
-                </h5>
-
+                <h5 class="fw-bold mb-1">Sản phẩm sắp hết hàng</h5>
                 <small class="text-muted">
                     Danh sách các biến thể có tồn kho thấp
                 </small>
@@ -32,20 +29,19 @@
                     name="keyword"
                     value="{{ request('keyword') }}"
                     class="form-control form-control-sm"
-                    placeholder="Tìm tên sản phẩm, mã SP, mã biến thể...">
+                    placeholder="Tìm tên sản phẩm, mã SP, mã biến thể..."
+                >
             </div>
 
             <div class="col-md-3">
                 <select name="sort" class="form-select form-select-sm">
                     <option value="">Tồn kho thấp → cao</option>
 
-                    <option value="high"
-                        {{ request('sort')=='high' ? 'selected' : '' }}>
+                    <option value="high" {{ request('sort') == 'high' ? 'selected' : '' }}>
                         Tồn kho cao → thấp
                     </option>
 
-                    <option value="all"
-                        {{ request('sort')=='all' ? 'selected' : '' }}>
+                    <option value="all" {{ request('sort') == 'all' ? 'selected' : '' }}>
                         Hiển thị tất cả
                     </option>
                 </select>
@@ -63,12 +59,6 @@
                 </a>
             </div>
         </form>
-
-        {{-- ALERT --}}
-        <div class="alert alert-warning mb-4">
-            <i class="bi bi-exclamation-triangle me-1"></i>
-            Những sản phẩm có tồn kho ≤ <b>5</b> sẽ hiển thị tại đây để quản trị viên kịp thời nhập thêm hàng.
-        </div>
 
         {{-- TABLE --}}
         <div class="table-responsive">
@@ -97,14 +87,19 @@
                                 @endphp
 
                                 @if($img)
-                                    <img src="{{ asset('storage/'.$img) }}"
-                                         width="55"
-                                         height="55"
-                                         class="rounded border"
-                                         style="object-fit:cover">
+                                    <img
+                                        src="{{ asset('storage/' . $img) }}"
+                                        width="55"
+                                        height="55"
+                                        class="rounded border"
+                                        style="object-fit:cover"
+                                        alt="{{ $v->product->name ?? 'Biến thể sản phẩm' }}"
+                                    >
                                 @else
-                                    <div class="bg-light border rounded d-inline-flex align-items-center justify-content-center"
-                                         style="width:55px;height:55px;">
+                                    <div
+                                        class="bg-light border rounded d-inline-flex align-items-center justify-content-center"
+                                        style="width:55px;height:55px;"
+                                    >
                                         <i class="bi bi-image text-muted"></i>
                                     </div>
                                 @endif
@@ -146,10 +141,14 @@
                             {{-- TỒN KHO --}}
                             <td class="text-center">
                                 <span class="badge
-                                    @if($v->stock_quantity <= 2) bg-danger
-                                    @elseif($v->stock_quantity <= 5) bg-warning text-dark
-                                    @else bg-success
-                                    @endif">
+                                    @if($v->stock_quantity <= 2)
+                                        bg-danger
+                                    @elseif($v->stock_quantity <= 5)
+                                        bg-warning text-dark
+                                    @else
+                                        bg-success
+                                    @endif
+                                ">
                                     {{ $v->stock_quantity }}
                                 </span>
                             </td>
@@ -197,7 +196,7 @@
         {{-- PAGINATION --}}
         @if($variants->hasPages())
             <div class="mt-4">
-                {{ $variants->links('pagination::bootstrap-5') }}
+                {{ $variants->links('vendor.pagination.custom-blue') }}
             </div>
         @endif
 

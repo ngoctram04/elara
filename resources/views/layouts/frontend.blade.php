@@ -154,7 +154,6 @@ value="{{ request('q') }}"
 placeholder="Tìm kiếm sản phẩm..."
 autocomplete="off"
 >
-
 <!-- NÚT MICRO -->
 <button type="button" id="voice-btn" class="voice-btn">
 <i class="bi bi-mic"></i>

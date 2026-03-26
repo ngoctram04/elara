@@ -84,7 +84,7 @@ class ReviewController extends Controller
         /**
          * 📄 PHÂN TRANG
          */
-        $reviews = $query->paginate(10)->withQueryString();
+        $reviews = $query->paginate(7)->withQueryString();
 
 
         return view('admin.reviews.index', compact('reviews'));

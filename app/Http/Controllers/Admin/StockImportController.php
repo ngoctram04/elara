@@ -262,7 +262,7 @@ class StockImportController extends Controller
         )
             ->groupBy('code')
             ->orderByDesc(DB::raw('MAX(created_at)'))
-            ->paginate(20)
+            ->paginate(7)
             ->withQueryString();
 
         return view('admin.stock_imports.history', compact('imports'));

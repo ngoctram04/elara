@@ -117,7 +117,7 @@ class InventoryController extends Controller
 
         $query->orderBy('stock_quantity', $request->sort == 'high' ? 'desc' : 'asc');
 
-        $variants = $query->paginate(30)->withQueryString();
+        $variants = $query->paginate(10)->withQueryString();
 
         return view('admin.inventory.report', compact('variants'));
     }
@@ -163,7 +163,7 @@ class InventoryController extends Controller
             $query->orderBy('stock_quantity', $request->sort == 'high' ? 'desc' : 'asc');
         }
 
-        $variants = $query->paginate(20)->withQueryString();
+        $variants = $query->paginate(10)->withQueryString();
 
         return view('admin.inventory.low_stock', compact('variants'));
     }
@@ -299,7 +299,7 @@ class InventoryController extends Controller
 
             'vi.image_path'
         )
-        ->paginate(20)
+        ->paginate(10)
         ->withQueryString();
 
         return view('admin.inventory.near_expiry', compact('lots'));

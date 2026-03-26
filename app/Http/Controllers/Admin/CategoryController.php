@@ -49,7 +49,7 @@ class CategoryController extends Controller
 
             $query->where(function ($q) use ($keyword, $numberKeyword) {
                 $q->where('name', 'like', '%' . $keyword . '%')
-                ->orWhereRaw("CONCAT('DM', LPAD(id, 4, '0')) LIKE ?", ['%' . $keyword . '%']);
+                    ->orWhereRaw("CONCAT('DM', LPAD(id, 4, '0')) LIKE ?", ['%' . $keyword . '%']);
 
                 if ($numberKeyword !== '') {
                     $q->orWhere('id', (int) $numberKeyword);
@@ -64,7 +64,7 @@ class CategoryController extends Controller
             default  => $query->orderBy('created_at', 'desc'),
         };
 
-        $categories = $query->get();
+        $categories = $query->paginate(7)->withQueryString();
 
         return view('admin.categories.index', compact('categories'));
     }
@@ -118,10 +118,8 @@ class CategoryController extends Controller
     */
     public function show(Request $request, Category $category)
     {
-        // ❗ Chỉ cho xem danh mục CHA
         abort_if($category->parent_id !== null, 404);
 
-        // ✅ THÊM withCount('products') Ở ĐÂY
         $childrenQuery = $category->children()
             ->withCount('products');
 
@@ -132,7 +130,7 @@ class CategoryController extends Controller
 
             $childrenQuery->where(function ($q) use ($keyword, $numberKeyword) {
                 $q->where('name', 'like', '%' . $keyword . '%')
-                ->orWhereRaw("CONCAT('DMC', LPAD(id, 4, '0')) LIKE ?", ['%' . $keyword . '%']);
+                    ->orWhereRaw("CONCAT('DMC', LPAD(id, 4, '0')) LIKE ?", ['%' . $keyword . '%']);
 
                 if ($numberKeyword !== '') {
                     $q->orWhere('id', (int) $numberKeyword);
@@ -140,14 +138,14 @@ class CategoryController extends Controller
             });
         }
 
-        // 🔃 Sắp xếp (CHUẨN)
+        // 🔃 Sắp xếp
         if ($request->sort === 'oldest') {
             $childrenQuery->orderBy('id', 'asc');
         } else {
-            $childrenQuery->orderBy('id', 'desc'); // mặc định
+            $childrenQuery->orderBy('id', 'desc');
         }
 
-        $children = $childrenQuery->get();
+        $children = $childrenQuery->paginate(7)->withQueryString();
 
         return view('admin.categories.show', compact('category', 'children'));
     }
@@ -198,7 +196,6 @@ class CategoryController extends Controller
     */
     public function destroy(Category $category)
     {
-        // ❌ Không cho xóa danh mục cha khi còn danh mục con
         if ($category->parent_id === null && $category->children()->exists()) {
             return back()->with('error', 'Không thể xóa danh mục đang chứa danh mục nhỏ');
         }

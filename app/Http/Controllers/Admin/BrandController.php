@@ -33,18 +33,16 @@ class BrandController extends Controller
             $query->orderByDesc('created_at');
         }
 
-        $brands = $query->get();
+        $brands = $query->paginate(7)->withQueryString();
 
         return view('admin.brands.index', compact('brands'));
     }
 
-    // FORM THÊM
     public function create()
     {
         return view('admin.brands.create');
     }
 
-    // LƯU THÊM
     public function store(Request $request)
     {
         $request->validate([
@@ -61,13 +59,11 @@ class BrandController extends Controller
             ->with('success', 'Thêm thương hiệu thành công');
     }
 
-    // FORM SỬA
     public function edit(Brand $brand)
     {
         return view('admin.brands.edit', compact('brand'));
     }
 
-    // LƯU SỬA
     public function update(Request $request, Brand $brand)
     {
         $request->validate([
@@ -84,10 +80,8 @@ class BrandController extends Controller
             ->with('success', 'Cập nhật thương hiệu thành công');
     }
 
-    // XÓA
     public function destroy(Brand $brand)
     {
-        // Đếm số sản phẩm thuộc thương hiệu
         if ($brand->products()->count() > 0) {
             return redirect()
                 ->back()
@@ -100,5 +94,4 @@ class BrandController extends Controller
             ->route('admin.brands.index')
             ->with('success', 'Xóa thương hiệu thành công.');
     }
-
 }

@@ -20,7 +20,8 @@
                                 name="search"
                                 class="form-control form-control-sm"
                                 placeholder="Tìm mã đơn hoặc khách hàng..."
-                                value="{{ request('search') }}">
+                                value="{{ request('search') }}"
+                            >
                         </div>
 
                         <div class="col-md-3">
@@ -63,7 +64,8 @@
                                 Lọc
                             </button>
 
-                            <a href="{{ route('admin.refunds.index') }}" class="btn btn-outline-secondary btn-sm">
+                            <a href="{{ route('admin.refunds.index') }}"
+                               class="btn btn-outline-secondary btn-sm">
                                 Đặt lại
                             </a>
                         </div>
@@ -72,290 +74,296 @@
                 </div>
             </div>
 
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>STT</th>
-                        <th>Đơn hàng</th>
-                        <th>Khách hàng</th>
-                        <th>Lý do</th>
-                        <th>Trạng thái</th>
-                        <th>Ngày gửi</th>
-                        <th width="120">Chi tiết</th>
-                        <th width="220">Hành động</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    @forelse($refunds as $refund)
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
                         <tr>
-                            <td>
-                                {{ ($refunds->currentPage() - 1) * $refunds->perPage() + $loop->iteration }}
-                            </td>
+                            <th>STT</th>
+                            <th>Đơn hàng</th>
+                            <th>Khách hàng</th>
+                            <th>Lý do</th>
+                            <th>Trạng thái</th>
+                            <th>Ngày gửi</th>
+                            <th width="120">Chi tiết</th>
+                            <th width="220">Hành động</th>
+                        </tr>
+                    </thead>
 
-                            <td>
-                                <a href="{{ route('admin.orders.show', $refund->order_id) }}">
-                                    DH{{ str_pad($refund->order_id, 5, '0', STR_PAD_LEFT) }}
-                                </a>
-                            </td>
+                    <tbody>
+                        @forelse($refunds as $refund)
+                            <tr>
+                                <td>
+                                    {{ ($refunds->currentPage() - 1) * $refunds->perPage() + $loop->iteration }}
+                                </td>
 
-                            <td>{{ $refund->user->name ?? '---' }}</td>
+                                <td>
+                                    <a href="{{ route('admin.orders.show', $refund->order_id) }}">
+                                        DH{{ str_pad($refund->order_id, 5, '0', STR_PAD_LEFT) }}
+                                    </a>
+                                </td>
 
-                            <td style="max-width:250px">
-                                {{ Str::limit($refund->reason, 60) }}
-                            </td>
+                                <td>{{ $refund->user->name ?? '---' }}</td>
 
-                            <td>
-                                @if($refund->status == 'pending')
-                                    <span class="badge bg-warning">Chờ duyệt</span>
-                                @elseif($refund->status == 'approved')
-                                    <span class="badge bg-primary">Đã duyệt</span>
-                                @elseif($refund->status == 'refunded')
-                                    <span class="badge bg-success">Đã hoàn tiền</span>
-                                @else
-                                    <span class="badge bg-danger">Từ chối</span>
-                                @endif
-                            </td>
+                                <td style="max-width:250px">
+                                    {{ Str::limit($refund->reason, 60) }}
+                                </td>
 
-                            <td>
-                                {{ $refund->created_at->format('d/m/Y H:i') }}
-                            </td>
+                                <td>
+                                    @if($refund->status == 'pending')
+                                        <span class="badge bg-warning">Chờ duyệt</span>
+                                    @elseif($refund->status == 'approved')
+                                        <span class="badge bg-primary">Đã duyệt</span>
+                                    @elseif($refund->status == 'refunded')
+                                        <span class="badge bg-success">Đã hoàn tiền</span>
+                                    @else
+                                        <span class="badge bg-danger">Từ chối</span>
+                                    @endif
+                                </td>
 
-                            <td>
-                                <button
-                                    class="btn btn-sm btn-dark"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#refundModal{{ $refund->id }}">
-                                    Xem
-                                </button>
-                            </td>
+                                <td>
+                                    {{ $refund->created_at->format('d/m/Y H:i') }}
+                                </td>
 
-                            <td>
-                                @if($refund->status == 'pending')
-                                    <form action="{{ route('admin.refunds.approve', $refund->id) }}" method="POST" class="d-inline">
-                                        @csrf
-                                        <button class="btn btn-sm btn-success">
-                                            Duyệt
-                                        </button>
-                                    </form>
-
-                                    <button
-                                        class="btn btn-sm btn-danger"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#rejectModal{{ $refund->id }}">
-                                        Từ chối
-                                    </button>
-                                @endif
-
-                                @if($refund->status == 'approved')
+                                <td>
                                     <button
                                         type="button"
-                                        class="btn btn-sm btn-primary"
+                                        class="btn btn-sm btn-dark"
                                         data-bs-toggle="modal"
-                                        data-bs-target="#refundConfirmModal{{ $refund->id }}">
-                                        Đã hoàn tiền
+                                        data-bs-target="#refundModal{{ $refund->id }}">
+                                        Xem
                                     </button>
-                                @endif
-                            </td>
-                        </tr>
+                                </td>
 
-                        {{-- MODAL TỪ CHỐI --}}
-                        <div class="modal fade" id="rejectModal{{ $refund->id }}" tabindex="-1" aria-hidden="true">
-                            <div class="modal-dialog">
-                                <div class="modal-content">
-                                    <form action="{{ route('admin.refunds.reject', $refund->id) }}" method="POST">
-                                        @csrf
-
-                                        <div class="modal-header">
-                                            <h5 class="modal-title">Từ chối yêu cầu hoàn tiền</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                        </div>
-
-                                        <div class="modal-body">
-                                            <label class="form-label fw-semibold">Lý do từ chối</label>
-
-                                            <textarea
-                                                name="admin_note"
-                                                class="form-control"
-                                                rows="4"
-                                                required
-                                                placeholder="Nhập lý do từ chối..."></textarea>
-                                        </div>
-
-                                        <div class="modal-footer">
-                                            <button
-                                                type="button"
-                                                class="btn btn-secondary"
-                                                data-bs-dismiss="modal">
-                                                Hủy
+                                <td>
+                                    @if($refund->status == 'pending')
+                                        <form action="{{ route('admin.refunds.approve', $refund->id) }}"
+                                              method="POST"
+                                              class="d-inline">
+                                            @csrf
+                                            <button class="btn btn-sm btn-success">
+                                                Duyệt
                                             </button>
+                                        </form>
 
-                                            <button
-                                                type="submit"
-                                                class="btn btn-danger">
-                                                Xác nhận từ chối
-                                            </button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
+                                        <button
+                                            type="button"
+                                            class="btn btn-sm btn-danger"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#rejectModal{{ $refund->id }}">
+                                            Từ chối
+                                        </button>
+                                    @endif
 
-                        {{-- MODAL XÁC NHẬN HOÀN TIỀN --}}
-                        <div class="modal fade" id="refundConfirmModal{{ $refund->id }}" tabindex="-1" aria-hidden="true">
-                            <div class="modal-dialog">
-                                <div class="modal-content">
-                                    <form action="{{ route('admin.refunds.refunded', $refund->id) }}" method="POST">
-                                        @csrf
+                                    @if($refund->status == 'approved')
+                                        <button
+                                            type="button"
+                                            class="btn btn-sm btn-primary"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#refundConfirmModal{{ $refund->id }}">
+                                            Đã hoàn tiền
+                                        </button>
+                                    @endif
+                                </td>
+                            </tr>
 
-                                        <div class="modal-header">
-                                            <h5 class="modal-title">Xác nhận hoàn tiền</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                        </div>
+                            {{-- MODAL TỪ CHỐI --}}
+                            <div class="modal fade" id="rejectModal{{ $refund->id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <form action="{{ route('admin.refunds.reject', $refund->id) }}" method="POST">
+                                            @csrf
 
-                                        <div class="modal-body">
-                                            <div class="mb-3">
-                                                <label class="form-label fw-semibold">Tình trạng hàng trả</label>
-                                                <select name="return_condition" class="form-select" required>
-                                                    <option value="sealed">Còn nguyên seal - hoàn kho và hoàn lô</option>
-                                                    <option value="broken">Bị vỡ - không hoàn kho, không hoàn lô, ghi nhận hao hụt</option>
-                                                </select>
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Từ chối yêu cầu hoàn tiền</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                             </div>
 
-                                            <div class="mb-0">
-                                                <label class="form-label fw-semibold">Ghi chú xử lý</label>
+                                            <div class="modal-body">
+                                                <label class="form-label fw-semibold">Lý do từ chối</label>
+
                                                 <textarea
                                                     name="admin_note"
                                                     class="form-control"
                                                     rows="4"
-                                                    placeholder="Ví dụ: Xác nhận hàng còn nguyên seal, đủ điều kiện hoàn kho..."></textarea>
+                                                    required
+                                                    placeholder="Nhập lý do từ chối..."></textarea>
                                             </div>
 
-                                            <div class="alert alert-light border mt-3 mb-0">
-                                                <div class="small text-muted">
-                                                    <strong>Lưu ý:</strong><br>
-                                                    - Chọn <strong>còn nguyên seal</strong> thì hệ thống sẽ hoàn kho và hoàn lại lô.<br>
-                                                    - Chọn <strong>bị vỡ</strong> thì hệ thống hoàn tiền, không hoàn kho, không hoàn lô và ghi nhận hao hụt theo giá nhập.
+                                            <div class="modal-footer">
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-secondary"
+                                                    data-bs-dismiss="modal">
+                                                    Hủy
+                                                </button>
+
+                                                <button
+                                                    type="submit"
+                                                    class="btn btn-danger">
+                                                    Xác nhận từ chối
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- MODAL XÁC NHẬN HOÀN TIỀN --}}
+                            <div class="modal fade" id="refundConfirmModal{{ $refund->id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <form action="{{ route('admin.refunds.refunded', $refund->id) }}" method="POST">
+                                            @csrf
+
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Xác nhận hoàn tiền</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+
+                                            <div class="modal-body">
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-semibold">Tình trạng hàng trả</label>
+                                                    <select name="return_condition" class="form-select" required>
+                                                        <option value="sealed">Còn nguyên seal - hoàn kho và hoàn lô</option>
+                                                        <option value="broken">Bị vỡ - không hoàn kho, không hoàn lô, ghi nhận hao hụt</option>
+                                                    </select>
+                                                </div>
+
+                                                <div class="mb-0">
+                                                    <label class="form-label fw-semibold">Ghi chú xử lý</label>
+                                                    <textarea
+                                                        name="admin_note"
+                                                        class="form-control"
+                                                        rows="4"
+                                                        placeholder="Ví dụ: Xác nhận hàng còn nguyên seal, đủ điều kiện hoàn kho..."></textarea>
+                                                </div>
+
+                                                <div class="alert alert-light border mt-3 mb-0">
+                                                    <div class="small text-muted">
+                                                        <strong>Lưu ý:</strong><br>
+                                                        - Chọn <strong>còn nguyên seal</strong> thì hệ thống sẽ hoàn kho và hoàn lại lô.<br>
+                                                        - Chọn <strong>bị vỡ</strong> thì hệ thống hoàn tiền, không hoàn kho, không hoàn lô và ghi nhận hao hụt theo giá nhập.
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
 
-                                        <div class="modal-footer">
-                                            <button
-                                                type="button"
-                                                class="btn btn-secondary"
-                                                data-bs-dismiss="modal">
-                                                Hủy
-                                            </button>
+                                            <div class="modal-footer">
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-secondary"
+                                                    data-bs-dismiss="modal">
+                                                    Hủy
+                                                </button>
 
-                                            <button
-                                                type="submit"
-                                                class="btn btn-primary">
-                                                Xác nhận đã hoàn tiền
-                                            </button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-
-                        {{-- MODAL CHI TIẾT --}}
-                        <div class="modal fade" id="refundModal{{ $refund->id }}" tabindex="-1" aria-hidden="true">
-                            <div class="modal-dialog modal-lg">
-                                <div class="modal-content">
-
-                                    <div class="modal-header">
-                                        <h5 class="modal-title">
-                                            Chi tiết yêu cầu hoàn tiền
-                                            HT{{ str_pad($refund->id, 5, '0', STR_PAD_LEFT) }}
-                                        </h5>
-
-                                        <button class="btn-close" data-bs-dismiss="modal"></button>
-                                    </div>
-
-                                    <div class="modal-body">
-                                        <p>
-                                            <b>Đơn hàng:</b>
-                                            DH{{ str_pad($refund->order_id, 5, '0', STR_PAD_LEFT) }}
-                                        </p>
-
-                                        <p>
-                                            <b>Khách hàng:</b>
-                                            {{ $refund->user->name ?? '---' }}
-                                        </p>
-
-                                        <p>
-                                            <b>Trạng thái:</b>
-                                            @if($refund->status == 'pending')
-                                                <span class="badge bg-warning">Chờ duyệt</span>
-                                            @elseif($refund->status == 'approved')
-                                                <span class="badge bg-primary">Đã duyệt</span>
-                                            @elseif($refund->status == 'refunded')
-                                                <span class="badge bg-success">Đã hoàn tiền</span>
-                                            @else
-                                                <span class="badge bg-danger">Từ chối</span>
-                                            @endif
-                                        </p>
-
-                                        <p><b>Lý do hoàn tiền:</b></p>
-                                        <div class="border rounded p-3 mb-3 bg-light" style="white-space: pre-line;">
-                                            {{ $refund->reason }}
-                                        </div>
-
-                                        @if(!empty($refund->admin_note))
-                                            <p><b>Ghi chú admin:</b></p>
-                                            <div class="border rounded p-3 mb-3 bg-light" style="white-space: pre-line;">
-                                                {{ $refund->admin_note }}
+                                                <button
+                                                    type="submit"
+                                                    class="btn btn-primary">
+                                                    Xác nhận đã hoàn tiền
+                                                </button>
                                             </div>
-                                        @endif
-
-                                        <h6 class="mb-2">Hình ảnh / video minh chứng</h6>
-
-                                        <div class="d-flex flex-wrap gap-2">
-                                            @forelse($refund->media as $media)
-                                                @if(Str::endsWith(strtolower($media->file_path), ['jpg', 'jpeg', 'png', 'webp']))
-                                                    <img
-                                                        src="{{ asset('storage/' . $media->file_path) }}"
-                                                        width="120"
-                                                        height="120"
-                                                        class="refund-preview"
-                                                        style="object-fit:cover;border-radius:6px;cursor:pointer"
-                                                        alt="refund-media">
-                                                @else
-                                                    <video
-                                                        width="200"
-                                                        class="refund-preview"
-                                                        style="border-radius:6px;cursor:pointer"
-                                                        muted>
-                                                        <source src="{{ asset('storage/' . $media->file_path) }}">
-                                                    </video>
-                                                @endif
-                                            @empty
-                                                <p class="text-muted mb-0">
-                                                    Không có hình minh chứng
-                                                </p>
-                                            @endforelse
-                                        </div>
+                                        </form>
                                     </div>
-
                                 </div>
                             </div>
-                        </div>
-                    @empty
-                        <tr>
-                            <td colspan="8" class="text-center py-4">
-                                Không có yêu cầu hoàn tiền
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
+
+                            {{-- MODAL CHI TIẾT --}}
+                            <div class="modal fade" id="refundModal{{ $refund->id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-lg">
+                                    <div class="modal-content">
+
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">
+                                                Chi tiết yêu cầu hoàn tiền
+                                                HT{{ str_pad($refund->id, 5, '0', STR_PAD_LEFT) }}
+                                            </h5>
+
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+
+                                        <div class="modal-body">
+                                            <p>
+                                                <b>Đơn hàng:</b>
+                                                DH{{ str_pad($refund->order_id, 5, '0', STR_PAD_LEFT) }}
+                                            </p>
+
+                                            <p>
+                                                <b>Khách hàng:</b>
+                                                {{ $refund->user->name ?? '---' }}
+                                            </p>
+
+                                            <p>
+                                                <b>Trạng thái:</b>
+                                                @if($refund->status == 'pending')
+                                                    <span class="badge bg-warning">Chờ duyệt</span>
+                                                @elseif($refund->status == 'approved')
+                                                    <span class="badge bg-primary">Đã duyệt</span>
+                                                @elseif($refund->status == 'refunded')
+                                                    <span class="badge bg-success">Đã hoàn tiền</span>
+                                                @else
+                                                    <span class="badge bg-danger">Từ chối</span>
+                                                @endif
+                                            </p>
+
+                                            <p><b>Lý do hoàn tiền:</b></p>
+                                            <div class="border rounded p-3 mb-3 bg-light" style="white-space: pre-line;">
+                                                {{ $refund->reason }}
+                                            </div>
+
+                                            @if(!empty($refund->admin_note))
+                                                <p><b>Ghi chú admin:</b></p>
+                                                <div class="border rounded p-3 mb-3 bg-light" style="white-space: pre-line;">
+                                                    {{ $refund->admin_note }}
+                                                </div>
+                                            @endif
+
+                                            <h6 class="mb-2">Hình ảnh / video minh chứng</h6>
+
+                                            <div class="d-flex flex-wrap gap-2">
+                                                @forelse($refund->media as $media)
+                                                    @if(Str::endsWith(strtolower($media->file_path), ['jpg', 'jpeg', 'png', 'webp']))
+                                                        <img
+                                                            src="{{ asset('storage/' . $media->file_path) }}"
+                                                            width="120"
+                                                            height="120"
+                                                            class="refund-preview"
+                                                            style="object-fit:cover;border-radius:6px;cursor:pointer"
+                                                            alt="refund-media">
+                                                    @else
+                                                        <video
+                                                            width="200"
+                                                            class="refund-preview"
+                                                            style="border-radius:6px;cursor:pointer"
+                                                            muted>
+                                                            <source src="{{ asset('storage/' . $media->file_path) }}">
+                                                        </video>
+                                                    @endif
+                                                @empty
+                                                    <p class="text-muted mb-0">
+                                                        Không có hình minh chứng
+                                                    </p>
+                                                @endforelse
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+                        @empty
+                            <tr>
+                                <td colspan="8" class="text-center py-4">
+                                    Không có yêu cầu hoàn tiền
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
 
         </div>
     </div>
 
     <div class="mt-3">
-        {{ $refunds->links() }}
+        {{ $refunds->links('vendor.pagination.custom-blue') }}
     </div>
 
 </div>
@@ -365,7 +373,7 @@
     <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content bg-dark border-0">
             <div class="modal-header border-0">
-                <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
 
             <div class="modal-body text-center">

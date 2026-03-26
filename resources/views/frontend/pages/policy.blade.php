@@ -3,15 +3,13 @@
 @section('title', 'Chính sách')
 
 @section('content')
-
 <x-breadcrumb :items="[
     ['label' => 'Trang chủ', 'url' => url('/')],
     ['label' => 'Chính sách']
 ]" />
 
 <div class="container policy-page pb-4">
-    <div class="row g-4">
-
+    <div class="row g-3">
         {{-- SIDEBAR --}}
         <div class="col-lg-3">
             <div class="policy-sidebar">
@@ -41,15 +39,14 @@
 
         {{-- CONTENT --}}
         <div class="col-lg-9">
-
             {{-- SHIPPING --}}
-            <section id="ship" class="policy-card mb-4">
+            <section id="ship" class="policy-card mb-3">
                 <div class="policy-card-header">
                     <div class="policy-card-icon">
                         <i class="bi bi-truck"></i>
                     </div>
                     <div>
-                        <h2 class="policy-card-title mb-1">Chính sách giao hàng</h2>
+                        <h2 class="policy-card-title">Chính sách giao hàng</h2>
                         <div class="policy-card-subtitle">Thông tin vận chuyển và nhận hàng</div>
                     </div>
                 </div>
@@ -63,13 +60,13 @@
             </section>
 
             {{-- TERMS --}}
-            <section id="terms" class="policy-card mb-4">
+            <section id="terms" class="policy-card mb-3">
                 <div class="policy-card-header">
                     <div class="policy-card-icon">
                         <i class="bi bi-file-earmark-text"></i>
                     </div>
                     <div>
-                        <h2 class="policy-card-title mb-1">Điều khoản sử dụng</h2>
+                        <h2 class="policy-card-title">Điều khoản sử dụng</h2>
                         <div class="policy-card-subtitle">Quy định khi sử dụng hệ thống ELARA</div>
                     </div>
                 </div>
@@ -84,7 +81,7 @@
                     <li>Tôn trọng hệ thống và những người dùng khác trong quá trình sử dụng.</li>
                 </ul>
 
-                <div class="policy-alert warning mt-3">
+                <div class="policy-alert warning mt-2">
                     <div class="alert-icon">
                         <i class="bi bi-exclamation-triangle-fill"></i>
                     </div>
@@ -106,12 +103,12 @@
                         <i class="bi bi-award"></i>
                     </div>
                     <div>
-                        <h2 class="policy-card-title mb-1">Chính sách thành viên</h2>
+                        <h2 class="policy-card-title">Chính sách thành viên</h2>
                         <div class="policy-card-subtitle">Xét hạng theo tổng chi tiêu trong năm</div>
                     </div>
                 </div>
 
-                <div class="policy-alert info mb-3">
+                <div class="policy-alert info mb-2">
                     <div class="alert-icon">
                         <i class="bi bi-info-circle-fill"></i>
                     </div>
@@ -180,7 +177,7 @@
                     </table>
                 </div>
 
-                <div class="policy-note-box mt-3">
+                <div class="policy-note-box mt-2">
                     <div class="note-title">
                         <i class="bi bi-ticket-perforated me-1"></i>
                         Điểm tích lũy
@@ -191,7 +188,6 @@
                     </div>
                 </div>
             </section>
-
         </div>
     </div>
 </div>
@@ -199,261 +195,285 @@
 
 @push('styles')
 <style>
-    .policy-page {
-        padding-top: 0 !important;
+    .policy-page{
+        padding-top:0 !important;
     }
 
-    .policy-sidebar {
-        position: sticky;
-        top: 90px;
+    .policy-sidebar{
+        position:sticky;
+        top:90px;
     }
 
-    .policy-sidebar-box {
-        background: #fff;
-        border: 1px solid #eef2f7;
-        border-radius: 18px;
-        padding: 18px;
-        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+    .policy-sidebar-box{
+        background:#fff;
+        border:1px solid #eef2f7;
+        border-radius:14px;
+        padding:14px;
+        box-shadow:0 6px 18px rgba(15, 23, 42, 0.05);
     }
 
-    .policy-sidebar-title {
-        display: flex;
-        align-items: center;
-        font-size: 17px;
-        font-weight: 700;
-        color: #111827;
-        margin-bottom: 14px;
+    .policy-sidebar-title{
+        display:flex;
+        align-items:center;
+        font-size:15px;
+        font-weight:700;
+        color:#111827;
+        margin-bottom:10px;
     }
 
-    .policy-link {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 12px 14px;
-        border-radius: 12px;
-        color: #4b5563;
-        text-decoration: none;
-        margin-bottom: 8px;
-        font-weight: 500;
-        transition: all .2s ease;
+    .policy-link{
+        display:flex;
+        align-items:center;
+        gap:10px;
+        padding:9px 11px;
+        border-radius:10px;
+        color:#4b5563;
+        text-decoration:none;
+        margin-bottom:6px;
+        font-size:14px;
+        font-weight:500;
+        transition:all .2s ease;
     }
 
-    .policy-link i {
-        font-size: 16px;
-        color: #6b7280;
-        transition: all .2s ease;
+    .policy-link i{
+        font-size:15px;
+        color:#6b7280;
+        transition:all .2s ease;
     }
 
-    .policy-link:hover {
-        background: #eef5ff;
-        color: #0d6efd;
+    .policy-link:hover{
+        background:#eef5ff;
+        color:#0d6efd;
     }
 
-    .policy-link:hover i {
-        color: #0d6efd;
+    .policy-link:hover i{
+        color:#0d6efd;
     }
 
-    .policy-link.active {
-        background: linear-gradient(135deg, #0d6efd, #0b5ed7);
-        color: #fff;
-        box-shadow: 0 8px 18px rgba(13,110,253,0.25);
+    .policy-link.active{
+        background:linear-gradient(135deg, #0d6efd, #0b5ed7);
+        color:#fff;
+        box-shadow:0 6px 14px rgba(13,110,253,0.22);
     }
 
-    .policy-link.active i {
-        color: #fff;
+    .policy-link.active i{
+        color:#fff;
     }
 
-    .policy-card {
-        background: #fff;
-        border: 1px solid #eef2f7;
-        border-radius: 20px;
-        padding: 24px;
-        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.05);
+    .policy-card{
+        background:#fff;
+        border:1px solid #eef2f7;
+        border-radius:16px;
+        padding:18px 18px 16px;
+        box-shadow:0 8px 22px rgba(15, 23, 42, 0.05);
     }
 
-    .policy-card-header {
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        margin-bottom: 18px;
+    .policy-card-header{
+        display:flex;
+        align-items:center;
+        gap:12px;
+        margin-bottom:12px;
     }
 
-    .policy-card-icon {
-        width: 46px;
-        height: 46px;
-        border-radius: 14px;
-        background: #eff6ff;
-        color: #2563eb;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 20px;
-        flex-shrink: 0;
+    .policy-card-icon{
+        width:40px;
+        height:40px;
+        border-radius:12px;
+        background:#eff6ff;
+        color:#2563eb;
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        font-size:18px;
+        flex-shrink:0;
     }
 
-    .policy-card-title {
-        font-size: 22px;
-        font-weight: 700;
-        color: #111827;
-        margin: 0;
+    .policy-card-title{
+        font-size:18px;
+        font-weight:700;
+        color:#111827;
+        margin:0 0 2px;
+        line-height:1.3;
     }
 
-    .policy-card-subtitle {
-        font-size: 14px;
-        color: #6b7280;
+    .policy-card-subtitle{
+        font-size:13px;
+        color:#6b7280;
+        line-height:1.4;
     }
 
-    .policy-text {
-        color: #4b5563;
-        font-size: 15px;
-        line-height: 1.8;
-        margin-bottom: 12px;
+    .policy-text{
+        color:#4b5563;
+        font-size:14px;
+        line-height:1.65;
+        margin-bottom:8px;
     }
 
-    .policy-list {
-        margin: 0;
-        padding-left: 18px;
-        color: #374151;
+    .policy-list{
+        margin:0;
+        padding-left:18px;
+        color:#374151;
     }
 
-    .policy-list li {
-        margin-bottom: 10px;
-        line-height: 1.75;
+    .policy-list li{
+        margin-bottom:6px;
+        line-height:1.6;
+        font-size:14px;
     }
 
-    .policy-alert {
-        display: flex;
-        gap: 12px;
-        border-radius: 14px;
-        padding: 14px 16px;
-        font-size: 14px;
-        line-height: 1.7;
+    .policy-alert{
+        display:flex;
+        gap:10px;
+        border-radius:12px;
+        padding:12px 14px;
+        font-size:13.5px;
+        line-height:1.6;
     }
 
-    .policy-alert .alert-icon {
-        font-size: 18px;
-        flex-shrink: 0;
-        margin-top: 2px;
+    .policy-alert .alert-icon{
+        font-size:17px;
+        flex-shrink:0;
+        margin-top:1px;
     }
 
-    .policy-alert .alert-title {
-        font-weight: 700;
-        margin-bottom: 4px;
+    .policy-alert .alert-title{
+        font-weight:700;
+        margin-bottom:2px;
     }
 
-    .policy-alert.warning {
-        background: #fff8e1;
-        border: 1px solid #fde68a;
-        color: #92400e;
+    .policy-alert.warning{
+        background:#fff8e1;
+        border:1px solid #fde68a;
+        color:#92400e;
     }
 
-    .policy-alert.info {
-        background: #eef6ff;
-        border: 1px solid #bfdbfe;
-        color: #1d4ed8;
+    .policy-alert.info{
+        background:#eef6ff;
+        border:1px solid #bfdbfe;
+        color:#1d4ed8;
     }
 
-    .membership-table-wrap {
-        border: 1px solid #eef2f7;
-        border-radius: 16px;
-        overflow: hidden;
+    .membership-table-wrap{
+        border:1px solid #eef2f7;
+        border-radius:12px;
+        overflow:hidden;
     }
 
-    .membership-table thead th {
-        background: #f8fafc;
-        color: #111827;
-        font-weight: 700;
-        border-bottom: 1px solid #e5e7eb;
-        padding: 14px;
+    .membership-table thead th{
+        background:#f8fafc;
+        color:#111827;
+        font-weight:700;
+        border-bottom:1px solid #e5e7eb;
+        padding:11px 12px;
+        font-size:14px;
+        white-space:nowrap;
     }
 
-    .membership-table tbody td {
-        padding: 14px;
-        color: #374151;
-        vertical-align: middle;
+    .membership-table tbody td{
+        padding:11px 12px;
+        color:#374151;
+        vertical-align:middle;
+        font-size:14px;
+        line-height:1.5;
     }
 
-    .membership-table tbody tr:hover {
-        background: #f8fbff;
+    .membership-table tbody tr:hover{
+        background:#f8fbff;
     }
 
-    .rank-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 8px 12px;
-        border-radius: 999px;
-        font-size: 13px;
-        font-weight: 700;
+    .rank-badge{
+        display:inline-flex;
+        align-items:center;
+        gap:6px;
+        padding:6px 10px;
+        border-radius:999px;
+        font-size:12px;
+        font-weight:700;
     }
 
-    .rank-badge.bronze {
-        background: #111827;
-        color: #fff;
+    .rank-badge.bronze{
+        background:#111827;
+        color:#fff;
     }
 
-    .rank-badge.silver {
-        background: #e5e7eb;
-        color: #374151;
+    .rank-badge.silver{
+        background:#e5e7eb;
+        color:#374151;
     }
 
-    .rank-badge.gold {
-        background: #fef3c7;
-        color: #92400e;
+    .rank-badge.gold{
+        background:#fef3c7;
+        color:#92400e;
     }
 
-    .rank-badge.platinum {
-        background: #dbeafe;
-        color: #1d4ed8;
+    .rank-badge.platinum{
+        background:#dbeafe;
+        color:#1d4ed8;
     }
 
-    .policy-note-box {
-        background: #f8fafc;
-        border: 1px solid #e5e7eb;
-        border-radius: 14px;
-        padding: 14px 16px;
+    .policy-note-box{
+        background:#f8fafc;
+        border:1px solid #e5e7eb;
+        border-radius:12px;
+        padding:12px 14px;
     }
 
-    .note-title {
-        font-weight: 700;
-        color: #111827;
-        margin-bottom: 6px;
+    .note-title{
+        font-weight:700;
+        color:#111827;
+        margin-bottom:4px;
+        font-size:14px;
     }
 
-    .note-text {
-        color: #4b5563;
-        font-size: 14px;
-        line-height: 1.7;
+    .note-text{
+        color:#4b5563;
+        font-size:13.5px;
+        line-height:1.6;
     }
 
-    @media (max-width: 991.98px) {
-        .policy-sidebar {
-            position: static;
+    @media (max-width: 991.98px){
+        .policy-sidebar{
+            position:static;
         }
     }
 
-    @media (max-width: 767.98px) {
-        .policy-card {
-            padding: 18px;
-            border-radius: 16px;
+    @media (max-width: 767.98px){
+        .policy-card{
+            padding:15px;
+            border-radius:14px;
         }
 
-        .policy-card-title {
-            font-size: 18px;
+        .policy-card-header{
+            align-items:flex-start;
+            margin-bottom:10px;
         }
 
-        .policy-card-header {
-            align-items: flex-start;
+        .policy-card-title{
+            font-size:16px;
+        }
+
+        .policy-card-subtitle,
+        .policy-text,
+        .policy-list li,
+        .membership-table thead th,
+        .membership-table tbody td,
+        .note-text{
+            font-size:13px;
+        }
+
+        .policy-sidebar-box{
+            border-radius:14px;
+            padding:12px;
+        }
+
+        .policy-link{
+            padding:8px 10px;
+            font-size:13px;
         }
 
         .membership-table thead th,
-        .membership-table tbody td {
-            padding: 12px;
-            font-size: 14px;
-        }
-
-        .policy-sidebar-box {
-            border-radius: 16px;
+        .membership-table tbody td{
+            padding:10px;
         }
     }
 </style>

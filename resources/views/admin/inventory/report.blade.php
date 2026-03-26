@@ -30,7 +30,7 @@
             <div class="card-body">
                 <h6 class="text-muted mb-1">Sắp hết hàng</h6>
                 <h4 class="fw-bold text-warning mb-0">
-                    {{ $variants->where('stock_quantity','<=',5)->count() }}
+                    {{ $variants->where('stock_quantity', '<=', 5)->count() }}
                 </h4>
             </div>
         </div>
@@ -41,7 +41,7 @@
             <div class="card-body">
                 <h6 class="text-muted mb-1">Hết hàng</h6>
                 <h4 class="fw-bold text-danger mb-0">
-                    {{ $variants->where('stock_quantity',0)->count() }}
+                    {{ $variants->where('stock_quantity', 0)->count() }}
                 </h4>
             </div>
         </div>
@@ -72,26 +72,27 @@
                     name="keyword"
                     value="{{ request('keyword') }}"
                     class="form-control form-control-sm"
-                    placeholder="Tìm tên sản phẩm, mã SP, mã biến thể...">
+                    placeholder="Tìm tên sản phẩm, mã SP, mã biến thể..."
+                >
             </div>
 
             <div class="col-md-3">
                 <select name="status" class="form-select form-select-sm">
                     <option value="">Tất cả trạng thái</option>
 
-                    <option value="out" {{ request('status')=='out' ? 'selected' : '' }}>
+                    <option value="out" {{ request('status') == 'out' ? 'selected' : '' }}>
                         Hết hàng
                     </option>
 
-                    <option value="danger" {{ request('status')=='danger' ? 'selected' : '' }}>
+                    <option value="danger" {{ request('status') == 'danger' ? 'selected' : '' }}>
                         Nguy hiểm (≤2)
                     </option>
 
-                    <option value="low" {{ request('status')=='low' ? 'selected' : '' }}>
+                    <option value="low" {{ request('status') == 'low' ? 'selected' : '' }}>
                         Sắp hết (3–5)
                     </option>
 
-                    <option value="ok" {{ request('status')=='ok' ? 'selected' : '' }}>
+                    <option value="ok" {{ request('status') == 'ok' ? 'selected' : '' }}>
                         Còn hàng
                     </option>
                 </select>
@@ -100,7 +101,7 @@
             <div class="col-md-3">
                 <select name="sort" class="form-select form-select-sm">
                     <option value="">Tồn kho thấp → cao</option>
-                    <option value="high" {{ request('sort')=='high' ? 'selected' : '' }}>
+                    <option value="high" {{ request('sort') == 'high' ? 'selected' : '' }}>
                         Tồn kho cao → thấp
                     </option>
                 </select>
@@ -146,14 +147,19 @@
                                 @endphp
 
                                 @if($img)
-                                    <img src="{{ asset('storage/'.$img) }}"
-                                         width="55"
-                                         height="55"
-                                         class="rounded border"
-                                         style="object-fit:cover">
+                                    <img
+                                        src="{{ asset('storage/' . $img) }}"
+                                        width="55"
+                                        height="55"
+                                        class="rounded border"
+                                        style="object-fit:cover"
+                                        alt="{{ $v->product->name ?? 'Biến thể sản phẩm' }}"
+                                    >
                                 @else
-                                    <div class="bg-light border rounded d-inline-flex align-items-center justify-content-center"
-                                         style="width:55px;height:55px;">
+                                    <div
+                                        class="bg-light border rounded d-inline-flex align-items-center justify-content-center"
+                                        style="width:55px;height:55px;"
+                                    >
                                         <i class="bi bi-image text-muted"></i>
                                     </div>
                                 @endif
@@ -195,11 +201,16 @@
                             {{-- TỒN KHO --}}
                             <td class="text-center">
                                 <span class="badge
-                                    @if($v->stock_quantity == 0) bg-danger
-                                    @elseif($v->stock_quantity <= 2) bg-danger
-                                    @elseif($v->stock_quantity <= 5) bg-warning text-dark
-                                    @else bg-success
-                                    @endif">
+                                    @if($v->stock_quantity == 0)
+                                        bg-danger
+                                    @elseif($v->stock_quantity <= 2)
+                                        bg-danger
+                                    @elseif($v->stock_quantity <= 5)
+                                        bg-warning text-dark
+                                    @else
+                                        bg-success
+                                    @endif
+                                ">
                                     {{ $v->stock_quantity }}
                                 </span>
                             </td>
@@ -234,7 +245,7 @@
         {{-- PAGINATION --}}
         @if($variants->hasPages())
             <div class="mt-4">
-                {{ $variants->links('pagination::bootstrap-5') }}
+                {{ $variants->links('vendor.pagination.custom-blue') }}
             </div>
         @endif
 

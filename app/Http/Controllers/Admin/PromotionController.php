@@ -20,8 +20,8 @@ class PromotionController extends Controller
     ========================================================= */
     public function index()
     {
-        $promotions = Promotion::latest()->paginate(10);
-        $rewards = PointReward::latest()->paginate(10);
+        $promotions = Promotion::latest()->paginate(5);
+        $rewards = PointReward::latest()->paginate(5);
 
         return view('admin.promotions.index', compact('promotions', 'rewards'));
     }

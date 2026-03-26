@@ -3,290 +3,270 @@
 @section('title','Lịch sử thay đổi tồn kho')
 
 @section('content')
-
 <div class="card border-0 shadow-sm">
+    <div class="card-body">
 
-<div class="card-body">
+        {{-- HEADER --}}
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h5 class="fw-bold mb-1">Lịch sử thay đổi tồn kho</h5>
+                <small class="text-muted">
+                    Theo dõi các thay đổi số lượng tồn kho trong hệ thống
+                </small>
+            </div>
 
-{{-- HEADER --}}
+            <span class="badge bg-secondary">
+                Tổng: {{ $logs->total() }}
+            </span>
+        </div>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+        {{-- ===================== FILTER ===================== --}}
+        <form method="GET" class="row g-2 mb-4 align-items-center">
 
-<div>
-<h5 class="fw-bold mb-1">
-Lịch sử thay đổi tồn kho
-</h5>
+            <div class="col-md-4">
+                <input
+                    type="text"
+                    name="keyword"
+                    class="form-control form-control-sm"
+                    placeholder="Tìm theo tên sản phẩm hoặc mã..."
+                    value="{{ request('keyword') }}"
+                >
+            </div>
 
-<small class="text-muted">
-Theo dõi các thay đổi số lượng tồn kho trong hệ thống
-</small>
-</div>
+            <div class="col-md-2">
+                <select name="type" class="form-select form-select-sm">
+                    <option value="">Tất cả loại</option>
 
-<span class="badge bg-secondary">
-Tổng: {{ $logs->total() }}
-</span>
+                    <option value="import" {{ request('type') == 'import' ? 'selected' : '' }}>
+                        Nhập kho
+                    </option>
 
-</div>
+                    <option value="order" {{ request('type') == 'order' ? 'selected' : '' }}>
+                        Bán hàng
+                    </option>
 
-{{-- ===================== FILTER ===================== --}}
+                    <option value="cancel" {{ request('type') == 'cancel' ? 'selected' : '' }}>
+                        Huỷ đơn / hoàn kho
+                    </option>
 
-<form method="GET" class="row g-2 mb-4 align-items-center">
+                    <option value="return_restock" {{ request('type') == 'return_restock' ? 'selected' : '' }}>
+                        Trả hàng nhập lại kho
+                    </option>
 
-<div class="col-md-4">
+                    <option value="return_damaged" {{ request('type') == 'return_damaged' ? 'selected' : '' }}>
+                        Trả hàng hư
+                    </option>
 
-<input type="text"
-name="keyword"
-class="form-control form-control-sm"
-placeholder="Tìm theo tên sản phẩm hoặc mã..."
-value="{{ request('keyword') }}">
+                    <option value="adjust" {{ request('type') == 'adjust' ? 'selected' : '' }}>
+                        Điều chỉnh
+                    </option>
 
-</div>
+                    <option value="expired_destroy" {{ request('type') == 'expired_destroy' ? 'selected' : '' }}>
+                        Huỷ cận date
+                    </option>
+                </select>
+            </div>
 
-<div class="col-md-2">
+            <div class="col-md-2">
+                <input
+                    type="date"
+                    name="from"
+                    class="form-control form-control-sm"
+                    value="{{ request('from') }}"
+                >
+            </div>
 
-<select name="type"
-class="form-select form-select-sm">
+            <div class="col-md-2">
+                <input
+                    type="date"
+                    name="to"
+                    class="form-control form-control-sm"
+                    value="{{ request('to') }}"
+                >
+            </div>
 
-<option value="">Tất cả loại</option>
+            <div class="col-md-2 d-flex gap-2">
+                <button class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-search"></i>
+                    Lọc
+                </button>
 
-<option value="import"
-{{ request('type')=='import'?'selected':'' }}>
-Nhập kho
-</option>
+                <a href="{{ route('admin.inventory.logs') }}"
+                   class="btn btn-outline-secondary btn-sm">
+                    Đặt lại
+                </a>
+            </div>
 
-<option value="order"
-{{ request('type')=='order'?'selected':'' }}>
-Bán hàng
-</option>
+        </form>
 
-<option value="cancel"
-{{ request('type')=='cancel'?'selected':'' }}>
-Hoàn kho
-</option>
+        {{-- ===================== TABLE ===================== --}}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
 
-<option value="adjust"
-{{ request('type')=='adjust'?'selected':'' }}>
-Điều chỉnh
-</option>
+                <thead class="table-light">
+                    <tr>
+                        <th>Sản phẩm</th>
+                        <th>Biến thể</th>
+                        <th class="text-center" style="width:170px">Loại</th>
+                        <th class="text-center" style="width:120px">Thay đổi</th>
+                        <th class="text-center" style="width:120px">Tồn trước</th>
+                        <th class="text-center" style="width:120px">Tồn sau</th>
+                        <th class="text-center" style="width:180px">Thời gian</th>
+                    </tr>
+                </thead>
 
-</select>
+                <tbody>
+                    @forelse($logs as $log)
+                        @php
+                            $variant = $log->variant;
+                            $product = $variant?->product;
+                            $img = $variant?->images?->first()?->image_path;
 
-</div>
+                            $typeLabel = match ($log->type) {
+                                'import' => 'Nhập kho',
+                                'order' => 'Bán hàng',
+                                'cancel' => 'Huỷ đơn / hoàn kho',
+                                'return_restock' => 'Trả hàng nhập lại kho',
+                                'return_damaged' => 'Trả hàng hư',
+                                'adjust' => 'Điều chỉnh',
+                                'expired_destroy' => 'Huỷ cận date',
+                                default => $log->type,
+                            };
 
-<div class="col-md-2">
+                            $typeClass = match ($log->type) {
+                                'import' => 'bg-success',
+                                'order' => 'bg-primary',
+                                'cancel' => 'bg-warning text-dark',
+                                'return_restock' => 'bg-info text-dark',
+                                'return_damaged' => 'bg-danger',
+                                'adjust' => 'bg-secondary',
+                                'expired_destroy' => 'bg-dark',
+                                default => 'bg-secondary',
+                            };
 
-<input type="date"
-name="from"
-class="form-control form-control-sm"
-value="{{ request('from') }}">
+                            $typeIcon = match ($log->type) {
+                                'import' => 'bi bi-box-arrow-in-down',
+                                'order' => 'bi bi-cart-check',
+                                'cancel' => 'bi bi-arrow-counterclockwise',
+                                'return_restock' => 'bi bi-arrow-repeat',
+                                'return_damaged' => 'bi bi-x-circle',
+                                'adjust' => 'bi bi-tools',
+                                'expired_destroy' => 'bi bi-trash',
+                                default => '',
+                            };
+                        @endphp
 
-</div>
+                        <tr>
 
-<div class="col-md-2">
+                            {{-- SẢN PHẨM --}}
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    @if($img)
+                                        <img
+                                            src="{{ asset('storage/' . $img) }}"
+                                            width="45"
+                                            height="45"
+                                            class="rounded border"
+                                            style="object-fit:cover"
+                                            alt="{{ $product?->name ?? 'Sản phẩm' }}"
+                                        >
+                                    @else
+                                        <div
+                                            class="bg-light border rounded d-flex align-items-center justify-content-center"
+                                            style="width:45px;height:45px;"
+                                        >
+                                            <i class="bi bi-image text-muted"></i>
+                                        </div>
+                                    @endif
 
-<input type="date"
-name="to"
-class="form-control form-control-sm"
-value="{{ request('to') }}">
+                                    <div>
+                                        <div class="fw-medium">
+                                            {{ $product?->name ?? '-' }}
+                                        </div>
 
-</div>
+                                        <small class="text-muted">
+                                            @if($product)
+                                                SP{{ str_pad($product->id, 5, '0', STR_PAD_LEFT) }}
+                                            @else
+                                                -
+                                            @endif
+                                        </small>
+                                    </div>
+                                </div>
+                            </td>
 
-<div class="col-md-2 d-flex gap-2">
+                            {{-- BIẾN THỂ --}}
+                            <td>
+                                @if($variant)
+                                    <div class="fw-semibold">
+                                        BT{{ str_pad($variant->id, 5, '0', STR_PAD_LEFT) }}
+                                    </div>
 
-<button class="btn btn-outline-primary btn-sm">
+                                    <small class="text-muted">
+                                        {{ $variant->attribute_name }}: {{ $variant->attribute_value }}
+                                    </small>
+                                @else
+                                    -
+                                @endif
+                            </td>
 
-<i class="bi bi-search"></i>
-Lọc
+                            {{-- LOẠI --}}
+                            <td class="text-center">
+                                <span class="badge {{ $typeClass }}">
+                                    @if($typeIcon)
+                                        <i class="{{ $typeIcon }} me-1"></i>
+                                    @endif
+                                    {{ $typeLabel }}
+                                </span>
+                            </td>
 
-</button>
+                            {{-- THAY ĐỔI --}}
+                            <td class="text-center fw-bold">
+                                @if($log->quantity_change > 0)
+                                    <span class="text-success">+{{ $log->quantity_change }}</span>
+                                @elseif($log->quantity_change < 0)
+                                    <span class="text-danger">{{ $log->quantity_change }}</span>
+                                @else
+                                    <span class="text-muted">0</span>
+                                @endif
+                            </td>
 
-<a href="{{ route('admin.inventory.logs') }}"
-class="btn btn-outline-secondary btn-sm">
+                            {{-- TỒN TRƯỚC --}}
+                            <td class="text-center text-muted">
+                                {{ $log->stock_before }}
+                            </td>
 
-Đặt lại
+                            {{-- TỒN SAU --}}
+                            <td class="text-center fw-semibold">
+                                {{ $log->stock_after }}
+                            </td>
 
-</a>
+                            {{-- THỜI GIAN --}}
+                            <td class="text-center text-muted small">
+                                {{ optional($log->created_at)->format('d/m/Y H:i') }}
+                            </td>
 
-</div>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox me-1"></i>
+                                Không có lịch sử tồn kho
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
 
-</form>
+            </table>
+        </div>
 
-{{-- ===================== TABLE ===================== --}}
-
-<div class="table-responsive">
-
-<table class="table table-hover align-middle mb-0">
-
-<thead class="table-light">
-<tr>
-    <th>Sản phẩm</th>
-    <th>Biến thể</th>
-    <th class="text-center" style="width:150px">Loại</th>
-    <th class="text-center" style="width:120px">Thay đổi</th>
-    <th class="text-center" style="width:120px">Tồn trước</th>
-    <th class="text-center" style="width:120px">Tồn sau</th>
-    <th class="text-center" style="width:180px">Thời gian</th>
-</tr>
-</thead>
-
-<tbody>
-
-@forelse($logs as $log)
-
-<tr>
-
-{{-- 🔥 SẢN PHẨM + ẢNH + MÃ --}}
-<td>
-    <div class="d-flex align-items-center gap-2">
-
-        @php
-            $img = $log->variant->images->first()->image_path ?? null;
-        @endphp
-
-        {{-- ẢNH --}}
-        @if($img)
-            <img src="{{ asset('storage/'.$img) }}"
-                 width="45"
-                 height="45"
-                 class="rounded border"
-                 style="object-fit:cover">
-        @else
-            <div class="bg-light border rounded d-flex align-items-center justify-content-center"
-                 style="width:45px;height:45px;">
-                <i class="bi bi-image text-muted"></i>
+        {{-- ===================== PAGINATION ===================== --}}
+        @if($logs->hasPages())
+            <div class="mt-4 d-flex justify-content-center">
+                {{ $logs->links('vendor.pagination.custom-blue') }}
             </div>
         @endif
 
-        {{-- TÊN + MÃ --}}
-        <div>
-            <div class="fw-medium">
-                {{ $log->variant->product->name ?? '-' }}
-            </div>
-            <small class="text-muted">
-    @if($log->variant && $log->variant->product)
-        SP{{ str_pad($log->variant->product->id, 5, '0', STR_PAD_LEFT) }}
-    @else
-        -
-    @endif
-</small>
-        </div>
-
     </div>
-</td>
-
-{{-- BIẾN THỂ --}}
-<td>
-    @if($log->variant)
-        <div class="fw-semibold">
-            BT{{ str_pad($log->variant->id, 5, '0', STR_PAD_LEFT) }}
-        </div>
-        <small class="text-muted">
-            {{ $log->variant->attribute_name }}: {{ $log->variant->attribute_value }}
-        </small>
-    @else
-        -
-    @endif
-</td>
-
-{{-- LOẠI --}}
-<td class="text-center">
-@switch($log->type)
-
-@case('import')
-<span class="badge bg-success">
-    <i class="bi bi-box-arrow-in-down me-1"></i> Nhập kho
-</span>
-@break
-
-@case('order')
-<span class="badge bg-primary">
-    <i class="bi bi-cart-check me-1"></i> Bán hàng
-</span>
-@break
-
-@case('cancel')
-<span class="badge bg-warning text-dark">
-    <i class="bi bi-arrow-counterclockwise me-1"></i> Hoàn kho
-</span>
-@break
-
-@case('adjust')
-<span class="badge bg-info text-dark">
-    <i class="bi bi-tools me-1"></i> Điều chỉnh
-</span>
-@break
-
-@case('expired_destroy')
-<span class="badge bg-danger">
-    <i class="bi bi-trash me-1"></i> Huỷ cận date
-</span>
-@break
-
-@default
-<span class="badge bg-secondary">
-    {{ $log->type }}
-</span>
-
-@endswitch
-</td>
-
-{{-- THAY ĐỔI --}}
-<td class="text-center fw-bold">
-    @if($log->quantity_change > 0)
-        <span class="text-success">+{{ $log->quantity_change }}</span>
-    @else
-        <span class="text-danger">{{ $log->quantity_change }}</span>
-    @endif
-</td>
-
-{{-- TỒN TRƯỚC --}}
-<td class="text-center text-muted">
-    {{ $log->stock_before }}
-</td>
-
-{{-- TỒN SAU --}}
-<td class="text-center fw-semibold">
-    {{ $log->stock_after }}
-</td>
-
-{{-- THỜI GIAN --}}
-<td class="text-center text-muted small">
-    {{ optional($log->created_at)->format('d/m/Y H:i') }}
-</td>
-
-</tr>
-
-@empty
-
-<tr>
-<td colspan="7" class="text-center text-muted py-4">
-    <i class="bi bi-inbox me-1"></i>
-    Không có lịch sử tồn kho
-</td>
-</tr>
-
-@endforelse
-
-</tbody>
-
-</table>
-
 </div>
-
-{{-- ===================== PAGINATION ===================== --}}
-
-@if($logs->hasPages())
-
-<div class="mt-4 d-flex justify-content-center">
-
-{{ $logs->links('pagination::bootstrap-5') }}
-
-</div>
-
-@endif
-
-</div>
-
-</div>
-
 @endsection

@@ -61,7 +61,7 @@ class ProductController extends Controller
         }
 
         return view('admin.products.index', [
-            'products'   => $query->latest()->paginate(10)->withQueryString(),
+            'products'   => $query->latest()->paginate(7)->withQueryString(),
             'categories' => Category::whereNull('parent_id')->with('children')->get(),
             'brands'     => Brand::orderBy('name')->get(),
         ]);
