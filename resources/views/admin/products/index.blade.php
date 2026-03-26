@@ -216,12 +216,12 @@
                             {{-- TÌNH TRẠNG --}}
                             <td class="text-center">
                                 <div class="fw-semibold">
-                                    @if(($product->total_stock ?? 0) > 0)
-                                        <span>Còn hàng</span>
-                                    @else
-                                        <span class="fw-semibold">Hết hàng</span>
-                                    @endif
-                                </div>
+    @if(($product->total_stock ?? 0) > 0)
+        <span class="text-success">Còn hàng</span>
+    @else
+        <span class="text-danger">Hết hàng</span>
+    @endif
+</div>
 
                                 <div class="fw-semibold">
                                     @if($warningLevel === 'danger')
