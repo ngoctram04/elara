@@ -84,7 +84,7 @@ class Review extends Model
     // Media (ảnh/video)
     public function media()
     {
-        return $this->hasMany(ReviewMedia::class);
+        return $this->hasMany(ReviewMedia::class, 'review_id');
     }
 
 
@@ -94,16 +94,18 @@ class Review extends Model
     |--------------------------------------------------------------------------
     */
 
-    // Lấy ảnh review
+    // Ảnh
     public function images()
     {
-        return $this->media()->where('file_type', 'image');
+        return $this->hasMany(ReviewMedia::class, 'review_id')
+        ->where('file_type', 'image');
     }
 
-    // Lấy video review
+    // Video (1 video)
     public function video()
     {
-        return $this->media()->where('file_type', 'video')->first();
+        return $this->hasOne(ReviewMedia::class, 'review_id')
+        ->where('file_type', 'video');
     }
 
 
@@ -189,4 +191,5 @@ class Review extends Model
     {
         return $query->whereNotNull('admin_reply');
     }
+    
 }

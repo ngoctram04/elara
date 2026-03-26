@@ -101,7 +101,7 @@ N/A
 
 <div class="col-md-6">
 
-<strong>Rating:</strong>
+<strong>Số sao:</strong>
 
 <span class="text-warning ms-2">
 
@@ -194,18 +194,27 @@ Nội dung đánh giá
 </h6>
 
 <div class="row">
+    @foreach($review->media as $media)
+        <div class="col-md-3 col-6 mb-3">
 
-@foreach($review->media as $media)
+            @if($media->file_type === 'image')
+                <a href="{{ asset('storage/'.$media->file_path) }}" target="_blank">
+                    <img src="{{ asset('storage/'.$media->file_path) }}"
+                         class="img-fluid rounded border shadow-sm"
+                         style="width:100%; height:220px; object-fit:cover;"
+                         alt="review-image">
+                </a>
+            @elseif($media->file_type === 'video')
+                <video controls
+                       class="w-100 rounded border shadow-sm"
+                       style="height:220px; object-fit:cover; background:#000;">
+                    <source src="{{ asset('storage/'.$media->file_path) }}">
+                    Trình duyệt không hỗ trợ video.
+                </video>
+            @endif
 
-<div class="col-md-3 col-6 mb-3">
-
-<img src="{{ asset('storage/'.$media->file_path) }}"
-class="img-fluid rounded border shadow-sm">
-
-</div>
-
-@endforeach
-
+        </div>
+    @endforeach
 </div>
 
 <hr>

@@ -6,10 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use App\Models\Promotion;
 use Illuminate\Support\Facades\DB;
-use App\Models\OrderItemBatch;
-use App\Models\StockImport;
+
 class ProductVariant extends Model
 {
     protected $table = 'product_variants';
@@ -61,16 +59,15 @@ class ProductVariant extends Model
         return $this->hasMany(PromotionProduct::class, 'variant_id');
     }
 
-    // ⭐ Quan hệ trực tiếp promotion (dùng eager load)
     public function promotions()
     {
         return $this->hasManyThrough(
             Promotion::class,
             PromotionProduct::class,
-            'variant_id',      // FK PromotionProduct
-            'id',              // FK Promotion
-            'id',              // local key variant
-            'promotion_id'     // local key PromotionProduct
+            'variant_id',
+            'id',
+            'id',
+            'promotion_id'
         );
     }
 
@@ -94,7 +91,7 @@ class ProductVariant extends Model
 
     public function availableStock(): int
     {
-        return $this->batches()
+        return (int) $this->stockImports()
             ->where('remaining_quantity', '>', 0)
             ->sum('remaining_quantity');
     }
@@ -102,6 +99,15 @@ class ProductVariant extends Model
     public function isInStock(): bool
     {
         return $this->availableStock() > 0;
+    }
+
+    public function syncStockAndStatus(): void
+    {
+        $total = (int) $this->stockImports()->sum('remaining_quantity');
+
+        $this->stock_quantity = $total;
+        $this->is_active = $total > 0;
+        $this->save();
     }
 
     /* =====================================================
@@ -114,12 +120,11 @@ class ProductVariant extends Model
     }
 
     /* =====================================================
-        PROMOTION (OPTIMIZED)
+        PROMOTION
     ===================================================== */
 
     public function activePromotion(): ?Promotion
     {
-        // Nếu đã eager load promotions → không query nữa
         if ($this->relationLoaded('promotions')) {
             return $this->promotions
                 ->where('type', 'product')
@@ -130,7 +135,6 @@ class ProductVariant extends Model
                 ->first();
         }
 
-        // Nếu chưa load → query
         return $this->promotions()
             ->where('type', 'product')
             ->where('is_active', true)
@@ -149,10 +153,7 @@ class ProductVariant extends Model
         }
 
         if ($promotion->discount_type === 'percent') {
-            return max(0, round(
-                $this->price * (1 - $promotion->discount_value / 100),
-                0
-            ));
+            return max(0, round($this->price * (1 - $promotion->discount_value / 100), 0));
         }
 
         return max(0, $this->price - $promotion->discount_value);
@@ -189,37 +190,26 @@ class ProductVariant extends Model
     {
         return $this->final_price - $this->cost_price;
     }
+
     /* =====================================================
-    BATCH (FEFO - HẾT HẠN TRƯỚC BÁN TRƯỚC)
-===================================================== */
-    public function syncStockAndStatus()
-    {
-        $total = $this->stockImports()->sum('remaining_quantity');
+        FEFO
+    ===================================================== */
 
-        $this->stock_quantity = $total;
-        $this->is_active = $total > 0 ? 1 : 0;
-
-        $this->save();
-    }
     public function deductByBatch(int $quantity): array
     {
         return DB::transaction(function () use ($quantity) {
+            $variant = self::where('id', $this->id)->lockForUpdate()->firstOrFail();
 
-            // 🔒 Reload + lock row variant (tránh race condition)
-            $variant = self::where('id', $this->id)->lockForUpdate()->first();
-
-            // ❗ CHẶN BÁN KHI KHÔNG ĐỦ HÀNG
             if ($variant->stock_quantity < $quantity) {
                 throw new \Exception('Không đủ hàng trong kho');
             }
 
-            // ✅ TỒN TRƯỚC
             $before = $variant->stock_quantity;
 
-            // 🔍 Lấy batch theo FEFO
-            $batches = StockImport::where('variant_id', $variant->id)
+            $batches = $variant->stockImports()
                 ->where('remaining_quantity', '>', 0)
                 ->orderBy('expiry_date', 'asc')
+                ->orderBy('created_at', 'asc')
                 ->lockForUpdate()
                 ->get();
 
@@ -228,40 +218,34 @@ class ProductVariant extends Model
             $totalCost = 0;
 
             foreach ($batches as $batch) {
-
-                if ($remaining <= 0) break;
+                if ($remaining <= 0) {
+                    break;
+                }
 
                 $take = min($remaining, $batch->remaining_quantity);
 
-                // ➖ Trừ tồn batch
                 $batch->remaining_quantity -= $take;
                 $batch->save();
 
                 $usedBatches[] = [
                     'batch_id'   => $batch->id,
                     'quantity'   => $take,
-                    'cost_price' => $batch->cost_price,
+                    'cost_price' => (float) ($batch->cost_price ?? 0),
                 ];
 
-                $totalCost += $take * $batch->cost_price;
+                $totalCost += $take * (float) ($batch->cost_price ?? 0);
                 $remaining -= $take;
             }
 
-            // ❌ Không đủ hàng theo lô
             if ($remaining > 0) {
                 throw new \Exception('Không đủ tồn kho theo lô');
             }
 
-            // ✅ Sync lại tồn tổng (QUAN TRỌNG)
             $variant->syncStockAndStatus();
-
-            // 🔄 Reload lại sau khi sync
             $variant->refresh();
 
-            // ✅ TỒN SAU
             $after = $variant->stock_quantity;
 
-            // 📝 LOG 1 LẦN DUY NHẤT (ĐÚNG CHUẨN)
             \App\Models\InventoryLog::create([
                 'variant_id'      => $variant->id,
                 'type'            => 'order',
@@ -272,43 +256,40 @@ class ProductVariant extends Model
 
             return [
                 'batches'    => $usedBatches,
-                'total_cost' => $totalCost
+                'total_cost' => $totalCost,
             ];
         });
     }
-    public function batches()
-    {
-        return $this->hasMany(StockImport::class, 'variant_id');
-    }
+
+    /* =====================================================
+        RESTORE STOCK
+    ===================================================== */
+
     public function restoreStock(int $quantity): void
     {
         DB::transaction(function () use ($quantity) {
+            $variant = self::where('id', $this->id)->lockForUpdate()->firstOrFail();
 
-            // 🔒 lock variant
-            $variant = self::where('id', $this->id)->lockForUpdate()->first();
-
-            // ✅ TỒN TRƯỚC (LUÔN LẤY TỔNG)
             $before = $variant->stock_quantity;
 
-            // =====================================================
-            // ⚠️ KHÔNG HOÀN THEO LÔ (để tránh sai mapping)
-            // =====================================================
-            // 👉 chỉ cộng tổng
-            $variant->stock_quantity += $quantity;
-            $variant->save();
+            // Tạm thời chỉ cộng lại lô gần nhất còn dùng được
+            $latestBatch = $variant->stockImports()
+                ->orderByDesc('created_at')
+                ->lockForUpdate()
+                ->first();
 
-            // =====================================================
-            // 🔄 (OPTION) nếu bạn muốn vẫn sync lại từ lô
-            // thì bỏ dòng trên và dùng:
-            // $variant->syncStockAndStatus();
-            // =====================================================
+            if ($latestBatch) {
+                $latestBatch->remaining_quantity += $quantity;
+                $latestBatch->save();
+            } else {
+                throw new \Exception('Không có lô hàng để hoàn lại tồn kho');
+            }
 
-            // ✅ reload
+            $variant->syncStockAndStatus();
             $variant->refresh();
 
             $after = $variant->stock_quantity;
 
-            // 📝 LOG CHUẨN (THEO TỔNG)
             \App\Models\InventoryLog::create([
                 'variant_id'      => $variant->id,
                 'type'            => 'cancel',

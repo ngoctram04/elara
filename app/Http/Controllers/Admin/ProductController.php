@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
+
 class ProductController extends Controller
 {
     /* =======================
@@ -19,10 +20,10 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $query = Product::with([
-            'category.parent',
+            'category',
             'brand',
             'mainImage',
-            'variants'
+            'variants.stockImports',
         ]);
 
         if ($request->filled('keyword')) {
@@ -31,7 +32,7 @@ class ProductController extends Controller
 
             $query->where(function ($q) use ($keyword, $numberKeyword) {
                 $q->where('name', 'like', '%' . $keyword . '%')
-                    ->orWhereRaw("CONCAT('SP', LPAD(id, 5, '0')) LIKE ?", ['%' . $keyword . '%']);
+                ->orWhereRaw("CONCAT('SP', LPAD(id, 5, '0')) LIKE ?", ['%' . $keyword . '%']);
 
                 if ($numberKeyword !== '') {
                     $q->orWhere('id', (int) $numberKeyword);
@@ -47,7 +48,6 @@ class ProductController extends Controller
             $query->where('brand_id', $request->brand_id);
         }
 
-        // 🔥 THÊM ĐOẠN NÀY
         if ($request->status === 'in_stock') {
             $query->whereHas('variants', function ($q) {
                 $q->where('stock_quantity', '>', 0);
@@ -60,9 +60,65 @@ class ProductController extends Controller
             });
         }
 
+        $products = $query->latest()->get()->filter(function ($product) use ($request) {
+            $product->total_stock = $product->variants->sum('stock_quantity');
+            $product->total_sold  = $product->variants->sum('sold_quantity');
+
+            $isUnderCost = false;
+
+            if ($product->total_stock > 0) {
+                foreach ($product->variants as $variant) {
+                    $salePrice = $variant->final_price;
+
+                    $remainingLots = collect($variant->stockImports ?? [])
+                        ->filter(function ($lot) {
+                            return (int) ($lot->remaining_quantity ?? 0) > 0;
+                        });
+
+                    $totalRemain = $remainingLots->sum('remaining_quantity');
+
+                    if ($totalRemain <= 0) {
+                        continue;
+                    }
+
+                    $avgCost = $remainingLots->sum(function ($lot) {
+                        return ((int) ($lot->remaining_quantity ?? 0)) * ((float) ($lot->cost_price ?? 0));
+                    }) / $totalRemain;
+
+                    if ($salePrice < $avgCost) {
+                        $isUnderCost = true;
+                        break;
+                    }
+                }
+            }
+
+            $product->profit_warning = $isUnderCost ? 'under_cost' : 'safe';
+
+            if (!$request->filled('profit_status')) {
+                return true;
+            }
+
+            return $product->profit_warning === $request->profit_status;
+        });
+
+        $page = request()->get('page', 1);
+        $perPage = 7;
+        $items = $products->slice(($page - 1) * $perPage, $perPage)->values();
+
+        $paginated = new \Illuminate\Pagination\LengthAwarePaginator(
+            $items,
+            $products->count(),
+            $perPage,
+            $page,
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
+
         return view('admin.products.index', [
-            'products'   => $query->latest()->paginate(7)->withQueryString(),
-            'categories' => Category::whereNull('parent_id')->with('children')->get(),
+            'products'   => $paginated,
+            'categories' => Category::whereNotNull('parent_id')->orderBy('name')->get(),
             'brands'     => Brand::orderBy('name')->get(),
         ]);
     }
@@ -105,16 +161,14 @@ class ProductController extends Controller
         ]);
 
         DB::transaction(function () use ($request, $data) {
-
-            // Slug unique
             $baseSlug = Str::slug($data['name']);
             $slug = $baseSlug;
             $i = 1;
+
             while (Product::where('slug', $slug)->exists()) {
                 $slug = $baseSlug . '-' . $i++;
             }
 
-            // Product
             $product = Product::create([
                 'name'        => $data['name'],
                 'slug'        => $slug,
@@ -125,13 +179,11 @@ class ProductController extends Controller
                 'is_featured' => $request->boolean('is_featured'),
             ]);
 
-            // Main image
             $product->images()->create([
                 'image_path' => $request->file('main_image')->store('products', 'public'),
                 'is_main'    => 1,
             ]);
 
-            // Sub images
             if ($request->hasFile('sub_images')) {
                 foreach ($request->file('sub_images') as $image) {
                     $product->images()->create([
@@ -141,7 +193,6 @@ class ProductController extends Controller
                 }
             }
 
-            // Variants
             foreach ($data['variants'] as $variantData) {
                 $variant = $product->variants()->create([
                     'attribute_name'  => $data['variant_attribute_name'],
@@ -149,7 +200,7 @@ class ProductController extends Controller
                     'price'           => $variantData['price'],
                     'cost_price'      => 0,
                     'stock_quantity'  => 0,
-                    'sold_quantity'   => 0, // Chỉ tăng khi đơn đã giao
+                    'sold_quantity'   => 0,
                 ]);
 
                 if (!empty($variantData['image'])) {
@@ -163,7 +214,8 @@ class ProductController extends Controller
             $this->recalculateProduct($product);
         });
 
-        return redirect()->route('admin.products.index')
+        return redirect()
+            ->route('admin.products.index')
             ->with('success', 'Thêm sản phẩm thành công');
     }
 
@@ -186,6 +238,10 @@ class ProductController extends Controller
             'brands'     => Brand::all(),
         ]);
     }
+
+    /* =======================
+        CHI TIẾT
+    ======================= */
     public function show(Product $product)
     {
         $product->load([
@@ -194,7 +250,14 @@ class ProductController extends Controller
             'images',
             'mainImage',
             'subImages',
-            'variants.images'
+            'variants' => function ($q) {
+                $q->with([
+                    'images',
+                    'stockImports' => function ($subQ) {
+                        $subQ->orderBy('created_at', 'asc');
+                    }
+                ]);
+            }
         ]);
 
         return view('admin.products.show', compact('product'));
@@ -203,7 +266,6 @@ class ProductController extends Controller
     /* =======================
         CẬP NHẬT
     ======================= */
-
     public function update(Request $request, Product $product)
     {
         $data = $request->validate([
@@ -218,7 +280,6 @@ class ProductController extends Controller
             'main_image'   => 'nullable|image',
             'sub_images.*' => 'nullable|image',
 
-            // 🔥 thêm
             'delete_images'   => 'nullable|array',
             'delete_images.*' => 'exists:product_images,id',
 
@@ -231,10 +292,6 @@ class ProductController extends Controller
         ]);
 
         DB::transaction(function () use ($request, $data, $product) {
-
-            /* ==================================================
-            UPDATE PRODUCT
-        ================================================== */
             $product->update([
                 'name'        => $data['name'],
                 'category_id' => $data['category_id'],
@@ -243,32 +300,22 @@ class ProductController extends Controller
                 'is_featured' => $request->boolean('is_featured'),
             ]);
 
-            /* ==================================================
-            XÓA ẢNH PHỤ
-        ================================================== */
             if (!empty($data['delete_images'])) {
-
                 $images = $product->images()
-                ->whereIn('id', $data['delete_images'])
-                ->where('is_main', 0)
-                ->get();
+                    ->whereIn('id', $data['delete_images'])
+                    ->where('is_main', 0)
+                    ->get();
 
                 foreach ($images as $img) {
-                    // xóa file
                     if ($img->image_path && Storage::disk('public')->exists($img->image_path)) {
                         Storage::disk('public')->delete($img->image_path);
                     }
 
-                    // xóa DB
                     $img->delete();
                 }
             }
 
-            /* ==================================================
-            MAIN IMAGE
-        ================================================== */
             if ($request->hasFile('main_image')) {
-
                 $oldMain = $product->images()->where('is_main', 1)->first();
 
                 if ($oldMain && Storage::disk('public')->exists($oldMain->image_path)) {
@@ -283,9 +330,6 @@ class ProductController extends Controller
                 ]);
             }
 
-            /* ==================================================
-            ADD SUB IMAGES
-        ================================================== */
             if ($request->hasFile('sub_images')) {
                 foreach ($request->file('sub_images') as $image) {
                     $product->images()->create([
@@ -295,18 +339,15 @@ class ProductController extends Controller
                 }
             }
 
-            /* ==================================================
-            VARIANTS
-        ================================================== */
             $existingIds = $product->variants()->pluck('id')->toArray();
             $submittedIds = [];
 
             foreach ($data['variants'] as $variantData) {
-
                 if (!empty($variantData['id'])) {
-
                     $variant = $product->variants()->find($variantData['id']);
-                    if (!$variant) continue;
+                    if (!$variant) {
+                        continue;
+                    }
 
                     $variant->update([
                         'attribute_name'  => $data['variant_attribute_name'],
@@ -314,7 +355,6 @@ class ProductController extends Controller
                         'price'           => $variantData['price'],
                     ]);
                 } else {
-
                     $variant = $product->variants()->create([
                         'attribute_name'  => $data['variant_attribute_name'],
                         'attribute_value' => $variantData['attribute_value'],
@@ -325,10 +365,9 @@ class ProductController extends Controller
                     ]);
                 }
 
-                // variant image
                 if (!empty($variantData['image'])) {
-
                     $oldImage = $variant->images()->first();
+
                     if ($oldImage && Storage::disk('public')->exists($oldImage->image_path)) {
                         Storage::disk('public')->delete($oldImage->image_path);
                     }
@@ -344,20 +383,18 @@ class ProductController extends Controller
                 $submittedIds[] = $variant->id;
             }
 
-            /* ==================================================
-            DELETE VARIANT (nếu tồn = 0 và chưa bán)
-        ================================================== */
             $toDelete = array_diff($existingIds, $submittedIds);
 
             if ($toDelete) {
-                $variants = $product->variants()->whereIn('id',
-                    $toDelete
-                )->get();
+                $variants = $product->variants()
+                    ->whereIn('id', $toDelete)
+                    ->get();
 
                 foreach ($variants as $variant) {
                     if ($variant->stock_quantity > 0 || $variant->sold_quantity > 0) {
                         continue;
                     }
+
                     $variant->delete();
                 }
             }
@@ -365,9 +402,11 @@ class ProductController extends Controller
             $this->recalculateProduct($product);
         });
 
-        return redirect()->route('admin.products.index')
-        ->with('success', 'Cập nhật sản phẩm thành công');
+        return redirect()
+            ->route('admin.products.index')
+            ->with('success', 'Cập nhật sản phẩm thành công');
     }
+
     /* =======================
         HELPER
     ======================= */
@@ -384,18 +423,16 @@ class ProductController extends Controller
     ======================= */
     public function destroy(Product $product)
     {
-        // kiểm tra tồn kho
         $stock = $product->variants()->sum('stock_quantity');
 
         if ($stock > 0) {
             return back()->with('error', 'Sản phẩm còn tồn kho nên không thể xóa');
         }
 
-        // kiểm tra có nằm trong đơn hàng không
         $hasOrder = DB::table('order_items')
-        ->join('product_variants', 'order_items.variant_id', '=', 'product_variants.id')
-        ->where('product_variants.product_id', $product->id)
-        ->exists();
+            ->join('product_variants', 'order_items.variant_id', '=', 'product_variants.id')
+            ->where('product_variants.product_id', $product->id)
+            ->exists();
 
         if ($hasOrder) {
             return back()->with('error', 'Sản phẩm đã có trong đơn hàng nên không thể xóa');
@@ -404,9 +441,10 @@ class ProductController extends Controller
         $product->delete();
 
         return redirect()
-        ->route('admin.products.index')
-        ->with('success', 'Đã xóa sản phẩm');
+            ->route('admin.products.index')
+            ->with('success', 'Đã xóa sản phẩm');
     }
+
     public function toggle(Product $product)
     {
         $product->is_active = !$product->is_active;

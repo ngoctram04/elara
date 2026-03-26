@@ -3,6 +3,10 @@
 @section('title', 'Yêu cầu hoàn tiền')
 
 @section('content')
+@php
+    use Illuminate\Support\Str;
+@endphp
+
 <div class="container-fluid">
 
     <h4 class="mb-4">Yêu cầu hoàn tiền</h4>
@@ -10,9 +14,9 @@
     <div class="card shadow-sm border-0">
         <div class="card-body p-0">
 
+            {{-- FILTER --}}
             <div class="card shadow-sm border-0 mb-3">
                 <div class="card-body">
-
                     <form method="GET" class="row g-2 mb-3 align-items-center">
                         <div class="col-md-4">
                             <input
@@ -70,10 +74,10 @@
                             </a>
                         </div>
                     </form>
-
                 </div>
             </div>
 
+            {{-- TABLE --}}
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
@@ -91,6 +95,12 @@
 
                     <tbody>
                         @forelse($refunds as $refund)
+                            @php
+                                $reasonRaw = trim((string) $refund->reason);
+                                $parts = explode('Chi tiết sản phẩm khách chọn:', $reasonRaw);
+                                $mainReason = trim($parts[0] ?? $reasonRaw);
+                            @endphp
+
                             <tr>
                                 <td>
                                     {{ ($refunds->currentPage() - 1) * $refunds->perPage() + $loop->iteration }}
@@ -105,7 +115,7 @@
                                 <td>{{ $refund->user->name ?? '---' }}</td>
 
                                 <td style="max-width:250px">
-                                    {{ Str::limit($refund->reason, 60) }}
+                                    {{ Str::limit($mainReason, 60) }}
                                 </td>
 
                                 <td>
@@ -180,7 +190,6 @@
 
                                             <div class="modal-body">
                                                 <label class="form-label fw-semibold">Lý do từ chối</label>
-
                                                 <textarea
                                                     name="admin_note"
                                                     class="form-control"
@@ -221,28 +230,21 @@
                                             </div>
 
                                             <div class="modal-body">
-                                                <div class="mb-3">
-                                                    <label class="form-label fw-semibold">Tình trạng hàng trả</label>
-                                                    <select name="return_condition" class="form-select" required>
-                                                        <option value="sealed">Còn nguyên seal - hoàn kho và hoàn lô</option>
-                                                        <option value="broken">Bị vỡ - không hoàn kho, không hoàn lô, ghi nhận hao hụt</option>
-                                                    </select>
-                                                </div>
-
                                                 <div class="mb-0">
                                                     <label class="form-label fw-semibold">Ghi chú xử lý</label>
                                                     <textarea
                                                         name="admin_note"
                                                         class="form-control"
                                                         rows="4"
-                                                        placeholder="Ví dụ: Xác nhận hàng còn nguyên seal, đủ điều kiện hoàn kho..."></textarea>
+                                                        placeholder="Ví dụ: Đã kiểm tra hàng hoàn và xác nhận hoàn tiền cho khách..."></textarea>
                                                 </div>
 
                                                 <div class="alert alert-light border mt-3 mb-0">
-                                                    <div class="small text-muted">
+                                                    <div class="small text-muted" style="line-height: 1.6;">
                                                         <strong>Lưu ý:</strong><br>
-                                                        - Chọn <strong>còn nguyên seal</strong> thì hệ thống sẽ hoàn kho và hoàn lại lô.<br>
-                                                        - Chọn <strong>bị vỡ</strong> thì hệ thống hoàn tiền, không hoàn kho, không hoàn lô và ghi nhận hao hụt theo giá nhập.
+                                                        Hệ thống sẽ xử lý theo từng sản phẩm khách đã chọn:
+                                                        <br>- <strong>Còn nguyên seal</strong>: hoàn kho, hoàn lô
+                                                        <br>- <strong>Bị vỡ</strong>: không hoàn kho, không hoàn lô, ghi nhận hao hụt giá nhập
                                                     </div>
                                                 </div>
                                             </div>
@@ -268,7 +270,7 @@
 
                             {{-- MODAL CHI TIẾT --}}
                             <div class="modal fade" id="refundModal{{ $refund->id }}" tabindex="-1" aria-hidden="true">
-                                <div class="modal-dialog modal-lg">
+                                <div class="modal-dialog modal-lg modal-dialog-scrollable">
                                     <div class="modal-content">
 
                                         <div class="modal-header">
@@ -304,18 +306,118 @@
                                                 @endif
                                             </p>
 
-                                            <p><b>Lý do hoàn tiền:</b></p>
-                                            <div class="border rounded p-3 mb-3 bg-light" style="white-space: pre-line;">
-                                                {{ $refund->reason }}
+                                            {{-- LÝ DO CHÍNH --}}
+                                            <div class="mb-3">
+                                                <div class="fw-semibold mb-2">Lý do hoàn tiền:</div>
+                                                <div class="border rounded-3 p-3 bg-light small" style="line-height:1.7;">
+                                                    {{ $mainReason ?: '---' }}
+                                                </div>
                                             </div>
 
-                                            @if(!empty($refund->admin_note))
-                                                <p><b>Ghi chú admin:</b></p>
-                                                <div class="border rounded p-3 mb-3 bg-light" style="white-space: pre-line;">
-                                                    {{ $refund->admin_note }}
-                                                </div>
-                                            @endif
+                                            {{-- CHI TIẾT BIẾN THỂ --}}
+                                            <div class="mb-3">
+                                                <div class="fw-semibold mb-2">Chi tiết sản phẩm hoàn:</div>
 
+                                                @if($refund->items->count())
+                                                    <div class="border rounded-3 overflow-hidden">
+                                                        @foreach($refund->items as $item)
+    @php
+        $variant = $item->variant;
+
+        $image = $variant?->image_path;
+
+        $variantCode = $variant->sku
+            ?? $variant->code
+            ?? $variant->variant_code
+            ?? ('BT' . $variant->id);
+
+        $rawCondition = strtolower(trim((string) ($item->pivot->condition_status ?? '')));
+
+        $conditionText = match($rawCondition) {
+            'sealed', 'intact', 'new', 'con_nguyen', 'connguyenseal' => 'Còn nguyên seal',
+            'broken', 'damaged', 'vo', 'bi_vo', 'bivo' => 'Bị vỡ',
+            default => 'Không xác định',
+        };
+
+        $conditionClass = match($rawCondition) {
+            'sealed', 'intact', 'new', 'con_nguyen', 'connguyenseal' => 'bg-success-subtle text-success border',
+            'broken', 'damaged', 'vo', 'bi_vo', 'bivo' => 'bg-danger-subtle text-danger border',
+            default => 'bg-secondary',
+        };
+    @endphp
+
+    <div class="d-flex gap-3 p-3 {{ !$loop->last ? 'border-bottom' : '' }}">
+        <div style="width:72px;min-width:72px;">
+            @if($image)
+                <img
+                    src="{{ asset('storage/' . ltrim($image, '/')) }}"
+                    alt="variant-image"
+                    class="img-fluid rounded border"
+                    style="width:72px;height:72px;object-fit:cover;"
+                >
+            @else
+                <div class="d-flex align-items-center justify-content-center rounded border bg-light text-muted"
+                     style="width:72px;height:72px;font-size:12px;">
+                    No image
+                </div>
+            @endif
+        </div>
+
+        <div class="flex-grow-1">
+            <div class="fw-semibold mb-1">
+                {{ $variant->product->name ?? 'Sản phẩm' }}
+            </div>
+
+            <div class="small text-muted mb-1">
+                Mã biến thể: <span class="fw-semibold text-dark">{{ $variantCode }}</span>
+            </div>
+
+            @if(!empty($variant->attribute_name) || !empty($variant->attribute_value))
+                <div class="small text-muted mb-1">
+                    Phân loại: {{ $variant->attribute_name }}: {{ $variant->attribute_value }}
+                </div>
+            @endif
+
+            <div class="small text-muted mb-1">
+                Số lượng hoàn: {{ $item->pivot->quantity ?? 1 }}
+            </div>
+
+            <div class="small">
+                Tình trạng:
+                <span class="badge {{ $conditionClass }}">{{ $conditionText }}</span>
+            </div>
+        </div>
+    </div>
+@endforeach
+                                                    </div>
+                                                @else
+                                                    <div class="border rounded-3 p-3 bg-light small text-muted">
+                                                        Không có dữ liệu sản phẩm hoàn
+                                                    </div>
+                                                @endif
+                                            </div>
+
+                                            
+@if(!empty($refund->admin_note))
+    @php
+        $adminNotes = array_filter(array_map('trim', explode('|', $refund->admin_note)));
+    @endphp
+
+    <div class="mb-3">
+        <div class="fw-semibold mb-2">Ghi chú admin:</div>
+
+        <div class="border rounded-3 p-3 bg-light">
+            <div class="d-flex flex-wrap gap-2">
+                @foreach($adminNotes as $note)
+                    <span class="px-3 py-2 rounded-pill border bg-white text-muted"
+                          style="font-size:13px;">
+                        {{ $note }}
+                    </span>
+                @endforeach
+            </div>
+        </div>
+    </div>
+@endif
                                             <h6 class="mb-2">Hình ảnh / video minh chứng</h6>
 
                                             <div class="d-flex flex-wrap gap-2">

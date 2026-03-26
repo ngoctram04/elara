@@ -12,7 +12,6 @@ use Carbon\Carbon;
 
 class CustomerController extends Controller
 {
-
     /**
      * ================================
      * DANH SÁCH KHÁCH HÀNG
@@ -34,8 +33,8 @@ class CustomerController extends Controller
 
             $query->where(function ($q) use ($keyword, $numberKeyword) {
                 $q->where('name', 'like', "%{$keyword}%")
-                ->orWhere('email', 'like', "%{$keyword}%")
-                ->orWhereRaw("CONCAT('KH', LPAD(id, 4, '0')) LIKE ?", ['%' . $keyword . '%']);
+                    ->orWhere('email', 'like', "%{$keyword}%")
+                    ->orWhereRaw("CONCAT('KH', LPAD(id, 4, '0')) LIKE ?", ['%' . $keyword . '%']);
 
                 if ($numberKeyword !== '') {
                     $q->orWhere('id', (int) $numberKeyword);
@@ -67,7 +66,6 @@ class CustomerController extends Controller
         |--------------------------------------------------------------------------
         */
         switch ($request->sort) {
-
             case 'oldest':
                 $query->oldest();
                 break;
@@ -87,27 +85,33 @@ class CustomerController extends Controller
         }
 
         $customers = $query
-        ->withCount(['orders as orders' => function ($q) {
-            $q->where('status', 3);
-        }])
-            ->withSum(['orders as spending' => function ($q) {
-                $q->where('status', 3);
-            }], 'grand_total')
-            ->withSum(['orders as yearly_spending' => function ($q) {
-                $q->where('status', 3)
-                ->whereYear('created_at', now()->year);
-            }], 'grand_total')
+            ->withCount([
+                'orders as orders' => function ($q) {
+                    $q->where('status', 3);
+                }
+            ])
+            ->withSum([
+                'orders as spending' => function ($q) {
+                    $q->where('status', 3);
+                }
+            ], 'grand_total')
+            ->withSum([
+                'orders as yearly_spending' => function ($q) {
+                    $q->where('status', 3)
+                        ->whereYear('created_at', now()->year);
+                }
+            ], 'grand_total')
             ->paginate(10)
             ->withQueryString();
+
         /*
         |--------------------------------------------------------------------------
         | ĐẾM ĐƠN HỦY TRONG 7 NGÀY
         |--------------------------------------------------------------------------
         */
         foreach ($customers as $customer) {
-
             $customer->cancel_count = Order::where('user_id', $customer->id)
-                ->where('status', 4) // đã hủy
+                ->where('status', 4)
                 ->where('cancelled_by', 'customer')
                 ->where('updated_at', '>=', Carbon::now()->subDays(7))
                 ->count();
@@ -115,7 +119,6 @@ class CustomerController extends Controller
 
         return view('admin.customers.index', compact('customers'));
     }
-
 
     /**
      * ================================
@@ -127,30 +130,34 @@ class CustomerController extends Controller
         abort_if($user->role !== 'customer', 404);
 
         /*
-    |--------------------------------------------------------------------------
-    | LỊCH SỬ ĐƠN HÀNG
-    |--------------------------------------------------------------------------
-    */
+        |--------------------------------------------------------------------------
+        | LỊCH SỬ ĐƠN HÀNG
+        |--------------------------------------------------------------------------
+        */
         $orders = Order::where('user_id', $user->id)
             ->latest()
             ->get();
 
         /*
-    |--------------------------------------------------------------------------
-    | TỔNG CHI TIÊU (CHỈ TÍNH ĐƠN ĐÃ GIAO)
-    |--------------------------------------------------------------------------
-    */
+        |--------------------------------------------------------------------------
+        | TỔNG CHI TIÊU (CHỈ TÍNH ĐƠN ĐÃ GIAO)
+        |--------------------------------------------------------------------------
+        */
         $totalSpent = Order::where('user_id', $user->id)
-            ->where('status', 3) // ✅ chỉ đơn đã giao
+            ->where('status', 3)
             ->sum('grand_total');
 
         /*
-    |--------------------------------------------------------------------------
-    | ĐÁNH GIÁ SẢN PHẨM
-    |--------------------------------------------------------------------------
-    */
-        $reviews = Review::with('product')
-        ->where('user_id', $user->id)
+        |--------------------------------------------------------------------------
+        | ĐÁNH GIÁ SẢN PHẨM + ẢNH + VIDEO
+        |--------------------------------------------------------------------------
+        */
+        $reviews = Review::with([
+            'product',
+            'images',
+            'video',
+        ])
+            ->where('user_id', $user->id)
             ->latest()
             ->get();
 
@@ -158,10 +165,9 @@ class CustomerController extends Controller
             'user',
             'orders',
             'reviews',
-            'totalSpent' // ✅ thêm biến này
+            'totalSpent'
         ));
     }
-
 
     /**
      * ================================
@@ -178,7 +184,6 @@ class CustomerController extends Controller
         |--------------------------------------------------------------------------
         */
         if ($user->is_active) {
-
             $validated = $request->validate([
                 'blocked_reason' => 'required|string|min:5|max:1000',
             ], [
@@ -192,7 +197,7 @@ class CustomerController extends Controller
             $user->update([
                 'is_active' => false,
                 'blocked_reason' => $validated['blocked_reason'],
-                'locked_until' => $lockedUntil
+                'locked_until' => $lockedUntil,
             ]);
 
             /*
@@ -206,7 +211,7 @@ class CustomerController extends Controller
                     'user' => $user,
                     'reason' => $validated['blocked_reason'],
                     'locked_from' => $lockedFrom->format('d/m/Y H:i'),
-                    'locked_until' => $lockedUntil->format('d/m/Y H:i')
+                    'locked_until' => $lockedUntil->format('d/m/Y H:i'),
                 ],
                 function ($message) use ($user) {
                     $message->to($user->email)
@@ -225,7 +230,7 @@ class CustomerController extends Controller
         $user->update([
             'is_active' => true,
             'blocked_reason' => null,
-            'locked_until' => null
+            'locked_until' => null,
         ]);
 
         /*
@@ -236,7 +241,7 @@ class CustomerController extends Controller
         Mail::send(
             'emails.account_unblocked',
             [
-                'user' => $user
+                'user' => $user,
             ],
             function ($message) use ($user) {
                 $message->to($user->email)

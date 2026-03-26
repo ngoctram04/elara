@@ -3,7 +3,6 @@
 @section('title','Danh sách sản phẩm')
 
 @section('content')
-
 <div class="card border-0 shadow-sm">
     <div class="card-body">
 
@@ -21,46 +20,39 @@
         </div>
 
         {{-- FILTER --}}
-        <form class="row g-2 mb-4" method="GET">
-            <div class="col-md-3">
-                <input type="text"
-                       name="keyword"
-                       value="{{ request('keyword') }}"
-                       class="form-control form-control-sm"
-                       placeholder="Tìm tên sản phẩm hoặc mã...">
-            </div>
+        <form class="mb-4" method="GET">
+            <div class="d-flex flex-wrap gap-2 align-items-center">
 
-            <div class="col-md-2">
-                <select name="category_id" class="form-select form-select-sm">
+                <div style="min-width:280px; flex:1;">
+                    <input type="text"
+                           name="keyword"
+                           value="{{ request('keyword') }}"
+                           class="form-control form-control-sm"
+                           placeholder="Tìm tên sản phẩm hoặc mã...">
+                </div>
+
+                <select name="category_id" class="form-select form-select-sm" style="width:170px;">
                     <option value="">Danh mục</option>
-                    @foreach($categories as $parent)
-                        <optgroup label="{{ $parent->name }}">
-                            @foreach($parent->children as $child)
-                                <option value="{{ $child->id }}"
-                                    {{ request('category_id') == $child->id ? 'selected' : '' }}>
-                                    {{ $child->name }}
-                                </option>
-                            @endforeach
-                        </optgroup>
+                    @foreach($categories as $category)
+                        <option value="{{ $category->id }}"
+                            {{ (string) request('category_id') === (string) $category->id ? 'selected' : '' }}>
+                            {{ $category->name }}
+                        </option>
                     @endforeach
                 </select>
-            </div>
 
-            <div class="col-md-2">
-                <select name="brand_id" class="form-select form-select-sm">
+                <select name="brand_id" class="form-select form-select-sm" style="width:160px;">
                     <option value="">Thương hiệu</option>
                     @foreach($brands as $brand)
                         <option value="{{ $brand->id }}"
-                            {{ request('brand_id') == $brand->id ? 'selected' : '' }}>
+                            {{ (string) request('brand_id') === (string) $brand->id ? 'selected' : '' }}>
                             {{ $brand->name }}
                         </option>
                     @endforeach
                 </select>
-            </div>
 
-            <div class="col-md-2">
-                <select name="status" class="form-select form-select-sm">
-                    <option value="">Trạng thái</option>
+                <select name="status" class="form-select form-select-sm" style="width:150px;">
+                    <option value="">Kho</option>
                     <option value="in_stock" {{ request('status') === 'in_stock' ? 'selected' : '' }}>
                         Còn hàng
                     </option>
@@ -68,11 +60,19 @@
                         Hết hàng
                     </option>
                 </select>
-            </div>
 
-            <div class="col-md-3 d-flex gap-2">
-                <button class="btn btn-outline-primary btn-sm">
-                    <i class="bi bi-search"></i> Lọc
+                <select name="profit_status" class="form-select form-select-sm" style="width:160px;">
+                    <option value="">Giá</option>
+                    <option value="safe" {{ request('profit_status') === 'safe' ? 'selected' : '' }}>
+                        Ổn
+                    </option>
+                    <option value="under_cost" {{ request('profit_status') === 'under_cost' ? 'selected' : '' }}>
+                        Dưới vốn
+                    </option>
+                </select>
+
+                <button class="btn btn-primary btn-sm">
+                    <i class="bi bi-search"></i>
                 </button>
 
                 <a href="{{ route('admin.products.index') }}"
@@ -87,21 +87,62 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light text-center">
                     <tr>
-                        <th width="60">Mã</th>
+                        <th width="70">Mã</th>
                         <th width="80">Ảnh</th>
                         <th>Tên sản phẩm</th>
-                        <th width="160">Giá</th>
-                        <th width="160">Danh mục</th>
-                        <th width="100">Thương hiệu</th>
-                        <th width="80">Tồn</th>
-                        <th width="80">Đã bán</th>
-                        <th width="80">Trạng thái</th>
+                        <th width="170">Giá</th>
+                        <th width="150">Danh mục</th>
+                        <th width="120">Kho</th>
+                        <th width="140">Tình trạng</th>
                         <th width="185">Hành động</th>
                     </tr>
                 </thead>
 
                 <tbody>
                     @forelse($products as $product)
+                        @php
+                            $variants = $product->variants ?? collect();
+
+                            $originMin = $variants->min('price');
+                            $originMax = $variants->max('price');
+
+                            $displayPrices = $variants->map(fn($variant) => $variant->final_price);
+                            $sellMin = $displayPrices->min();
+                            $sellMax = $displayPrices->max();
+
+                            $hasPromotion = $variants->contains(function ($variant) {
+                                return $variant->final_price < $variant->price;
+                            });
+
+                            $warningLevel = 'safe';
+
+                            if (($product->total_stock ?? 0) > 0) {
+                                foreach ($variants as $variant) {
+                                    $salePrice = $variant->final_price;
+
+                                    $remainingLots = collect($variant->stockImports ?? [])
+                                        ->filter(function ($lot) {
+                                            return (int) ($lot->remaining_quantity ?? 0) > 0;
+                                        });
+
+                                    $totalRemain = $remainingLots->sum('remaining_quantity');
+
+                                    if ($totalRemain <= 0) {
+                                        continue;
+                                    }
+
+                                    $avgCost = $remainingLots->sum(function ($lot) {
+                                        return ((int) ($lot->remaining_quantity ?? 0)) * ((float) ($lot->cost_price ?? 0));
+                                    }) / $totalRemain;
+
+                                    if ($salePrice < $avgCost) {
+                                        $warningLevel = 'danger';
+                                        break;
+                                    }
+                                }
+                            }
+                        @endphp
+
                         <tr>
                             <td class="text-center text-muted fw-semibold">
                                 SP{{ str_pad($product->id, 5, '0', STR_PAD_LEFT) }}
@@ -118,22 +159,15 @@
                                 @endif
                             </td>
 
-                            <td class="fw-medium">
-                                {{ $product->name }}
+                            <td>
+                                <div class="fw-semibold">{{ $product->name }}</div>
+                                <div class="small text-muted mt-1">
+                                    {{ $product->brand?->name ?? '---' }}
+                                </div>
                             </td>
 
                             {{-- GIÁ --}}
                             <td class="text-end">
-                                @php
-                                    $originMin = $product->variants->min('price');
-                                    $originMax = $product->variants->max('price');
-
-                                    $sellMin = $product->variants->min('final_price');
-                                    $sellMax = $product->variants->max('final_price');
-
-                                    $hasPromotion = $sellMin < $originMin;
-                                @endphp
-
                                 @if($originMin)
                                     @if($hasPromotion)
                                         <div class="fw-semibold text-danger">
@@ -153,9 +187,9 @@
                                         </div>
                                     @else
                                         <div class="fw-semibold">
-                                            {{ number_format($originMin, 0, ',', '.') }}
-                                            @if($originMin != $originMax)
-                                                – {{ number_format($originMax, 0, ',', '.') }}
+                                            {{ number_format($sellMin, 0, ',', '.') }}
+                                            @if($sellMin != $sellMax)
+                                                – {{ number_format($sellMax, 0, ',', '.') }}
                                             @endif
                                             đ
                                         </div>
@@ -166,38 +200,36 @@
                             </td>
 
                             <td class="text-center">
-                                @if($product->category)
-                                    <small class="text-muted">
-                                        {{ $product->category->parent?->name }} →
-                                    </small>
-                                    {{ $product->category->name }}
-                                @endif
+                                {{ $product->category?->name ?? '---' }}
                             </td>
 
+                            {{-- KHO --}}
                             <td class="text-center">
-                                {{ $product->brand?->name }}
+                                <div class="fw-semibold">
+                                    Tồn: {{ $product->total_stock ?? 0 }}
+                                </div>
+                                <div class="fw-semibold">
+                                    Bán: {{ $product->total_sold ?? 0 }}
+                                </div>
                             </td>
 
+                            {{-- TÌNH TRẠNG --}}
                             <td class="text-center">
-                                @if($product->total_stock > 0)
-                                    <span class="badge bg-success">{{ $product->total_stock }}</span>
-                                @else
-                                    <span class="badge bg-danger">0</span>
-                                @endif
-                            </td>
+                                <div class="fw-semibold">
+                                    @if(($product->total_stock ?? 0) > 0)
+                                        <span>Còn hàng</span>
+                                    @else
+                                        <span class="fw-semibold">Hết hàng</span>
+                                    @endif
+                                </div>
 
-                            <td class="text-center">
-                                <span class="badge bg-primary">
-                                    {{ $product->total_sold }}
-                                </span>
-                            </td>
-
-                            <td class="text-center">
-                                @if($product->total_stock > 0)
-                                    <span class="badge bg-success">Còn hàng</span>
-                                @else
-                                    <span class="badge bg-danger">Hết hàng</span>
-                                @endif
+                                <div class="fw-semibold">
+                                    @if($warningLevel === 'danger')
+                                        <span class="text-danger fw-semibold">Dưới vốn</span>
+                                    @else
+                                        <span class="fw-semibold">Ổn</span>
+                                    @endif
+                                </div>
                             </td>
 
                             <td class="text-center">
@@ -211,8 +243,7 @@
                                     <i class="bi bi-pencil"></i>
                                 </a>
 
-                                {{-- NÚT ẨN / HIỆN --}}
-                                <form action="{{ route('admin.products.toggle',$product) }}"
+                                <form action="{{ route('admin.products.toggle', $product) }}"
                                       method="POST"
                                       class="d-inline">
                                     @csrf
@@ -241,7 +272,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="10" class="text-center text-muted py-4">
+                            <td colspan="8" class="text-center text-muted py-4">
                                 Chưa có sản phẩm nào
                             </td>
                         </tr>
