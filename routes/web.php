@@ -628,10 +628,10 @@ Route::middleware(['auth', 'check_active'])
     ->name('reviews.')
     ->group(function () {
 
-        Route::get('/{orderItem}', [ReviewController::class, 'create'])
+        Route::get('/order/{order}', [ReviewController::class, 'create'])
             ->name('create');
 
-        Route::post('/{orderItem}', [ReviewController::class, 'store'])
+        Route::post('/order/{order}', [ReviewController::class, 'store'])
             ->name('store');
     });
 Route::post(

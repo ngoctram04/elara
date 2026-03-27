@@ -23,34 +23,48 @@
         </div>
 
         <div class="d-flex flex-wrap gap-2">
-            {{-- NÚT NHẬN HÀNG --}}
-            @if($order->status == 3 && !$order->customer_confirmed)
-                <form action="{{ route('orders.confirmReceived',$order->id) }}"
-                      method="POST"
-                      class="confirm-form">
-                    @csrf
-                    <button type="submit" class="btn btn-success btn-sm px-3 btn-confirm">
-                        <i class="bi bi-check-circle me-1"></i> Đã nhận hàng
-                    </button>
-                </form>
-            @endif
+    @php
+        $hasUnreviewedItems = $order->isCompleted() && $order->items->contains(function ($item) {
+            return !$item->review;
+        });
+    @endphp
 
-            {{-- NÚT HUỶ --}}
-            @if($order->canCancel())
-                <form action="{{ route('orders.cancel', $order->id) }}"
-                      method="POST"
-                      class="cancel-form">
-                    @csrf
-                    @method('PUT')
+    {{-- NÚT ĐÁNH GIÁ TẤT CẢ --}}
+    @if($hasUnreviewedItems)
+        <a href="{{ route('reviews.create', $order->id) }}"
+           class="btn btn-primary btn-sm px-3">
+            <i class="bi bi-star me-1"></i> Đánh giá tất cả
+        </a>
+    @endif
 
-                    <input type="hidden" name="cancel_reason" class="cancel-reason">
+    {{-- NÚT NHẬN HÀNG --}}
+    @if($order->status == 3 && !$order->customer_confirmed)
+        <form action="{{ route('orders.confirmReceived',$order->id) }}"
+              method="POST"
+              class="confirm-form">
+            @csrf
+            <button type="submit" class="btn btn-success btn-sm px-3 btn-confirm">
+                <i class="bi bi-check-circle me-1"></i> Đã nhận hàng
+            </button>
+        </form>
+    @endif
 
-                    <button type="button" class="btn btn-danger btn-sm px-3 btn-cancel">
-                        <i class="bi bi-x-circle me-1"></i> Huỷ đơn
-                    </button>
-                </form>
-            @endif
-        </div>
+    {{-- NÚT HUỶ --}}
+    @if($order->canCancel())
+        <form action="{{ route('orders.cancel', $order->id) }}"
+              method="POST"
+              class="cancel-form">
+            @csrf
+            @method('PUT')
+
+            <input type="hidden" name="cancel_reason" class="cancel-reason">
+
+            <button type="button" class="btn btn-danger btn-sm px-3 btn-cancel">
+                <i class="bi bi-x-circle me-1"></i> Huỷ đơn
+            </button>
+        </form>
+    @endif
+</div>
     </div>
 
     {{-- ================= THÔNG TIN CHUNG ================= --}}
@@ -227,54 +241,54 @@
                     </div>
 
                     {{-- REVIEW --}}
-                    @if($order->status == 3)
-                        <div class="review-wrap">
-                            @if(!$item->review)
-                                <a href="{{ route('reviews.create', $item->id) }}"
-                                   class="btn btn-warning btn-sm px-3">
-                                    <i class="bi bi-star me-1"></i> Đánh giá sản phẩm
-                                </a>
+@if($order->status == 3)
+    <div class="review-wrap">
+        @if(!$item->review)
+            <div class="review-empty">
+                <i class="bi bi-star me-1"></i>
+                Sản phẩm này chưa được đánh giá
+            </div>
+        @else
+            <div class="review-box">
+                <div class="review-rating">
+                    @for($i = 1; $i <= 5; $i++)
+                        @if($i <= $item->review->rating)
+                            ★
+                        @else
+                            ☆
+                        @endif
+                    @endfor
+
+                    <span class="review-score">
+                        ({{ number_format($item->review->rating, 1) }})
+                    </span>
+                </div>
+
+                @if($item->review->comment)
+                    <div class="review-comment">
+                        {{ $item->review->comment }}
+                    </div>
+                @endif
+
+                @if($item->review->media->count())
+                    <div class="review-media">
+                        @foreach($item->review->media as $media)
+                            @if($media->file_type == 'image')
+                                <img src="{{ asset('storage/'.$media->file_path) }}"
+                                     class="review-media-image"
+                                     alt="review-image">
                             @else
-                                <div class="review-box">
-                                    <div class="review-rating">
-                                        @for($i = 1; $i <= 5; $i++)
-                                            @if($i <= $item->review->rating)
-                                                ★
-                                            @else
-                                                ☆
-                                            @endif
-                                        @endfor
-
-                                        <span class="review-score">
-                                            ({{ number_format($item->review->rating, 1) }})
-                                        </span>
-                                    </div>
-
-                                    @if($item->review->comment)
-                                        <div class="review-comment">
-                                            {{ $item->review->comment }}
-                                        </div>
-                                    @endif
-
-                                    @if($item->review->media->count())
-                                        <div class="review-media">
-                                            @foreach($item->review->media as $media)
-                                                @if($media->file_type == 'image')
-                                                    <img src="{{ asset('storage/'.$media->file_path) }}"
-                                                         class="review-media-image"
-                                                         alt="review-image">
-                                                @else
-                                                    <video class="review-media-video" controls>
-                                                        <source src="{{ asset('storage/'.$media->file_path) }}">
-                                                    </video>
-                                                @endif
-                                            @endforeach
-                                        </div>
-                                    @endif
-                                </div>
+                                <video class="review-media-video" controls>
+                                    <source src="{{ asset('storage/'.$media->file_path) }}">
+                                </video>
                             @endif
-                        </div>
-                    @endif
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+        @endif
+    </div>
+@endif
                 </div>
             @endforeach
 
@@ -605,7 +619,18 @@
     margin-top:14px;
     margin-left:92px;
 }
-
+.review-empty{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    background:#fff7e6;
+    border:1px solid #ffe7ba;
+    color:#ad6800;
+    font-size:14px;
+    font-weight:600;
+    padding:10px 14px;
+    border-radius:12px;
+}
 .review-box{
     background:#f8fafc;
     border:1px solid #e5e7eb;

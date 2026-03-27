@@ -299,18 +299,6 @@ body{background:#f5f6fa;}
                             x{{ $item->quantity }}
                         </div>
 
-                        @if($order->status == 3 && $order->customer_confirmed)
-                            @if(!$item->review)
-                                <a href="{{ route('reviews.create', $item->id) }}"
-                                   class="btn btn-warning btn-sm mt-2">
-                                    Đánh giá
-                                </a>
-                            @else
-                                <span class="badge bg-success mt-2">
-                                    Đã đánh giá
-                                </span>
-                            @endif
-                        @endif
                     </div>
 
                     <div class="order-price">
@@ -363,95 +351,116 @@ body{background:#f5f6fa;}
                         {{ number_format($payAmount) }}đ
                     </span>
 
-                    <div class="mt-2">
-                        <a href="{{ route('orders.show', $order->id) }}"
-                           class="btn btn-outline-secondary btn-sm btn-action">
-                            Chi tiết
-                        </a>
+                    <div class="mt-2 d-flex flex-wrap gap-2 align-items-center">
 
-                        @if($order->refundRequest)
-                            <a href="{{ route('refund.show', $order->refundRequest->id) }}"
-                               class="btn btn-outline-danger btn-sm btn-action">
-                                Xem phiếu hoàn tiền
-                            </a>
-                        @endif
+    {{-- CHI TIẾT ĐƠN --}}
+    <a href="{{ route('orders.show', $order->id) }}"
+       class="btn btn-outline-secondary btn-sm btn-action">
+        Chi tiết
+    </a>
 
-                        {{-- KHÁCH XÁC NHẬN ĐÃ NHẬN HÀNG --}}
-                        @if($order->status == 3 && !$order->customer_confirmed)
-                            <form action="{{ route('orders.confirmReceived', $order->id) }}"
-                                  method="POST"
-                                  class="d-inline">
-                                @csrf
-                                <button type="submit"
-                                        class="btn btn-success btn-sm btn-action btn-confirm">
-                                    Đã nhận hàng
-                                </button>
-                            </form>
-                        @endif
+    {{-- XEM PHIẾU HOÀN TIỀN --}}
+    @if($order->refundRequest)
+        <a href="{{ route('refund.show', $order->refundRequest->id) }}"
+           class="btn btn-outline-danger btn-sm btn-action">
+            Xem phiếu hoàn tiền
+        </a>
+    @endif
 
-                        @if($order->canCancel())
-                            <form action="{{ route('orders.cancel', $order->id) }}"
-                                  method="POST"
-                                  class="d-inline cancel-form">
-                                @csrf
-                                @method('PUT')
+    {{-- KHÁCH XÁC NHẬN ĐÃ NHẬN HÀNG --}}
+    @if($order->status == 3 && !$order->customer_confirmed)
+        <form action="{{ route('orders.confirmReceived', $order->id) }}"
+              method="POST"
+              class="d-inline">
+            @csrf
+            <button type="submit"
+                    class="btn btn-success btn-sm btn-action btn-confirm">
+                Đã nhận hàng
+            </button>
+        </form>
+    @endif
 
-                                <input type="hidden" name="cancel_reason" class="cancel-reason">
+    {{-- HUỶ ĐƠN --}}
+    @if($order->canCancel())
+        <form action="{{ route('orders.cancel', $order->id) }}"
+              method="POST"
+              class="d-inline cancel-form">
+            @csrf
+            @method('PUT')
 
-                                <button type="button"
-                                        class="btn btn-outline-danger btn-sm btn-action btn-cancel">
-                                    Huỷ đơn
-                                </button>
-                            </form>
-                        @endif
+            <input type="hidden" name="cancel_reason" class="cancel-reason">
 
-                        @if($order->isCompleted() || $order->isCancelled())
-                            <form action="{{ route('orders.reorder', $order->id) }}"
-                                  method="POST"
-                                  class="d-inline">
-                                @csrf
-                                <button type="submit"
-                                        class="btn btn-outline-primary btn-sm btn-action">
-                                    Mua lại
-                                </button>
-                            </form>
-                        @endif
+            <button type="button"
+                    class="btn btn-outline-danger btn-sm btn-action btn-cancel">
+                Huỷ đơn
+            </button>
+        </form>
+    @endif
 
-                        {{-- YÊU CẦU TRẢ HÀNG / HOÀN TIỀN --}}
-                        @if($order->isCompleted() && !$order->refundRequest)
-                            <button type="button"
-                                    class="btn btn-outline-danger btn-sm btn-action btn-refund"
-                                    data-url="{{ route('refund.create', $order->id) }}">
-                                Trả hàng / Hoàn tiền
-                            </button>
-                        @endif
+    {{-- MUA LẠI --}}
+    @if($order->isCompleted() || $order->isCancelled())
+        <form action="{{ route('orders.reorder', $order->id) }}"
+              method="POST"
+              class="d-inline">
+            @csrf
+            <button type="submit"
+                    class="btn btn-outline-primary btn-sm btn-action">
+                Mua lại
+            </button>
+        </form>
+    @endif
 
-                        @if($order->refundRequest)
-                            @if($order->refundRequest->status == 'pending')
-                                <span class="badge bg-warning">
-                                    Đang chờ xử lý hoàn tiền
-                                </span>
-                            @elseif($order->refundRequest->status == 'approved')
-                                <span class="badge bg-primary">
-                                    Yêu cầu hoàn tiền đã được duyệt
-                                </span>
-                            @elseif($order->refundRequest->status == 'refunded')
-                                <span class="badge bg-success">
-                                    Đã hoàn tiền
-                                </span>
-                            @elseif($order->refundRequest->status == 'rejected')
-                                <span class="badge bg-danger">
-                                    Yêu cầu hoàn tiền bị từ chối
-                                </span>
+    {{-- TRẢ HÀNG / HOÀN TIỀN --}}
+    @if($order->isCompleted() && !$order->refundRequest)
+        <button type="button"
+                class="btn btn-outline-danger btn-sm btn-action btn-refund"
+                data-url="{{ route('refund.create', $order->id) }}">
+            Trả hàng / Hoàn tiền
+        </button>
+    @endif
 
-                                @if($order->refundRequest->admin_note)
-                                    <div class="text-danger small mt-1">
-                                        Lý do: {{ $order->refundRequest->admin_note }}
-                                    </div>
-                                @endif
-                            @endif
-                        @endif
-                    </div>
+    {{-- ĐÁNH GIÁ TẤT CẢ --}}
+    @php
+        $canReviewAll = $order->isCompleted()
+            && !$order->refundRequest
+            && $order->items->where('review', null)->count() > 0;
+    @endphp
+
+    @if($canReviewAll)
+        <a href="{{ route('reviews.create', $order->id) }}"
+           class="btn btn-primary btn-sm btn-action">
+            Đánh giá tất cả
+        </a>
+    @endif
+
+    {{-- TRẠNG THÁI HOÀN TIỀN --}}
+    @if($order->refundRequest)
+        @if($order->refundRequest->status == 'pending')
+            <span class="badge bg-warning text-dark">
+                Đang chờ xử lý hoàn tiền
+            </span>
+        @elseif($order->refundRequest->status == 'approved')
+            <span class="badge bg-primary">
+                Yêu cầu hoàn tiền đã được duyệt
+            </span>
+        @elseif($order->refundRequest->status == 'refunded')
+            <span class="badge bg-success">
+                Đã hoàn tiền
+            </span>
+        @elseif($order->refundRequest->status == 'rejected')
+            <span class="badge bg-danger">
+                Yêu cầu hoàn tiền bị từ chối
+            </span>
+
+            @if($order->refundRequest->admin_note)
+                <div class="w-100 text-danger small mt-1">
+                    Lý do: {{ $order->refundRequest->admin_note }}
+                </div>
+            @endif
+        @endif
+    @endif
+
+</div>
                 </div>
             </div>
 
@@ -613,26 +622,4 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 </script>
-
-@if(session('success'))
-<script>
-Swal.fire({
-    icon: 'success',
-    title: 'Thành công',
-    text: '{{ session('success') }}',
-    confirmButtonColor: '#3085d6'
-});
-</script>
-@endif
-
-@if(session('error'))
-<script>
-Swal.fire({
-    icon: 'error',
-    title: 'Lỗi',
-    text: '{{ session('error') }}',
-    confirmButtonColor: '#d33'
-});
-</script>
-@endif
 @endpush
