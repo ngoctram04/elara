@@ -153,7 +153,7 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         $spent = (float) $this->yearly_spent_calculated;
 
-        if ($spent >= 10000000) return 'platinum';
+        if ($spent >= 10000000) return 'diamond';
         if ($spent >= 3000000) return 'gold';
         if ($spent >= 1000000) return 'silver';
         return 'bronze';
@@ -164,7 +164,7 @@ class User extends Authenticatable implements MustVerifyEmail
         $spent = (float) $this->yearly_spent_calculated;
 
         if ($spent >= 10000000) {
-            $level = 'platinum';
+            $level = 'diamond';
         } elseif ($spent >= 3000000) {
             $level = 'gold';
         } elseif ($spent >= 1000000) {

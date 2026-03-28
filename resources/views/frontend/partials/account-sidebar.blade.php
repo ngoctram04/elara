@@ -14,21 +14,21 @@
         'bronze'   => 0,
         'silver'   => 1000000,
         'gold'     => 3000000,
-        'platinum' => 10000000,
+        'diamond' => 10000000,
     ];
 
     $levelNames = [
         'bronze'   => 'Đồng',
         'silver'   => 'Bạc',
         'gold'     => 'Vàng',
-        'platinum' => 'Bạch kim',
+        'diamond' => 'Kim Cương',
     ];
 
     $colors = [
         'bronze'   => '#cd7f32',
         'silver'   => '#6c757d',
         'gold'     => '#f1c40f',
-        'platinum' => '#0dcaf0',
+        'diamond' => '#0dcaf0',
     ];
 
     $benefits = [
@@ -42,7 +42,7 @@
             'Miễn phí vận chuyển đơn trên 300.000đ',
             'Giảm 10% vào ngày sinh nhật',
         ],
-        'platinum' => [
+        'diamond' => [
             'Miễn phí vận chuyển mọi đơn',
             'Giảm 15% vào ngày sinh nhật',
         ],

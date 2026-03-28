@@ -63,7 +63,7 @@
                 'bronze' => ['name' => 'Đồng', 'min' => 0],
                 'silver' => ['name' => 'Bạc', 'min' => 1000000],
                 'gold' => ['name' => 'Vàng', 'min' => 5000000],
-                'platinum' => ['name' => 'Bạch kim', 'min' => 20000000],
+                'diamond' => ['name' => 'Kim Cương', 'min' => 20000000],
             ];
 
             $currentLevel = $user->member_level;
@@ -163,7 +163,7 @@
                         </ul>
                         @break
 
-                    @case('platinum')
+                    @case('diamond')
                         <ul class="mb-0">
                             <li>Tích điểm 5% mỗi đơn hàng</li>
                             <li>Miễn phí vận chuyển mọi đơn</li>

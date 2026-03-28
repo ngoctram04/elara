@@ -163,8 +163,8 @@
 
                             <tr>
                                 <td>
-                                    <span class="rank-badge platinum">
-                                        <i class="bi bi-gem"></i> Bạch kim
+                                    <span class="rank-badge diamond">
+                                        <i class="bi bi-gem"></i> Kim Cương
                                     </span>
                                 </td>
                                 <td>Từ 10.000.000đ trở lên</td>
@@ -406,7 +406,7 @@
         color:#92400e;
     }
 
-    .rank-badge.platinum{
+    .rank-badge.diamond{
         background:#dbeafe;
         color:#1d4ed8;
     }
