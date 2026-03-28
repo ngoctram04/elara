@@ -60,13 +60,13 @@ $isFavorited = in_array($product->id, $favorites ?? []);
 
         {{-- BUY --}}
         <button
-            type="button"
-            class="category-buy btn-buy-now"
-            data-variant-id="{{ $addVariant?->id }}"
-            data-out-stock="{{ $outOfStock ? 1 : 0 }}">
-            <i class="bi bi-lightning-charge-fill"></i>
-            Mua ngay
-        </button>
+    type="button"
+    class="category-buy card-buy-now"
+    data-variant-id="{{ $addVariant?->id }}"
+    data-out-stock="{{ $outOfStock ? 1 : 0 }}">
+    <i class="bi bi-lightning-charge-fill"></i>
+    Mua ngay
+</button>
 
         {{-- CART --}}
         <button
@@ -200,7 +200,7 @@ function showToast(message){
 // click delegation (chuẩn cho swiper/ajax)
 document.addEventListener('click', function(e){
 
-    const btn = e.target.closest('.btn-add-to-cart, .btn-buy-now');
+    const btn = e.target.closest('.btn-add-to-cart, .card-buy-now');
     if(btn){
         if(btn.dataset.outStock == "1"){
             e.preventDefault();

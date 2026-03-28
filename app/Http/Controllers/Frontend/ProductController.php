@@ -10,21 +10,20 @@ use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
-
     public function show(string $slug, Request $request)
     {
         $userId = Auth::id();
 
         /* ======================================================
-     * 1. LOAD PRODUCT
-     * ====================================================== */
+         * 1. LOAD PRODUCT
+         * ====================================================== */
         $product = Product::with([
             'images',
             'mainImage',
 
             'variants' => function ($q) {
                 $q->where('is_active', 1)
-                ->orderBy('id')
+                    ->orderBy('id')
                     ->with('images');
             },
 
@@ -35,61 +34,56 @@ class ProductController extends Controller
                 $q->where('is_active', 1);
             },
 
-            // ⭐ THÊM Q&A
+            // Q&A
             'questions' => function ($q) {
                 $q->where('is_active', 1)
-                ->latest()
+                    ->latest()
                     ->with([
                         'user:id,name',
                         'answers.user:id,name'
                     ]);
             }
-
         ])
-        ->where('slug', $slug)
-        ->where('is_active', 1)
-        ->firstOrFail();
-
+            ->where('slug', $slug)
+            ->where('is_active', 1)
+            ->firstOrFail();
 
         /* ======================================================
-     * 2. REVIEWS (FILTER + SORT + PAGINATION)
-     * ====================================================== */
-
+         * 2. REVIEWS (FILTER + SORT + PAGINATION)
+         * ====================================================== */
         $reviewsQuery = $product->reviews()
             ->with([
                 'user:id,name,avatar',
                 'media'
             ]);
 
-        /* ===== FILTER RATING ===== */
+        // FILTER RATING
         if ($request->rating && $request->rating !== 'all') {
             $reviewsQuery->where('rating', $request->rating);
         }
 
-        /* ===== FILTER COMMENT ===== */
+        // FILTER COMMENT
         if ($request->type === 'comment') {
             $reviewsQuery->whereNotNull('comment');
         }
 
-        /* ===== FILTER MEDIA ===== */
+        // FILTER MEDIA
         if ($request->type === 'media') {
             $reviewsQuery->whereHas('media');
         }
 
-        /* ===== SORT ===== */
+        // SORT
         if ($request->sort === 'old') {
             $reviewsQuery->orderBy('created_at', 'asc');
         } else {
             $reviewsQuery->orderBy('created_at', 'desc');
         }
 
-        $reviews = $reviewsQuery->paginate(5);
-
+        $reviews = $reviewsQuery->get();
 
         /* ======================================================
-     * 3. REVIEW STATS
-     * ====================================================== */
-
+         * 3. REVIEW STATS
+         * ====================================================== */
         $reviewCount = $product->reviews()->count();
 
         $avgRating = $reviewCount
@@ -112,18 +106,14 @@ class ProductController extends Controller
             ->whereHas('media')
             ->count();
 
-
         /* ======================================================
-     * 4. TOTAL SOLD
-     * ====================================================== */
-
+         * 4. TOTAL SOLD
+         * ====================================================== */
         $totalSold = $product->variants->sum('sold_quantity');
 
-
         /* ======================================================
-     * 5. WISHLIST
-     * ====================================================== */
-
+         * 5. WISHLIST
+         * ====================================================== */
         $favorites = [];
 
         if ($userId) {
@@ -134,11 +124,9 @@ class ProductController extends Controller
 
         $favoritesCount = Wishlist::where('product_id', $product->id)->count();
 
-
         /* ======================================================
-     * 6. RELATED PRODUCTS
-     * ====================================================== */
-
+         * 6. RELATED PRODUCTS
+         * ====================================================== */
         $relatedProducts = Product::with([
             'mainImage',
             'brand'
@@ -151,20 +139,17 @@ class ProductController extends Controller
             ->where('category_id', $product->category_id)
             ->whereHas('variants', function ($q) {
                 $q->where('stock_quantity', '>', 0)
-                ->where('is_active', 1);
+                    ->where('is_active', 1);
             })
             ->orderByRaw("brand_id = ? DESC", [$product->brand_id])
             ->orderByDesc('total_sold')
             ->limit(8)
             ->get();
 
-
         /* ======================================================
-     * 7. FALLBACK RELATED
-     * ====================================================== */
-
+         * 7. FALLBACK RELATED
+         * ====================================================== */
         if ($relatedProducts->count() < 8) {
-
             $excludeIds = $relatedProducts
                 ->pluck('id')
                 ->push($product->id);
@@ -180,7 +165,7 @@ class ProductController extends Controller
                 ->whereNotIn('id', $excludeIds)
                 ->whereHas('variants', function ($q) {
                     $q->where('stock_quantity', '>', 0)
-                    ->where('is_active', 1);
+                        ->where('is_active', 1);
                 })
                 ->inRandomOrder()
                 ->limit(8 - $relatedProducts->count())
@@ -189,11 +174,51 @@ class ProductController extends Controller
             $relatedProducts = $relatedProducts->merge($moreProducts);
         }
 
+        /* ======================================================
+         * 8. RECENT VIEWED PRODUCTS (SESSION)
+         * ====================================================== */
+        $recentViewed = session()->get('recent_viewed_products', []);
+
+        // nếu sản phẩm đã có trong danh sách thì xóa vị trí cũ
+        $recentViewed = array_values(array_diff($recentViewed, [$product->id]));
+
+        // thêm sản phẩm hiện tại lên đầu
+        array_unshift($recentViewed, $product->id);
+
+        // giới hạn tối đa 8 sản phẩm đã xem
+        $recentViewed = array_slice($recentViewed, 0, 8);
+
+        // lưu lại session
+        session()->put('recent_viewed_products', $recentViewed);
+
+        // lấy danh sách sản phẩm vừa xem, bỏ sản phẩm hiện tại
+        $recentProducts = collect();
+
+        $recentIdsWithoutCurrent = array_values(array_diff($recentViewed, [$product->id]));
+
+        if (!empty($recentIdsWithoutCurrent)) {
+            $recentProducts = Product::with([
+                'mainImage',
+                'brand'
+            ])
+                ->withAvg('reviews', 'rating')
+                ->withCount('reviews')
+                ->withSum('variants as total_sold', 'sold_quantity')
+                ->where('is_active', 1)
+                ->whereIn('id', $recentIdsWithoutCurrent)
+                ->whereHas('variants', function ($q) {
+                    $q->where('is_active', 1);
+                })
+                ->get()
+                ->sortBy(function ($item) use ($recentIdsWithoutCurrent) {
+                    return array_search($item->id, $recentIdsWithoutCurrent);
+                })
+                ->values();
+        }
 
         /* ======================================================
-     * 8. RETURN VIEW
-     * ====================================================== */
-
+         * 9. RETURN VIEW
+         * ====================================================== */
         return view('frontend.detail', compact(
             'product',
             'reviews',
@@ -203,12 +228,12 @@ class ProductController extends Controller
             'withComment',
             'withMedia',
             'relatedProducts',
+            'recentProducts',
             'favorites',
             'favoritesCount',
             'totalSold'
         ));
     }
-
 
     public function quickView(int $id)
     {
@@ -217,7 +242,7 @@ class ProductController extends Controller
             'mainImage',
             'variants' => function ($q) {
                 $q->orderBy('id')
-                ->with('images');
+                    ->with('images');
             },
             'category',
             'brand',
