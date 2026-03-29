@@ -37,6 +37,9 @@ body {
 .header-box {
     background: #fff;
     border-bottom: 1px solid #eee;
+    position: relative;
+    z-index: 3000;
+    overflow: visible !important;
 }
 
 .header-inner {
@@ -46,6 +49,7 @@ body {
     display: flex;
     align-items: center;
     gap: 24px;
+    overflow: visible !important;
 }
 
 .logo {
@@ -55,22 +59,32 @@ body {
     text-decoration: none;
 }
 
-/* SEARCH */
+.header-icons {
+    display: flex;
+    gap: 16px;
+}
+
+.icon-btn {
+    position: relative;
+    color: var(--text-dark);
+    font-size: 18px;
+    text-decoration: none;
+}
+
+.dropdown-menu {
+    z-index: 9999;
+}
+
+/* =====================================================
+   SEARCH
+===================================================== */
 .search-pill {
+    position: relative;
     flex: 1;
     display: flex;
     background: var(--primary-soft);
     border-radius: var(--radius-pill);
     overflow: visible;
-}
-
-.header-box,
-.header-inner {
-    overflow: visible !important;
-}
-
-.dropdown-menu {
-    z-index: 9999;
 }
 
 .search-pill input {
@@ -90,16 +104,150 @@ body {
     cursor: pointer;
 }
 
-/* ICONS */
-.header-icons {
-    display: flex;
-    gap: 16px;
+.search-suggest-box {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    width: 800px;
+    max-width: 90vw;
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid #eee;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, .12);
+    z-index: 9999;
+    max-height: 420px;
+    overflow-y: auto;
+    display: none;
+    padding: 6px 0;
 }
 
-.icon-btn {
-    color: var(--text-dark);
+.search-suggest-box::-webkit-scrollbar {
+    width: 6px;
+}
+
+.search-suggest-box::-webkit-scrollbar-thumb {
+    background: #ddd;
+    border-radius: 6px;
+}
+
+.search-suggest-item {
+    padding: 12px 18px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: background .2s;
+}
+
+.search-suggest-item:hover {
+    background: #f3f6f9;
+}
+
+.search-history-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: background .2s;
+}
+
+.search-history-item:hover {
+    background: #f5f7fa;
+}
+
+.history-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #333;
+}
+
+.history-left i {
+    font-size: 16px;
+    color: #9aa0a6;
+}
+
+.history-row {
+    transition: all .2s ease;
+}
+
+.history-row:hover {
+    background: #f7f9fb;
+}
+
+.delete-history {
+    font-size: 16px;
+    color: #bbb;
+    cursor: pointer;
+    padding-left: 10px;
+    transition: color .2s;
+}
+
+.delete-history:hover {
+    color: #e74c3c;
+}
+
+.voice-btn {
+    border: none;
+    background: transparent !important;
     font-size: 18px;
-    text-decoration: none;
+    color: #666 !important;
+    margin-right: 5px;
+    padding: 0 12px !important;
+}
+
+.voice-btn:hover {
+    color: #7ec8ea !important;
+}
+
+/* =====================================================
+   VOICE POPUP
+===================================================== */
+.voice-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.voice-box {
+    background: white;
+    padding: 25px 35px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.voice-icon {
+    font-size: 40px;
+    color: #7ec8ea;
+    margin-bottom: 10px;
+    animation: voicePulse 1s infinite;
+}
+
+.voice-text {
+    font-size: 16px;
+    color: #333;
+}
+
+@keyframes voicePulse {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.2);
+    }
+
+    100% {
+        transform: scale(1);
+    }
 }
 
 /* =====================================================
@@ -107,6 +255,8 @@ body {
 ===================================================== */
 .nav-box {
     background: var(--primary);
+    position: relative;
+    z-index: 2000;
 }
 
 .nav-inner {
@@ -116,7 +266,6 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    /* CÂN GIỮA */
     gap: 32px;
 }
 
@@ -137,38 +286,26 @@ body {
     background: rgba(255, 255, 255, .15);
 }
 
-/* ================= MEGA MENU – FIX DỨT ĐIỂM ================= */
-.nav-box {
-    position: relative;
-    z-index: 2000;
-}
-
-.header-box {
-    position: relative;
-    z-index: 3000;
-}
-
 .nav-category {
     position: relative;
 }
 
-/* wrapper */
+/* =====================================================
+   MEGA MENU
+===================================================== */
 .mega-menu {
     position: absolute;
     top: 100%;
     left: 0;
     display: none;
     z-index: 99999;
-    /* 🔥 tăng mạnh */
 }
 
-/* chỉ mở khi hover đúng */
 .nav-category-trigger:hover+.mega-menu,
 .mega-menu:hover {
     display: block;
 }
 
-/* container tổng */
 .mega-container {
     width: 750px;
     height: 420px;
@@ -178,10 +315,8 @@ body {
     display: flex;
     overflow: hidden;
     position: relative;
-    /* ⭐ thêm */
 }
 
-/* ===== LEFT ===== */
 .mega-left {
     width: 260px;
     border-right: 1px solid #eee;
@@ -190,16 +325,12 @@ body {
     padding: 8px 0;
 }
 
-/* mỗi danh mục cha */
 .mega-parent {
     position: static;
-    /* ⭐ RẤT QUAN TRỌNG */
 }
 
-/* label */
 .mega-parent-label {
     height: 56px;
-    /* ⭐ cố định chiều cao */
     display: flex;
     align-items: center;
     gap: 10px;
@@ -218,25 +349,21 @@ body {
     color: #999;
 }
 
-/* ===== RIGHT ===== */
 .mega-right {
     position: absolute;
     top: 0;
-    /* căn theo container */
     left: 260px;
-    width: 740px;
+    width: calc(100% - 260px);
     height: 100%;
     padding: 24px;
     background: #fff;
     display: none;
 }
 
-/* chỉ hiện submenu của item đang hover */
 .mega-parent:hover>.mega-right {
     display: block;
 }
 
-/* ===== COLUMNS ===== */
 .mega-columns {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -267,7 +394,6 @@ body {
     font-size: 13px;
     color: #999;
 }
-
 
 /* =====================================================
    HOME PAGE
@@ -308,287 +434,48 @@ body {
     margin-bottom: 24px;
 }
 
-/* =====================================================
-   FOOTER – ELARA FULL VERSION
-===================================================== */
-
-.footer-box {
-    background: #e9f6fb;
-    padding: 60px 0 24px;
-}
-
-/* container */
-.footer-inner {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 16px;
-}
-
-/* title */
-.footer-title {
-    font-weight: 700;
-    font-size: 18px;
-    margin-bottom: 12px;
-    color: #2c3e50;
-}
-
-.footer-title-sm {
-    font-weight: 600;
-    margin-bottom: 10px;
-    color: #2c3e50;
-}
-
-/* description */
-.footer-desc {
-    font-size: 14px;
-    color: #444;
-    line-height: 1.6;
-}
-
-/* list reset */
-.footer-info,
-.footer-links {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-/* list item */
-.footer-info li,
-.footer-links li {
-    font-size: 14px;
-    margin-bottom: 8px;
-    color: #555;
-}
-
-/* links */
-.footer-links a {
-    color: #333;
-    text-decoration: none;
-    transition: all .2s ease;
-}
-
-/* hover effect */
-.footer-links a:hover {
-    color: var(--primary);
-    padding-left: 3px;
-}
-
-/* =====================================================
-   SOCIAL ICON
-===================================================== */
-
-.footer-social {
-    margin-top: 12px;
-    display: flex;
-    gap: 10px;
-}
-
-.footer-social a {
-    width: 32px;
-    height: 32px;
-    background: #fff;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #555;
-    font-size: 14px;
-    transition: all .25s ease;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, .08);
-}
-
-.footer-social a:hover {
-    background: var(--primary);
-    color: #fff;
-    transform: translateY(-2px);
-}
-
-/* =====================================================
-   NEWSLETTER
-===================================================== */
-
-.footer-newsletter input {
-    width: 100%;
-    padding: 8px 10px;
-    margin-bottom: 8px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-    font-size: 14px;
-}
-
-.footer-newsletter button {
-    width: 100%;
-    border: none;
-    background: var(--primary);
-    color: #fff;
-    padding: 8px;
-    border-radius: 6px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: .25s;
-}
-
-.footer-newsletter button:hover {
-    background: #5fb6de;
-}
-
-/* =====================================================
-   FOOTER BOTTOM
-===================================================== */
-
-.footer-bottom {
-    border-top: 1px solid #dbe7ec;
-    margin-top: 40px;
-    padding-top: 16px;
+.section-title.fancy {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
     text-align: center;
-    font-size: 13px;
-    color: #777;
+    margin-bottom: 32px;
+    position: relative;
+    text-transform: uppercase;
 }
 
-/* =====================================================
-   RESPONSIVE
-===================================================== */
-
-@media (max-width: 768px) {
-
-    .footer-inner {
-        text-align: left;
-    }
-
-    /* 🔥 QUAN TRỌNG NHẤT */
-    .footer-inner .row>div {
-        width: 50% !important;
-    }
-
-    .footer-inner .row {
-        row-gap: 20px;
-    }
-
-    .footer-title {
-        font-size: 16px;
-    }
-
-    .footer-title-sm {
-        font-size: 14px;
-    }
-
-    .footer-desc,
-    .footer-links li,
-    .footer-info li {
-        font-size: 13px;
-    }
-
-    .footer-social {
-        justify-content: flex-start;
-    }
-
-    .footer-bottom {
-        font-size: 12px;
-        text-align: center;
-    }
-}
-@media (max-width: 480px) {
-
-    .footer-inner .row>div {
-        width: 100% !important;
-    }
-
-}
-
-/* =====================================================
-   RESPONSIVE
-===================================================== */
-@media (max-width: 768px) {
-
-    /* ================= HEADER ================= */
-    .header-inner {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .logo {
-        flex: 1;
-    }
-
-    .header-icons {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-left: auto;
-    }
-
-    .search-pill {
-        order: 3;
-        width: 100%;
-    }
-
-    /* ================= NAV ================= */
-        .nav-inner {
-            justify-content: flex-start;
-            flex-wrap: nowrap;
-            overflow-x: auto;
-            overflow-y: visible;
-            /* 🔥 THÊM DÒNG NÀY */
-            white-space: nowrap;
-            gap: 12px;
-            padding-bottom: 6px;
-        }
-.nav-box {
-    overflow: visible !important;
-}
-    .nav-inner::-webkit-scrollbar {
-        display: none;
-    }
-
-    .nav-inner a,
-    .nav-category-trigger {
-        flex-shrink: 0;
-        font-size: 14px;
-        padding: 6px 10px;
-        white-space: nowrap;
-    }
-
-    /* ================= FIX MEGA MENU MOBILE ================= */
-
-    .nav-box {
-        position: relative;
-        z-index: 1000;
-    }
-
-    .nav-category {
-        position: relative;
-    }
-
-.mega-menu {
-    position: fixed;
-    /* 🔥 QUAN TRỌNG */
-    top: 110px;
-    /* chỉnh theo header bạn */
+.section-title.fancy::before {
+    content: "";
+    position: absolute;
+    top: -14px;
     left: 50%;
     transform: translateX(-50%);
-    width: 90%;
-    max-width: 750px;
-    z-index: 99999;
+    width: 140px;
+    height: 1px;
+    background: #eee;
 }
 
-
-    /* ❗ QUAN TRỌNG: KHÔNG TẮT HOÀN TOÀN */
-    /* xoá display:none; cũ đi */
-
-    .nav-category-trigger:hover+.mega-menu,
-    .mega-menu:hover {
-        display: block;
-    }
-
-    /* ================= HOME ================= */
-    .home-banner img {
-        height: 260px;
-    }
+.section-title.fancy::after {
+    content: "";
+    display: block;
+    width: 70px;
+    height: 3px;
+    background: currentColor;
+    margin: 12px auto 0;
+    border-radius: 2px;
 }
 
+.section-title.text-danger.fancy {
+    text-shadow: 0 6px 14px rgba(231, 76, 60, 0.3);
+}
+
+.home-section {
+    padding-top: 10px;
+}
+
+/* =====================================================
+   BREADCRUMB
+===================================================== */
 .breadcrumb-box {
     display: flex;
     align-items: center;
@@ -617,173 +504,9 @@ body {
     text-transform: uppercase;
 }
 
-/* ================= SECTION TITLE – PREMIUM ================= */
-.section-title.fancy {
-    font-size: 20px;
-    font-weight: 800;
-    letter-spacing: 1.5px;
-    text-align: center;
-    margin-bottom: 32px;
-    position: relative;
-    text-transform: uppercase;
-}
-
-/* gạch nhấn dưới */
-.section-title.fancy::after {
-    content: "";
-    display: block;
-    width: 70px;
-    height: 3px;
-    background: currentColor;
-    margin: 12px auto 0;
-    border-radius: 2px;
-}
-
-/* gạch mờ trang trí trên */
-.section-title.fancy::before {
-    content: "";
-    position: absolute;
-    top: -14px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 140px;
-    height: 1px;
-    background: #eee;
-}
-
-/* FLASH SALE nổi bật hơn */
-.section-title.text-danger.fancy {
-    text-shadow: 0 6px 14px rgba(231, 76, 60, 0.3);
-}
-
-/* spacing section */
-.home-section {
-    padding-top: 10px;
-}
-
-/* responsive */
-@media (max-width: 768px) {
-    .section-title.fancy {
-        font-size: 24px;
-        letter-spacing: 1px;
-        margin-bottom: 24px;
-    }
-}
-
-.cart-badge {
-    position: absolute;
-    top: -6px;
-    right: -8px;
-    background: #dc2626;
-    color: #fff;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 2px 6px;
-    border-radius: 999px;
-    min-width: 18px;
-    text-align: center;
-    line-height: 1.2;
-}
-
-.icon-btn {
-    position: relative;
-}
-
 /* =====================================================
-   SEARCH DROPDOWN – FULL VERSION
+   SEARCH RESULT BANNER
 ===================================================== */
-
-/* Đảm bảo search nổi trên menu */
-.search-pill {
-    position: relative;
-}
-
-/* ================= DROPDOWN BOX ================= */
-.search-suggest-box {
-    position: absolute;
-    top: calc(100% + 8px);
-    left: 0;
-
-    /* RỘNG HƠN INPUT (giống Shopee/Youtube) */
-    width: 800px;
-    max-width: 90vw;
-
-    background: #fff;
-    border-radius: 14px;
-    border: 1px solid #eee;
-    box-shadow: 0 18px 40px rgba(0, 0, 0, .12);
-    z-index: 9999;
-
-    max-height: 420px;
-    overflow-y: auto;
-    display: none;
-    padding: 6px 0;
-}
-
-/* ================= SUGGEST ITEM ================= */
-.search-suggest-item {
-    padding: 12px 18px;
-    font-size: 15px;
-    cursor: pointer;
-    transition: background .2s;
-}
-
-.search-suggest-item:hover {
-    background: #f3f6f9;
-}
-
-/* ================= HISTORY ITEM ================= */
-.search-history-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 18px;
-    font-size: 15px;
-    cursor: pointer;
-    transition: background .2s;
-}
-
-.search-history-item:hover {
-    background: #f3f6f9;
-}
-
-/* bên trái: icon + text */
-.history-left {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    color: #333;
-}
-
-.history-left i {
-    font-size: 16px;
-    color: #9aa0a6;
-}
-
-/* nút X bên phải */
-.history-delete {
-    font-size: 18px;
-    color: #bbb;
-    cursor: pointer;
-    transition: color .2s;
-}
-
-.history-delete:hover {
-    color: #e74c3c;
-}
-
-/* ================= SCROLL BAR (đẹp hơn) ================= */
-.search-suggest-box::-webkit-scrollbar {
-    width: 6px;
-}
-
-.search-suggest-box::-webkit-scrollbar-thumb {
-    background: #ddd;
-    border-radius: 6px;
-}
-
-/* ================= SEARCH RESULT BANNER ================= */
-
 .search-result-banner {
     background: linear-gradient(135deg, #7ec8ea, #9bd6f0);
     border-radius: 18px;
@@ -833,20 +556,137 @@ body {
 }
 
 /* =====================================================
-   FLOATING BUTTON (WISHLIST + CHAT)
+   FOOTER
 ===================================================== */
+.footer-box {
+    background: #e9f6fb;
+    padding: 60px 0 24px;
+}
 
+.footer-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 16px;
+}
+
+.footer-title {
+    font-weight: 700;
+    font-size: 18px;
+    margin-bottom: 12px;
+    color: #2c3e50;
+}
+
+.footer-title-sm {
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #2c3e50;
+}
+
+.footer-desc {
+    font-size: 14px;
+    color: #444;
+    line-height: 1.6;
+}
+
+.footer-info,
+.footer-links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.footer-info li,
+.footer-links li {
+    font-size: 14px;
+    margin-bottom: 8px;
+    color: #555;
+}
+
+.footer-links a {
+    color: #333;
+    text-decoration: none;
+    transition: all .2s ease;
+}
+
+.footer-links a:hover {
+    color: var(--primary);
+    padding-left: 3px;
+}
+
+.footer-social {
+    margin-top: 12px;
+    display: flex;
+    gap: 10px;
+}
+
+.footer-social a {
+    width: 32px;
+    height: 32px;
+    background: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #555;
+    font-size: 14px;
+    transition: all .25s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .08);
+}
+
+.footer-social a:hover {
+    background: var(--primary);
+    color: #fff;
+    transform: translateY(-2px);
+}
+
+.footer-newsletter input {
+    width: 100%;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+}
+
+.footer-newsletter button {
+    width: 100%;
+    border: none;
+    background: var(--primary);
+    color: #fff;
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: .25s;
+}
+
+.footer-newsletter button:hover {
+    background: #5fb6de;
+}
+
+.footer-bottom {
+    border-top: 1px solid #dbe7ec;
+    margin-top: 40px;
+    padding-top: 16px;
+    text-align: center;
+    font-size: 13px;
+    color: #777;
+}
+
+/* =====================================================
+   FLOATING BUTTONS + AI CHAT
+===================================================== */
 .floating-left {
     position: fixed;
     left: 20px;
-    bottom: 25px;
+    bottom: 20px;
     z-index: 9999;
 }
 
 .floating-right {
     position: fixed;
     right: 20px;
-    bottom: 25px;
+    bottom: 20px;
     z-index: 9999;
     display: flex;
     flex-direction: column;
@@ -857,26 +697,122 @@ body {
     width: 55px;
     height: 55px;
     border-radius: 50%;
+    border: none;
+    color: white;
+    font-size: 22px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 22px;
-    color: #fff;
-    border: none;
     cursor: pointer;
     box-shadow: 0 6px 18px rgba(0, 0, 0, .2);
     transition: .25s;
 }
 
-
-/* chat */
-
 .contact-btn {
-    background: #3b82f6;
+    background: #0d6efd;
 }
 
-/* CHAT BOX */
+.ai-btn {
+    background: #7ec8ea;
+}
 
+.chat-badge,
+.cart-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    min-width: 18px;
+    text-align: center;
+}
+
+.chat-badge {
+    background: #dc3545;
+    padding: 3px 6px;
+    border-radius: 50%;
+    line-height: 1;
+}
+
+.cart-badge {
+    top: -6px;
+    right: -8px;
+    background: #dc2626;
+    padding: 2px 6px;
+    border-radius: 999px;
+    line-height: 1.2;
+}
+
+.ai-chat-box {
+    position: fixed;
+    bottom: 90px;
+    left: 20px;
+    width: 360px;
+    height: 550px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+    display: none;
+    flex-direction: column;
+    z-index: 9999;
+}
+
+.ai-header {
+    background: #7ec8ea;
+    color: white;
+    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.ai-body {
+    flex: 1;
+    padding: 10px;
+    overflow-y: auto;
+    font-size: 14px;
+}
+
+.ai-input {
+    display: flex;
+    border-top: 1px solid #eee;
+}
+
+.ai-input input {
+    flex: 1;
+    border: none;
+    padding: 10px;
+    outline: none;
+}
+
+.ai-input button {
+    border: none;
+    background: #7ec8ea;
+    color: white;
+    padding: 10px 15px;
+}
+
+.ai-msg {
+    margin-top: 6px;
+    padding: 6px 8px;
+    background: #f5f7fa;
+    border-radius: 8px;
+}
+
+.ai-msg a {
+    color: #0d6efd;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.ai-msg a:hover {
+    text-decoration: underline;
+}
+
+/* =====================================================
+   CHAT BOX
+===================================================== */
 .chat-box {
     position: fixed;
     right: 90px;
@@ -918,10 +854,6 @@ body {
     background: #e5e7eb;
 }
 
-/* =====================================================
-   CHAT DATE DIVIDER
-===================================================== */
-
 .chat-date {
     text-align: center;
     font-size: 12px;
@@ -948,135 +880,9 @@ body {
     right: 0;
 }
 
-/* ================= CHAT BADGE ================= */
-
-.chat-badge {
-    position: absolute;
-    top: -4px;
-    right: -4px;
-    background: #ef4444;
-    color: #fff;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 2px 6px;
-    border-radius: 999px;
-    min-width: 18px;
-    text-align: center;
-    line-height: 1.2;
-}
-
-.ai-msg {
-    margin-top: 6px;
-    padding: 6px 8px;
-    background: #f5f7fa;
-    border-radius: 6px;
-}
-
-.ai-msg a {
-    color: #0d6efd;
-    text-decoration: none;
-    font-weight: 500;
-}
-
-.ai-msg a:hover {
-    text-decoration: underline;
-}
-
-/* ================= DELETE HISTORY BUTTON ================= */
-
-.delete-history {
-    font-size: 16px;
-    color: #bbb;
-    cursor: pointer;
-    padding-left: 10px;
-    transition: color .2s;
-}
-
-.delete-history:hover {
-    color: #e74c3c;
-}
-
-.voice-btn {
-    border: none;
-    background: transparent;
-    font-size: 18px;
-    color: #666;
-    margin-right: 5px;
-}
-
-.voice-btn:hover {
-    color: #7ec8ea;
-}
-
-/* ==============================
-VOICE POPUP
-============================== */
-
-.voice-popup {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.3);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 2000;
-}
-
-.voice-box {
-    background: white;
-    padding: 25px 35px;
-    border-radius: 12px;
-    text-align: center;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-}
-
-.voice-icon {
-    font-size: 40px;
-    color: #7ec8ea;
-    margin-bottom: 10px;
-    animation: voicePulse 1s infinite;
-}
-
-@keyframes voicePulse {
-    0% {
-        transform: scale(1);
-    }
-
-    50% {
-        transform: scale(1.2);
-    }
-
-    100% {
-        transform: scale(1);
-    }
-}
-
-.voice-text {
-    font-size: 16px;
-    color: #333;
-}
-
-.search-history-item {
-    cursor: pointer;
-    padding: 10px 14px;
-}
-
-.search-history-item:hover {
-    background: #f5f7fa;
-}
-
-.history-row {
-    transition: all .2s ease;
-}
-
-.history-row:hover {
-    background: #f7f9fb;
-}
-
-/* dropdown */
+/* =====================================================
+   NOTIFICATION DROPDOWN
+===================================================== */
 .noti-dropdown {
     width: 480px;
     max-height: 420px;
@@ -1084,7 +890,15 @@ VOICE POPUP
     border-radius: 14px;
 }
 
-/* item */
+.noti-dropdown::-webkit-scrollbar {
+    width: 5px;
+}
+
+.noti-dropdown::-webkit-scrollbar-thumb {
+    background: #ddd;
+    border-radius: 10px;
+}
+
 .noti-item {
     display: flex;
     gap: 10px;
@@ -1093,39 +907,32 @@ VOICE POPUP
     transition: all 0.2s ease;
 }
 
-/* hover */
 .noti-item:hover {
     background: #f5f7fb;
 }
 
-/* 🔥 UNREAD */
 .noti-item.unread {
     background: #eef4ff;
 }
 
-/* icon */
 .noti-icon i {
     font-size: 18px;
 }
 
-/* title */
 .noti-title {
     font-size: 14px;
     font-weight: 500;
 }
 
-/* 🔥 đậm hơn khi chưa đọc */
 .noti-item.unread .noti-title {
     font-weight: 700;
 }
 
-/* message */
 .noti-message {
     font-size: 13px;
     color: #666;
 }
 
-/* time */
 .noti-time {
     font-size: 11px;
     color: #999;
@@ -1140,18 +947,137 @@ VOICE POPUP
     margin-left: 6px;
 }
 
-.noti-dropdown::-webkit-scrollbar {
-    width: 5px;
-}
-
-.noti-dropdown::-webkit-scrollbar-thumb {
-    background: #ddd;
-    border-radius: 10px;
-}
+/* =====================================================
+   MODAL
+===================================================== */
 .modal {
     z-index: 100000 !important;
 }
 
 .modal-backdrop {
     z-index: 99990 !important;
+}
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+@media (max-width: 768px) {
+    .header-inner {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .logo {
+        flex: 1;
+    }
+
+    .header-icons {
+        align-items: center;
+        gap: 12px;
+        margin-left: auto;
+    }
+
+    .search-pill {
+        order: 3;
+        width: 100%;
+    }
+
+    .nav-box {
+        overflow: visible !important;
+        z-index: 1000;
+    }
+
+    .nav-inner {
+        justify-content: flex-start;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: visible;
+        white-space: nowrap;
+        gap: 12px;
+        padding-bottom: 6px;
+    }
+
+    .nav-inner::-webkit-scrollbar {
+        display: none;
+    }
+
+    .nav-inner a,
+    .nav-category-trigger {
+        flex-shrink: 0;
+        font-size: 14px;
+        padding: 6px 10px;
+        white-space: nowrap;
+    }
+
+    .nav-category {
+        position: relative;
+    }
+
+    .mega-menu {
+        position: fixed;
+        top: 110px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 90%;
+        max-width: 750px;
+        z-index: 99999;
+    }
+
+    .home-banner img {
+        height: 260px;
+    }
+
+    .section-title.fancy {
+        font-size: 24px;
+        letter-spacing: 1px;
+        margin-bottom: 24px;
+    }
+
+    .footer-inner {
+        text-align: left;
+    }
+
+    .footer-inner .row>div {
+        width: 50% !important;
+    }
+
+    .footer-inner .row {
+        row-gap: 20px;
+    }
+
+    .footer-title {
+        font-size: 16px;
+    }
+
+    .footer-title-sm {
+        font-size: 14px;
+    }
+
+    .footer-desc,
+    .footer-links li,
+    .footer-info li {
+        font-size: 13px;
+    }
+
+    .footer-social {
+        justify-content: flex-start;
+    }
+
+    .footer-bottom {
+        font-size: 12px;
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .footer-inner .row>div {
+        width: 100% !important;
+    }
+
+    .ai-chat-box {
+        left: 10px;
+        right: 10px;
+        width: auto;
+        height: 500px;
+    }
 }
