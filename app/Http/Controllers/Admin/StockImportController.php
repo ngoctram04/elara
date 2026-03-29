@@ -306,4 +306,32 @@ class StockImportController extends Controller
 
         return $pdf->download('phieu-nhap-' . $code . '.pdf');
     }
+    public function searchSuppliers(Request $request)
+    {
+        $keyword = trim((string) $request->get('q', ''));
+
+        $query = StockImport::query()
+            ->select('supplier', 'supplier_phone', 'supplier_address', DB::raw('MAX(created_at) as latest_created_at'))
+            ->whereNotNull('supplier')
+            ->where('supplier', '!=', '');
+
+        if ($keyword !== '') {
+            $query->where('supplier', 'like', '%' . $keyword . '%');
+        }
+
+        $suppliers = $query
+            ->groupBy('supplier', 'supplier_phone', 'supplier_address')
+            ->orderByDesc('latest_created_at')
+            ->limit(10)
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'supplier' => $item->supplier,
+                    'supplier_phone' => $item->supplier_phone,
+                    'supplier_address' => $item->supplier_address,
+                ];
+            });
+
+        return response()->json($suppliers);
+    }
 }

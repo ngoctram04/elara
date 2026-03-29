@@ -512,6 +512,8 @@ Route::prefix('admin')
             ->name('stock.show');
         Route::get('/stock-import/{code}/pdf', [StockImportController::class, 'exportPdf'])
             ->name('stock.exportPdf');
+    Route::get('/stock-import/suppliers/search', [App\Http\Controllers\Admin\StockImportController::class, 'searchSuppliers'])
+    ->name('stock.suppliers.search');
     /*
 |--------------------------------------------------
 | INVENTORY - QUẢN LÝ KHO
