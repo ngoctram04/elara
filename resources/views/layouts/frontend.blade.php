@@ -331,7 +331,13 @@ elara.shop26@gmail.com
 
 <a href="/chat" class="float-btn contact-btn position-relative">
 
-<i class="bi bi-chat-dots"></i>
+<div class="chat-float">
+    <i class="bi bi-chat-dots"></i>
+
+    <span id="chat-badge" class="chat-badge" style="display:none;">
+        0
+    </span>
+</div>
 
 <span id="chat-badge" class="chat-badge" style="display:none">
 0

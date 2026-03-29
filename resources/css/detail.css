@@ -21,11 +21,20 @@
     display: none;
 }
 
+/* thêm khung bọc để trượt ngang */
+.thumb-slider-wrap {
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+}
+
 .thumb-row {
     display: flex;
     gap: 12px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
+    transition: transform .35s ease;
+    will-change: transform;
 }
 
 .thumb-img {
@@ -85,11 +94,17 @@
     background: #1d4ed8;
 }
 
+.review-section-title,
+.qa-section-title {
+    font-size: 18px;
+    font-weight: 700;
+}
+
 /* ===== INFO ===== */
 .product-title {
-    font-size: 30px;
+    font-size: 20px;
     line-height: 1.45;
-    font-weight: 800;
+    font-weight: 700;
     color: #0f172a;
     margin-bottom: 14px;
 }
@@ -181,14 +196,15 @@
 }
 
 .price-original {
-    font-size: 15px;
+    font-size: 13px;
     color: #64748b;
     text-decoration: line-through;
     margin-bottom: 4px;
+    font-weight: 500;
 }
 
 .price-final {
-    font-size: 38px;
+    font-size: 28px;
     font-weight: 800;
     color: #dc2626;
     line-height: 1.2;
@@ -758,17 +774,23 @@
         flex-direction: column;
     }
 
-    .thumb-row {
-        flex-wrap: nowrap;
+    .thumb-slider-wrap {
         overflow-x: auto;
+        overflow-y: hidden;
         padding-bottom: 4px;
     }
 
-    .thumb-row::-webkit-scrollbar {
+    .thumb-row {
+        flex-wrap: nowrap;
+        min-width: max-content;
+        transform: none !important;
+    }
+
+    .thumb-slider-wrap::-webkit-scrollbar {
         height: 6px;
     }
 
-    .thumb-row::-webkit-scrollbar-thumb {
+    .thumb-slider-wrap::-webkit-scrollbar-thumb {
         background: #cbd5e1;
         border-radius: 999px;
     }
@@ -779,11 +801,11 @@
     }
 
     .product-title {
-        font-size: 24px;
+        font-size: 18px;
     }
 
     .price-final {
-        font-size: 30px;
+        font-size: 24px;
     }
 
     .section-head,
@@ -816,4 +838,55 @@
         width: 72px;
         height: 72px;
     }
+         .main-nav {
+             opacity: 1;
+             visibility: visible;
+             width: 36px;
+             height: 36px;
+         }
+    
+         .main-nav.prev {
+             left: 10px;
+         }
+    
+         .main-nav.next {
+             right: 10px;
+         }
+}
+.main-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(37, 99, 235, 0.85);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    visibility: hidden;
+    transition: 0.25s;
+    z-index: 3;
+}
+
+.main-image-box:hover .main-nav {
+    opacity: 1;
+    visibility: visible;
+}
+
+.main-nav.prev {
+    left: 12px;
+}
+
+.main-nav.next {
+    right: 12px;
+}
+
+.main-nav:hover {
+    background: #1d4ed8;
+    transform: translateY(-50%) scale(1.08);
 }

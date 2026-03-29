@@ -5,12 +5,7 @@
     ['label' => 'Trang chủ', 'url' => url('/')],
     ['label' => 'Chat với nhân viên']
 ]" />
-<div class="container py-4">
-
-<h4 class="mb-3">
-<i class="bi bi-chat-dots me-2"></i>
-Chat với nhân viên
-</h4>
+<div class="container">
 
 <div class="chat-wrapper">
 

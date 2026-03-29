@@ -66,26 +66,37 @@ class ChatController extends Controller
             'user_id' => Auth::id()
         ]);
 
-        $text = $request->message;
+        $createdMessages = [];
 
-        if ($request->hasFile('file')) {
-            $path = $request->file('file')->store('chat', 'public');
-            $text = '/storage/' . $path;
+        // lưu text nếu có
+        if ($request->filled('message')) {
+            $createdMessages[] = ChatMessage::create([
+                'conversation_id' => $conversation->id,
+                'sender_id' => Auth::id(),
+                'message' => trim($request->message),
+                'is_read' => 0,
+            ]);
         }
 
-        if (!$text) {
+        // lưu ảnh nếu có
+        if ($request->hasFile('file')) {
+            $path = $request->file('file')->store('chat', 'public');
+
+            $createdMessages[] = ChatMessage::create([
+                'conversation_id' => $conversation->id,
+                'sender_id' => Auth::id(),
+                'message' => '/storage/' . $path,
+                'is_read' => 0,
+            ]);
+        }
+
+        // nếu không có gì thì báo lỗi
+        if (empty($createdMessages)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Tin nhắn trống',
             ], 422);
         }
-
-        $message = ChatMessage::create([
-            'conversation_id' => $conversation->id,
-            'sender_id' => Auth::id(),
-            'message' => $text,
-            'is_read' => 0,
-        ]);
 
         User::where('role', 'admin')->each(function ($admin) use ($conversation) {
             $admin->notify(new SystemNotification([
@@ -101,15 +112,6 @@ class ChatController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => [
-                'id' => $message->id,
-                'sender_id' => $message->sender_id,
-                'sender_name' => 'Bạn',
-                'message' => $message->message,
-                'time' => $message->created_at->format('H:i'),
-                'date' => $message->created_at->format('d/m/Y'),
-                'created_at' => $message->created_at->format('d/m/Y H:i'),
-            ]
         ]);
     }
 

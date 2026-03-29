@@ -1,5 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
     const mainImg = document.getElementById('main-image');
+    const mainPrev = document.getElementById('main-prev');
+    const mainNext = document.getElementById('main-next');
+
     const qtyInput = document.querySelector('input[name="qty"]');
     const addBtn = document.querySelector('#add-to-cart-form button[type="submit"]');
     const variantIdInput = document.getElementById('variant_id');
@@ -29,6 +32,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const relatedNext = document.getElementById('related-next');
 
     const wishlistButtons = document.querySelectorAll('.btn-wishlist, .btn-wishlist-top');
+
+    const thumbRow = document.getElementById('thumbRow');
+    const thumbWrap = document.querySelector('.thumb-slider-wrap');
 
     function formatPrice(value) {
         const number = Number(value || 0);
@@ -97,13 +103,47 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function scrollThumbToIndex(index) {
+        if (!thumbRow || !thumbWrap) return;
+
+        const thumbs = getThumbs();
+        if (!thumbs.length || !thumbs[index]) return;
+
+        if (window.innerWidth <= 768) {
+            thumbs[index].scrollIntoView({
+                behavior: 'smooth',
+                inline: 'start',
+                block: 'nearest'
+            });
+            return;
+        }
+
+        const thumb = thumbs[index];
+        const thumbWidth = thumb.offsetWidth;
+        const gap = parseInt(window.getComputedStyle(thumbRow).gap, 10) || 12;
+        const itemWidth = thumbWidth + gap;
+
+        const maxTranslate = Math.max(0, thumbRow.scrollWidth - thumbWrap.clientWidth);
+        const targetTranslate = Math.min(index * itemWidth, maxTranslate);
+
+        thumbRow.style.transform = `translateX(-${targetTranslate}px)`;
+    }
+
     function setActiveThumbByImage(imageSrc) {
         const thumbs = getThumbs();
-        thumbs.forEach(img => img.classList.remove('active'));
+        let matchedIndex = -1;
 
-        const matchedThumb = Array.from(thumbs).find(img => img.dataset.image === imageSrc);
-        if (matchedThumb) {
-            matchedThumb.classList.add('active');
+        thumbs.forEach((img, index) => {
+            img.classList.remove('active');
+
+            if (img.dataset.image === imageSrc || img.src === imageSrc) {
+                img.classList.add('active');
+                matchedIndex = index;
+            }
+        });
+
+        if (matchedIndex >= 0) {
+            scrollThumbToIndex(matchedIndex);
         }
     }
 
@@ -111,6 +151,33 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!mainImg || !imageSrc) return;
         mainImg.src = imageSrc;
         setActiveThumbByImage(imageSrc);
+    }
+
+    function getCurrentThumbIndex() {
+        const thumbs = Array.from(getThumbs());
+        return thumbs.findIndex(img => img.classList.contains('active'));
+    }
+
+    function goToThumb(index) {
+        const thumbs = Array.from(getThumbs());
+        if (!thumbs.length) return;
+
+        if (index < 0) index = thumbs.length - 1;
+        if (index >= thumbs.length) index = 0;
+
+        const target = thumbs[index];
+        const imageSrc = target.dataset.image || target.src;
+        const variantId = target.dataset.variant;
+
+        setMainImage(imageSrc);
+        scrollThumbToIndex(index);
+
+        if (variantId) {
+            const variantBtn = document.querySelector(`.variant-btn[data-id="${variantId}"]`);
+            if (variantBtn && !variantBtn.classList.contains('variant-out')) {
+                updateVariantUI(variantBtn);
+            }
+        }
     }
 
     function updateQtyMax(stock) {
@@ -191,32 +258,39 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!mainImg) return;
 
         const activeThumb = document.querySelector('.thumb-img.active');
-        if (activeThumb) return;
+        if (activeThumb) {
+            const thumbs = Array.from(getThumbs());
+            const activeIndex = thumbs.indexOf(activeThumb);
+            if (activeIndex >= 0) {
+                scrollThumbToIndex(activeIndex);
+            }
+            return;
+        }
 
         setActiveThumbByImage(mainImg.src);
     }
 
     function updateWishlistButtons(productId, isFavorited, countText) {
-    wishlistButtons.forEach(btn => {
-        if (String(btn.dataset.productId) !== String(productId)) return;
+        wishlistButtons.forEach(btn => {
+            if (String(btn.dataset.productId) !== String(productId)) return;
 
-        const icon = btn.querySelector('i');
-        const countEl = btn.querySelector('#wishlist-count, .wishlist-count');
-        const span = btn.querySelector('span');
+            const icon = btn.querySelector('i');
+            const countEl = btn.querySelector('#wishlist-count, .wishlist-count');
+            const span = btn.querySelector('span');
 
-        if (icon) {
-            icon.className = `bi ${isFavorited ? 'bi-heart-fill text-danger' : 'bi-heart text-danger'}`;
-        }
+            if (icon) {
+                icon.className = `bi ${isFavorited ? 'bi-heart-fill text-danger' : 'bi-heart text-danger'}`;
+            }
 
-        if (countEl) {
-            countEl.textContent = countText;
-        }
+            if (countEl) {
+                countEl.textContent = countText;
+            }
 
-        if (span && !countEl) {
-            span.textContent = `${isFavorited ? 'Đã thích' : 'Yêu thích'} (${countText})`;
-        }
-    });
-}
+            if (span && !countEl) {
+                span.textContent = `${isFavorited ? 'Đã thích' : 'Yêu thích'} (${countText})`;
+            }
+        });
+    }
 
     function formatWishlistCount(value) {
         const raw = Number(value || 0);
@@ -461,14 +535,18 @@ document.addEventListener('DOMContentLoaded', () => {
         initDefaultThumb();
     }
 
-    getThumbs().forEach(img => {
+    getThumbs().forEach((img, index) => {
         img.addEventListener('click', function () {
             const imageSrc = this.dataset.image;
             const variantId = this.dataset.variant;
 
             if (imageSrc) {
                 setMainImage(imageSrc);
+            } else if (this.src) {
+                setMainImage(this.src);
             }
+
+            scrollThumbToIndex(index);
 
             if (variantId) {
                 const variantBtn = document.querySelector(`.variant-btn[data-id="${variantId}"]`);
@@ -481,11 +559,29 @@ document.addEventListener('DOMContentLoaded', () => {
         img.addEventListener('dblclick', function () {
             if (this.dataset.image) {
                 openImageLightbox(this.dataset.image);
+            } else if (this.src) {
+                openImageLightbox(this.src);
             }
         });
     });
 
     initDefaultThumb();
+
+    if (mainPrev) {
+        mainPrev.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const currentIndex = getCurrentThumbIndex();
+            goToThumb(currentIndex - 1);
+        });
+    }
+
+    if (mainNext) {
+        mainNext.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const currentIndex = getCurrentThumbIndex();
+            goToThumb(currentIndex + 1);
+        });
+    }
 
     if (zoomMainImageBtn && mainImg) {
         zoomMainImageBtn.addEventListener('click', () => {
@@ -684,11 +780,11 @@ document.addEventListener('DOMContentLoaded', () => {
         loop: false
     });
 
-    initHorizontalSlider({
+    initVerticalSlider({
         slider: relatedSlider,
         prevBtn: relatedPrev,
         nextBtn: relatedNext,
-        slideSelector: '.related-slide-full',
+        slideSelector: '.related-vertical-slide',
         gapFallback: 18,
         autoInterval: 3000,
         loop: true
@@ -709,6 +805,33 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
             closeLightbox();
+        }
+
+        if (e.key === 'ArrowLeft') {
+            const currentIndex = getCurrentThumbIndex();
+            goToThumb(currentIndex - 1);
+        }
+
+        if (e.key === 'ArrowRight') {
+            const currentIndex = getCurrentThumbIndex();
+            goToThumb(currentIndex + 1);
+        }
+    });
+
+    window.addEventListener('resize', () => {
+        if (window.innerWidth <= 768) {
+            if (thumbRow) {
+                thumbRow.style.transform = 'none';
+            }
+        } else {
+            const activeThumb = document.querySelector('.thumb-img.active');
+            if (activeThumb) {
+                const thumbs = Array.from(getThumbs());
+                const activeIndex = thumbs.indexOf(activeThumb);
+                if (activeIndex >= 0) {
+                    scrollThumbToIndex(activeIndex);
+                }
+            }
         }
     });
 });

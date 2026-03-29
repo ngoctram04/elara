@@ -327,3 +327,26 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 });
+function loadUnreadChat() {
+    fetch('/chat/unread-count')
+        .then(res => res.json())
+        .then(data => {
+            const badge = document.getElementById('chat-badge');
+
+            if (!badge) return;
+
+            if (data.count > 0) {
+                badge.innerText = data.count;
+                badge.style.display = 'block';
+            } else {
+                badge.style.display = 'none';
+            }
+        })
+        .catch(() => {});
+}
+
+// load lần đầu
+loadUnreadChat();
+
+// auto refresh mỗi 3s
+setInterval(loadUnreadChat, 3000);

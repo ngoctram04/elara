@@ -34,44 +34,70 @@
 
         {{-- ===== LEFT: GALLERY ===== --}}
         <div class="gallery-area">
-            <div class="gallery-grid single-column">
+    <div class="gallery-grid single-column">
 
-                <div class="main-image-box">
-                    <img id="main-image"
-                         src="{{ $defaultVariant?->images->first()
-                                ? asset('storage/'.$defaultVariant->images->first()->image_path)
-                                : ($product->mainImage
-                                    ? asset('storage/'.$product->mainImage->image_path)
-                                    : asset('images/no-image.png')) }}"
-                         class="main-product-image"
+        @php
+            $defaultMainImage = $defaultVariant?->images->first()
+                ? asset('storage/' . $defaultVariant->images->first()->image_path)
+                : ($product->mainImage
+                    ? asset('storage/' . $product->mainImage->image_path)
+                    : asset('images/no-image.png'));
+
+            $galleryThumbs = collect();
+
+            foreach ($product->images as $img) {
+                $galleryThumbs->push([
+                    'src' => asset('storage/' . $img->image_path),
+                    'variant_id' => null,
+                ]);
+            }
+
+            foreach ($product->variants as $variant) {
+                foreach ($variant->images as $vImg) {
+                    $galleryThumbs->push([
+                        'src' => asset('storage/' . $vImg->image_path),
+                        'variant_id' => $variant->id,
+                    ]);
+                }
+            }
+
+            if ($galleryThumbs->isEmpty()) {
+                $galleryThumbs->push([
+                    'src' => asset('images/no-image.png'),
+                    'variant_id' => null,
+                ]);
+            }
+        @endphp
+
+        <div class="main-image-box">
+            <img id="main-image"
+                 src="{{ $defaultMainImage }}"
+                 class="main-product-image"
+                 alt="{{ $product->name }}">
+
+            <button type="button" class="main-nav prev" id="main-prev">
+                <i class="bi bi-chevron-left"></i>
+            </button>
+
+            <button type="button" class="main-nav next" id="main-next">
+                <i class="bi bi-chevron-right"></i>
+            </button>
+        </div>
+
+        <div class="thumb-slider-wrap">
+            <div class="thumb-row" id="thumbRow">
+                @foreach($galleryThumbs as $thumb)
+                    <img src="{{ $thumb['src'] }}"
+                         class="thumb-img {{ $thumb['src'] === $defaultMainImage ? 'active' : '' }}"
+                         data-image="{{ $thumb['src'] }}"
+                         @if($thumb['variant_id']) data-variant="{{ $thumb['variant_id'] }}" @endif
                          alt="{{ $product->name }}">
-
-                    <button type="button" class="zoom-image-btn" id="zoom-main-image">
-                        <i class="bi bi-zoom-in"></i> Xem ảnh lớn
-                    </button>
-                </div>
-
-                <div class="thumb-row">
-                    @foreach($product->images as $img)
-                        <img src="{{ asset('storage/'.$img->image_path) }}"
-                             class="thumb-img"
-                             data-image="{{ asset('storage/'.$img->image_path) }}"
-                             alt="{{ $product->name }}">
-                    @endforeach
-
-                    @foreach($product->variants as $variant)
-                        @foreach($variant->images as $vImg)
-                            <img src="{{ asset('storage/'.$vImg->image_path) }}"
-                                 class="thumb-img"
-                                 data-image="{{ asset('storage/'.$vImg->image_path) }}"
-                                 data-variant="{{ $variant->id }}"
-                                 alt="{{ $product->name }}">
-                        @endforeach
-                    @endforeach
-                </div>
-
+                @endforeach
             </div>
         </div>
+
+    </div>
+</div>
 
         {{-- ===== RIGHT: INFO ===== --}}
         <div class="product-info-area">
@@ -236,8 +262,7 @@
             <div class="detail-tab-panel" id="tab-reviews">
                 <div class="content-card">
 
-                    <h5 class="section-title mb-3">Đánh giá sản phẩm ({{ $reviewCount }})</h5>
-
+                    <h5 class="section-title review-section-title mb-3">Đánh giá sản phẩm ({{ $reviewCount }})</h5>
                     <div class="review-summary-box">
                         <div class="review-score-big">
                             {{ number_format($avgRating, 1) }}/5
