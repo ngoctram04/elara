@@ -7,6 +7,7 @@
 @endpush
 
 @section('content')
+<div class="page-wrapper home-page">
 
     {{-- ================= BANNER ================= --}}
     <section class="home-banner mb-4">
@@ -46,17 +47,15 @@
         </div>
     </section>
 
-    {{-- ================= SERVICE ================= --}}
-    
 
     {{-- ================= FLASH SALE ================= --}}
-    @if($flashSaleProducts->count())
-        <section class="flash-sale-section mb-4"
+    @if(isset($flashSaleProducts) && $flashSaleProducts->count())
+        <section class="flash-sale-section home-block mb-5"
                  data-countdown-end="{{ now()->addDays(2)->addHours(15)->format('Y-m-d H:i:s') }}">
 
-            <div class="flash-sale-header">
-                <div class="flash-sale-left">
-                    <h2 class="flash-sale-title">FLASH SALE</h2>
+            <div class="section-head flash-sale-head">
+                <div class="section-head-left">
+                    <h2 class="section-title mb-0">FLASH SALE</h2>
 
                     <div class="flash-sale-countdown">
                         <span class="countdown-label">Thời gian còn lại</span>
@@ -74,19 +73,19 @@
                     </div>
                 </div>
 
-                <a href="{{ route('shop', ['sort' => 'newest']) }}" class="flash-sale-more">
-                    Xem thêm
+                <a href="{{ route('shop', ['sort' => 'discount']) }}" class="section-more-link">
+                    Xem thêm >>
                 </a>
             </div>
 
-            <div class="swiper flash-sale-swiper">
+            <div class="swiper flash-sale-swiper product-swiper">
                 <div class="swiper-wrapper">
                     @foreach($flashSaleProducts as $product)
                         <div class="swiper-slide">
                             @include('frontend.partials.product-card-flash', [
-    'product' => $product,
-    'favorites' => $favorites ?? []
-])
+                                'product' => $product,
+                                'favorites' => $favorites ?? []
+                            ])
                         </div>
                     @endforeach
                 </div>
@@ -97,12 +96,48 @@
         </section>
     @endif
 
-    {{-- ================= FEATURED ================= --}}
-    @if($featuredProducts->count())
-        <section class="home-section mb-4">
-            <h2 class="section-title fancy">SẢN PHẨM NỔI BẬT</h2>
 
-            <div class="swiper featured-slider">
+    {{-- ================= BRANDS ================= --}}
+    @if(isset($brands) && $brands->count())
+        <section class="home-section brand-section mb-5">
+            <div class="section-head">
+                <h2 class="section-title mb-0">THƯƠNG HIỆU NỔI BẬT</h2>
+            </div>
+
+            <div class="swiper brand-slider small-slider">
+                <div class="swiper-wrapper">
+                    @foreach($brands as $brand)
+                        <div class="swiper-slide">
+                            <a href="{{ route('shop', ['brand' => $brand->id]) }}" class="brand-card">
+                                <div class="brand-card-inner">
+                                    <img
+                                        src="{{ $brand->image ? asset('storage/' . $brand->image) : asset('images/no-image.png') }}"
+                                        alt="{{ $brand->name }}"
+                                    >
+                                </div>
+                            </a>
+                        </div>
+                    @endforeach
+                </div>
+
+                <div class="swiper-button-prev brand-prev"></div>
+                <div class="swiper-button-next brand-next"></div>
+            </div>
+        </section>
+    @endif
+
+
+    {{-- ================= FEATURED PRODUCTS ================= --}}
+    @if(isset($featuredProducts) && $featuredProducts->count())
+        <section class="home-section mb-5">
+            <div class="section-head">
+                <h2 class="section-title mb-0">SẢN PHẨM NỔI BẬT</h2>
+                <a href="{{ route('shop', ['sort' => 'featured']) }}" class="section-more-link">
+                    Xem thêm
+                </a>
+            </div>
+
+            <div class="swiper featured-slider product-swiper">
                 <div class="swiper-wrapper">
                     @foreach($featuredProducts as $product)
                         <div class="swiper-slide">
@@ -120,12 +155,60 @@
         </section>
     @endif
 
-    {{-- ================= LATEST ================= --}}
-    @if($latestProducts->count())
-        <section class="home-section mb-4">
-            <h2 class="section-title fancy">SẢN PHẨM MỚI</h2>
 
-            <div class="swiper latest-slider">
+    {{-- ================= CATEGORIES ================= --}}
+    @if(isset($categories) && $categories->count())
+        <section class="home-section category-section mb-5">
+            <div class="section-head">
+                <h2 class="section-title mb-0">DANH MỤC NỔI BẬT</h2>
+            </div>
+
+            <div class="swiper category-slider small-slider">
+                <div class="swiper-wrapper">
+                    @foreach($categories as $category)
+                        <div class="swiper-slide">
+                            <a href="{{ route('shop', ['category' => $category->id]) }}" class="category-card">
+                                <div class="category-card-inner">
+                                    <div class="category-thumb">
+                                        @if(!empty($category->image))
+                                            <img
+                                                src="{{ asset('storage/' . $category->image) }}"
+                                                alt="{{ $category->name }}"
+                                            >
+                                        @else
+                                            <div class="category-thumb-placeholder">
+                                                <i class="bi bi-grid"></i>
+                                            </div>
+                                        @endif
+                                    </div>
+
+                                    <div class="category-name">
+                                        {{ $category->name }}
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                    @endforeach
+                </div>
+
+                <div class="swiper-button-prev category-prev"></div>
+                <div class="swiper-button-next category-next"></div>
+            </div>
+        </section>
+    @endif
+
+
+    {{-- ================= LATEST PRODUCTS ================= --}}
+    @if(isset($latestProducts) && $latestProducts->count())
+        <section class="home-section mb-5">
+            <div class="section-head">
+                <h2 class="section-title mb-0">SẢN PHẨM MỚI</h2>
+                <a href="{{ route('shop', ['sort' => 'newest']) }}" class="section-more-link">
+                    Xem thêm
+                </a>
+            </div>
+
+            <div class="swiper latest-slider product-swiper">
                 <div class="swiper-wrapper">
                     @foreach($latestProducts as $product)
                         <div class="swiper-slide">
@@ -143,8 +226,114 @@
         </section>
     @endif
 
+
+    {{-- ================= BLOG ================= --}}
+    @if(isset($blogs) && $blogs->count())
+        @php
+            $mainBlog = $blogs->first();
+            $sideBlogs = $blogs->skip(1)->take(4);
+        @endphp
+
+        <section class="home-blog-section mb-4">
+            <div class="section-head">
+                <h2 class="section-title mb-0">BLOG LÀM ĐẸP</h2>
+
+                @if(Route::has('blogs.index'))
+                    <a href="{{ route('blogs.index') }}" class="section-more-link">Xem thêm</a>
+                @endif
+            </div>
+
+            <div class="row g-4 blog-layout">
+                @if($mainBlog)
+                    <div class="col-lg-7">
+                        <article class="blog-feature-card">
+                            <a href="{{ Route::has('blogs.show') ? route('blogs.show', $mainBlog->slug ?? $mainBlog->id) : '#' }}"
+                               class="blog-feature-image">
+                                <img
+                                    src="{{ !empty($mainBlog->image) ? asset('storage/' . $mainBlog->image) : asset('images/no-image.png') }}"
+                                    alt="{{ $mainBlog->title }}"
+                                >
+                            </a>
+
+                            <div class="blog-feature-content">
+                                <h3 class="blog-feature-title">
+                                    <a href="{{ Route::has('blogs.show') ? route('blogs.show', $mainBlog->slug ?? $mainBlog->id) : '#' }}">
+                                        {{ $mainBlog->title }}
+                                    </a>
+                                </h3>
+
+                                <div class="blog-meta">
+                                    <span>
+                                        <i class="bi bi-calendar3"></i>
+                                        {{ optional($mainBlog->published_at ?? $mainBlog->created_at)->format('d.m.Y') }}
+                                    </span>
+                                    <span>/</span>
+                                    <span>
+                                        <i class="bi bi-person"></i>
+                                        {{ $mainBlog->author->name ?? 'ELARA Cosmetics' }}
+                                    </span>
+                                </div>
+
+                                <p class="blog-excerpt">
+                                    {{ \Illuminate\Support\Str::limit(strip_tags($mainBlog->excerpt ?? $mainBlog->content), 220) }}
+                                </p>
+
+                                <a href="{{ Route::has('blogs.show') ? route('blogs.show', $mainBlog->slug ?? $mainBlog->id) : '#' }}"
+                                   class="blog-read-more">
+                                    Đọc tiếp
+                                </a>
+                            </div>
+                        </article>
+                    </div>
+                @endif
+
+                <div class="col-lg-5">
+                    <div class="blog-side-list">
+                        @foreach($sideBlogs as $blog)
+                            <article class="blog-side-item">
+                                <a href="{{ Route::has('blogs.show') ? route('blogs.show', $blog->slug ?? $blog->id) : '#' }}"
+                                   class="blog-side-thumb">
+                                    <img
+                                        src="{{ !empty($blog->image) ? asset('storage/' . $blog->image) : asset('images/no-image.png') }}"
+                                        alt="{{ $blog->title }}"
+                                    >
+                                </a>
+
+                                <div class="blog-side-content">
+                                    <h4 class="blog-side-title">
+                                        <a href="{{ Route::has('blogs.show') ? route('blogs.show', $blog->slug ?? $blog->id) : '#' }}">
+                                            {{ $blog->title }}
+                                        </a>
+                                    </h4>
+
+                                    <div class="blog-meta">
+                                        <span>
+                                            <i class="bi bi-calendar3"></i>
+                                            {{ optional($blog->published_at ?? $blog->created_at)->format('d.m.Y') }}
+                                        </span>
+                                        <span>/</span>
+                                        <span>
+                                            <i class="bi bi-person"></i>
+                                            {{ $blog->author->name ?? 'ELARA Cosmetics' }}
+                                        </span>
+                                    </div>
+
+                                    <p class="blog-side-excerpt">
+                                        {{ \Illuminate\Support\Str::limit(strip_tags($blog->excerpt ?? $blog->content), 120) }}
+                                    </p>
+                                </div>
+                            </article>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        </section>
+    @endif
+
+</div>
 @endsection
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+@vite('resources/js/home.js')
 @endpush

@@ -1,14 +1,31 @@
 @php
     $addVariant = $product->variants->first(fn ($v) => $v->stock_quantity > 0);
 
-    $priceVariant = $product->variants
+    $saleVariant = $product->variants
+        ->filter(function ($v) {
+            $final = $v->final_price ?? $v->price;
+            $original = $v->original_price ?? $v->price;
+
+            return $v->is_on_sale || ($original > $final);
+        })
         ->sortBy(fn ($v) => $v->final_price ?? $v->price)
         ->first();
 
-    $saleVariant = $product->variants->first(fn ($v) => $v->is_on_sale);
+    $priceVariant = $saleVariant
+        ?? $product->variants->sortBy(fn ($v) => $v->final_price ?? $v->price)->first();
+
+    $finalPrice = $priceVariant->final_price ?? $priceVariant->price;
+    $oldPrice = null;
+
+    if ($priceVariant) {
+        if (!empty($priceVariant->original_price) && $priceVariant->original_price > $finalPrice) {
+            $oldPrice = $priceVariant->original_price;
+        } elseif (!empty($priceVariant->price) && $priceVariant->price > $finalPrice) {
+            $oldPrice = $priceVariant->price;
+        }
+    }
 
     $outOfStock = !$addVariant;
-
     $isFavorited = in_array($product->id, $favorites ?? []);
 @endphp
 
@@ -93,20 +110,24 @@
                         @endfor
                         <small>({{ $avg }})</small>
                     </span>
+                @else
+                    <span class="rating-stars rating-empty">
+                        <small>Chưa có đánh giá</small>
+                    </span>
                 @endif
 
                 <span class="fs-sold">Đã bán {{ $product->total_sold }}</span>
             </div>
 
             <div class="fs-price">
-                @if ($priceVariant->is_on_sale && $priceVariant->original_price)
+                @if ($oldPrice)
                     <span class="old">
-                        {{ number_format($priceVariant->original_price, 0, ',', '.') }}đ
+                        {{ number_format($oldPrice, 0, ',', '.') }}đ
                     </span>
                 @endif
 
                 <span class="new">
-                    {{ number_format($priceVariant->final_price ?? $priceVariant->price, 0, ',', '.') }}đ
+                    {{ number_format($finalPrice, 0, ',', '.') }}đ
                 </span>
             </div>
         </div>

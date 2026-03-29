@@ -1,17 +1,21 @@
 @php
-$addVariant = $product->variants
-    ->first(fn ($v) => $v->stock_quantity > 0);
+$variants = $product->variants ?? collect();
 
-$priceVariant = $product->variants
+$addVariant = $variants->first(fn ($v) => $v->stock_quantity > 0);
+
+$priceVariant = $variants
     ->sortBy(fn ($v) => $v->final_price ?? $v->price)
     ->first();
 
-$saleVariant = $product->variants
-    ->first(fn ($v) => $v->is_on_sale);
+$saleVariant = $variants->first(fn ($v) => $v->is_on_sale);
 
 $outOfStock = !$addVariant;
 
 $isFavorited = in_array($product->id, $favorites ?? []);
+
+$originalPrice = $priceVariant?->original_price ?: $priceVariant?->price;
+$finalPrice = $priceVariant?->final_price ?? $priceVariant?->price;
+$hasSalePrice = $priceVariant && $priceVariant->is_on_sale && $originalPrice > $finalPrice;
 @endphp
 
 @if ($priceVariant)
@@ -85,8 +89,7 @@ $isFavorited = in_array($product->id, $favorites ?? []);
             </div>
 
             <div class="fs-meta">
-
-                @if ($product->reviews_count > 0)
+                @if (($product->reviews_count ?? 0) > 0)
                     @php
                         $avg = round($product->reviews_avg_rating, 1);
                         $full = floor($avg);
@@ -106,21 +109,27 @@ $isFavorited = in_array($product->id, $favorites ?? []);
 
                         <small>({{ $avg }})</small>
                     </span>
+                @else
+                    <span class="no-rating">Chưa đánh giá</span>
                 @endif
 
                 <span>Đã bán {{ $product->total_sold }}</span>
             </div>
 
             <div class="fs-price">
-                @if ($priceVariant->is_on_sale && $priceVariant->original_price)
+                @if ($hasSalePrice)
+                    <span class="new">
+                        {{ number_format($finalPrice, 0, ',', '.') }}đ
+                    </span>
+
                     <span class="old">
-                        {{ number_format($priceVariant->original_price, 0, ',', '.') }}đ
+                        {{ number_format($originalPrice, 0, ',', '.') }}đ
+                    </span>
+                @else
+                    <span class="new">
+                        {{ number_format($finalPrice, 0, ',', '.') }}đ
                     </span>
                 @endif
-
-                <span class="new">
-                    {{ number_format($priceVariant->final_price ?? $priceVariant->price, 0, ',', '.') }}đ
-                </span>
             </div>
 
         </div>
@@ -130,8 +139,6 @@ $isFavorited = in_array($product->id, $favorites ?? []);
 
 @endif
 
-
-{{-- ================= STYLE ================= --}}
 <style>
 .product-item {
     width: 250px;
@@ -161,6 +168,13 @@ $isFavorited = in_array($product->id, $favorites ?? []);
 
 .rating-stars i {
     font-size: 14px;
+    margin-right: 1px;
+}
+
+.no-rating{
+    font-size:13px;
+    color:#6b7280;
+    font-weight:500;
 }
 
 .wishlist-btn {
@@ -172,9 +186,19 @@ $isFavorited = in_array($product->id, $favorites ?? []);
     border-radius: 50%;
     background: #fff;
     border: none;
+    box-shadow:0 3px 8px rgba(0,0,0,0.15);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    z-index:20;
+    transition:.2s;
 }
 
-/* HẾT HÀNG */
+.wishlist-btn:hover{
+    transform:scale(1.1);
+}
+
 [data-out-stock="1"]{
     opacity: 0.6;
     cursor: not-allowed;
@@ -183,12 +207,31 @@ $isFavorited = in_array($product->id, $favorites ?? []);
 .fs-image:has([data-out-stock="1"]) img {
     filter: grayscale(30%);
 }
+
+.fs-price{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-top:6px;
+}
+
+.fs-price .new{
+    font-size:18px;
+    font-weight:700;
+    color:#dc3545;
+    line-height:1;
+}
+
+.fs-price .old{
+    font-size:14px;
+    color:#9ca3af;
+    text-decoration:line-through;
+    line-height:1;
+}
 </style>
 
-
-{{-- ================= SCRIPT ================= --}}
 <script>
-// toast
 function showToast(message){
     const toast = document.createElement('div');
     toast.innerText = message;
@@ -209,17 +252,20 @@ function showToast(message){
     setTimeout(() => toast.remove(), 2000);
 }
 
-// click
-document.querySelectorAll('.btn-add-to-cart, .btn-buy-now').forEach(btn => {
-    btn.addEventListener('click', function(e){
-
-        if(this.dataset.outStock == "1"){
+document.addEventListener('click', function(e){
+    const btn = e.target.closest('.btn-add-to-cart, .btn-buy-now');
+    if(btn){
+        if(btn.dataset.outStock == "1"){
             e.preventDefault();
+            e.stopPropagation();
             showToast('Sản phẩm đã hết hàng!');
             return;
         }
+    }
 
-        console.log('OK');
-    });
+    const card = e.target.closest('.js-card');
+    if(card && !e.target.closest('button')){
+        window.location.href = card.dataset.href;
+    }
 });
 </script>

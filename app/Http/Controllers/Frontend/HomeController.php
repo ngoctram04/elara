@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Frontend;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Category;
+use App\Models\Brand;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 
@@ -13,24 +14,32 @@ class HomeController extends Controller
     public function index()
     {
         /* =====================================================
-            🔒 Nếu là ADMIN → chuyển về admin dashboard
+            🔒 ADMIN → dashboard
         ===================================================== */
         if (Auth::check() && Auth::user()->role === 'admin') {
-            // Route admin chính của bạn
             return redirect()->route('admin.reports.index');
         }
 
         $now = Carbon::now();
 
         /* ===============================
-            DANH MỤC
+            DANH MỤC NHỎ (CÓ ẢNH)
         =============================== */
-        $categories = Category::whereNull('parent_id')
+        $categories = Category::with('parent')
+            ->whereNotNull('parent_id')
+            ->whereNotNull('image')
             ->orderBy('name')
             ->get();
 
         /* ===============================
-            ⭐ SẢN PHẨM NỔI BẬT
+            THƯƠNG HIỆU
+        =============================== */
+        $brands = Brand::whereNotNull('image')
+            ->orderBy('name')
+            ->get();
+
+        /* ===============================
+            SẢN PHẨM NỔI BẬT
         =============================== */
         $featuredProducts = Product::with(['mainImage', 'brand'])
             ->withAvg('reviews', 'rating')
@@ -42,18 +51,18 @@ class HomeController extends Controller
             ->get();
 
         /* ===============================
-            🆕 SẢN PHẨM MỚI
+            SẢN PHẨM MỚI
         =============================== */
         $latestProducts = Product::with(['mainImage', 'brand'])
             ->withAvg('reviews', 'rating')
             ->withCount('reviews')
             ->where('is_active', true)
-            ->orderByDesc('created_at')
+            ->latest()
             ->take(8)
             ->get();
 
         /* ===============================
-            🔥 FLASH SALE
+            FLASH SALE
         =============================== */
         $flashSaleProducts = Product::with([
             'mainImage',
@@ -75,13 +84,24 @@ class HomeController extends Controller
             ->get();
 
         /* ===============================
+            BLOG (AN TOÀN - KHÔNG LỖI)
+        =============================== */
+        $blogs = collect();
+
+        if (class_exists(\App\Models\Blog::class)) {
+            $blogs = \App\Models\Blog::latest()->take(5)->get();
+        }
+
+        /* ===============================
             VIEW
         =============================== */
         return view('frontend.home', compact(
             'categories',
+            'brands',
             'featuredProducts',
             'latestProducts',
-            'flashSaleProducts'
+            'flashSaleProducts',
+            'blogs'
         ));
     }
 }

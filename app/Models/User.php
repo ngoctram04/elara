@@ -178,4 +178,5 @@ class User extends Authenticatable implements MustVerifyEmail
             'membership_year' => now()->year,
         ])->save();
     }
+    
 }
