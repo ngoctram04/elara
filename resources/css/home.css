@@ -1,0 +1,296 @@
+/* ===============================
+   HOME PAGE WIDTH
+=============================== */
+.page-wrapper {
+    max-width: 1380px;
+    margin: 24px auto;
+    padding: 0 20px;
+}
+
+/* ===============================
+   HOME BANNER
+=============================== */
+.home-banner .carousel {
+    border-radius: 26px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.08);
+}
+
+.home-banner .carousel-inner {
+    border-radius: 26px;
+}
+
+.home-banner .carousel-item img {
+    width: 100%;
+    height: 500px;
+    object-fit: cover;
+    display: block;
+}
+
+.home-banner .carousel-fade .carousel-item {
+    opacity: 0;
+    transition: opacity 1.1s ease-in-out;
+}
+
+.home-banner .carousel-fade .carousel-item.active {
+    opacity: 1;
+}
+
+.home-banner .carousel-control-prev,
+.home-banner .carousel-control-next {
+    width: 54px;
+    height: 54px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: 50%;
+    opacity: 0;
+    transition: all 0.25s ease;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.home-banner .carousel-control-prev {
+    left: 18px;
+}
+
+.home-banner .carousel-control-next {
+    right: 18px;
+}
+
+.home-banner:hover .carousel-control-prev,
+.home-banner:hover .carousel-control-next {
+    opacity: 1;
+}
+
+.home-banner .carousel-control-prev:hover,
+.home-banner .carousel-control-next:hover {
+    background: #fff;
+    transform: translateY(-50%) scale(1.05);
+}
+
+.home-banner .carousel-control-prev-icon,
+.home-banner .carousel-control-next-icon {
+    filter: invert(1) grayscale(1);
+    transform: scale(0.8);
+}
+
+/* ===============================
+   SERVICE SECTION
+=============================== */
+.home-services .service-item {
+    min-height: 120px;
+}
+
+/* ===============================
+   SECTION TITLE
+=============================== */
+.home-section {
+    margin-top: 8px;
+}
+
+.home-section .section-title {
+    margin-bottom: 18px;
+}
+
+/* ===============================
+   FLASH SALE SECTION WRAPPER
+=============================== */
+.flash-sale-section {
+    background: linear-gradient(135deg, #2f5d95 0%, #3f77b6 55%, #5fa8d3 100%);
+    border-radius: 26px;
+    padding: 20px 18px 22px;
+    overflow: hidden;
+    box-shadow: 0 14px 34px rgba(33, 82, 136, 0.18);
+}
+
+.flash-sale-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 18px;
+}
+
+.flash-sale-left {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    flex-wrap: wrap;
+}
+
+.flash-sale-title {
+    margin: 0;
+    color: #fff;
+    font-size: 38px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    line-height: 1;
+}
+
+.flash-sale-countdown {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.countdown-label {
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 15px;
+    font-weight: 500;
+    margin-right: 6px;
+}
+
+.countdown-box {
+    min-width: 74px;
+    height: 38px;
+    padding: 0 12px;
+    border-radius: 14px;
+    background: #ffd54f;
+    color: #153b68;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 14px;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+}
+
+.countdown-sep {
+    color: #fff;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.flash-sale-more {
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: 0.2s ease;
+}
+
+.flash-sale-more:hover {
+    color: #dff2ff;
+}
+
+/* ===============================
+   FLASH SALE SWIPER
+=============================== */
+.flash-sale-swiper {
+    overflow: hidden;
+}
+
+.flash-sale-swiper .swiper-slide {
+    width: auto !important;
+}
+
+/* ===============================
+   FEATURED + LATEST SWIPER
+=============================== */
+.home-section .swiper {
+    padding: 10px 4px;
+}
+
+.home-section .swiper-slide {
+    width: auto !important;
+}
+
+/* ===============================
+   SHARED SWIPER NAVIGATION
+=============================== */
+.flash-sale-section .swiper-button-prev,
+.flash-sale-section .swiper-button-next,
+.home-section .swiper-button-prev,
+.home-section .swiper-button-next {
+    width: 44px;
+    height: 44px;
+    background: rgba(255, 255, 255, 0.94);
+    border-radius: 50%;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.14);
+    transition: 0.2s ease;
+}
+
+.flash-sale-section .swiper-button-prev:hover,
+.flash-sale-section .swiper-button-next:hover,
+.home-section .swiper-button-prev:hover,
+.home-section .swiper-button-next:hover {
+    transform: scale(1.06);
+    background: #fff;
+}
+
+.flash-sale-section .swiper-button-prev::after,
+.flash-sale-section .swiper-button-next::after,
+.home-section .swiper-button-prev::after,
+.home-section .swiper-button-next::after {
+    font-size: 16px;
+    font-weight: 800;
+    color: #2f5d95;
+}
+
+/* ===============================
+   RESPONSIVE
+=============================== */
+@media (max-width: 991px) {
+    .home-banner .carousel-item img {
+        height: 380px;
+    }
+
+    .flash-sale-title {
+        font-size: 30px;
+    }
+}
+
+@media (max-width: 768px) {
+    .page-wrapper {
+        padding: 0 14px;
+    }
+
+    .home-banner .carousel {
+        border-radius: 18px;
+    }
+
+    .home-banner .carousel-item img {
+        height: 250px;
+    }
+
+    .home-banner .carousel-control-prev,
+    .home-banner .carousel-control-next {
+        width: 42px;
+        height: 42px;
+    }
+
+    .flash-sale-section {
+        padding: 16px 14px 18px;
+        border-radius: 20px;
+    }
+
+    .flash-sale-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .flash-sale-left {
+        gap: 14px;
+    }
+
+    .flash-sale-title {
+        font-size: 26px;
+    }
+
+    .countdown-box {
+        min-width: 64px;
+        height: 34px;
+        font-size: 12px;
+        border-radius: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .home-banner .carousel-item img {
+        height: 190px;
+    }
+}

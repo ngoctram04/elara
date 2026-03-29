@@ -14,12 +14,14 @@
 @vite(['resources/js/app.js'])
 
 @vite([
+    'resources/js/app.js',
     'resources/css/app.css',
     'resources/css/category.css',
     'resources/css/product.css',
     'resources/css/flash-sale.css',
     'resources/css/profile.css',
-    'resources/css/frontend.css', 
+    'resources/css/frontend.css',
+    'resources/css/home.css',
 ])
 
 

@@ -36,11 +36,9 @@
             <div class="col-md-3">
                 <select name="sort" class="form-select form-select-sm">
                     <option value="">Sắp xếp</option>
-
                     <option value="newest" {{ request('sort') === 'newest' ? 'selected' : '' }}>
                         Mới nhất
                     </option>
-
                     <option value="oldest" {{ request('sort') === 'oldest' ? 'selected' : '' }}>
                         Cũ nhất
                     </option>
@@ -64,7 +62,8 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th width="80" class="text-center text-muted">Mã</th>
+                        <th width="100" class="text-center text-muted">Mã</th>
+                        <th width="100" class="text-center">Ảnh</th>
                         <th>Tên danh mục nhỏ</th>
                         <th width="120" class="text-center">Sản phẩm</th>
                         <th width="180" class="text-center">Ngày tạo</th>
@@ -75,29 +74,38 @@
                 <tbody>
                     @forelse ($children as $child)
                         <tr>
-                            {{-- MÃ --}}
                             <td class="text-center text-muted fw-semibold">
                                 DMC{{ str_pad($child->id, 4, '0', STR_PAD_LEFT) }}
                             </td>
 
-                            {{-- TÊN --}}
+                            <td class="text-center">
+                                @if($child->image)
+                                    <img src="{{ asset('storage/' . $child->image) }}"
+                                         alt="{{ $child->name }}"
+                                         class="rounded border"
+                                         style="width:56px;height:56px;object-fit:contain;background:#fff;">
+                                @else
+                                    <div class="d-inline-flex align-items-center justify-content-center rounded border bg-light text-muted"
+                                         style="width:56px;height:56px;font-size:12px;">
+                                        No img
+                                    </div>
+                                @endif
+                            </td>
+
                             <td class="fw-medium">
                                 {{ $child->name }}
                             </td>
 
-                            {{-- SỐ SẢN PHẨM --}}
                             <td class="text-center fw-semibold">
                                 <span class="badge {{ $child->products_count > 0 ? 'bg-primary' : 'bg-secondary' }}">
                                     {{ $child->products_count }}
                                 </span>
                             </td>
 
-                            {{-- NGÀY TẠO --}}
                             <td class="text-center text-muted">
                                 {{ optional($child->created_at)->format('d/m/Y H:i') }}
                             </td>
 
-                            {{-- ACTION --}}
                             <td class="text-center">
                                 <a href="{{ route('admin.categories.edit', $child) }}"
                                    class="btn btn-sm btn-outline-secondary"
@@ -124,7 +132,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="text-center text-muted py-4">
+                            <td colspan="6" class="text-center text-muted py-4">
                                 Chưa có danh mục con
                             </td>
                         </tr>
@@ -133,12 +141,10 @@
             </table>
         </div>
 
-        {{-- PAGINATION --}}
         <div class="mt-4">
             {{ $children->links('vendor.pagination.custom-blue') }}
         </div>
 
-        {{-- FOOTER --}}
         <a href="{{ route('admin.categories.index') }}"
            class="btn btn-link btn-sm text-decoration-none mt-3">
             ← Quay lại danh sách danh mục

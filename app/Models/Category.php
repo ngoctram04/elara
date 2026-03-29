@@ -13,6 +13,7 @@ class Category extends Model
         'name',
         'slug',
         'parent_id',
+        'image',
     ];
 
     /**
@@ -27,13 +28,13 @@ class Category extends Model
         return $this->belongsTo(self::class, 'parent_id');
     }
 
-    // ✅ Danh mục con (KHÔNG sort để controller tự xử lý)
+    // Danh mục con
     public function children(): HasMany
     {
         return $this->hasMany(self::class, 'parent_id');
     }
 
-    // ✅ Danh mục con dùng cho MENU (có sort theo tên)
+    // Danh mục con dùng cho MENU
     public function childrenSorted(): HasMany
     {
         return $this->hasMany(self::class, 'parent_id')

@@ -73,6 +73,10 @@
                             Mã thương hiệu
                         </th>
 
+                        <th class="text-center" style="width:110px">
+                            Ảnh
+                        </th>
+
                         <th>
                             Tên thương hiệu
                         </th>
@@ -96,6 +100,20 @@
                         <tr>
                             <td class="text-center text-muted fw-semibold">
                                 TH{{ str_pad($brand->id, 4, '0', STR_PAD_LEFT) }}
+                            </td>
+
+                            <td class="text-center">
+                                @if($brand->image)
+                                    <img src="{{ asset('storage/' . $brand->image) }}"
+                                         alt="{{ $brand->name }}"
+                                         class="rounded border"
+                                         style="width:56px;height:56px;object-fit:contain;background:#fff;">
+                                @else
+                                    <div class="d-inline-flex align-items-center justify-content-center rounded border bg-light text-muted"
+                                         style="width:56px;height:56px;font-size:12px;">
+                                        No img
+                                    </div>
+                                @endif
                             </td>
 
                             <td class="fw-medium">
@@ -137,7 +155,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="text-center text-muted py-4">
+                            <td colspan="6" class="text-center text-muted py-4">
                                 Chưa có thương hiệu nào
                             </td>
                         </tr>

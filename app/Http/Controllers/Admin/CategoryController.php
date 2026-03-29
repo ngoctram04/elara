@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class CategoryController extends Controller
@@ -42,7 +43,6 @@ class CategoryController extends Controller
             ->whereNull('parent_id')
             ->withCount('children');
 
-        // 🔍 Tìm kiếm
         if ($request->filled('keyword')) {
             $keyword = trim($request->keyword);
             $numberKeyword = preg_replace('/\D/', '', $keyword);
@@ -57,7 +57,6 @@ class CategoryController extends Controller
             });
         }
 
-        // 🔃 Sắp xếp
         match ($request->sort) {
             'oldest' => $query->orderBy('created_at', 'asc'),
             'newest' => $query->orderBy('created_at', 'desc'),
@@ -96,12 +95,21 @@ class CategoryController extends Controller
         $data = $request->validate([
             'name'      => 'required|string|max:255',
             'parent_id' => 'nullable|exists:categories,id',
+            'image'     => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
+
+        $imagePath = null;
+
+        // Chỉ danh mục nhỏ mới được lưu ảnh
+        if (!empty($data['parent_id']) && $request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('categories', 'public');
+        }
 
         $category = Category::create([
             'name'      => $data['name'],
             'slug'      => $this->generateUniqueSlug($data['name']),
             'parent_id' => $data['parent_id'] ?? null,
+            'image'     => $imagePath,
         ]);
 
         return $category->parent_id
@@ -123,7 +131,6 @@ class CategoryController extends Controller
         $childrenQuery = $category->children()
             ->withCount('products');
 
-        // 🔍 Tìm kiếm
         if ($request->filled('keyword')) {
             $keyword = trim($request->keyword);
             $numberKeyword = preg_replace('/\D/', '', $keyword);
@@ -138,7 +145,6 @@ class CategoryController extends Controller
             });
         }
 
-        // 🔃 Sắp xếp
         if ($request->sort === 'oldest') {
             $childrenQuery->orderBy('id', 'asc');
         } else {
@@ -168,19 +174,40 @@ class CategoryController extends Controller
     public function update(Request $request, Category $category)
     {
         $data = $request->validate([
-            'name' => 'required|string|max:255',
+            'name'  => 'required|string|max:255',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
 
+        $updateData = [
+            'name' => $data['name'],
+        ];
+
         if ($data['name'] !== $category->name) {
-            $category->slug = $this->generateUniqueSlug(
+            $updateData['slug'] = $this->generateUniqueSlug(
                 $data['name'],
                 $category->id
             );
         }
 
-        $category->update([
-            'name' => $data['name'],
-        ]);
+        // Chỉ danh mục nhỏ mới được cập nhật ảnh
+        if ($category->parent_id) {
+            if ($request->hasFile('image')) {
+                if ($category->image && Storage::disk('public')->exists($category->image)) {
+                    Storage::disk('public')->delete($category->image);
+                }
+
+                $updateData['image'] = $request->file('image')->store('categories', 'public');
+            }
+        } else {
+            // Danh mục lớn thì luôn không có ảnh
+            if ($category->image && Storage::disk('public')->exists($category->image)) {
+                Storage::disk('public')->delete($category->image);
+            }
+
+            $updateData['image'] = null;
+        }
+
+        $category->update($updateData);
 
         return $category->parent_id
             ? redirect()->route('admin.categories.show', $category->parent_id)
@@ -200,7 +227,16 @@ class CategoryController extends Controller
             return back()->with('error', 'Không thể xóa danh mục đang chứa danh mục nhỏ');
         }
 
+        if ($category->products()->exists()) {
+            return back()->with('error', 'Không thể xóa danh mục đang có sản phẩm');
+        }
+
         $parentId = $category->parent_id;
+
+        if ($category->image && Storage::disk('public')->exists($category->image)) {
+            Storage::disk('public')->delete($category->image);
+        }
+
         $category->delete();
 
         return $parentId

@@ -28,6 +28,7 @@
                        class="form-control form-control-sm"
                        placeholder="Tìm theo tên danh mục hoặc mã...">
             </div>
+
             <div class="col-md-3">
                 <select name="sort" class="form-select form-select-sm">
                     <option value="">Sắp xếp theo</option>
@@ -69,30 +70,24 @@
                 <tbody>
                 @forelse ($categories as $category)
                     <tr>
-                        {{-- ID --}}
                         <td class="text-center text-muted fw-semibold">
-    DM{{ str_pad($category->id, 4, '0', STR_PAD_LEFT) }}
-</td>
+                            DM{{ str_pad($category->id, 4, '0', STR_PAD_LEFT) }}
+                        </td>
 
-                        {{-- NAME --}}
                         <td class="fw-medium">
                             {{ $category->name }}
                         </td>
 
-                        {{-- CHILD COUNT --}}
                         <td class="text-center">
-                            <span class="badge rounded-pill
-                                {{ ($category->children_count ?? 0) > 0 ? 'bg-primary' : 'bg-secondary' }}">
+                            <span class="badge rounded-pill {{ ($category->children_count ?? 0) > 0 ? 'bg-primary' : 'bg-secondary' }}">
                                 {{ $category->children_count ?? 0 }}
                             </span>
                         </td>
 
-                        {{-- CREATED AT --}}
                         <td class="text-center text-muted small">
                             {{ optional($category->created_at)->format('d/m/Y H:i') }}
                         </td>
 
-                        {{-- VIEW --}}
                         <td class="text-center">
                             <a href="{{ route('admin.categories.show', $category) }}"
                                class="btn btn-sm btn-outline-primary"
@@ -101,7 +96,6 @@
                             </a>
                         </td>
 
-                        {{-- ACTION --}}
                         <td class="text-center">
                             <a href="{{ route('admin.categories.edit', $category) }}"
                                class="btn btn-sm btn-outline-secondary"
@@ -110,16 +104,17 @@
                             </a>
 
                             <form method="POST"
-                            id="delete-category-{{ $category->id }}"
-                            action="{{ route('admin.categories.destroy', $category) }}"
-                            class="d-inline">
+                                  id="delete-category-{{ $category->id }}"
+                                  action="{{ route('admin.categories.destroy', $category) }}"
+                                  class="d-inline">
                                 @csrf
                                 @method('DELETE')
+
                                 <button type="button"
-                                class="btn btn-sm btn-outline-danger btn-delete-category"
-                                data-id="{{ $category->id }}"
-                                title="Xóa">
-                                <i class="bi bi-trash"></i>
+                                        class="btn btn-sm btn-outline-danger btn-delete-category"
+                                        data-id="{{ $category->id }}"
+                                        title="Xóa">
+                                    <i class="bi bi-trash"></i>
                                 </button>
                             </form>
                         </td>
@@ -135,39 +130,36 @@
             </table>
         </div>
 
+        @if($categories instanceof \Illuminate\Contracts\Pagination\Paginator || $categories instanceof \Illuminate\Contracts\Pagination\LengthAwarePaginator)
+            <div class="mt-4">
+                {{ $categories->links('vendor.pagination.custom-blue') }}
+            </div>
+        @endif
+
     </div>
 </div>
 @endsection
+
 @push('scripts')
-
 <script>
-
 document.querySelectorAll('.btn-delete-category').forEach(btn => {
+    btn.addEventListener('click', function () {
+        let id = this.dataset.id;
 
-btn.addEventListener('click', function(){
-
-let id = this.dataset.id
-
-Swal.fire({
-title: 'Xóa danh mục?',
-text: 'Hành động này không thể hoàn tác',
-icon: 'warning',
-showCancelButton: true,
-confirmButtonColor: '#dc3545',
-cancelButtonText: 'Hủy',
-confirmButtonText: 'Xóa'
-}).then((result) => {
-
-if(result.isConfirmed){
-document.getElementById('delete-category-'+id).submit()
-}
-
-})
-
-})
-
-})
-
+        Swal.fire({
+            title: 'Xóa danh mục?',
+            text: 'Hành động này không thể hoàn tác',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonText: 'Hủy',
+            confirmButtonText: 'Xóa'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                document.getElementById('delete-category-' + id).submit();
+            }
+        });
+    });
+});
 </script>
-
 @endpush

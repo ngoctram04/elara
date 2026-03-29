@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class BrandController extends Controller
@@ -45,13 +46,19 @@ class BrandController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255|unique:brands,name',
+        $data = $request->validate([
+            'name'  => 'required|string|max:255|unique:brands,name',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
 
+        if ($request->hasFile('image')) {
+            $data['image'] = $request->file('image')->store('brands', 'public');
+        }
+
         Brand::create([
-            'name' => $request->name,
-            'slug' => Str::slug($request->name),
+            'name'  => $data['name'],
+            'slug'  => Str::slug($data['name']),
+            'image' => $data['image'] ?? null,
         ]);
 
         return redirect()
@@ -66,14 +73,25 @@ class BrandController extends Controller
 
     public function update(Request $request, Brand $brand)
     {
-        $request->validate([
-            'name' => 'required|string|max:255|unique:brands,name,' . $brand->id,
+        $data = $request->validate([
+            'name'  => 'required|string|max:255|unique:brands,name,' . $brand->id,
+            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
 
-        $brand->update([
-            'name' => $request->name,
-            'slug' => Str::slug($request->name),
-        ]);
+        $updateData = [
+            'name' => $data['name'],
+            'slug' => Str::slug($data['name']),
+        ];
+
+        if ($request->hasFile('image')) {
+            if ($brand->image && Storage::disk('public')->exists($brand->image)) {
+                Storage::disk('public')->delete($brand->image);
+            }
+
+            $updateData['image'] = $request->file('image')->store('brands', 'public');
+        }
+
+        $brand->update($updateData);
 
         return redirect()
             ->route('admin.brands.index')
@@ -86,6 +104,10 @@ class BrandController extends Controller
             return redirect()
                 ->back()
                 ->with('error', 'Không thể xóa thương hiệu đang có sản phẩm.');
+        }
+
+        if ($brand->image && Storage::disk('public')->exists($brand->image)) {
+            Storage::disk('public')->delete($brand->image);
         }
 
         $brand->delete();
