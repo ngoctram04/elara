@@ -1,15 +1,10 @@
 document.addEventListener("DOMContentLoaded", function () {
-    /* ==============================
-       SWIPER
-    ============================== */
-    function initSlider(selector, next, prev, options = {}) {
-        const el = document.querySelector(selector);
+    function createSwiper(selector, next, prev, config = {}) {
+        const element = document.querySelector(selector);
 
-        if (!el || typeof Swiper === "undefined") return;
+        if (!element || typeof Swiper === "undefined") return null;
 
-        new Swiper(selector, {
-            slidesPerView: 2,
-            spaceBetween: 14,
+        return new Swiper(selector, {
             speed: 700,
             loop: false,
             watchOverflow: true,
@@ -17,88 +12,54 @@ document.addEventListener("DOMContentLoaded", function () {
                 nextEl: next,
                 prevEl: prev,
             },
-            breakpoints: {
-                0: {
-                    slidesPerView: 2,
-                    spaceBetween: 12,
-                },
-                576: {
-                    slidesPerView: 2,
-                    spaceBetween: 14,
-                },
-                768: {
-                    slidesPerView: 3,
-                    spaceBetween: 16,
-                },
-                992: {
-                    slidesPerView: 4,
-                    spaceBetween: 16,
-                },
-                1200: {
-                    slidesPerView: 5,
-                    spaceBetween: 18,
-                },
-            },
-            ...options,
+            ...config,
         });
     }
 
-    function initSmallSlider(selector, next, prev, options = {}) {
-        const el = document.querySelector(selector);
+    const productSliderConfig = {
+        slidesPerView: 2,
+        spaceBetween: 14,
+        breakpoints: {
+            0: { slidesPerView: 2, spaceBetween: 12 },
+            576: { slidesPerView: 2, spaceBetween: 14 },
+            768: { slidesPerView: 3, spaceBetween: 16 },
+            992: { slidesPerView: 4, spaceBetween: 16 },
+            1200: { slidesPerView: 5, spaceBetween: 18 },
+        },
+    };
 
-        if (!el || typeof Swiper === "undefined") return;
+    createSwiper(".flash-sale-swiper", ".flash-sale-next", ".flash-sale-prev", productSliderConfig);
+    createSwiper(".featured-slider", ".featured-next", ".featured-prev", productSliderConfig);
+    createSwiper(".latest-slider", ".latest-next", ".latest-prev", productSliderConfig);
 
-        new Swiper(selector, {
-            slidesPerView: 2,
-            spaceBetween: 12,
-            speed: 650,
-            loop: false,
-            watchOverflow: true,
-            navigation: {
-                nextEl: next,
-                prevEl: prev,
-            },
-            breakpoints: {
-                0: {
-                    slidesPerView: 2,
-                    spaceBetween: 12,
-                },
-                576: {
-                    slidesPerView: 3,
-                    spaceBetween: 12,
-                },
-                768: {
-                    slidesPerView: 4,
-                    spaceBetween: 14,
-                },
-                992: {
-                    slidesPerView: 5,
-                    spaceBetween: 14,
-                },
-                1200: {
-                    slidesPerView: 6,
-                    spaceBetween: 16,
-                },
-            },
-            ...options,
-        });
-    }
+    const brandCategoryConfig = {
+        slidesPerView: 2,
+        spaceBetween: 12,
+        breakpoints: {
+            0: { slidesPerView: 2, spaceBetween: 12 },
+            576: { slidesPerView: 3, spaceBetween: 12 },
+            768: { slidesPerView: 4, spaceBetween: 14 },
+            992: { slidesPerView: 5, spaceBetween: 14 },
+            1200: { slidesPerView: 6, spaceBetween: 16 },
+        },
+    };
 
-    initSlider(".flash-sale-swiper", ".flash-sale-next", ".flash-sale-prev");
-    initSlider(".featured-slider", ".featured-next", ".featured-prev");
-    initSlider(".latest-slider", ".latest-next", ".latest-prev");
+    createSwiper(".brand-slider", ".brand-next", ".brand-prev", {
+        ...brandCategoryConfig,
+        loop: true,
+        autoplay: {
+            delay: 2200,
+            disableOnInteraction: false,
+            pauseOnMouseEnter: true,
+        },
+    });
 
-    initSmallSlider(".brand-slider", ".brand-next", ".brand-prev");
-    initSmallSlider(".category-slider", ".category-next", ".category-prev");
+    createSwiper(".category-slider", ".category-next", ".category-prev", brandCategoryConfig);
 
-    /* ==============================
-       FLASH SALE COUNTDOWN
-    ============================== */
     const flashSaleSection = document.querySelector(".flash-sale-section");
 
     if (flashSaleSection) {
         const endTime = flashSaleSection.dataset.countdownEnd;
-
         const daysEl = document.getElementById("flash-days");
         const hoursEl = document.getElementById("flash-hours");
         const minutesEl = document.getElementById("flash-minutes");
@@ -106,14 +67,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (endTime && daysEl && hoursEl && minutesEl && secondsEl) {
             const target = new Date(endTime.replace(" ", "T")).getTime();
-
-            function pad(num) {
-                return String(num).padStart(2, "0");
-            }
+            const pad = (num) => String(num).padStart(2, "0");
 
             function updateCountdown() {
-                const now = Date.now();
-                const distance = target - now;
+                const distance = target - Date.now();
 
                 if (distance <= 0) {
                     daysEl.textContent = "00 NGÀY";
@@ -139,9 +96,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    /* ==============================
-       TOAST BÁO HẾT HÀNG
-    ============================== */
     function showFlashToast(message) {
         const oldToast = document.querySelector(".flash-inline-toast");
         if (oldToast) oldToast.remove();
@@ -157,9 +111,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }, 2200);
     }
 
-    /* ==============================
-       CLICK CARD / CHẶN HẾT HÀNG
-    ============================== */
     document.addEventListener("click", function (e) {
         const actionBtn = e.target.closest(".btn-add-to-cart, .btn-buy-now");
 

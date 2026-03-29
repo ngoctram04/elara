@@ -37,11 +37,9 @@ class ShopController extends Controller
             $baseQuery->where(function ($q) use ($keyword) {
                 $q->where('name', 'like', "%{$keyword}%")
                     ->orWhere('slug', 'like', "%{$keyword}%")
-
                     ->orWhereHas('brand', function ($b) use ($keyword) {
                         $b->where('name', 'like', "%{$keyword}%");
                     })
-
                     ->orWhereHas('category', function ($c) use ($keyword) {
                         $c->where('name', 'like', "%{$keyword}%")
                             ->orWhereHas('parent', function ($parent) use ($keyword) {
@@ -82,6 +80,12 @@ class ShopController extends Controller
             };
         }
 
+        // ✅ lọc 1 thương hiệu từ home
+        if ($request->filled('brand')) {
+            $baseQuery->where('brand_id', $request->brand);
+        }
+
+        // ✅ lọc nhiều thương hiệu từ sidebar/filter
         if ($request->filled('brands') && is_array($request->brands)) {
             $baseQuery->whereIn('brand_id', $request->brands);
         }

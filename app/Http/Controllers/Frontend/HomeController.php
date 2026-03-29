@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Frontend;
 
 use App\Http\Controllers\Controller;
-use App\Models\Product;
-use App\Models\Category;
 use App\Models\Brand;
+use App\Models\Category;
+use App\Models\Product;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 
@@ -14,7 +14,7 @@ class HomeController extends Controller
     public function index()
     {
         /* =====================================================
-            🔒 ADMIN → dashboard
+           ADMIN -> chuyển về dashboard
         ===================================================== */
         if (Auth::check() && Auth::user()->role === 'admin') {
             return redirect()->route('admin.reports.index');
@@ -23,7 +23,7 @@ class HomeController extends Controller
         $now = Carbon::now();
 
         /* ===============================
-            DANH MỤC NHỎ (CÓ ẢNH)
+           DANH MỤC NHỎ (CHỈ LẤY DANH MỤC CON CÓ ẢNH)
         =============================== */
         $categories = Category::with('parent')
             ->whereNotNull('parent_id')
@@ -32,16 +32,20 @@ class HomeController extends Controller
             ->get();
 
         /* ===============================
-            THƯƠNG HIỆU
+           THƯƠNG HIỆU
         =============================== */
         $brands = Brand::whereNotNull('image')
             ->orderBy('name')
             ->get();
 
         /* ===============================
-            SẢN PHẨM NỔI BẬT
+           SẢN PHẨM NỔI BẬT
         =============================== */
-        $featuredProducts = Product::with(['mainImage', 'brand'])
+        $featuredProducts = Product::with([
+            'mainImage',
+            'brand',
+            'variants',
+        ])
             ->withAvg('reviews', 'rating')
             ->withCount('reviews')
             ->where('is_active', true)
@@ -51,9 +55,13 @@ class HomeController extends Controller
             ->get();
 
         /* ===============================
-            SẢN PHẨM MỚI
+           SẢN PHẨM MỚI
         =============================== */
-        $latestProducts = Product::with(['mainImage', 'brand'])
+        $latestProducts = Product::with([
+            'mainImage',
+            'brand',
+            'variants',
+        ])
             ->withAvg('reviews', 'rating')
             ->withCount('reviews')
             ->where('is_active', true)
@@ -62,13 +70,13 @@ class HomeController extends Controller
             ->get();
 
         /* ===============================
-            FLASH SALE
+           FLASH SALE
         =============================== */
         $flashSaleProducts = Product::with([
             'mainImage',
             'brand',
             'variants',
-            'promotions'
+            'promotions',
         ])
             ->withAvg('reviews', 'rating')
             ->withCount('reviews')
@@ -84,16 +92,20 @@ class HomeController extends Controller
             ->get();
 
         /* ===============================
-            BLOG (AN TOÀN - KHÔNG LỖI)
+           BLOG
         =============================== */
         $blogs = collect();
 
         if (class_exists(\App\Models\Blog::class)) {
-            $blogs = \App\Models\Blog::latest()->take(5)->get();
+            $blogs = \App\Models\Blog::with('author')
+                ->latest()
+                ->take(5)
+                ->get();
         }
 
+
         /* ===============================
-            VIEW
+           VIEW
         =============================== */
         return view('frontend.home', compact(
             'categories',
