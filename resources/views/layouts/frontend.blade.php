@@ -22,6 +22,8 @@
     'resources/css/profile.css',
     'resources/css/frontend.css',
     'resources/css/home.css',
+    'resources/css/blog.css',
+
 ])
 
 

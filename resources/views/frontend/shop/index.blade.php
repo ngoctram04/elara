@@ -6,37 +6,36 @@
 <div class="shop-page">
 
     <x-breadcrumb :items="[
-        ['label' => 'Trang chủ', 'url' => url('/')],
-        ['label' => 'Danh mục', 'url' => route('shop')],
-        ['label' => request('q') ? 'Kết quả tìm kiếm' : 'Tất cả sản phẩm']
-    ]" />
+    ['label' => 'Trang chủ', 'url' => url('/')],
+    ['label' => 'Danh mục', 'url' => route('shop')],
+    [
+        'label' => request('q') ? 'Kết quả tìm kiếm' : 'Tất cả sản phẩm',
+        'url' => route('shop')
+    ]
+]" />
 
     {{-- PAGE BANNER --}}
     @php
         use Illuminate\Support\Str;
     @endphp
 
-    <section class="search-result-banner mb-4">
-        @if(request('q'))
-            <div class="search-result-content">
-                <div class="result-title">
-                    <i class="bi bi-search"></i>
-                    Kết quả cho:
-                    <span class="keyword">
-                        "{{ Str::limit(request('q'), 50) }}"
-                    </span>
-                </div>
+    <section class="shop-page-head mb-4">
+    @if(request('q'))
+        <div class="shop-search-banner">
+            <div class="shop-search-title">
+                <i class="bi bi-search"></i>
+                <span>
+                    Kết quả cho: "{{ Str::limit(request('q'), 50) }}"
+                </span>
+            </div>
 
-                <div class="result-count">
-                    {{ $products->total() }} sản phẩm được tìm thấy
-                </div>
+            <div class="shop-search-count">
+                {{ $products->total() }} sản phẩm được tìm thấy
             </div>
-        @else
-            <div class="search-result-content">
-                <h2 class="all-product-title">TẤT CẢ SẢN PHẨM</h2>
-            </div>
-        @endif
-    </section>
+        </div>
+    @else
+    @endif
+</section>
 
     <div class="container">
         <div class="row">

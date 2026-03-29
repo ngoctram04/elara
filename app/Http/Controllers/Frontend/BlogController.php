@@ -5,64 +5,94 @@ namespace App\Http\Controllers\Frontend;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Blog;
+use Illuminate\Support\Facades\Session;
 
 class BlogController extends Controller
 {
-
     /**
      * Danh sách blog
      */
-    public function index(Request $request)
+    public function index()
     {
+        // 1) Bài lớn bên trái: bài mới nhất
+        $latestBlog = Blog::where('is_active', 1)
+            ->orderBy('created_at', 'desc')
+            ->first();
 
-        // chỉ lấy blog đang hiển thị
-        $query = Blog::where('is_active', 1);
+        // 2) Cột phải: khám phá thêm
+        $discoverBlogsQuery = Blog::where('is_active', 1);
 
-        // sắp xếp
-        if ($request->sort == 'old') {
-            $query->orderBy('created_at', 'asc');
-        } elseif ($request->sort == 'views') {
-            $query->orderBy('views', 'desc');
-        } else {
-            $query->orderBy('created_at', 'desc');
+        if ($latestBlog) {
+            $discoverBlogsQuery->where('id', '!=', $latestBlog->id);
         }
 
-        $blogs = $query->paginate(9)->withQueryString();
+        $discoverBlogs = $discoverBlogsQuery
+            ->orderBy('created_at', 'desc')
+            ->get();
 
-        return view('frontend.blogs.index', compact('blogs'));
+        // 3) Bài viết vừa xem từ session, chỉ lấy 3 bài
+        $recentViewedIds = Session::get('recent_viewed_blogs', []);
+
+        $recentViewedBlogs = collect();
+
+        if (!empty($recentViewedIds)) {
+            $recentViewedBlogs = Blog::where('is_active', 1)
+                ->whereIn('id', $recentViewedIds)
+                ->get()
+                ->sortBy(function ($blog) use ($recentViewedIds) {
+                    return array_search($blog->id, $recentViewedIds);
+                })
+                ->values()
+                ->take(4);
+        }
+
+        return view('frontend.blogs.index', compact(
+            'latestBlog',
+            'discoverBlogs',
+            'recentViewedBlogs'
+        ));
     }
-
-
 
     /**
      * Chi tiết blog
      */
     public function show($slug)
     {
-
-        // chỉ cho xem blog đang active
         $blog = Blog::where('slug', $slug)
             ->where('is_active', 1)
             ->firstOrFail();
 
-        // tăng lượt xem
+        // lưu lịch sử xem bằng session
+        $recentViewed = Session::get('recent_viewed_blogs', []);
+
+        $recentViewed = array_values(array_filter($recentViewed, function ($id) use ($blog) {
+            return (int) $id !== (int) $blog->id;
+        }));
+
+        array_unshift($recentViewed, $blog->id);
+
+        // lưu tối đa 12 bài trong session
+        $recentViewed = array_slice($recentViewed, 0, 12);
+
+        Session::put('recent_viewed_blogs', $recentViewed);
+
+        // tăng lượt xem nhưng không cập nhật updated_at
+        $blog->timestamps = false;
         $blog->increment('views');
+        $blog->refresh();
 
-
-        // bài viết liên quan
         $relatedBlogs = Blog::where('id', '!=', $blog->id)
             ->where('is_active', 1)
-            ->latest()
+            ->orderBy('created_at', 'desc')
             ->limit(3)
             ->get();
 
-
-        // bài viết phổ biến
         $popularBlogs = Blog::where('is_active', 1)
+            ->where('id', '!=', $blog->id)
             ->orderBy('views', 'desc')
+            ->orderBy('created_at', 'desc')
             ->limit(5)
             ->get();
-
 
         return view('frontend.blogs.show', compact(
             'blog',

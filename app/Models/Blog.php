@@ -17,7 +17,10 @@ class Blog extends Model
         'views',
         'is_active'
     ];
-
+    protected $casts = [
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
     protected static function boot()
     {
         parent::boot();
