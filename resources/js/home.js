@@ -7,7 +7,14 @@ document.addEventListener("DOMContentLoaded", function () {
         return new Swiper(selector, {
             speed: 700,
             loop: false,
-            watchOverflow: true,
+            rewind: false,
+            watchOverflow: false,
+            grabCursor: true,
+            allowTouchMove: true,
+            slidesPerGroup: 1,
+            centeredSlides: false,
+            observer: true,
+            observeParents: true,
             navigation: {
                 nextEl: next,
                 prevEl: prev,
@@ -19,6 +26,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const productSliderConfig = {
         slidesPerView: 2,
         spaceBetween: 14,
+        loop: false,
+        rewind: false,
         breakpoints: {
             0: { slidesPerView: 2, spaceBetween: 12 },
             576: { slidesPerView: 2, spaceBetween: 14 },
@@ -28,13 +37,36 @@ document.addEventListener("DOMContentLoaded", function () {
         },
     };
 
-    createSwiper(".flash-sale-swiper", ".flash-sale-next", ".flash-sale-prev", productSliderConfig);
-    createSwiper(".featured-slider", ".featured-next", ".featured-prev", productSliderConfig);
-    createSwiper(".latest-slider", ".latest-next", ".latest-prev", productSliderConfig);
+    createSwiper(
+        ".flash-sale-swiper",
+        ".flash-sale-next",
+        ".flash-sale-prev",
+        productSliderConfig
+    );
+
+    createSwiper(
+        ".featured-slider",
+        ".featured-next",
+        ".featured-prev",
+        productSliderConfig
+    );
+
+    createSwiper(
+        ".latest-slider",
+        ".latest-next",
+        ".latest-prev",
+        productSliderConfig
+    );
 
     const brandCategoryConfig = {
         slidesPerView: 2,
         spaceBetween: 12,
+        slidesPerGroup: 1,
+        speed: 600,
+        loop: true,
+        rewind: false,
+        watchOverflow: false,
+        loopAdditionalSlides: 10,
         breakpoints: {
             0: { slidesPerView: 2, spaceBetween: 12 },
             576: { slidesPerView: 3, spaceBetween: 12 },
@@ -44,17 +76,19 @@ document.addEventListener("DOMContentLoaded", function () {
         },
     };
 
-    createSwiper(".brand-slider", ".brand-next", ".brand-prev", {
-        ...brandCategoryConfig,
-        loop: true,
-        autoplay: {
-            delay: 2200,
-            disableOnInteraction: false,
-            pauseOnMouseEnter: true,
-        },
-    });
+    createSwiper(
+        ".brand-slider",
+        ".brand-next",
+        ".brand-prev",
+        brandCategoryConfig
+    );
 
-    createSwiper(".category-slider", ".category-next", ".category-prev", brandCategoryConfig);
+    createSwiper(
+        ".category-slider",
+        ".category-next",
+        ".category-prev",
+        brandCategoryConfig
+    );
 
     const flashSaleSection = document.querySelector(".flash-sale-section");
 

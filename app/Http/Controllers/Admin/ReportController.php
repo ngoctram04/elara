@@ -170,24 +170,24 @@ class ReportController extends Controller
             ->where('status', Order::STATUS_COMPLETED)
             ->where('payment_status', '!=', Order::PAYMENT_REFUNDED)
             ->whereBetween('delivered_at', [$from, $to])
-            ->sum(DB::raw('total + shipping_fee'));
+            ->sum(DB::raw('total + COALESCE(shipping_fee, 0)'));
 
         // Ship khách trả
         $shippingTotal = DB::table('orders')
-        ->where(function ($q) {
-            $q->whereIn('status', [
-                Order::STATUS_COMPLETED,
-                Order::STATUS_RETURNED
+            ->where(function ($q) {
+                $q->whereIn('status', [
+                    Order::STATUS_COMPLETED,
+                    Order::STATUS_RETURNED
+                ])
+                ->orWhere(function ($sub) {
+                    $sub->where('status', Order::STATUS_CANCELLED)
+                        ->whereNotNull('delivered_at');
+                });
+            })
+            ->whereBetween('delivered_at', [$from,
+                $to
             ])
-            ->orWhere(function ($sub) {
-                $sub->where('status', Order::STATUS_CANCELLED)
-                    ->whereNotNull('delivered_at');
-            });
-        })
-        ->whereBetween('delivered_at', [$from,
-            $to
-        ])
-        ->sum(DB::raw('COALESCE(shipping_fee, 0)'));
+            ->sum(DB::raw('COALESCE(shipping_fee, 0)'));
 
         // Ship thực tế phải trả cho đơn vị vận chuyển
         $shippingCostTotal = DB::table('orders')
@@ -205,9 +205,9 @@ class ReportController extends Controller
             $to
         ])
         ->sum(DB::raw("
-            CASE 
-                WHEN shipping_cost > 0 THEN shipping_cost
-                ELSE shipping_fee
+            CASE
+                WHEN COALESCE(shipping_cost, 0) > 0 THEN shipping_cost
+                ELSE COALESCE(shipping_fee, 0)
             END
         "));
 
@@ -285,7 +285,7 @@ class ReportController extends Controller
             Order::PAYMENT_REFUNDED
         )
         ->whereBetween('delivered_at', [$prevFrom, $prevTo])
-            ->sum(DB::raw('total + shipping_fee'));
+            ->sum(DB::raw('total + COALESCE(shipping_fee, 0)'));
 
         $growth = $previousRevenue > 0
         ? (($revenue - $previousRevenue) / $previousRevenue) * 100
@@ -299,34 +299,34 @@ class ReportController extends Controller
 
         $orderStats = DB::table('orders')
         ->selectRaw('
-            COUNT(CASE 
-                WHEN created_at BETWEEN ? AND ? 
-                THEN 1 
+            COUNT(CASE
+                WHEN created_at BETWEEN ? AND ?
+                THEN 1
             END) as total,
 
-            SUM(CASE 
-                WHEN status = 1 
-                AND created_at BETWEEN ? AND ? 
+            SUM(CASE
+                WHEN status = 1
+                AND created_at BETWEEN ? AND ?
                 THEN 1 ELSE 0 END) as pending,
 
-            SUM(CASE 
-                WHEN status = 2 
-                AND created_at BETWEEN ? AND ? 
+            SUM(CASE
+                WHEN status = 2
+                AND created_at BETWEEN ? AND ?
                 THEN 1 ELSE 0 END) as shipping,
 
-            SUM(CASE 
-                WHEN status = 3 
-                AND delivered_at BETWEEN ? AND ? 
+            SUM(CASE
+                WHEN status = 3
+                AND delivered_at BETWEEN ? AND ?
                 THEN 1 ELSE 0 END) as completed,
 
-            SUM(CASE 
-                WHEN status = 4 
-                AND updated_at BETWEEN ? AND ? 
+            SUM(CASE
+                WHEN status = 4
+                AND updated_at BETWEEN ? AND ?
                 THEN 1 ELSE 0 END) as cancelled,
 
-            SUM(CASE 
-                WHEN status = 5 
-                AND updated_at BETWEEN ? AND ? 
+            SUM(CASE
+                WHEN status = 5
+                AND updated_at BETWEEN ? AND ?
                 THEN 1 ELSE 0 END) as returned
         ', [
             $from,
@@ -351,12 +351,12 @@ class ReportController extends Controller
     */
 
         $validTotal =
-        ($orderStats->completed ?? 0)
-        + ($orderStats->cancelled ?? 0)
-        + ($orderStats->returned ?? 0);
+        ($s = $orderStats->completed ?? 0)
+        + ($c = $orderStats->cancelled ?? 0)
+        + ($r = $orderStats->returned ?? 0);
 
         $cancelRate = $validTotal > 0
-        ? ((($orderStats->cancelled ?? 0) + ($orderStats->returned ?? 0)) / $validTotal) * 100
+            ? (($c + $r) / $validTotal) * 100
             : 0;
 
         /*
@@ -387,7 +387,7 @@ class ReportController extends Controller
                 Order::PAYMENT_REFUNDED
             )
             ->whereBetween('delivered_at', [$from, $to])
-            ->selectRaw('DATE(delivered_at) as date, SUM(total + shipping_fee) as revenue')
+            ->selectRaw('DATE(delivered_at) as date, SUM(total + COALESCE(shipping_fee, 0)) as revenue')
             ->groupBy('date')
             ->orderBy('date')
             ->get();
@@ -399,7 +399,7 @@ class ReportController extends Controller
             Order::PAYMENT_REFUNDED
         )
         ->whereBetween('delivered_at', [$from, $to])
-        ->selectRaw('YEARWEEK(delivered_at) as week, SUM(total + shipping_fee) as revenue')
+        ->selectRaw('YEARWEEK(delivered_at) as week, SUM(total + COALESCE(shipping_fee, 0)) as revenue')
         ->groupBy('week')
         ->orderBy('week')
         ->get();
@@ -411,7 +411,7 @@ class ReportController extends Controller
             Order::PAYMENT_REFUNDED
         )
         ->whereBetween('delivered_at', [$from, $to])
-        ->selectRaw('DATE_FORMAT(delivered_at,"%Y-%m") as month, SUM(total + shipping_fee) as revenue')
+        ->selectRaw('DATE_FORMAT(delivered_at, "%Y-%m") as month, SUM(total + COALESCE(shipping_fee, 0)) as revenue')
         ->groupBy('month')
         ->orderBy('month')
         ->get();
@@ -422,10 +422,65 @@ class ReportController extends Controller
             '!=',
             Order::PAYMENT_REFUNDED
         )
-        ->selectRaw('YEAR(delivered_at) as year, SUM(total + shipping_fee) as revenue')
+        ->selectRaw('YEAR(delivered_at) as year, SUM(total + COALESCE(shipping_fee, 0)) as revenue')
         ->groupBy('year')
-        ->orderBy('year')
-        ->get();
+            ->orderBy('year')
+            ->get();
+
+        /*
+    =====================================
+    5.1 LỢI NHUẬN THEO NGÀY
+    =====================================
+    */
+
+        // Tổng giá vốn theo từng đơn trước, tránh bị nhân lặp total của order
+        $orderCostSub = DB::table('order_items')
+            ->selectRaw('order_id, SUM(quantity * cost_price) as total_cost')
+            ->groupBy('order_id');
+
+        $dailyProfitRaw = DB::table('orders as o')
+            ->leftJoinSub($orderCostSub, 'costs', function ($join) {
+                $join->on('costs.order_id', '=', 'o.id');
+            })
+            ->where('o.status', Order::STATUS_COMPLETED)
+            ->where('o.payment_status', '!=', Order::PAYMENT_REFUNDED)
+            ->whereBetween('o.delivered_at', [$from, $to])
+            ->selectRaw('
+            DATE(o.delivered_at) as date,
+            SUM(
+                (COALESCE(o.total, 0) + COALESCE(o.shipping_fee, 0))
+                - COALESCE(costs.total_cost, 0)
+            ) as profit
+        ')
+            ->groupByRaw('DATE(o.delivered_at)')
+            ->orderBy('date')
+            ->get()
+            ->keyBy('date');
+
+        /*
+    =====================================
+    5.2 CHUẨN HOÁ LABELS CHART
+    =====================================
+    */
+
+        $dailyRevenueMap = $dailyRevenue->keyBy('date');
+
+        $chartLabels = [];
+        $chartRevenue = [];
+        $chartProfit = [];
+
+        $currentDate = $from->copy()->startOfDay();
+        $endDate = $to->copy()->startOfDay();
+
+        while ($currentDate->lte($endDate)) {
+            $date = $currentDate->format('Y-m-d');
+
+            $chartLabels[] = $date;
+            $chartRevenue[] = (float) ($dailyRevenueMap[$date]->revenue ?? 0);
+            $chartProfit[] = (float) ($dailyProfitRaw[$date]->profit ?? 0);
+
+            $currentDate->addDay();
+        }
 
         /*
     =====================================
@@ -520,30 +575,23 @@ class ReportController extends Controller
     =====================================
     */
 
-        // Tổng vốn nhập toàn hệ thống
         $totalImportValueAll = DB::table('stock_imports')
             ->sum(DB::raw('imported_quantity * cost_price'));
 
-        // Tổng giá vốn đã bán toàn hệ thống
-        // CHỈ trừ khi đơn đã hoàn thành
         $completedCostAll = DB::table('order_items as oi')
         ->join('orders as o', 'o.id', '=', 'oi.order_id')
         ->where('o.status', Order::STATUS_COMPLETED)
         ->where('o.payment_status', '!=', Order::PAYMENT_REFUNDED)
         ->sum(DB::raw('oi.quantity * oi.cost_price'));
 
-        // Hao hụt do hết hạn toàn hệ thống
         $expiredLossAll = DB::table('stock_imports')
         ->whereNotNull('expired_at')
-            ->sum(DB::raw('COALESCE(expired_quantity, 0) * cost_price'));
+        ->sum(DB::raw('COALESCE(expired_quantity, 0) * cost_price'));
 
-        // Hao hụt do hoàn hàng bị hư / không nhập lại kho toàn hệ thống
         $refundLossAll = DB::table('refund_requests')
-        ->where('status', 'refunded')
-        ->sum(DB::raw('COALESCE(loss_amount, 0)'));
+            ->where('status', 'refunded')
+            ->sum(DB::raw('COALESCE(loss_amount, 0)'));
 
-        // Giá trị tồn kho hiện tại:
-        // = Tổng vốn nhập - vốn đã bán hoàn tất - hao hụt
         $inventoryValueCurrent = $totalImportValueAll - $completedCostAll - $expiredLossAll - $refundLossAll;
 
         if ($inventoryValueCurrent < 0) {
@@ -551,9 +599,6 @@ class ReportController extends Controller
         }
 
         $inventory = (object) [
-            // total_qty tạm vẫn giữ theo hệ thống hiện tại
-            // nếu stock_quantity/remaining_quantity của bạn bị trừ sớm
-            // thì qty có thể chưa chuẩn, nhưng total_value sẽ đúng theo nghiệp vụ hơn
             'total_qty' => DB::table('stock_imports')->sum('remaining_quantity'),
             'total_value' => $inventoryValueCurrent,
         ];
@@ -586,7 +631,7 @@ class ReportController extends Controller
         ->select(
             'orders.id',
             'users.name as customer_name',
-            DB::raw('orders.total + COALESCE(orders.shipping_fee,0) as total'),
+            DB::raw('orders.total + COALESCE(orders.shipping_fee, 0) as total'),
             DB::raw('COALESCE(orders.updated_at, orders.created_at) as created_at')
         )
         ->orderByDesc('orders.created_at')
@@ -608,6 +653,17 @@ class ReportController extends Controller
             'weeklyRevenue' => $weeklyRevenue,
             'monthlyRevenue' => $monthlyRevenue,
             'yearlyRevenue' => $yearlyRevenue,
+
+            'dailyProfit' => collect($chartLabels)->map(function ($date, $index) use ($chartProfit) {
+                return (object) [
+                    'date' => $date,
+                    'profit' => $chartProfit[$index] ?? 0,
+                ];
+            }),
+
+            'chartLabels' => $chartLabels,
+            'chartRevenue' => $chartRevenue,
+            'chartProfit' => $chartProfit,
 
             'topProducts' => $topProducts,
             'topCustomers' => $topCustomers,

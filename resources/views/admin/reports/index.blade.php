@@ -557,45 +557,46 @@ Không có dữ liệu
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
+let revenueChart = new Chart(document.getElementById('revenueChart'), {
+    type: 'line',
+    data: {
+        labels: @json($chartLabels),
+        datasets: [
+            {
+                label: 'Doanh thu',
+                data: @json($chartRevenue),
+                tension: 0.3,
+                borderWidth: 2,
+                fill: false
+            },
+            {
+                label: 'Lợi nhuận',
+                data: @json($chartProfit),
+                tension: 0.3,
+                borderWidth: 2,
+                fill: false
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        interaction: {
+            mode: 'index',
+            intersect: false
+        },
+        plugins: {
+            legend: {
+                display: true
+            }
+        }
+    }
+});
 
-let revenueChart=new Chart(document.getElementById('revenueChart'),{
-
-type:'line',
-
-data:{
-
-labels:@json($dailyRevenue->pluck('date')->toArray()),
-
-datasets:[{
-
-label:'Doanh thu',
-
-data:@json($dailyRevenue->pluck('revenue')->toArray()),
-
-tension:0.3,
-
-borderWidth:2,
-
-fill:false
-
-}]
-
+function exportPdf() {
+    const img = revenueChart.toBase64Image();
+    document.getElementById('chart_image').value = img;
+    document.getElementById('exportForm').submit();
 }
-
-})
-
-
-
-function exportPdf(){
-
-const img=revenueChart.toBase64Image()
-
-document.getElementById('chart_image').value=img
-
-document.getElementById('exportForm').submit()
-
-}
-
 </script>
 
 @endsection

@@ -889,3 +889,12 @@
         height: 82px;
     }
 }
+.brand-slider .swiper-wrapper,
+.category-slider .swiper-wrapper {
+    align-items: stretch;
+}
+
+.brand-slider .swiper-slide,
+.category-slider .swiper-slide {
+    flex-shrink: 0;
+}
