@@ -25,7 +25,7 @@ class PointController extends Controller
     {
         $histories = UserPointHistory::where('user_id', Auth::id())
             ->latest()
-            ->paginate(10);
+            ->paginate(5);
 
         return view('frontend.points.history', compact('histories'));
     }

@@ -168,8 +168,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/profile/addresses/{id}', [AddressController::class, 'destroy'])->name('addresses.destroy');
     Route::put('/addresses/{id}', [AddressController::class, 'update'])
         ->name('addresses.update');
-    Route::get('/membership', [ProfileController::class, 'membership'])
-        ->name('membership');
 });
 Route::middleware('auth')->group(function () {
 

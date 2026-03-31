@@ -8,7 +8,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
-use Illuminate\Support\Facades\DB; 
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+
 class ProfileController extends Controller
 {
     /**
@@ -42,29 +44,10 @@ class ProfileController extends Controller
             'gender.in'            => 'Giới tính không hợp lệ',
         ]);
 
-        // ===== CHỐNG GIAN LẬN NGÀY SINH =====
-
-        $newBirthday = $validated['date_of_birth'] ?? null;
-        $oldBirthday = $user->date_of_birth;
-
-        // Nếu đã từng sửa ngày sinh rồi và đang cố thay đổi tiếp
-        if ($user->birthday_updated_at && $newBirthday != $oldBirthday) {
-            return back()->withErrors([
-                'date_of_birth' => 'Bạn chỉ được thay đổi ngày sinh một lần.'
-            ])->withInput();
-        }
-
-        // Nếu thay đổi ngày sinh lần đầu
-        if (!$user->birthday_updated_at && $newBirthday != $oldBirthday) {
-            $user->birthday_updated_at = now();
-        }
-
-        // =====================================
-
         $user->fill([
             'name'          => $validated['name'],
             'phone'         => $validated['phone'] ?? null,
-            'date_of_birth' => $newBirthday,
+            'date_of_birth' => $validated['date_of_birth'] ?? null,
             'gender'        => $validated['gender'] ?? null,
         ]);
 
@@ -82,7 +65,7 @@ class ProfileController extends Controller
      */
     public function updateAvatar(Request $request): RedirectResponse
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'avatar' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ], [
             'avatar.required' => 'Vui lòng chọn ảnh',
@@ -90,6 +73,12 @@ class ProfileController extends Controller
             'avatar.mimes'    => 'Chỉ chấp nhận JPG, PNG hoặc WEBP',
             'avatar.max'      => 'Ảnh tối đa 2MB',
         ]);
+
+        if ($validator->fails()) {
+            return back()
+                ->with('error', $validator->errors()->first())
+                ->withInput();
+        }
 
         $user = $request->user();
 
@@ -112,12 +101,11 @@ class ProfileController extends Controller
     {
         $user = $request->user();
 
-        // Nếu tài khoản đăng nhập Google (không có password)
         if (!$user->password) {
             return back()->with('warning', 'Tài khoản này không thể đổi mật khẩu.');
         }
 
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'current_password' => ['required'],
             'password'         => ['required', 'confirmed', 'min:8'],
         ], [
@@ -127,21 +115,23 @@ class ProfileController extends Controller
             'password.min'              => 'Mật khẩu tối thiểu 8 ký tự',
         ]);
 
-        // Sai mật khẩu hiện tại
-        if (!Hash::check($validated['current_password'], $user->password)) {
+        if ($validator->fails()) {
             return back()
-                ->withErrors([
-                    'current_password' => 'Mật khẩu hiện tại không đúng.'
-                ])
+                ->with('error', $validator->errors()->first())
                 ->withInput();
         }
 
-        // ❗ Mật khẩu mới trùng mật khẩu cũ -> hiển thị tại ô password
+        $validated = $validator->validated();
+
+        if (!Hash::check($validated['current_password'], $user->password)) {
+            return back()
+                ->with('error', 'Mật khẩu hiện tại không đúng.')
+                ->withInput();
+        }
+
         if (Hash::check($validated['password'], $user->password)) {
             return back()
-                ->withErrors([
-                    'password' => 'Mật khẩu mới không được trùng với mật khẩu hiện tại.'
-                ])
+                ->with('error', 'Mật khẩu mới không được trùng với mật khẩu hiện tại.')
                 ->withInput();
         }
 
@@ -156,19 +146,23 @@ class ProfileController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'password' => ['required'],
         ], [
             'password.required' => 'Vui lòng nhập mật khẩu',
         ]);
 
+        if ($validator->fails()) {
+            return back()
+                ->with('error', $validator->errors()->first())
+                ->withInput();
+        }
+
         $user = $request->user();
 
         if (!Hash::check($request->password, $user->password)) {
             return back()
-                ->withErrors([
-                    'password' => 'Mật khẩu không đúng.'
-                ])
+                ->with('error', 'Mật khẩu không đúng.')
                 ->withInput();
         }
 
@@ -184,12 +178,16 @@ class ProfileController extends Controller
 
         return redirect('/')->with('success', 'Tài khoản đã được xoá.');
     }
+
+    /**
+     * Trang thành viên / tích điểm
+     */
     public function membership()
     {
         $user = Auth::user();
 
         $histories = DB::table('user_point_histories')
-        ->where('user_id', $user->id)
+            ->where('user_id', $user->id)
             ->latest()
             ->limit(20)
             ->get();

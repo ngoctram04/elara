@@ -12,7 +12,7 @@
         ['label' => 'Giỏ hàng']
     ]" />
 
-    <div class="container py-4">
+    <div class="container">
         <div class="cart-header mb-4">
             <h4 class="cart-title mb-1">Giỏ hàng của bạn</h4>
             <div class="cart-subtitle">Kiểm tra sản phẩm, chọn ưu đãi và tiến hành thanh toán</div>
