@@ -23,7 +23,7 @@
     'resources/css/frontend.css',
     'resources/css/home.css',
     'resources/css/blog.css',
-
+    'resources/css/cart.css',
 ])
 
 
