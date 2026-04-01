@@ -46,7 +46,7 @@
             </div>
 
             <div class="col-md-4 d-flex gap-2">
-                <button class="btn btn-outline-primary btn-sm">
+                <button type="submit" class="btn btn-outline-primary btn-sm">
                     <i class="bi bi-search"></i>
                 </button>
 
@@ -123,8 +123,8 @@
                                     <button type="button"
                                             class="btn btn-sm btn-outline-danger btn-delete-category"
                                             data-id="{{ $child->id }}"
-                                            {{ $child->products_count > 0 ? 'disabled' : '' }}
-                                            title="{{ $child->products_count > 0 ? 'Danh mục đang có sản phẩm' : 'Xóa' }}">
+                                            data-products="{{ $child->products_count }}"
+                                            title="Xóa">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </form>
@@ -157,24 +157,24 @@
 
 @push('scripts')
 <script>
-document.querySelectorAll('.btn-delete-category').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-        if (this.hasAttribute('disabled')) return;
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.btn-delete-category').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const id = this.dataset.id;
 
-        let id = this.dataset.id;
-
-        Swal.fire({
-            title: 'Xóa danh mục?',
-            text: 'Hành động này không thể hoàn tác',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc3545',
-            cancelButtonText: 'Hủy',
-            confirmButtonText: 'Xóa'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                document.getElementById('delete-category-' + id).submit();
-            }
+            Swal.fire({
+                title: 'Xóa danh mục?',
+                text: 'Hành động này không thể hoàn tác',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonText: 'Hủy',
+                confirmButtonText: 'Xóa'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    document.getElementById('delete-category-' + id).submit();
+                }
+            });
         });
     });
 });

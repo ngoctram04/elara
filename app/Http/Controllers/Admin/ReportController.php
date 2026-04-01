@@ -435,27 +435,35 @@ class ReportController extends Controller
 
         // Tổng giá vốn theo từng đơn trước, tránh bị nhân lặp total của order
         $orderCostSub = DB::table('order_items')
-            ->selectRaw('order_id, SUM(quantity * cost_price) as total_cost')
-            ->groupBy('order_id');
+        ->selectRaw('order_id, SUM(quantity * cost_price) as total_cost')
+        ->groupBy('order_id');
 
-        $dailyProfitRaw = DB::table('orders as o')
-            ->leftJoinSub($orderCostSub, 'costs', function ($join) {
-                $join->on('costs.order_id', '=', 'o.id');
-            })
+        $dailyOrderProfit = DB::table('orders as o')
+        ->leftJoinSub($orderCostSub, 'costs', function ($join) {
+            $join->on('costs.order_id', '=', 'o.id');
+        })
             ->where('o.status', Order::STATUS_COMPLETED)
             ->where('o.payment_status', '!=', Order::PAYMENT_REFUNDED)
             ->whereBetween('o.delivered_at', [$from, $to])
             ->selectRaw('
-            DATE(o.delivered_at) as date,
-            SUM(
-                (COALESCE(o.total, 0) + COALESCE(o.shipping_fee, 0))
-                - COALESCE(costs.total_cost, 0)
-            ) as profit
-        ')
+        DATE(o.delivered_at) as date,
+        SUM(
+            (COALESCE(o.total, 0) + COALESCE(o.shipping_fee, 0))
+            - COALESCE(costs.total_cost, 0)
+        ) as profit
+    ')
             ->groupByRaw('DATE(o.delivered_at)')
             ->orderBy('date')
             ->get()
             ->keyBy('date');
+
+        $dailyShippingPaid = DB::table('shipping_payments')
+        ->whereBetween('created_at', [$from, $to])
+        ->selectRaw('DATE(created_at) as date, SUM(amount) as paid')
+        ->groupByRaw('DATE(created_at)')
+        ->orderBy('date')
+        ->get()
+        ->keyBy('date');
 
         /*
     =====================================
@@ -477,7 +485,11 @@ class ReportController extends Controller
 
             $chartLabels[] = $date;
             $chartRevenue[] = (float) ($dailyRevenueMap[$date]->revenue ?? 0);
-            $chartProfit[] = (float) ($dailyProfitRaw[$date]->profit ?? 0);
+
+            $orderProfit = (float) ($dailyOrderProfit[$date]->profit ?? 0);
+            $shippingPaid = (float) ($dailyShippingPaid[$date]->paid ?? 0);
+
+            $chartProfit[] = $orderProfit - $shippingPaid;
 
             $currentDate->addDay();
         }
