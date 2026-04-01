@@ -321,7 +321,6 @@
                 @csrf
 
                 <div class="register-grid">
-                    {{-- Họ tên --}}
                     <div class="field-group">
                         <label class="field-label" for="name">Họ và tên</label>
                         <input
@@ -337,7 +336,6 @@
                         @enderror
                     </div>
 
-                    {{-- SĐT --}}
                     <div class="field-group">
                         <label class="field-label" for="phone">Số điện thoại</label>
                         <input
@@ -350,7 +348,6 @@
                         >
                     </div>
 
-                    {{-- Ngày sinh --}}
                     <div class="field-group">
                         <label class="field-label" for="date_of_birth">Ngày sinh</label>
                         <input
@@ -362,7 +359,6 @@
                         >
                     </div>
 
-                    {{-- Giới tính --}}
                     <div class="field-group">
                         <label class="field-label" for="gender">Giới tính</label>
                         <select id="gender" name="gender" class="field-select">
@@ -373,7 +369,6 @@
                         </select>
                     </div>
 
-                    {{-- Email --}}
                     <div class="field-group full-col">
                         <label class="field-label" for="email">Email</label>
                         <input
@@ -389,7 +384,6 @@
                         @enderror
                     </div>
 
-                    {{-- Avatar --}}
                     <div class="field-group full-col">
                         <label class="field-label">Ảnh đại diện</label>
 
@@ -428,7 +422,6 @@
                         </div>
                     </div>
 
-                    {{-- Password --}}
                     <div class="field-group">
                         <label class="field-label" for="password">Mật khẩu</label>
                         <div class="password-wrap">
@@ -444,6 +437,7 @@
                                 type="button"
                                 onclick="togglePassword('password', this)"
                                 class="toggle-password-btn"
+                                aria-label="Ẩn hiện mật khẩu"
                             >
                                 <i class="bi bi-eye"></i>
                             </button>
@@ -454,7 +448,6 @@
                         @enderror
                     </div>
 
-                    {{-- Confirm --}}
                     <div class="field-group">
                         <label class="field-label" for="password_confirmation">Xác nhận mật khẩu</label>
                         <div class="password-wrap">
@@ -470,6 +463,7 @@
                                 type="button"
                                 onclick="togglePassword('password_confirmation', this)"
                                 class="toggle-password-btn"
+                                aria-label="Ẩn hiện mật khẩu"
                             >
                                 <i class="bi bi-eye"></i>
                             </button>
@@ -496,42 +490,43 @@
         </div>
     </div>
 
-    {{-- Toast chỉ cho lỗi KHÔNG thuộc các field chính --}}
-    @if ($errors->any()
-        && !$errors->has('name')
-        && !$errors->has('email')
-        && !$errors->has('password')
-        && !$errors->has('password_confirmation'))
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            showToast(@json($errors->first()), 'error');
-        });
-    </script>
+    @if ($errors->any())
+        @push('scripts')
+            <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                    if (typeof window.showToast === 'function') {
+                        window.showToast(@json($errors->first()), 'error');
+                    }
+                });
+            </script>
+        @endpush
     @endif
 
-    <script>
-        function previewAvatar(event) {
-            const file = event.target.files[0];
-            if (!file) return;
+    @push('scripts')
+        <script>
+            function previewAvatar(event) {
+                const file = event.target.files[0];
+                if (!file) return;
 
-            const reader = new FileReader();
-            reader.onload = function () {
-                document.getElementById('avatarPreview').src = reader.result;
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function togglePassword(id, btn) {
-            const input = document.getElementById(id);
-            const icon = btn.querySelector('i');
-
-            if (input.type === "password") {
-                input.type = "text";
-                icon.classList.replace("bi-eye", "bi-eye-slash");
-            } else {
-                input.type = "password";
-                icon.classList.replace("bi-eye-slash", "bi-eye");
+                const reader = new FileReader();
+                reader.onload = function () {
+                    document.getElementById('avatarPreview').src = reader.result;
+                };
+                reader.readAsDataURL(file);
             }
-        }
-    </script>
+
+            function togglePassword(id, btn) {
+                const input = document.getElementById(id);
+                const icon = btn.querySelector('i');
+
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    icon.classList.replace('bi-eye', 'bi-eye-slash');
+                } else {
+                    input.type = 'password';
+                    icon.classList.replace('bi-eye-slash', 'bi-eye');
+                }
+            }
+        </script>
+    @endpush
 </x-guest-layout>

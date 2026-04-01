@@ -316,27 +316,33 @@
     </div>
 
     @if ($errors->any())
-        <script>
-            document.addEventListener("DOMContentLoaded", function () {
-                showToast(@json($errors->first()), 'error');
-            });
-        </script>
+        @push('scripts')
+            <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                    if (typeof window.showToast === 'function') {
+                        window.showToast(@json($errors->first()), 'error');
+                    }
+                });
+            </script>
+        @endpush
     @endif
 
-    <script>
-        function togglePassword() {
-            const input = document.getElementById('password');
-            const icon = document.getElementById('toggleIcon');
+    @push('scripts')
+        <script>
+            function togglePassword() {
+                const input = document.getElementById('password');
+                const icon = document.getElementById('toggleIcon');
 
-            if (input.type === "password") {
-                input.type = "text";
-                icon.classList.remove("bi-eye");
-                icon.classList.add("bi-eye-slash");
-            } else {
-                input.type = "password";
-                icon.classList.remove("bi-eye-slash");
-                icon.classList.add("bi-eye");
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    icon.classList.remove('bi-eye');
+                    icon.classList.add('bi-eye-slash');
+                } else {
+                    input.type = 'password';
+                    icon.classList.remove('bi-eye-slash');
+                    icon.classList.add('bi-eye');
+                }
             }
-        }
-    </script>
+        </script>
+    @endpush
 </x-guest-layout>

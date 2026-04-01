@@ -1,4 +1,5 @@
 import './bootstrap';
+import './toast';
 import './wishlist';
 import './cart-actions';
 import './frontend';
