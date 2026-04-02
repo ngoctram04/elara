@@ -6,13 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\RefundRequest;
 use App\Models\RefundMedia;
+use App\Models\User;
+use App\Mail\RefundRequestMail;
+use App\Notifications\SystemNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
-use App\Mail\RefundRequestMail;
-use App\Models\User;
-use App\Notifications\SystemNotification;
 
 class RefundController extends Controller
 {
@@ -21,11 +21,11 @@ class RefundController extends Controller
      */
     public function create(Order $order)
     {
-        if ($order->user_id != Auth::id()) {
+        if ((int) $order->user_id !== (int) Auth::id()) {
             abort(403);
         }
 
-        if ($order->status != Order::STATUS_COMPLETED) {
+        if ((int) $order->status !== (int) Order::STATUS_COMPLETED) {
             return redirect()
                 ->route('orders.show', $order->id)
                 ->with('error', 'Chỉ đơn đã giao mới được yêu cầu hoàn tiền.');
@@ -71,11 +71,11 @@ class RefundController extends Controller
                 'refundRequest',
             ])->findOrFail($request->order_id);
 
-            if ($order->user_id != Auth::id()) {
+            if ((int) $order->user_id !== (int) Auth::id()) {
                 abort(403);
             }
 
-            if ($order->status != Order::STATUS_COMPLETED) {
+            if ((int) $order->status !== (int) Order::STATUS_COMPLETED) {
                 throw new \Exception('Chỉ đơn đã giao mới được yêu cầu hoàn tiền');
             }
 
@@ -83,10 +83,10 @@ class RefundController extends Controller
                 throw new \Exception('Đơn hàng này đã gửi yêu cầu hoàn tiền');
             }
 
-            $validItemIds = $order->items->pluck('id')->toArray();
+            $validItemIds = $order->items->pluck('id')->map(fn($id) => (int) $id)->toArray();
 
             foreach ($request->items as $itemId) {
-                if (!in_array($itemId, $validItemIds)) {
+                if (!in_array((int) $itemId, $validItemIds, true)) {
                     throw new \Exception('Sản phẩm không hợp lệ');
                 }
             }
@@ -96,10 +96,11 @@ class RefundController extends Controller
             | Ghép lý do chung + tình trạng từng sản phẩm
             |--------------------------------------------------------------------------
             */
-            $reason = trim($request->reason);
+            $reason = trim((string) $request->reason);
             $itemDescriptions = [];
 
             foreach ($request->items as $itemId) {
+                $itemId = (int) $itemId;
                 $condition = $request->input("item_conditions.$itemId");
                 $note = trim((string) $request->input("item_notes.$itemId"));
 
@@ -133,26 +134,29 @@ class RefundController extends Controller
                 'order_id' => $order->id,
                 'user_id'  => Auth::id(),
                 'reason'   => $fullReason,
-                'status'   => 'pending',
+                'status'   => RefundRequest::STATUS_PENDING,
             ]);
 
             /*
-|--------------------------------------------------------------------------
-| Lưu item được chọn
-|--------------------------------------------------------------------------
-*/
+            |--------------------------------------------------------------------------
+            | Lưu item được chọn
+            |--------------------------------------------------------------------------
+            | Hiện tại:
+            | - Chọn item nào thì hoàn toàn bộ số lượng của item đó
+            | - Chưa hỗ trợ hoàn 1 phần số lượng trong cùng một order_item
+            |--------------------------------------------------------------------------
+            */
             if (method_exists($refund, 'items')) {
                 $syncData = [];
 
                 foreach ($order->items as $item) {
-                    if (!in_array($item->id, $request->items)) {
+                    if (!in_array((int) $item->id, array_map('intval', $request->items), true)) {
                         continue;
                     }
 
                     $condition = $request->input("item_conditions.{$item->id}", 'sealed');
                     $note = trim((string) $request->input("item_notes.{$item->id}"));
 
-                    // Map logic mới -> enum cũ của DB
                     $dbCondition = match ($condition) {
                         'sealed' => 'sealed',
                         'broken' => 'damaged',
@@ -162,11 +166,15 @@ class RefundController extends Controller
                     $syncData[$item->id] = [
                         'variant_id'       => $item->variant_id,
                         'quantity'         => (int) ($item->quantity ?? 1),
+                        'reason'           => $reason,
                         'condition_status' => $dbCondition,
-                        'reason'           => $request->reason,
-                        'note'             => $note !== '' ? $note : null,
-                        'restockable'      => $condition === 'sealed' ? 1 : 0,
                         'is_sealed'        => $condition === 'sealed' ? 1 : 0,
+                        'restockable'      => $condition === 'sealed' ? 1 : 0,
+                        'returned_to_stock' => 0,
+                        'refund_amount'    => 0,
+                        'unit_cost'        => 0,
+                        'loss_amount'      => 0,
+                        'note'             => $note !== '' ? $note : null,
                         'created_at'       => now(),
                         'updated_at'       => now(),
                     ];
@@ -174,6 +182,7 @@ class RefundController extends Controller
 
                 $refund->items()->sync($syncData);
             }
+
             /*
             |--------------------------------------------------------------------------
             | Upload ảnh

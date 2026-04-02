@@ -517,24 +517,23 @@ Xem tất cả
 </thead>
 
 <tbody>
-
-@forelse($cancelList as $order)
+@forelse($cancelList as $cancelOrder)
 <tr>
 
 <td>
-    DH{{ str_pad($order->id, 5, '0', STR_PAD_LEFT) }}
+    DH{{ str_pad($cancelOrder->id ?? 0, 5, '0', STR_PAD_LEFT) }}
 </td>
 
 <td>
-{{ $order->customer_name ?? '---' }}
+    {{ $cancelOrder->customer_name ?? '---' }}
 </td>
 
 <td class="text-danger text-center">
-{{ number_format($order->total) }} đ
+    {{ number_format($cancelOrder->total ?? 0) }} đ
 </td>
 
 <td class="text-muted text-end">
-{{ \Carbon\Carbon::parse($order->created_at)->format('d/m/Y') }}
+    {{ !empty($cancelOrder->created_at) ? \Carbon\Carbon::parse($cancelOrder->created_at)->format('d/m/Y') : '---' }}
 </td>
 
 </tr>

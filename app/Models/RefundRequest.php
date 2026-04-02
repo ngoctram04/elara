@@ -21,12 +21,18 @@ class RefundRequest extends Model
         'status',
         'admin_note',
         'loss_amount',
+        'refund_total',
+        'restock_total_qty',
+        'damaged_total_qty',
     ];
 
     protected $casts = [
-        'loss_amount' => 'float',
-        'created_at'  => 'datetime',
-        'updated_at'  => 'datetime',
+        'loss_amount'       => 'float',
+        'refund_total'      => 'float',
+        'restock_total_qty' => 'integer',
+        'damaged_total_qty' => 'integer',
+        'created_at'        => 'datetime',
+        'updated_at'        => 'datetime',
     ];
 
     public const STATUS_PENDING  = 'pending';
@@ -59,14 +65,16 @@ class RefundRequest extends Model
         )->withPivot([
             'variant_id',
             'quantity',
+            'reason',
             'condition_status',
+            'is_sealed',
             'restockable',
             'returned_to_stock',
             'refund_amount',
             'unit_cost',
             'loss_amount',
             'note',
-        ]);
+        ])->withTimestamps();
     }
 
     public function isPending(): bool

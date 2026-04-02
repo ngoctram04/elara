@@ -66,12 +66,12 @@ class RefundController extends Controller
         DB::transaction(function () use ($id, &$refund) {
             $refund = RefundRequest::with('order.user')->findOrFail($id);
 
-            if ($refund->status !== 'pending') {
+            if ($refund->status !== RefundRequest::STATUS_PENDING) {
                 throw new \Exception('Yêu cầu không hợp lệ');
             }
 
             $refund->update([
-                'status' => 'approved',
+                'status' => RefundRequest::STATUS_APPROVED,
             ]);
         });
 
@@ -98,12 +98,12 @@ class RefundController extends Controller
 
         $refund = RefundRequest::with('user', 'order')->findOrFail($id);
 
-        if ($refund->status !== 'pending') {
+        if ($refund->status !== RefundRequest::STATUS_PENDING) {
             return back()->with('error', 'Không thể từ chối yêu cầu này');
         }
 
         $refund->update([
-            'status'     => 'rejected',
+            'status'     => RefundRequest::STATUS_REJECTED,
             'admin_note' => trim($request->admin_note),
         ]);
 
@@ -122,8 +122,8 @@ class RefundController extends Controller
     /**
      * Xác nhận đã hoàn tiền
      *
-     * sealed => hoàn kho + hoàn lô + hoàn tiền
-     * broken => không hoàn kho, không hoàn lô, hoàn tiền + ghi nhận hao hụt giá nhập
+     * sealed  => hoàn kho + trừ đã bán + hoàn tiền
+     * damaged => không hoàn kho + vẫn trừ đã bán + ghi nhận hao hụt
      */
     public function refunded(Request $request, $id)
     {
@@ -148,6 +148,7 @@ class RefundController extends Controller
         ) {
             $refund = RefundRequest::with([
                 'order.user',
+                'order.items',
                 'items.variant.product',
                 'items.variant.mainImage',
                 'items.batches',
@@ -159,7 +160,7 @@ class RefundController extends Controller
                 throw new \Exception('Không tìm thấy đơn hàng');
             }
 
-            if ($refund->status !== 'approved') {
+            if ($refund->status !== RefundRequest::STATUS_APPROVED) {
                 throw new \Exception('Chỉ có thể xác nhận hoàn tiền khi yêu cầu đã được duyệt');
             }
 
@@ -171,44 +172,34 @@ class RefundController extends Controller
             |--------------------------------------------------------------------------
             */
             $refund->update([
-                'status'      => 'refunded',
-                'admin_note'  => $manualNote ?: $refund->admin_note,
+                'status'      => RefundRequest::STATUS_REFUNDED,
+                'admin_note'  => $manualNote !== '' ? $manualNote : $refund->admin_note,
                 'loss_amount' => 0,
             ]);
 
             /*
             |--------------------------------------------------------------------------
-            | 2. Cập nhật order
-            |--------------------------------------------------------------------------
-            */
-            $order->update([
-                'status'         => Order::STATUS_RETURNED,
-                'payment_status' => Order::PAYMENT_REFUNDED,
-            ]);
-
-            /*
-            |--------------------------------------------------------------------------
-            | 3. Xử lý từng item
+            | 2. Xử lý từng item hoàn
             |--------------------------------------------------------------------------
             */
             foreach ($refund->items as $item) {
-                $variantId = $item->variant_id;
+                $variantId = (int) ($item->pivot->variant_id ?: $item->variant_id);
                 $price = (float) ($item->price ?? 0);
-                $qty = (int) ($item->pivot->quantity ?? 1);
+                $qty = max(1, (int) ($item->pivot->quantity ?? 1));
                 $refundAmount = $price * $qty;
-
-                // lưu tiền hoàn cho item
-                $item->pivot->refund_amount = $refundAmount;
-                $item->pivot->save();
-
-                $totalRefund += $refundAmount;
 
                 $conditionStatus = $item->pivot->condition_status ?? 'sealed';
                 $isRestockable = $this->shouldRestock($conditionStatus);
 
+                $pivotUnitCost = 0;
+                $pivotLoss = 0;
+                $returnedToStock = 0;
+
+                $totalRefund += $refundAmount;
+
                 if ($isRestockable) {
                     foreach ($item->batches as $batch) {
-                        if ((int) $batch->is_rolled_back === 1) {
+                        if ((int) ($batch->is_rolled_back ?? 0) === 1) {
                             continue;
                         }
 
@@ -218,8 +209,13 @@ class RefundController extends Controller
                         }
 
                         $batchQty = (int) $batch->quantity;
+                        if ($batchQty <= 0) {
+                            continue;
+                        }
+
                         $before = (int) $stock->remaining_quantity;
                         $after = $before + $batchQty;
+                        $unitCost = (float) ($stock->cost_price ?? 0);
 
                         $stock->increment('remaining_quantity', $batchQty);
 
@@ -234,7 +230,7 @@ class RefundController extends Controller
                             'quantity_change' => $batchQty,
                             'stock_before'    => $before,
                             'stock_after'     => $after,
-                            'unit_cost'       => (float) ($stock->cost_price ?? 0),
+                            'unit_cost'       => $unitCost,
                             'loss_amount'     => 0,
                             'reference_type'  => 'refund',
                             'reference_id'    => $refund->id,
@@ -242,6 +238,8 @@ class RefundController extends Controller
                         ]);
 
                         $restockQty += $batchQty;
+                        $pivotUnitCost = $unitCost;
+                        $returnedToStock = 1;
                     }
                 } else {
                     foreach ($item->batches as $batch) {
@@ -251,11 +249,18 @@ class RefundController extends Controller
                         }
 
                         $batchQty = (int) $batch->quantity;
+                        if ($batchQty <= 0) {
+                            continue;
+                        }
+
                         $unitCost = (float) ($stock->cost_price ?? 0);
                         $loss = $unitCost * $batchQty;
 
                         $totalLoss += $loss;
                         $damagedQty += $batchQty;
+                        $pivotUnitCost = $unitCost;
+                        $pivotLoss += $loss;
+                        $returnedToStock = 0;
 
                         InventoryLog::create([
                             'variant_id'      => $variantId,
@@ -273,13 +278,56 @@ class RefundController extends Controller
                     }
                 }
 
-                // đồng bộ tổng tồn của biến thể
+                /*
+                |--------------------------------------------------------------------------
+                | 2.1 Lưu thêm chi tiết vào pivot
+                |--------------------------------------------------------------------------
+                */
+                $item->pivot->refund_amount = $refundAmount;
+                $item->pivot->unit_cost = $pivotUnitCost;
+                $item->pivot->loss_amount = $pivotLoss;
+                $item->pivot->returned_to_stock = $returnedToStock;
+                $item->pivot->save();
+
+                /*
+                |--------------------------------------------------------------------------
+                | 2.2 Đồng bộ tồn kho + trừ đã bán
+                |--------------------------------------------------------------------------
+                */
                 $totalStock = (int) StockImport::where('variant_id', $variantId)
                     ->sum('remaining_quantity');
 
-                ProductVariant::where('id', $variantId)->update([
-                    'stock_quantity' => $totalStock,
+                $variant = ProductVariant::lockForUpdate()->find($variantId);
+
+                if ($variant) {
+                    $currentSold = (int) ($variant->sold_quantity ?? 0);
+                    $newSold = max(0, $currentSold - $qty);
+
+                    $variant->update([
+                        'stock_quantity' => $totalStock,
+                        'sold_quantity'  => $newSold,
+                    ]);
+                }
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | 3. Cập nhật trạng thái đơn hàng
+            |--------------------------------------------------------------------------
+            */
+            $isFullRefund = $this->isFullRefundOrder($order, $refund);
+
+            if ($isFullRefund) {
+                $order->update([
+                    'status'         => Order::STATUS_RETURNED,
+                    'payment_status' => Order::PAYMENT_REFUNDED,
                 ]);
+            } else {
+                if ((int) $order->status !== (int) Order::STATUS_COMPLETED) {
+                    $order->update([
+                        'status' => Order::STATUS_COMPLETED,
+                    ]);
+                }
             }
 
             /*
@@ -301,13 +349,23 @@ class RefundController extends Controller
                 $extraNote[] = 'Hao hụt giá nhập: ' . number_format($totalLoss, 0, ',', '.') . 'đ';
             }
 
+            if ($totalRefund > 0) {
+                $extraNote[] = 'Tổng tiền hoàn: ' . number_format($totalRefund, 0, ',', '.') . 'đ';
+            }
+
+            if (!$isFullRefund) {
+                $extraNote[] = 'Hoàn một phần đơn hàng';
+            } else {
+                $extraNote[] = 'Hoàn toàn bộ đơn hàng';
+            }
+
             $mergedNote = trim(implode(' | ', array_filter([
                 $refund->admin_note,
                 implode(' | ', $extraNote),
             ])));
 
             $refund->update([
-                'admin_note'        => $mergedNote ?: null,
+                'admin_note'        => $mergedNote !== '' ? $mergedNote : null,
                 'loss_amount'       => $totalLoss,
                 'restock_total_qty' => $restockQty,
                 'damaged_total_qty' => $damagedQty,
@@ -324,7 +382,7 @@ class RefundController extends Controller
             ]));
         }
 
-        return back()->with('success', 'Đã hoàn tiền và xử lý tồn kho theo từng sản phẩm');
+        return back()->with('success', 'Đã hoàn tiền và cập nhật tồn kho / đã bán');
     }
 
     /**
@@ -333,5 +391,33 @@ class RefundController extends Controller
     private function shouldRestock(?string $condition): bool
     {
         return $condition === 'sealed';
+    }
+
+    /**
+     * Kiểm tra refund hiện tại có phải hoàn toàn bộ đơn hay không
+     */
+    private function isFullRefundOrder(Order $order, RefundRequest $refund): bool
+    {
+        $order->loadMissing('items');
+        $refund->loadMissing('items');
+
+        $refundQtyMap = [];
+
+        foreach ($refund->items as $refundItem) {
+            $orderItemId = (int) $refundItem->id;
+            $refundQtyMap[$orderItemId] = (int) ($refundItem->pivot->quantity ?? 0);
+        }
+
+        foreach ($order->items as $orderItem) {
+            $orderItemId = (int) $orderItem->id;
+            $orderedQty = (int) ($orderItem->quantity ?? 0);
+            $refundedQty = (int) ($refundQtyMap[$orderItemId] ?? 0);
+
+            if ($refundedQty < $orderedQty) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
