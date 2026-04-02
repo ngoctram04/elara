@@ -50,7 +50,6 @@ function getVariantSearchText(item) {
     return normalizeText([
         item.product_name,
         item.attribute_value,
-        item.sku,
         item.label
     ].join(' '));
 }
@@ -144,9 +143,8 @@ function renderDropdown(row, items) {
                     ${escapeHtml(item.product_name)} - ${escapeHtml(item.attribute_value)}
                 </div>
                 <div class="variant-item-meta">
-                    ${item.sku ? `<span><i class="bi bi-upc-scan me-1"></i>SKU: ${escapeHtml(item.sku)}</span>` : ''}
-                    ${getStockBadgeHtml(item)}
-                </div>
+    ${getStockBadgeHtml(item)}
+</div>
             </div>
         </div>
     `).join('');
@@ -200,9 +198,8 @@ function renderSelectedVariantInfo(row, variant) {
                     ${escapeHtml(variant.product_name)} - ${escapeHtml(variant.attribute_value)}
                 </div>
                 <div class="selected-variant-stock">
-                    ${variant.sku ? `<span><i class="bi bi-upc-scan me-1"></i>${escapeHtml(variant.sku)}</span>` : ''}
-                    ${getStockBadgeHtml(variant)}
-                </div>
+    ${getStockBadgeHtml(variant)}
+</div>
             </div>
         </div>
     `;

@@ -119,11 +119,8 @@
                             </td>
 
                             <td>
-                                <div>{{ $item->variant->attribute_value ?? '-' }}</div>
-                                @if(!empty($item->variant->sku))
-                                    <small class="text-muted">SKU: {{ $item->variant->sku }}</small>
-                                @endif
-                            </td>
+    <div>{{ $item->variant->attribute_value ?? '-' }}</div>
+</td>
 
                             <td class="text-center">
                                 {{ number_format($item->quantity) }}

@@ -326,10 +326,7 @@
 
         $image = $variant?->image_path;
 
-        $variantCode = $variant->sku
-            ?? $variant->code
-            ?? $variant->variant_code
-            ?? ('BT' . $variant->id);
+        $variantCode = $variant ? ('BT' . $variant->id) : '---';
 
         $rawCondition = strtolower(trim((string) ($item->pivot->condition_status ?? '')));
 

@@ -140,7 +140,7 @@
 
                                         <input type="text"
                                                class="form-control form-control-sm variant-keyword"
-                                               placeholder="Tìm theo tên / biến thể / SKU"
+                                               placeholder="Tìm theo tên / biến thể"
                                                autocomplete="off">
 
                                         <div class="variant-dropdown d-none"></div>
@@ -250,16 +250,15 @@
             : '';
 
         return [
-            'id' => $v->id,
-            'product_name' => $v->product->name ?? '',
-            'attribute_value' => $v->attribute_value ?? '',
-            'sku' => $v->sku ?? '',
-            'stock_quantity' => (int) $v->stock_quantity,
-            'stock_text' => $stockText,
-            'stock_class' => $stockClass,
-            'label' => trim(($v->product->name ?? '') . ' - ' . ($v->attribute_value ?? '')),
-            'image' => $imageUrl,
-        ];
+    'id' => $v->id,
+    'product_name' => $v->product->name ?? '',
+    'attribute_value' => $v->attribute_value ?? '',
+    'stock_quantity' => (int) $v->stock_quantity,
+    'stock_text' => $stockText,
+    'stock_class' => $stockClass,
+    'label' => trim(($v->product->name ?? '') . ' - ' . ($v->attribute_value ?? '')),
+    'image' => $imageUrl,
+];
     })->values();
 @endphp
 
