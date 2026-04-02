@@ -117,10 +117,7 @@ class Order extends Model
     /**
      * Khuyến mãi áp dụng
      */
-    public function promotions(): HasMany
-    {
-        return $this->hasMany(OrderPromotion::class, 'order_id');
-    }
+
 
     /**
      * Yêu cầu hoàn tiền

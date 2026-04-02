@@ -78,18 +78,19 @@ class HomeController extends Controller
             'variants',
             'promotions',
         ])
-            ->withAvg('reviews', 'rating')
-            ->withCount('reviews')
+        ->withAvg('reviews', 'rating')
+        ->withCount('reviews')
+        ->withSum('variants as variants_sold_sum', 'sold_quantity')
+        ->where('is_active', true)
+        ->whereHas('promotions', function ($q) use ($now) {
+            $q->where('type', 'product')
             ->where('is_active', true)
-            ->whereHas('promotions', function ($q) use ($now) {
-                $q->where('type', 'product')
-                    ->where('is_active', true)
-                    ->where('start_date', '<=', $now)
-                    ->where('end_date', '>=', $now);
-            })
-            ->orderByDesc('total_sold')
-            ->take(8)
-            ->get();
+            ->where('start_date', '<=', $now)
+            ->where('end_date', '>=', $now);
+        })
+        ->orderByDesc('variants_sold_sum')
+        ->take(8)
+        ->get();
 
         /* ===============================
            BLOG

@@ -17,9 +17,6 @@ use App\Notifications\SystemNotification;
 
 class StockImportController extends Controller
 {
-    /* =======================
-        FORM NHẬP HÀNG
-    ======================= */
     public function create()
     {
         $variants = ProductVariant::with('product:id,name')
@@ -36,9 +33,6 @@ class StockImportController extends Controller
         return view('admin.stock_imports.create', compact('variants'));
     }
 
-    /* =======================
-        LƯU PHIẾU NHẬP
-    ======================= */
     public function store(Request $request)
     {
         $request->validate([
@@ -87,18 +81,12 @@ class StockImportController extends Controller
                     $mfg = $request->mfg_date[$index] ?? null;
                     $exp = $request->expiry_date[$index] ?? null;
 
-                    /* ======================
-                        VALIDATE NGÀY
-                    ====================== */
                     if ($mfg && $exp) {
                         if (Carbon::parse($exp)->lte(Carbon::parse($mfg))) {
                             throw new \Exception('Hạn sử dụng phải lớn hơn ngày sản xuất');
                         }
                     }
 
-                    /* ======================
-                        CẢNH BÁO < 6 THÁNG
-                    ====================== */
                     if ($exp) {
                         $today  = Carbon::today();
                         $expiry = Carbon::parse($exp);
@@ -108,16 +96,10 @@ class StockImportController extends Controller
                         }
                     }
 
-                    /* ======================
-                        LOCK VARIANT
-                    ====================== */
                     $variant = ProductVariant::with('product')
                         ->lockForUpdate()
                         ->findOrFail($variantId);
 
-                    /* ======================
-                        GIÁ VỐN TRUNG BÌNH
-                    ====================== */
                     $oldStock = $variant->stock_quantity ?? 0;
                     $oldCost  = $variant->cost_price ?? 0;
 
@@ -130,29 +112,11 @@ class StockImportController extends Controller
                         ? ($totalOldValue + $totalNewValue) / $newStock
                         : $cost;
 
-                    /* ======================
-                        UPDATE VARIANT
-                    ====================== */
                     $variant->update([
                         'stock_quantity' => $newStock,
                         'cost_price'     => $avgCost
                     ]);
 
-                    /* ======================
-                        UPDATE PRODUCT STOCK
-                    ====================== */
-                    if ($variant->product) {
-                        $totalStock = ProductVariant::where('product_id', $variant->product_id)
-                            ->sum('stock_quantity');
-
-                        $variant->product->update([
-                            'total_stock' => $totalStock
-                        ]);
-                    }
-
-                    /* ======================
-                        STOCK IMPORT
-                    ====================== */
                     $import = StockImport::create([
                         'variant_id'         => $variant->id,
                         'quantity'           => $qty,
@@ -173,15 +137,11 @@ class StockImportController extends Controller
                         'created_by'         => Auth::id()
                     ]);
 
-                    // Chỉ dùng nếu bảng stock_imports có cột lot_code
                     if (isset($import->lot_code) || Schema::hasColumn('stock_imports', 'lot_code')) {
                         $import->lot_code = 'L' . $import->id;
                         $import->save();
                     }
 
-                    /* ======================
-                        INVENTORY LOG
-                    ====================== */
                     InventoryLog::create([
                         'variant_id'      => $variant->id,
                         'stock_import_id' => $import->id,
@@ -203,9 +163,6 @@ class StockImportController extends Controller
                 ->withErrors($e->getMessage());
         }
 
-        /* ======================
-            NOTIFICATION
-        ====================== */
         $totalQty = array_sum($request->quantity);
 
         $admins = User::where('role', 'admin')->get();
@@ -221,18 +178,12 @@ class StockImportController extends Controller
             ]));
         }
 
-        /* ======================
-            RETURN
-        ====================== */
         return redirect()
             ->route('admin.stock.history')
             ->with('success', 'Nhập hàng thành công')
             ->with('warning', $warnings);
     }
 
-    /* =======================
-        LỊCH SỬ NHẬP
-    ======================= */
     public function history(Request $request)
     {
         $query = StockImport::query();
@@ -272,9 +223,6 @@ class StockImportController extends Controller
         return view('admin.stock_imports.history', compact('imports'));
     }
 
-    /* =======================
-        CHI TIẾT PHIẾU NHẬP
-    ======================= */
     public function show($code)
     {
         $items = StockImport::with([
@@ -287,9 +235,6 @@ class StockImportController extends Controller
         return view('admin.stock_imports.show', compact('items', 'code'));
     }
 
-    /* =======================
-        XUẤT PDF
-    ======================= */
     public function exportPdf($code)
     {
         $items = StockImport::with([

@@ -61,9 +61,6 @@ class ProductController extends Controller
         }
 
         $products = $query->latest()->get()->filter(function ($product) use ($request) {
-            $product->total_stock = $product->variants->sum('stock_quantity');
-            $product->total_sold  = $product->variants->sum('sold_quantity');
-
             $isUnderCost = false;
 
             if ($product->total_stock > 0) {

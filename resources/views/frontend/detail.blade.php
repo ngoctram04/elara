@@ -12,7 +12,7 @@
 
 @php
     $hasVariants = $product->variants->count() > 0;
-    $totalSold = $product->variants()->sum('sold_quantity');
+    $totalSold = $product->total_sold;
     $defaultVariant = $product->variants->firstWhere('stock_quantity', '>', 0) ?? $product->variants->first();
 
     $isFavorited = in_array((int) $product->id, $favorites ?? [], true);
@@ -153,15 +153,11 @@
                 <div id="price-final" class="price-final"></div>
             </div>
 
-            @if(!empty($product->short_description))
-                <div class="short-desc">
-                    {!! nl2br(e($product->short_description)) !!}
-                </div>
-            @elseif(!empty($product->description))
-                <div class="short-desc">
-                    {{ \Illuminate\Support\Str::limit(strip_tags($product->description), 220) }}
-                </div>
-            @endif
+            @if(!empty($product->description))
+    <div class="short-desc">
+        {{ \Illuminate\Support\Str::limit(strip_tags($product->description), 220) }}
+    </div>
+@endif
 
             {{-- VARIANTS --}}
             @if($hasVariants)

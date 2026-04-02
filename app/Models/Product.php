@@ -16,14 +16,12 @@ class Product extends Model
         'category_id',
         'brand_id',
         'description',
-        'short_description',
         'min_price',
         'max_price',
-        'total_stock',
-        'total_sold',
         'is_active',
         'is_featured',
     ];
+    
 
     /* ======================
         RELATIONS

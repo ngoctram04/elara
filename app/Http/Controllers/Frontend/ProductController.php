@@ -109,8 +109,7 @@ class ProductController extends Controller
         /* ======================================================
          * 4. TOTAL SOLD
          * ====================================================== */
-        $totalSold = $product->variants->sum('sold_quantity');
-
+        $totalSold = $product->total_sold;
         /* ======================================================
          * 5. WISHLIST
          * ====================================================== */
@@ -133,7 +132,7 @@ class ProductController extends Controller
         ])
             ->withAvg('reviews', 'rating')
             ->withCount('reviews')
-            ->withSum('variants as total_sold', 'sold_quantity')
+            ->withSum('variants as variants_sold_sum', 'sold_quantity')
             ->where('is_active', 1)
             ->where('id', '!=', $product->id)
             ->where('category_id', $product->category_id)
@@ -142,7 +141,7 @@ class ProductController extends Controller
                     ->where('is_active', 1);
             })
             ->orderByRaw("brand_id = ? DESC", [$product->brand_id])
-            ->orderByDesc('total_sold')
+            ->orderByDesc('variants_sold_sum')
             ->limit(8)
             ->get();
 
@@ -203,7 +202,7 @@ class ProductController extends Controller
             ])
                 ->withAvg('reviews', 'rating')
                 ->withCount('reviews')
-                ->withSum('variants as total_sold', 'sold_quantity')
+                ->withSum('variants as variants_sold_sum', 'sold_quantity')
                 ->where('is_active', 1)
                 ->whereIn('id', $recentIdsWithoutCurrent)
                 ->whereHas('variants', function ($q) {

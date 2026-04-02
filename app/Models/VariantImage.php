@@ -19,7 +19,6 @@ class VariantImage extends Model
         'variant_id',
         'image_path',
         'is_main',
-        'sort_order',
     ];
 
     /**
@@ -27,7 +26,6 @@ class VariantImage extends Model
      */
     protected $casts = [
         'is_main'    => 'boolean',
-        'sort_order' => 'integer',
     ];
 
     /* =====================================================
@@ -65,11 +63,4 @@ class VariantImage extends Model
         return $query->where('is_main', true);
     }
 
-    /**
-     * Scope sắp xếp theo thứ tự hiển thị
-     */
-    public function scopeOrdered($query)
-    {
-        return $query->orderBy('sort_order')->orderBy('id');
-    }
 }
