@@ -118,70 +118,65 @@ class AdminChatController extends Controller
      */
     public function send(Request $request, $id)
     {
-
         $conversation = ChatConversation::findOrFail($id);
+
+        // Gán admin phụ trách nếu chưa có
+        if (is_null($conversation->admin_id)) {
+            $conversation->admin_id = Auth::id();
+            $conversation->save();
+        }
 
         $message = $request->message;
 
-
         /*
-        ============================
-        Upload ảnh nếu có
-        ============================
-        */
-
+    ============================
+    Upload ảnh nếu có
+    ============================
+    */
         if ($request->hasFile('image')) {
-
             $file = $request->file('image');
-
             $path = $file->store('chat', 'public');
-
             $message = '/storage/' . $path;
         }
 
-
         /*
-        ============================
-        Không gửi nếu rỗng
-        ============================
-        */
-
+    ============================
+    Không gửi nếu rỗng
+    ============================
+    */
         if (!$message) {
             return back();
         }
 
-
         /*
-        ============================
-        Lưu tin nhắn
-        ============================
-        */
-
+    ============================
+    Lưu tin nhắn
+    ============================
+    */
         $msg = ChatMessage::create([
-                'conversation_id' => $conversation->id,
-                'sender_id' => Auth::id(),
-                'message' => $message,
-                'is_read' => 0
-            ]);
+            'conversation_id' => $conversation->id,
+            'sender_id'       => Auth::id(),
+            'message'         => $message,
+            'is_read'         => 0
+        ]);
 
         // 🔔 THÔNG BÁO CHO USER
         $conversation->user->notify(new SystemNotification([
-            'title' => 'Tin nhắn mới từ shop',
+            'title'   => 'Tin nhắn mới từ shop',
             'message' => 'Bạn có tin nhắn mới từ nhân viên',
-            'url' => route('chat.index'),
-            'type' => 'chat',
-            'meta' => [
+            'url'     => route('chat.index'),
+            'type'    => 'chat',
+            'meta'    => [
                 'conversation_id' => $conversation->id
             ]
         ]));
+
         /*
-        ============================
-        Cập nhật thời gian chat
-        ============================
-        */
-
+    ============================
+    Cập nhật thời gian chat
+    ============================
+    */
         $conversation->touch();
-
 
         return back();
     }

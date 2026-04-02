@@ -184,12 +184,16 @@ class StockImportController extends Controller
                     ====================== */
                     InventoryLog::create([
                         'variant_id'      => $variant->id,
+                        'stock_import_id' => $import->id,
                         'type'            => 'import',
                         'quantity_change' => $qty,
                         'stock_before'    => $oldStock,
                         'stock_after'     => $newStock,
+                        'unit_cost'       => $cost,
+                        'loss_amount'     => 0,
                         'reference_type'  => 'stock_import',
-                        'reference_id'    => $import->id
+                        'reference_id'    => $import->id,
+                        'note'            => 'Nhập hàng từ phiếu ' . $code,
                     ]);
                 }
             });
@@ -306,6 +310,7 @@ class StockImportController extends Controller
 
         return $pdf->download('phieu-nhap-' . $code . '.pdf');
     }
+
     public function searchSuppliers(Request $request)
     {
         $keyword = trim((string) $request->get('q', ''));

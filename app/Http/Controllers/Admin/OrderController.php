@@ -402,7 +402,8 @@ class OrderController extends Controller
                     $stock->increment('remaining_quantity', $batch->quantity);
 
                     $batch->update([
-                        'is_rolled_back' => 1
+                        'returned_quantity' => $batch->quantity,
+                        'is_rolled_back'    => 1,
                     ]);
 
                     // ✅ cộng change

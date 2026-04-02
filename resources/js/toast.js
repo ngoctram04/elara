@@ -35,6 +35,4 @@ window.showToast = function (message, type = 'success') {
         }, 300);
     }
 };
-window.showToast = function(message, type = 'success') {
-    alert('Toast đang chạy: ' + message);
-};
+
