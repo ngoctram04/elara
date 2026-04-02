@@ -17,7 +17,10 @@ class RefundMedia extends Model
         'type'
     ];
 
-    public $timestamps = false;
+    /**
+     * Laravel sẽ tự động quản lý created_at, updated_at
+     */
+    // ❌ KHÔNG cần $timestamps = false
 
     /*
     |--------------------------------------------------------------------------
@@ -48,6 +51,12 @@ class RefundMedia extends Model
 
     // Lấy link file
     public function url()
+    {
+        return asset('storage/' . $this->file_path);
+    }
+
+    // (Optional) accessor cho tiện dùng blade
+    public function getUrlAttribute()
     {
         return asset('storage/' . $this->file_path);
     }

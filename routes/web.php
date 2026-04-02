@@ -297,9 +297,6 @@ Route::prefix('admin')
         // Xuất PDF
         Route::post('/reports/export-pdf', [ReportController::class, 'exportPdf'])
             ->name('reports.exportPdf');
-    // Trả ship
-    Route::post('/reports/pay-shipping', [ReportController::class, 'payShipping'])
-    ->name('reports.payShipping');
 
         // ===== Trang chi tiết báo cáo =====
 
