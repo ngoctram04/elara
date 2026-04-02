@@ -13,9 +13,9 @@ $outOfStock = !$addVariant;
 
 $isFavorited = in_array($product->id, $favorites ?? []);
 
-$originalPrice = $priceVariant?->original_price ?: $priceVariant?->price;
 $finalPrice = $priceVariant?->final_price ?? $priceVariant?->price;
-$hasSalePrice = $priceVariant && $priceVariant->is_on_sale && $originalPrice > $finalPrice;
+$originalPrice = ($priceVariant && $priceVariant->is_on_sale) ? $priceVariant->price : null;
+$hasSalePrice = $originalPrice && $originalPrice > $finalPrice;
 @endphp
 
 @if ($priceVariant)

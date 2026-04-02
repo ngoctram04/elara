@@ -18,7 +18,6 @@ class ProductVariant extends Model
         'attribute_name',
         'attribute_value',
         'price',
-        'original_price',
         'cost_price',
         'stock_quantity',
         'sold_quantity',
@@ -27,16 +26,11 @@ class ProductVariant extends Model
 
     protected $casts = [
         'price'          => 'float',
-        'original_price' => 'float',
         'cost_price'     => 'float',
         'stock_quantity' => 'integer',
         'sold_quantity'  => 'integer',
         'is_active'      => 'boolean',
     ];
-
-    /* =====================================================
-        RELATIONS
-    ===================================================== */
 
     public function product(): BelongsTo
     {
@@ -76,18 +70,10 @@ class ProductVariant extends Model
         return $this->hasMany(StockImport::class, 'variant_id');
     }
 
-    /* =====================================================
-        IMAGE
-    ===================================================== */
-
     public function getImagePathAttribute()
     {
         return optional($this->mainImage)->image_path;
     }
-
-    /* =====================================================
-        STOCK
-    ===================================================== */
 
     public function availableStock(): int
     {
@@ -110,18 +96,10 @@ class ProductVariant extends Model
         $this->save();
     }
 
-    /* =====================================================
-        DISPLAY
-    ===================================================== */
-
     public function displayName(): string
     {
         return "{$this->attribute_name}: {$this->attribute_value}";
     }
-
-    /* =====================================================
-        PROMOTION
-    ===================================================== */
 
     public function activePromotion(): ?Promotion
     {
@@ -182,18 +160,10 @@ class ProductVariant extends Model
             : '-' . number_format($promotion->discount_value, 0, ',', '.') . 'đ';
     }
 
-    /* =====================================================
-        PROFIT
-    ===================================================== */
-
     public function getProfitPerItemAttribute(): float
     {
         return $this->final_price - $this->cost_price;
     }
-
-    /* =====================================================
-        FEFO
-    ===================================================== */
 
     public function deductByBatch(int $quantity): array
     {
@@ -261,10 +231,6 @@ class ProductVariant extends Model
         });
     }
 
-    /* =====================================================
-        RESTORE STOCK
-    ===================================================== */
-
     public function restoreStock(int $quantity): void
     {
         DB::transaction(function () use ($quantity) {
@@ -272,7 +238,6 @@ class ProductVariant extends Model
 
             $before = $variant->stock_quantity;
 
-            // Tạm thời chỉ cộng lại lô gần nhất còn dùng được
             $latestBatch = $variant->stockImports()
                 ->orderByDesc('created_at')
                 ->lockForUpdate()

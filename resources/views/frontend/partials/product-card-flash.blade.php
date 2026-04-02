@@ -2,14 +2,12 @@
     $addVariant = $product->variants->first(fn ($v) => $v->stock_quantity > 0);
 
     $saleVariant = $product->variants
-        ->filter(function ($v) {
-            $final = $v->final_price ?? $v->price;
-            $original = $v->original_price ?? $v->price;
-
-            return $v->is_on_sale || ($original > $final);
-        })
-        ->sortBy(fn ($v) => $v->final_price ?? $v->price)
-        ->first();
+    ->filter(function ($v) {
+        $final = $v->final_price ?? $v->price;
+        return $v->is_on_sale || ($v->price > $final);
+    })
+    ->sortBy(fn ($v) => $v->final_price ?? $v->price)
+    ->first();
 
     $priceVariant = $saleVariant
         ?? $product->variants->sortBy(fn ($v) => $v->final_price ?? $v->price)->first();
@@ -17,13 +15,9 @@
     $finalPrice = $priceVariant->final_price ?? $priceVariant->price;
     $oldPrice = null;
 
-    if ($priceVariant) {
-        if (!empty($priceVariant->original_price) && $priceVariant->original_price > $finalPrice) {
-            $oldPrice = $priceVariant->original_price;
-        } elseif (!empty($priceVariant->price) && $priceVariant->price > $finalPrice) {
-            $oldPrice = $priceVariant->price;
-        }
-    }
+    if ($priceVariant && $priceVariant->is_on_sale && $priceVariant->price > $finalPrice) {
+    $oldPrice = $priceVariant->price;
+}
 
     $outOfStock = !$addVariant;
     $isFavorited = in_array($product->id, $favorites ?? []);

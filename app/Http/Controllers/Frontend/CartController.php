@@ -100,7 +100,7 @@ class CartController extends Controller
                 }
 
                 $price = $variant->final_price ?? $variant->price;
-                $originalPrice = $variant->price;
+                $originalPrice = $variant->is_on_sale ? $variant->price : null;
 
                 $subTotal = $price * $quantity;
                 $total += $subTotal;
@@ -481,7 +481,7 @@ class CartController extends Controller
             ?? null;
 
         $price = $variant->final_price ?? $variant->price;
-        $originalPrice = $variant->price;
+        $originalPrice = $variant->is_on_sale ? $variant->price : null;
 
         return response()->json([
             'success'        => true,

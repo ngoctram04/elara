@@ -125,20 +125,14 @@ class ShopController extends Controller
             case 'discount':
                 $now = Carbon::now();
 
-                $query->where(function ($q) use ($now) {
-                    $q->whereHas('variants', function ($sub) {
-                        $sub->whereNotNull('original_price')
-                            ->whereColumn('original_price', '>', 'price');
-                    })
-                        ->orWhereHas('promotions', function ($sub) use ($now) {
-                            $sub->where('type', 'product')
-                                ->where('is_active', 1)
-                                ->where('start_date', '<=', $now)
-                                ->where('end_date', '>=', $now);
-                        });
+                $query->whereHas('promotions', function ($sub) use ($now) {
+                    $sub->where('type', 'product')
+                    ->where('is_active', 1)
+                    ->where('start_date', '<=', $now)
+                    ->where('end_date', '>=', $now);
                 })
-                    ->orderByDesc('variants_total_sold')
-                    ->orderByDesc('id');
+                ->orderByDesc('variants_total_sold')
+                ->orderByDesc('id');
                 break;
 
             default:
