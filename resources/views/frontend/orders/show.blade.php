@@ -23,16 +23,17 @@
             </div>
         </div>
 
-        <div class="d-flex flex-wrap gap-2">
+        <div class="order-header-actions">
             @php
                 $hasUnreviewedItems = $order->isCompleted() && $order->items->contains(function ($item) {
                     return !$item->review;
                 });
             @endphp
 
+
             @if($hasUnreviewedItems)
                 <a href="{{ route('reviews.create', $order->id) }}"
-                   class="btn btn-primary btn-sm px-3">
+                   class="btn btn-primary btn-sm btn-action-soft">
                     <i class="bi bi-star me-1"></i> Đánh giá tất cả
                 </a>
             @endif
@@ -40,9 +41,9 @@
             @if($order->status == 3 && !$order->customer_confirmed)
                 <form action="{{ route('orders.confirmReceived',$order->id) }}"
                       method="POST"
-                      class="confirm-form">
+                      class="confirm-form d-inline">
                     @csrf
-                    <button type="submit" class="btn btn-success btn-sm px-3 btn-confirm">
+                    <button type="submit" class="btn btn-success btn-sm btn-action-soft btn-confirm">
                         <i class="bi bi-check-circle me-1"></i> Đã nhận hàng
                     </button>
                 </form>
@@ -51,13 +52,13 @@
             @if($order->canCancel())
                 <form action="{{ route('orders.cancel', $order->id) }}"
                       method="POST"
-                      class="cancel-form">
+                      class="cancel-form d-inline">
                     @csrf
                     @method('PUT')
 
                     <input type="hidden" name="cancel_reason" class="cancel-reason">
 
-                    <button type="button" class="btn btn-danger btn-sm px-3 btn-cancel">
+                    <button type="button" class="btn btn-danger btn-sm btn-action-soft btn-cancel">
                         <i class="bi bi-x-circle me-1"></i> Huỷ đơn
                     </button>
                 </form>
@@ -73,6 +74,13 @@
                     <div class="info-box">
                         <div class="info-label">Ngày đặt</div>
                         <div class="info-value">{{ $order->created_at->format('d/m/Y H:i') }}</div>
+
+                        @if($order->updated_at)
+                            <div class="info-meta mt-2">
+                                <i class="bi bi-clock-history me-1"></i>
+                                Cập nhật: {{ $order->updated_at->format('d/m/Y H:i') }}
+                            </div>
+                        @endif
 
                         @if($order->isCompleted() && $order->delivered_at)
                             <div class="info-meta text-success mt-2">
@@ -100,10 +108,34 @@
                     <div class="info-box">
                         <div class="info-label">Trạng thái đơn hàng</div>
                         <div class="mt-1">
-                            <span class="badge rounded-pill bg-{{ $order->status_badge }} px-3 py-2">
+                            <span class="badge rounded-pill bg-{{ $order->status_badge }} px-3 py-2 status-pill">
                                 {{ $order->status_name }}
                             </span>
                         </div>
+
+                        @if($order->refundRequest)
+                            <div class="mt-3">
+                                <div class="info-label">Trạng thái hoàn tiền</div>
+
+                                @if($order->refundRequest->status == 'pending')
+                                    <span class="badge rounded-pill text-dark bg-warning-subtle border refund-pill">
+                                        Đang chờ xử lý
+                                    </span>
+                                @elseif($order->refundRequest->status == 'approved')
+                                    <span class="badge rounded-pill text-primary bg-primary-subtle border refund-pill">
+                                        Đã duyệt
+                                    </span>
+                                @elseif($order->refundRequest->status == 'refunded')
+                                    <span class="badge rounded-pill text-success bg-success-subtle border refund-pill">
+                                        Đã hoàn tiền
+                                    </span>
+                                @elseif($order->refundRequest->status == 'rejected')
+                                    <span class="badge rounded-pill text-danger bg-danger-subtle border refund-pill">
+                                        Bị từ chối
+                                    </span>
+                                @endif
+                            </div>
+                        @endif
                     </div>
                 </div>
 
@@ -113,7 +145,7 @@
                         <div class="info-value">{{ $order->payment_method_name }}</div>
 
                         <div class="mt-2">
-                            <span class="badge rounded-pill bg-{{ $order->payment_status_badge }} px-3 py-2">
+                            <span class="badge rounded-pill bg-{{ $order->payment_status_badge }} px-3 py-2 status-pill">
                                 {{ $order->payment_status_name }}
                             </span>
                         </div>
@@ -181,7 +213,7 @@
                 </div>
 
                 @if($order->delivery_image)
-                    <div class="mt-3">
+                    <div class="shipping-image-wrap">
                         <a href="javascript:void(0)"
                            class="delivery-image-link view-delivery-image"
                            data-src="{{ asset('storage/' . $order->delivery_image) }}">
@@ -314,26 +346,26 @@
             <div class="summary-box mt-3">
                 <div class="summary-row">
                     <span>Tạm tính</span>
-                    <strong>{{ number_format($order->subtotal) }}đ</strong>
+                    <span>{{ number_format($order->subtotal) }}đ</span>
                 </div>
 
                 @if($order->voucher_discount > 0)
                     <div class="summary-row text-success">
                         <span>Voucher</span>
-                        <strong>- {{ number_format($order->voucher_discount) }}đ</strong>
+                        <span>- {{ number_format($order->voucher_discount) }}đ</span>
                     </div>
                 @endif
 
                 @if($order->birthday_discount > 0)
                     <div class="summary-row text-success">
                         <span>Ưu đãi sinh nhật</span>
-                        <strong>- {{ number_format($order->birthday_discount) }}đ</strong>
+                        <span>- {{ number_format($order->birthday_discount) }}đ</span>
                     </div>
                 @endif
 
                 <div class="summary-row">
                     <span>Phí vận chuyển</span>
-                    <strong>{{ number_format($order->shipping_fee) }}đ</strong>
+                    <span>{{ number_format($order->shipping_fee) }}đ</span>
                 </div>
 
                 <div class="summary-total">
@@ -349,12 +381,20 @@
                     <div class="refund-box">
                         @if(!$refund)
                             <button type="button"
-                                    class="btn btn-outline-danger btn-sm px-3 btn-refund"
+                                    class="btn btn-outline-danger btn-sm px-3 btn-action-soft btn-refund"
                                     data-url="{{ route('refund.create', $order->id) }}">
                                 <i class="bi bi-arrow-counterclockwise me-1"></i>
                                 Yêu cầu trả hàng / hoàn tiền
                             </button>
                         @else
+                            <div class="refund-top-action mb-2">
+                                <a href="{{ route('refund.show', $refund->id) }}"
+                                   class="btn btn-outline-danger btn-sm btn-action-soft">
+                                    <i class="bi bi-receipt-cutoff me-1"></i>
+                                    Xem phiếu hoàn tiền
+                                </a>
+                            </div>
+
                             @if($refund->status == 'pending')
                                 <div class="refund-alert refund-warning">
                                     <b>Đã gửi yêu cầu hoàn tiền</b><br>

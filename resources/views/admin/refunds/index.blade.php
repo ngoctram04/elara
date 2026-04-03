@@ -8,7 +8,6 @@
 @endphp
 
 <div class="container-fluid">
-
     <h4 class="mb-4">Yêu cầu hoàn tiền</h4>
 
     <div class="card shadow-sm border-0">
@@ -52,7 +51,7 @@
 
                         <div class="col-md-3">
                             <select name="sort" class="form-select form-select-sm">
-                                <option value="new" {{ request('sort') == 'new' ? 'selected' : '' }}>
+                                <option value="new" {{ request('sort', 'new') == 'new' ? 'selected' : '' }}>
                                     Mới nhất
                                 </option>
 
@@ -63,13 +62,12 @@
                         </div>
 
                         <div class="col-md-2 d-flex gap-2">
-                            <button class="btn btn-outline-primary btn-sm">
+                            <button class="btn btn-outline-primary btn-sm" type="submit">
                                 <i class="bi bi-search"></i>
                                 Lọc
                             </button>
 
-                            <a href="{{ route('admin.refunds.index') }}"
-                               class="btn btn-outline-secondary btn-sm">
+                            <a href="{{ route('admin.refunds.index') }}" class="btn btn-outline-secondary btn-sm">
                                 Đặt lại
                             </a>
                         </div>
@@ -82,7 +80,6 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>STT</th>
                             <th>Đơn hàng</th>
                             <th>Khách hàng</th>
                             <th>Lý do</th>
@@ -99,12 +96,11 @@
                                 $reasonRaw = trim((string) $refund->reason);
                                 $parts = explode('Chi tiết sản phẩm khách chọn:', $reasonRaw);
                                 $mainReason = trim($parts[0] ?? $reasonRaw);
+
+                                $stt = ($refunds->currentPage() - 1) * $refunds->perPage() + $loop->iteration;
                             @endphp
 
                             <tr>
-                                <td>
-                                    {{ ($refunds->currentPage() - 1) * $refunds->perPage() + $loop->iteration }}
-                                </td>
 
                                 <td>
                                     <a href="{{ route('admin.orders.show', $refund->order_id) }}">
@@ -131,7 +127,7 @@
                                 </td>
 
                                 <td>
-                                    {{ $refund->created_at->format('d/m/Y H:i') }}
+                                    {{ optional($refund->created_at)->format('d/m/Y H:i') ?? '---' }}
                                 </td>
 
                                 <td>
@@ -150,7 +146,7 @@
                                               method="POST"
                                               class="d-inline">
                                             @csrf
-                                            <button class="btn btn-sm btn-success">
+                                            <button class="btn btn-sm btn-success" type="submit">
                                                 Duyệt
                                             </button>
                                         </form>
@@ -306,7 +302,6 @@
                                                 @endif
                                             </p>
 
-                                            {{-- LÝ DO CHÍNH --}}
                                             <div class="mb-3">
                                                 <div class="fw-semibold mb-2">Lý do hoàn tiền:</div>
                                                 <div class="border rounded-3 p-3 bg-light small" style="line-height:1.7;">
@@ -314,78 +309,74 @@
                                                 </div>
                                             </div>
 
-                                            {{-- CHI TIẾT BIẾN THỂ --}}
                                             <div class="mb-3">
                                                 <div class="fw-semibold mb-2">Chi tiết sản phẩm hoàn:</div>
 
                                                 @if($refund->items->count())
                                                     <div class="border rounded-3 overflow-hidden">
                                                         @foreach($refund->items as $item)
-    @php
-        $variant = $item->variant;
+                                                            @php
+                                                                $variant = $item->variant;
+                                                                $image = $variant?->image_path;
+                                                                $variantCode = $variant ? ('BT' . $variant->id) : '---';
+                                                                $rawCondition = strtolower(trim((string) ($item->pivot->condition_status ?? '')));
 
-        $image = $variant?->image_path;
+                                                                $conditionText = match($rawCondition) {
+                                                                    'sealed', 'intact', 'new', 'con_nguyen', 'connguyenseal' => 'Còn nguyên seal',
+                                                                    'broken', 'damaged', 'vo', 'bi_vo', 'bivo' => 'Bị vỡ',
+                                                                    default => 'Không xác định',
+                                                                };
 
-        $variantCode = $variant ? ('BT' . $variant->id) : '---';
+                                                                $conditionClass = match($rawCondition) {
+                                                                    'sealed', 'intact', 'new', 'con_nguyen', 'connguyenseal' => 'bg-success-subtle text-success border',
+                                                                    'broken', 'damaged', 'vo', 'bi_vo', 'bivo' => 'bg-danger-subtle text-danger border',
+                                                                    default => 'bg-secondary',
+                                                                };
+                                                            @endphp
 
-        $rawCondition = strtolower(trim((string) ($item->pivot->condition_status ?? '')));
+                                                            <div class="d-flex gap-3 p-3 {{ !$loop->last ? 'border-bottom' : '' }}">
+                                                                <div style="width:72px;min-width:72px;">
+                                                                    @if($image)
+                                                                        <img
+                                                                            src="{{ asset('storage/' . ltrim($image, '/')) }}"
+                                                                            alt="variant-image"
+                                                                            class="img-fluid rounded border"
+                                                                            style="width:72px;height:72px;object-fit:cover;"
+                                                                        >
+                                                                    @else
+                                                                        <div class="d-flex align-items-center justify-content-center rounded border bg-light text-muted"
+                                                                             style="width:72px;height:72px;font-size:12px;">
+                                                                            No image
+                                                                        </div>
+                                                                    @endif
+                                                                </div>
 
-        $conditionText = match($rawCondition) {
-            'sealed', 'intact', 'new', 'con_nguyen', 'connguyenseal' => 'Còn nguyên seal',
-            'broken', 'damaged', 'vo', 'bi_vo', 'bivo' => 'Bị vỡ',
-            default => 'Không xác định',
-        };
+                                                                <div class="flex-grow-1">
+                                                                    <div class="fw-semibold mb-1">
+                                                                        {{ $variant->product->name ?? 'Sản phẩm' }}
+                                                                    </div>
 
-        $conditionClass = match($rawCondition) {
-            'sealed', 'intact', 'new', 'con_nguyen', 'connguyenseal' => 'bg-success-subtle text-success border',
-            'broken', 'damaged', 'vo', 'bi_vo', 'bivo' => 'bg-danger-subtle text-danger border',
-            default => 'bg-secondary',
-        };
-    @endphp
+                                                                    <div class="small text-muted mb-1">
+                                                                        Mã biến thể: <span class="fw-semibold text-dark">{{ $variantCode }}</span>
+                                                                    </div>
 
-    <div class="d-flex gap-3 p-3 {{ !$loop->last ? 'border-bottom' : '' }}">
-        <div style="width:72px;min-width:72px;">
-            @if($image)
-                <img
-                    src="{{ asset('storage/' . ltrim($image, '/')) }}"
-                    alt="variant-image"
-                    class="img-fluid rounded border"
-                    style="width:72px;height:72px;object-fit:cover;"
-                >
-            @else
-                <div class="d-flex align-items-center justify-content-center rounded border bg-light text-muted"
-                     style="width:72px;height:72px;font-size:12px;">
-                    No image
-                </div>
-            @endif
-        </div>
+                                                                    @if(!empty($variant->attribute_name) || !empty($variant->attribute_value))
+                                                                        <div class="small text-muted mb-1">
+                                                                            Phân loại: {{ $variant->attribute_name }}: {{ $variant->attribute_value }}
+                                                                        </div>
+                                                                    @endif
 
-        <div class="flex-grow-1">
-            <div class="fw-semibold mb-1">
-                {{ $variant->product->name ?? 'Sản phẩm' }}
-            </div>
+                                                                    <div class="small text-muted mb-1">
+                                                                        Số lượng hoàn: {{ $item->pivot->quantity ?? 1 }}
+                                                                    </div>
 
-            <div class="small text-muted mb-1">
-                Mã biến thể: <span class="fw-semibold text-dark">{{ $variantCode }}</span>
-            </div>
-
-            @if(!empty($variant->attribute_name) || !empty($variant->attribute_value))
-                <div class="small text-muted mb-1">
-                    Phân loại: {{ $variant->attribute_name }}: {{ $variant->attribute_value }}
-                </div>
-            @endif
-
-            <div class="small text-muted mb-1">
-                Số lượng hoàn: {{ $item->pivot->quantity ?? 1 }}
-            </div>
-
-            <div class="small">
-                Tình trạng:
-                <span class="badge {{ $conditionClass }}">{{ $conditionText }}</span>
-            </div>
-        </div>
-    </div>
-@endforeach
+                                                                    <div class="small">
+                                                                        Tình trạng:
+                                                                        <span class="badge {{ $conditionClass }}">{{ $conditionText }}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        @endforeach
                                                     </div>
                                                 @else
                                                     <div class="border rounded-3 p-3 bg-light small text-muted">
@@ -394,27 +385,26 @@
                                                 @endif
                                             </div>
 
-                                            
-@if(!empty($refund->admin_note))
-    @php
-        $adminNotes = array_filter(array_map('trim', explode('|', $refund->admin_note)));
-    @endphp
+                                            @if(!empty($refund->admin_note))
+                                                @php
+                                                    $adminNotes = array_filter(array_map('trim', explode('|', $refund->admin_note)));
+                                                @endphp
 
-    <div class="mb-3">
-        <div class="fw-semibold mb-2">Ghi chú admin:</div>
+                                                <div class="mb-3">
+                                                    <div class="fw-semibold mb-2">Ghi chú admin:</div>
 
-        <div class="border rounded-3 p-3 bg-light">
-            <div class="d-flex flex-wrap gap-2">
-                @foreach($adminNotes as $note)
-                    <span class="px-3 py-2 rounded-pill border bg-white text-muted"
-                          style="font-size:13px;">
-                        {{ $note }}
-                    </span>
-                @endforeach
-            </div>
-        </div>
-    </div>
-@endif
+                                                    <div class="border rounded-3 p-3 bg-light">
+                                                        <div class="d-flex flex-wrap gap-2">
+                                                            @foreach($adminNotes as $note)
+                                                                <span class="px-3 py-2 rounded-pill border bg-white text-muted" style="font-size:13px;">
+                                                                    {{ $note }}
+                                                                </span>
+                                                            @endforeach
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            @endif
+
                                             <h6 class="mb-2">Hình ảnh / video minh chứng</h6>
 
                                             <div class="d-flex flex-wrap gap-2">
@@ -437,9 +427,7 @@
                                                         </video>
                                                     @endif
                                                 @empty
-                                                    <p class="text-muted mb-0">
-                                                        Không có hình minh chứng
-                                                    </p>
+                                                    <p class="text-muted mb-0">Không có hình minh chứng</p>
                                                 @endforelse
                                             </div>
                                         </div>
@@ -462,9 +450,8 @@
     </div>
 
     <div class="mt-3">
-        {{ $refunds->links('vendor.pagination.custom-blue') }}
+        {{ $refunds->appends(request()->query())->links('vendor.pagination.custom-blue') }}
     </div>
-
 </div>
 
 {{-- PREVIEW MEDIA MODAL --}}
@@ -508,7 +495,6 @@ document.querySelectorAll('.refund-preview').forEach(function (el) {
             img.style.display = 'block';
         } else {
             const source = this.querySelector('source');
-
             if (source) {
                 video.src = source.src;
                 video.style.display = 'block';

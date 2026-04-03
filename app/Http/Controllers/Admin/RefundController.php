@@ -51,7 +51,15 @@ class RefundController extends Controller
             $query->where('status', $request->status);
         }
 
-        $query->orderBy('created_at', $request->sort === 'old' ? 'asc' : 'desc');
+        $sort = $request->get('sort', 'new');
+
+        if ($sort === 'old') {
+            $query->orderBy('created_at', 'asc')
+                ->orderBy('id', 'asc');
+        } else {
+            $query->orderBy('created_at', 'desc')
+            ->orderBy('id', 'desc');
+        }
 
         $refunds = $query->paginate(10)->withQueryString();
 
