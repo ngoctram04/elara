@@ -47,7 +47,7 @@
                     </div>
                     <div>
                         <h2 class="policy-card-title">Chính sách giao hàng</h2>
-                        <div class="policy-card-subtitle">Thông tin vận chuyển và nhận hàng</div>
+                        <div class="policy-card-subtitle">Thông tin vận chuyển, nhận hàng và đổi trả</div>
                     </div>
                 </div>
 
@@ -55,8 +55,23 @@
                     <li>Thời gian giao hàng dự kiến từ <b>2 - 5 ngày</b>.</li>
                     <li>Hỗ trợ <b>thanh toán khi nhận hàng (COD)</b>.</li>
                     <li>Khách hàng được <b>kiểm tra sản phẩm</b> trước khi thanh toán.</li>
-                    <li>Hỗ trợ đổi trả khi sản phẩm gặp lỗi hoặc có vấn đề phát sinh.</li>
+                    <li>Hỗ trợ <b>đổi trả/hoàn tiền</b> khi sản phẩm gặp lỗi, hư hỏng hoặc có vấn đề phát sinh theo quy định của hệ thống.</li>
                 </ul>
+
+                <div class="policy-alert warning mt-2">
+                    <div class="alert-icon">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                    </div>
+                    <div class="alert-content">
+                        <div class="alert-title">Lưu ý về phí vận chuyển khi hoàn tiền</div>
+                        <div>
+                            Trong trường hợp khách hàng yêu cầu <b>đổi trả/hoàn tiền</b>, 
+                            <b>phí vận chuyển sẽ do khách hàng chịu</b>. 
+                            Số tiền hoàn lại thực tế sẽ được tính sau khi <b>trừ phí vận chuyển</b> liên quan đến đơn hàng.
+                            Nếu đơn hàng có phát sinh tiền ship, hệ thống sẽ <b>khấu trừ trực tiếp tiền ship vào số tiền hoàn</b>.
+                        </div>
+                    </div>
+                </div>
             </section>
 
             {{-- TERMS --}}
@@ -79,6 +94,7 @@
                     <li>Không sử dụng website cho mục đích gian lận hoặc vi phạm pháp luật.</li>
                     <li>Cung cấp thông tin cá nhân chính xác khi mua hàng.</li>
                     <li>Tôn trọng hệ thống và những người dùng khác trong quá trình sử dụng.</li>
+                    <li>Trong trường hợp phát sinh yêu cầu đổi trả/hoàn tiền, khách hàng cần cung cấp thông tin trung thực và phối hợp với hệ thống để xác minh đơn hàng.</li>
                 </ul>
 
                 <div class="policy-alert warning mt-2">
@@ -483,12 +499,33 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const links = document.querySelectorAll('.policy-link');
+    const sections = document.querySelectorAll('.policy-card');
 
     links.forEach(link => {
         link.addEventListener('click', function () {
             links.forEach(item => item.classList.remove('active'));
             this.classList.add('active');
         });
+    });
+
+    window.addEventListener('scroll', function () {
+        let current = '';
+
+        sections.forEach(section => {
+            const sectionTop = section.offsetTop - 120;
+            if (window.scrollY >= sectionTop) {
+                current = section.getAttribute('id');
+            }
+        });
+
+        if (current) {
+            links.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === '#' + current) {
+                    link.classList.add('active');
+                }
+            });
+        }
     });
 });
 </script>

@@ -141,10 +141,6 @@ class RefundController extends Controller
             |--------------------------------------------------------------------------
             | Lưu item được chọn
             |--------------------------------------------------------------------------
-            | Hiện tại:
-            | - Chọn item nào thì hoàn toàn bộ số lượng của item đó
-            | - Chưa hỗ trợ hoàn 1 phần số lượng trong cùng một order_item
-            |--------------------------------------------------------------------------
             */
             if (method_exists($refund, 'items')) {
                 $syncData = [];
@@ -164,19 +160,19 @@ class RefundController extends Controller
                     };
 
                     $syncData[$item->id] = [
-                        'variant_id'       => $item->variant_id,
-                        'quantity'         => (int) ($item->quantity ?? 1),
-                        'reason'           => $reason,
-                        'condition_status' => $dbCondition,
-                        'is_sealed'        => $condition === 'sealed' ? 1 : 0,
-                        'restockable'      => $condition === 'sealed' ? 1 : 0,
-                        'returned_to_stock' => 0,
-                        'refund_amount'    => 0,
-                        'unit_cost'        => 0,
-                        'loss_amount'      => 0,
-                        'note'             => $note !== '' ? $note : null,
-                        'created_at'       => now(),
-                        'updated_at'       => now(),
+                        'variant_id'         => $item->variant_id,
+                        'quantity'           => (int) ($item->quantity ?? 1),
+                        'reason'             => $reason,
+                        'condition_status'   => $dbCondition,
+                        'is_sealed'          => $condition === 'sealed' ? 1 : 0,
+                        'restockable'        => $condition === 'sealed' ? 1 : 0,
+                        'returned_to_stock'  => 0,
+                        'refund_amount'      => 0,
+                        'unit_cost'          => 0,
+                        'loss_amount'        => 0,
+                        'note'               => $note !== '' ? $note : null,
+                        'created_at'         => now(),
+                        'updated_at'         => now(),
                     ];
                 }
 

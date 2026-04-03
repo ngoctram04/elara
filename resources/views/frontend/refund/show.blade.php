@@ -9,10 +9,10 @@
     --rf-text:#0f172a;
     --rf-muted:#64748b;
     --rf-soft:#f8fbff;
-    --rf-soft-2:#eef6ff;
     --rf-primary:#0d6efd;
-    --rf-primary-2:#2563eb;
     --rf-danger:#dc3545;
+    --rf-success:#15803d;
+    --rf-warning:#ea580c;
 }
 
 .refund-wrapper{
@@ -85,7 +85,7 @@
 .refund-row{
     display:flex;
     gap:16px;
-    padding:8px 0;
+    padding:10px 0;
     border-bottom:1px dashed #e6edf5;
 }
 
@@ -95,7 +95,7 @@
 }
 
 .refund-label{
-    width:160px;
+    width:220px;
     flex-shrink:0;
     font-weight:700;
     color:#334155;
@@ -124,6 +124,7 @@
     font-weight:700;
     color:var(--rf-text);
     margin-bottom:12px;
+    text-align:center;
 }
 
 .product-list{
@@ -217,6 +218,21 @@
     color:var(--rf-danger);
 }
 
+.amount-positive{
+    font-weight:800;
+    color:var(--rf-danger);
+}
+
+.amount-deduction{
+    font-weight:800;
+    color:var(--rf-warning);
+}
+
+.amount-final{
+    font-weight:800;
+    color:var(--rf-success);
+}
+
 .total-refund-box{
     background:linear-gradient(180deg, #fff 0%, #f8fbff 100%);
     border:1px solid #dbeafe;
@@ -239,17 +255,6 @@
     font-weight:800;
     color:var(--rf-danger);
     line-height:1.2;
-}
-
-.reason-box{
-    background:var(--rf-soft);
-    border:1px solid var(--rf-border);
-    border-radius:16px;
-    padding:14px 16px;
-    color:#334155;
-    font-size:14px;
-    line-height:1.75;
-    white-space:pre-line;
 }
 
 .gallery{
@@ -347,6 +352,62 @@
 @section('content')
 <div class="container py-4 refund-wrapper refund-detail-page">
 
+    @php
+        $productRefundTotal = (float) $refund->items->sum(function ($i) {
+            return (float) ($i->pivot->refund_amount ?? 0);
+        });
+
+        $finalRefundTotal = (float) ($refund->refund_total ?? 0);
+
+        $orderShippingFee = (float) (optional($refund->order)->shipping_fee ?? 0);
+
+        /*
+        |--------------------------------------------------------------------------
+        | XỬ LÝ HIỂN THỊ PHÍ SHIP
+        |--------------------------------------------------------------------------
+        | 1. Nếu tiền hoàn thực tế nhỏ hơn tiền sản phẩm hoàn
+        |    => có khoản ship bị khấu trừ trực tiếp
+        | 2. Nếu không bị khấu trừ trực tiếp nhưng đơn gốc có ship
+        |    => ship không hoàn
+        | 3. Nếu không có ship thật
+        |    => hiển thị 0đ
+        */
+        $shippingDeducted = max(0, $productRefundTotal - $finalRefundTotal);
+
+        $shippingLabel = 'Phí vận chuyển đã khấu trừ';
+        $shippingDisplayAmount = $shippingDeducted;
+
+        if ($shippingDeducted > 0) {
+            $shippingLabel = 'Phí vận chuyển đã khấu trừ';
+            $shippingDisplayAmount = $shippingDeducted;
+        } elseif ($orderShippingFee > 0) {
+            $shippingLabel = 'Phí vận chuyển không hoàn';
+            $shippingDisplayAmount = $orderShippingFee;
+        } else {
+            $shippingLabel = 'Phí vận chuyển đã khấu trừ';
+            $shippingDisplayAmount = 0;
+        }
+
+        $refundReason = trim((string) \Illuminate\Support\Str::before(
+            (string) ($refund->reason ?? ''),
+            'Chi tiết sản phẩm khách chọn:'
+        ));
+
+        $isFullOrderRefund = false;
+
+        if ($refund->order && $refund->order->relationLoaded('items') && $refund->order->items) {
+            $refundQty = (int) $refund->items->sum(function ($item) {
+                return (int) ($item->pivot->quantity ?? 0);
+            });
+
+            $orderQty = (int) $refund->order->items->sum(function ($orderItem) {
+                return (int) ($orderItem->quantity ?? 0);
+            });
+
+            $isFullOrderRefund = $refundQty > 0 && $refundQty === $orderQty;
+        }
+    @endphp
+
     <h4 class="refund-page-title">Chi tiết phiếu hoàn tiền</h4>
     <div class="refund-page-subtitle">
         Theo dõi sản phẩm yêu cầu hoàn, số tiền hoàn và trạng thái xử lý của cửa hàng
@@ -355,14 +416,13 @@
     <div class="card refund-card">
         <div class="card-body">
 
-            {{-- HEADER --}}
             <div class="refund-header">
                 <div>
                     <div class="refund-code">
                         RH{{ str_pad($refund->id, 5, '0', STR_PAD_LEFT) }}
                     </div>
                     <div class="refund-created">
-                        Ngày gửi: {{ $refund->created_at->format('d/m/Y H:i') }}
+                        Ngày gửi: {{ optional($refund->created_at)->format('d/m/Y H:i') }}
                     </div>
                 </div>
 
@@ -373,13 +433,12 @@
                 </div>
             </div>
 
-            {{-- THÔNG TIN CHUNG --}}
             <div class="refund-section">
                 <div class="refund-info-box">
                     <div class="refund-row">
                         <div class="refund-label">Đơn hàng</div>
                         <div class="refund-value">
-                            <a href="{{ route('orders.show',$refund->order_id) }}" class="refund-order-link">
+                            <a href="{{ route('orders.show', $refund->order_id) }}" class="refund-order-link">
                                 DH{{ str_pad($refund->order_id, 5, '0', STR_PAD_LEFT) }}
                             </a>
                         </div>
@@ -388,13 +447,12 @@
                     <div class="refund-row">
                         <div class="refund-label">Lý do yêu cầu</div>
                         <div class="refund-value">
-                            {{ Str::before($refund->reason, 'Chi tiết sản phẩm khách chọn:') }}
+                            {{ $refundReason !== '' ? $refundReason : 'Không có lý do' }}
                         </div>
                     </div>
                 </div>
             </div>
 
-            {{-- SẢN PHẨM HOÀN --}}
             @if($refund->items->count())
                 <div class="refund-section">
                     <div class="section-title">Sản phẩm hoàn tiền</div>
@@ -405,23 +463,26 @@
                                 $variant = $item->variant ?? null;
                                 $product = $variant->product ?? null;
                                 $img = $variant->mainImage->image_path
-                                        ?? $product->mainImage->image_path
-                                        ?? null;
+                                    ?? $product->mainImage->image_path
+                                    ?? null;
 
                                 $condition = $item->pivot->condition_status ?? 'sealed';
 
                                 $conditionText = match($condition) {
                                     'sealed'  => 'Còn nguyên seal',
-                                    'damaged' => 'Bị vỡ',
+                                    'damaged' => 'Bị hư hỏng',
                                     'broken'  => 'Bị vỡ',
                                     default   => 'Không xác định'
                                 };
 
-                                $refundMoney = $item->pivot->refund_amount ?? 0;
+                                $refundMoney = (float) ($item->pivot->refund_amount ?? 0);
                             @endphp
 
                             <div class="product-box">
-                                <img src="{{ $img ? asset('storage/'.$img) : 'https://via.placeholder.com/78' }}" alt="product">
+                                <img
+                                    src="{{ $img ? asset('storage/' . $img) : 'https://via.placeholder.com/78' }}"
+                                    alt="product"
+                                >
 
                                 <div class="product-content">
                                     <div class="product-name">
@@ -434,17 +495,17 @@
                                     </div>
 
                                     <div class="product-meta">
-                                        Số lượng hoàn: {{ $item->pivot->quantity }}
+                                        Số lượng hoàn: {{ $item->pivot->quantity ?? 0 }}
                                     </div>
 
                                     <div class="product-bottom">
-                                        <span class="info-chip {{ in_array($condition, ['damaged','broken']) ? 'broken' : 'sealed' }}">
-                                            <i class="bi {{ in_array($condition, ['damaged','broken']) ? 'bi-exclamation-octagon' : 'bi-shield-check' }}"></i>
+                                        <span class="info-chip {{ in_array($condition, ['damaged', 'broken']) ? 'broken' : 'sealed' }}">
+                                            <i class="bi {{ in_array($condition, ['damaged', 'broken']) ? 'bi-exclamation-octagon' : 'bi-shield-check' }}"></i>
                                             {{ $conditionText }}
                                         </span>
 
                                         <span class="refund-money">
-                                            Hoàn: {{ number_format($refundMoney) }}₫
+                                            Tiền sản phẩm: {{ number_format($refundMoney, 0, ',', '.') }}₫
                                         </span>
                                     </div>
                                 </div>
@@ -454,10 +515,37 @@
                 </div>
             @endif
 
-            {{-- TỔNG TIỀN HOÀN --}}
-            @php
-                $totalRefund = $refund->items->sum(fn($i) => $i->pivot->refund_amount ?? 0);
-            @endphp
+            <div class="refund-section">
+                <div class="refund-info-box">
+                    <div class="refund-row">
+                        <div class="refund-label">Tổng tiền sản phẩm hoàn</div>
+                        <div class="refund-value amount-positive">
+                            {{ number_format($productRefundTotal, 0, ',', '.') }}₫
+                        </div>
+                    </div>
+
+                    <div class="refund-row">
+                        <div class="refund-label">{{ $shippingLabel }}</div>
+                        <div class="refund-value amount-deduction">
+                            {{ number_format($shippingDisplayAmount, 0, ',', '.') }}₫
+                        </div>
+                    </div>
+
+                    <div class="refund-row">
+                        <div class="refund-label">Số tiền hoàn thực tế</div>
+                        <div class="refund-value amount-final">
+                            {{ number_format($finalRefundTotal, 0, ',', '.') }}₫
+                        </div>
+                    </div>
+
+                    <div class="refund-row">
+                        <div class="refund-label">Hình thức hoàn</div>
+                        <div class="refund-value">
+                            {{ $isFullOrderRefund ? 'Hoàn toàn bộ đơn hàng' : 'Hoàn một phần đơn hàng' }}
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <div class="refund-section">
                 <div class="total-refund-box">
@@ -465,20 +553,19 @@
                         Tổng số tiền hoàn
                     </div>
                     <div class="total-refund-value">
-                        {{ number_format($totalRefund) }}₫
+                        {{ number_format($finalRefundTotal, 0, ',', '.') }}₫
                     </div>
                 </div>
             </div>
 
-            {{-- ẢNH MINH CHỨNG --}}
-            @if($refund->media->where('type','image')->count())
+            @if($refund->media->where('type', 'image')->count())
                 <div class="refund-section">
                     <div class="section-title">Ảnh minh chứng</div>
 
                     <div class="gallery">
-                        @foreach($refund->media->where('type','image') as $media)
+                        @foreach($refund->media->where('type', 'image') as $media)
                             <div class="gallery-item">
-                                <img src="{{ asset('storage/'.$media->file_path) }}" alt="refund-proof">
+                                <img src="{{ asset('storage/' . $media->file_path) }}" alt="refund-proof">
                             </div>
                         @endforeach
                     </div>

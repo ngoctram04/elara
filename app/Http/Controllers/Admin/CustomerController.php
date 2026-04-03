@@ -8,8 +8,6 @@ use App\Models\Order;
 use App\Models\Review;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 
 class CustomerController extends Controller
 {
@@ -91,37 +89,22 @@ class CustomerController extends Controller
                     $q->where('status', 3);
                 }
             ])
-            ->withSum([
-                'orders as spending' => function ($q) {
-                    $q->where('status', 3);
-                }
-            ], 'grand_total')
-            ->withSum([
-                'orders as yearly_spending' => function ($q) {
-                    $q->where('status', 3)
-                        ->whereYear('created_at', now()->year);
-                }
-            ], 'grand_total')
             ->paginate(10)
             ->withQueryString();
 
         /*
         |--------------------------------------------------------------------------
-        | ĐẾM ĐƠN HỦY TRONG 7 NGÀY
+        | GÁN DỮ LIỆU HIỂN THỊ TỪ CHÍNH CSDL USERS
         |--------------------------------------------------------------------------
         */
-        $customerIds = $customers->pluck('id')->all();
-
-        $cancelCounts = Order::select('user_id', DB::raw('COUNT(*) as total'))
-            ->whereIn('user_id', $customerIds)
-            ->where('status', 4)
-            ->where('cancelled_by', 'customer')
-            ->where('updated_at', '>=', now()->subDays(7))
-            ->groupBy('user_id')
-            ->pluck('total', 'user_id');
-
         foreach ($customers as $customer) {
-            $customer->cancel_count = (int) ($cancelCounts[$customer->id] ?? 0);
+            $customer->spending = (float) ($customer->total_spent ?? 0);
+            $customer->yearly_spending = (float) ($customer->yearly_spent ?? 0);
+            $customer->cancel_count = (int) Order::where('user_id', $customer->id)
+                ->where('status', 4)
+                ->where('cancelled_by', 'customer')
+                ->where('updated_at', '>=', now()->subDays(7))
+                ->count();
         }
 
         return view('admin.customers.index', compact('customers'));
@@ -147,12 +130,10 @@ class CustomerController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | TỔNG CHI TIÊU (CHỈ TÍNH ĐƠN ĐÃ GIAO)
+        | TỔNG CHI TIÊU LẤY TỪ CSDL USERS
         |--------------------------------------------------------------------------
         */
-        $totalSpent = Order::where('user_id', $user->id)
-            ->where('status', 3)
-            ->sum('grand_total');
+        $totalSpent = (float) ($user->total_spent ?? 0);
 
         /*
         |--------------------------------------------------------------------------
@@ -208,11 +189,6 @@ class CustomerController extends Controller
                 'locked_until'   => $lockedUntil,
             ]);
 
-            /*
-            |--------------------------------------------------------------------------
-            | GỬI MAIL KHÓA
-            |--------------------------------------------------------------------------
-            */
             Mail::send(
                 'emails.account_blocked',
                 [
@@ -241,11 +217,6 @@ class CustomerController extends Controller
             'locked_until'   => null,
         ]);
 
-        /*
-        |--------------------------------------------------------------------------
-        | GỬI MAIL MỞ KHÓA
-        |--------------------------------------------------------------------------
-        */
         Mail::send(
             'emails.account_unblocked',
             [

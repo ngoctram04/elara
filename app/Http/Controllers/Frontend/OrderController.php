@@ -30,9 +30,6 @@ class OrderController extends Controller
             ->where('user_id', Auth::id())
             ->latest();
 
-        // =========================
-        // TÌM KIẾM MÃ ĐƠN
-        // =========================
         if ($request->filled('keyword')) {
             $keyword = trim($request->keyword);
             $numberKeyword = preg_replace('/\D/', '', $keyword);
@@ -49,25 +46,22 @@ class OrderController extends Controller
             });
         }
 
-        // =========================
-        // LỌC TRẠNG THÁI
-        // =========================
         if ($request->filled('status')) {
             switch ($request->status) {
                 case 'processing':
-                    $query->where('status', 1);
+                    $query->where('status', Order::STATUS_PENDING);
                     break;
 
                 case 'shipping':
-                    $query->where('status', 2);
+                    $query->where('status', Order::STATUS_PROCESSING);
                     break;
 
                 case 'completed':
-                    $query->where('status', 3);
+                    $query->where('status', Order::STATUS_COMPLETED);
                     break;
 
                 case 'cancelled':
-                    $query->where('status', 4);
+                    $query->where('status', Order::STATUS_CANCELLED);
                     break;
 
                 case 'return':
@@ -80,6 +74,7 @@ class OrderController extends Controller
 
         return view('frontend.orders.index', compact('orders'));
     }
+
     public function showRefund($id)
     {
         $refund = RefundRequest::with([
@@ -95,11 +90,11 @@ class OrderController extends Controller
             'items.variant.product',
             'items.variant.mainImage',
         ])
-        ->where('id', $id)
-        ->whereHas('order', function ($q) {
-            $q->where('user_id', Auth::id());
-        })
-        ->firstOrFail();
+            ->where('id', $id)
+            ->whereHas('order', function ($q) {
+                $q->where('user_id', Auth::id());
+            })
+            ->firstOrFail();
 
         return view('frontend.refund.show', compact('refund'));
     }
@@ -129,7 +124,7 @@ class OrderController extends Controller
      */
     public function cancel(Request $request, $id)
     {
-        $order = Order::with('items.batches', 'items.variant')
+        $order = Order::with(['items.batches', 'items.variant', 'user'])
             ->where('id', $id)
             ->where('user_id', Auth::id())
             ->firstOrFail();
@@ -144,8 +139,8 @@ class OrderController extends Controller
             $paymentStatus = $order->payment_status;
 
             if (
-                $order->payment_method === 'vnpay'
-                && $order->payment_status == Order::PAYMENT_PAID
+                $order->payment_method === 'vnpay' &&
+                $order->payment_status == Order::PAYMENT_PAID
             ) {
                 $paymentStatus = Order::PAYMENT_REFUNDED;
             }
@@ -201,32 +196,34 @@ class OrderController extends Controller
                 ]);
 
                 \App\Models\InventoryLog::create([
-                    'variant_id' => $variant->id,
-                    'type' => 'cancel',
+                    'variant_id'      => $variant->id,
+                    'type'            => 'cancel',
                     'quantity_change' => $change,
-                    'stock_before' => $before,
-                    'stock_after' => $after,
-                    'reference_type' => 'order',
-                    'reference_id' => $order->id
+                    'stock_before'    => $before,
+                    'stock_after'     => $after,
+                    'reference_type'  => 'order',
+                    'reference_id'    => $order->id
                 ]);
             }
 
             DB::commit();
 
-            $order->user->notify(new SystemNotification([
-                'title' => 'Bạn đã huỷ đơn',
-                'message' => 'Đơn #' . $order->id . ' đã được huỷ',
-                'url' => route('orders.show', $order->id),
-                'type' => 'order_cancelled'
-            ]));
+            if ($order->user) {
+                $order->user->notify(new SystemNotification([
+                    'title'   => 'Bạn đã huỷ đơn',
+                    'message' => 'Đơn #' . $order->id . ' đã được huỷ',
+                    'url'     => route('orders.show', $order->id),
+                    'type'    => 'order_cancelled'
+                ]));
+            }
 
             User::where('role', 'admin')->get()
                 ->each(function ($admin) use ($order) {
                     $admin->notify(new SystemNotification([
-                        'title' => 'Đơn bị huỷ',
+                        'title'   => 'Đơn bị huỷ',
                         'message' => 'Đơn #' . $order->id . ' đã bị khách huỷ',
-                        'url' => route('admin.orders.show', $order->id),
-                        'type' => 'order_cancelled'
+                        'url'     => route('admin.orders.show', $order->id),
+                        'type'    => 'order_cancelled'
                     ]));
                 });
 
@@ -236,7 +233,10 @@ class OrderController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
-            Log::error('Cancel order error: ' . $e->getMessage());
+            Log::error('Cancel order error: ' . $e->getMessage(), [
+                'order_id' => $id,
+                'user_id'  => Auth::id(),
+            ]);
 
             return back()->with('error', 'Huỷ đơn thất bại.');
         }
@@ -265,15 +265,8 @@ class OrderController extends Controller
         try {
             $order->update([
                 'customer_confirmed' => 1,
-                'received_at' => now()
+                'received_at'        => now()
             ]);
-
-            $user = $order->user;
-
-            $user->increment('yearly_spent', (float) $order->grand_total);
-
-            $user->refresh();
-            $user->updateMemberLevel();
 
             DB::commit();
 
@@ -283,7 +276,7 @@ class OrderController extends Controller
 
             Log::error('Confirm received error: ' . $e->getMessage(), [
                 'order_id' => $id,
-                'user_id' => Auth::id(),
+                'user_id'  => Auth::id(),
             ]);
 
             return back()->with('error', 'Xác nhận thất bại.');
@@ -329,9 +322,9 @@ class OrderController extends Controller
                     ]);
                 } else {
                     Cart::create([
-                        'user_id' => $userId,
+                        'user_id'    => $userId,
                         'variant_id' => $variant->id,
-                        'quantity' => $quantity
+                        'quantity'   => $quantity
                     ]);
                 }
             }
@@ -344,7 +337,10 @@ class OrderController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
-            Log::error('Reorder error: ' . $e->getMessage());
+            Log::error('Reorder error: ' . $e->getMessage(), [
+                'order_id' => $id,
+                'user_id'  => $userId,
+            ]);
 
             return back()->with('error', 'Mua lại thất bại.');
         }

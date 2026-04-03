@@ -1,8 +1,8 @@
 @php
-    $user = auth()->user();
+    $user = \App\Models\User::find(auth()->id());
 
-    $points = $user->loyalty_points ?? 0;
-    $spent = (float) ($user->yearly_spent_calculated ?? 0);
+    $points = (int) ($user->loyalty_points ?? 0);
+    $spent = (float) ($user->yearly_spent ?? 0);
     $level = strtolower($user->member_level ?? 'bronze');
 
     /*
@@ -47,6 +47,10 @@
             'Giảm 15% vào ngày sinh nhật',
         ],
     ];
+
+    if (!array_key_exists($level, $levels)) {
+        $level = 'bronze';
+    }
 
     /*
     |--------------------------------------------------------------------------

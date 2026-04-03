@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
+use App\Models\Order;
+use App\Models\RefundRequest;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -53,7 +56,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     /*
     |--------------------------------------------------------------------------
-    | RELATIONSHIPS
+    | Relationships
     |--------------------------------------------------------------------------
     */
 
@@ -109,7 +112,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     /*
     |--------------------------------------------------------------------------
-    | ACCESSORS
+    | Accessors
     |--------------------------------------------------------------------------
     */
 
@@ -127,45 +130,77 @@ class User extends Authenticatable implements MustVerifyEmail
         return asset('images/avatar-default.png');
     }
 
-    public function getYearlySpentCalculatedAttribute()
+    /**
+     * Tổng giá trị sản phẩm đã hoàn trong năm hiện tại
+     * - chỉ tính tiền sản phẩm
+     * - không dùng refund_total vì refund_total có thể đã bị trừ ship
+     */
+    public function getYearlyRefundProductTotalAttribute(): float
     {
-        return $this->calculateYearlySpent();
+        return (float) DB::table('refund_requests')
+            ->join('refund_request_items', 'refund_requests.id', '=', 'refund_request_items.refund_request_id')
+            ->join('order_items', 'refund_request_items.order_item_id', '=', 'order_items.id')
+            ->where('refund_requests.user_id', $this->id)
+            ->where('refund_requests.status', RefundRequest::STATUS_REFUNDED)
+            ->whereYear('refund_requests.updated_at', now()->year)
+            ->sum(DB::raw('COALESCE(order_items.price, 0) * COALESCE(refund_request_items.quantity, 0)'));
     }
 
-    public function getTotalSpentCalculatedAttribute()
+    /**
+     * Tổng giá trị sản phẩm đã hoàn toàn thời gian
+     * - chỉ tính tiền sản phẩm
+     * - không dùng refund_total vì refund_total có thể đã bị trừ ship
+     */
+    public function getRefundProductTotalAttribute(): float
     {
-        return $this->calculateTotalSpent();
+        return (float) DB::table('refund_requests')
+            ->join('refund_request_items', 'refund_requests.id', '=', 'refund_request_items.refund_request_id')
+            ->join('order_items', 'refund_request_items.order_item_id', '=', 'order_items.id')
+            ->where('refund_requests.user_id', $this->id)
+            ->where('refund_requests.status', RefundRequest::STATUS_REFUNDED)
+            ->sum(DB::raw('COALESCE(order_items.price, 0) * COALESCE(refund_request_items.quantity, 0)'));
     }
 
-    public function getCalculatedMemberLevelAttribute()
+    /**
+     * Chi tiêu năm hiện tại:
+     * - chỉ tính tiền sản phẩm sau giảm giá (orders.total)
+     * - không tính ship
+     * - trừ theo GIÁ TRỊ SẢN PHẨM đã hoàn
+     */
+    public function getYearlySpentCalculatedAttribute(): float
     {
-        return $this->calculateMemberLevel();
+        $completedTotal = (float) $this->orders()
+            ->whereIn('status', [Order::STATUS_COMPLETED, Order::STATUS_RETURNED])
+            ->whereNotNull('delivered_at')
+            ->whereYear('delivered_at', now()->year)
+            ->sum('total');
+
+        $refundedProductTotal = $this->yearly_refund_product_total;
+
+        return max(0, $completedTotal - $refundedProductTotal);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | CALCULATION METHODS
-    |--------------------------------------------------------------------------
-    */
-
-    public function calculateYearlySpent()
+    /**
+     * Tổng chi tiêu toàn thời gian:
+     * - chỉ tính tiền sản phẩm sau giảm giá (orders.total)
+     * - không tính ship
+     * - trừ theo GIÁ TRỊ SẢN PHẨM đã hoàn
+     */
+    public function getTotalSpentCalculatedAttribute(): float
     {
-        return (float) $this->orders()
-            ->where('status', 3)
-            ->whereYear('created_at', now()->year)
-            ->sum('grand_total');
+        $completedTotal = (float) $this->orders()
+            ->whereIn('status', [Order::STATUS_COMPLETED, Order::STATUS_RETURNED])
+            ->whereNotNull('delivered_at')
+            ->sum('total');
+
+        $refundedProductTotal = $this->refund_product_total;
+
+        return max(0, $completedTotal - $refundedProductTotal);
     }
 
-    public function calculateTotalSpent()
+    public function getCalculatedMemberLevelAttribute(): string
     {
-        return (float) $this->orders()
-            ->where('status', 3)
-            ->sum('grand_total');
-    }
-
-    public function calculateMemberLevel()
-    {
-        $spent = (float) $this->calculateYearlySpent();
+        $spent = $this->yearly_spent_calculated;
 
         if ($spent >= 10000000) {
             return 'diamond';
@@ -182,11 +217,36 @@ class User extends Authenticatable implements MustVerifyEmail
         return 'bronze';
     }
 
+    public function getCalculatedMemberLevelNameAttribute(): string
+    {
+        return match ($this->calculated_member_level) {
+            'diamond' => 'Kim Cương',
+            'gold'    => 'Vàng',
+            'silver'  => 'Bạc',
+            default   => 'Đồng',
+        };
+    }
+
     /*
     |--------------------------------------------------------------------------
-    | ROLE / STATUS
+    | Helpers
     |--------------------------------------------------------------------------
     */
+
+    public function calculateYearlySpent()
+    {
+        return $this->yearly_spent_calculated;
+    }
+
+    public function calculateTotalSpent()
+    {
+        return $this->total_spent_calculated;
+    }
+
+    public function calculateMemberLevel()
+    {
+        return $this->calculated_member_level;
+    }
 
     public function isAdmin()
     {
@@ -226,12 +286,6 @@ class User extends Authenticatable implements MustVerifyEmail
         ])->save();
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | BIRTHDAY DISCOUNT
-    |--------------------------------------------------------------------------
-    */
-
     public function hasUsedBirthdayDiscount()
     {
         return (int) $this->birthday_discount_year === (int) now()->year;
@@ -244,15 +298,22 @@ class User extends Authenticatable implements MustVerifyEmail
         ])->save();
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | MEMBERSHIP
-    |--------------------------------------------------------------------------
-    */
-
+    /**
+     * Cập nhật hạng theo yearly_spent đang lưu
+     */
     public function updateMemberLevel()
     {
-        $level = $this->calculateMemberLevel();
+        $spent = (float) ($this->yearly_spent ?? 0);
+
+        $level = 'bronze';
+
+        if ($spent >= 10000000) {
+            $level = 'diamond';
+        } elseif ($spent >= 3000000) {
+            $level = 'gold';
+        } elseif ($spent >= 1000000) {
+            $level = 'silver';
+        }
 
         $this->forceFill([
             'member_level'    => $level,
@@ -260,11 +321,23 @@ class User extends Authenticatable implements MustVerifyEmail
         ])->save();
     }
 
+    /**
+     * Đồng bộ lại dữ liệu membership từ dữ liệu đơn hàng / hoàn hàng
+     */
     public function refreshMembershipData()
     {
-        $yearlySpent = $this->calculateYearlySpent();
-        $totalSpent  = $this->calculateTotalSpent();
-        $level       = $this->calculateMemberLevel();
+        $yearlySpent = $this->yearly_spent_calculated;
+        $totalSpent  = $this->total_spent_calculated;
+
+        $level = 'bronze';
+
+        if ($yearlySpent >= 10000000) {
+            $level = 'diamond';
+        } elseif ($yearlySpent >= 3000000) {
+            $level = 'gold';
+        } elseif ($yearlySpent >= 1000000) {
+            $level = 'silver';
+        }
 
         $this->forceFill([
             'yearly_spent'    => $yearlySpent,
