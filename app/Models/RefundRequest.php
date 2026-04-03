@@ -62,8 +62,9 @@ class RefundRequest extends Model
             'refund_request_items',
             'refund_request_id',
             'order_item_id'
-        )->withPivot([
+        ) -> withPivot([
             'variant_id',
+            'stock_import_id',
             'quantity',
             'reason',
             'condition_status',

@@ -4,14 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ReviewMedia extends Model
 {
     use HasFactory;
 
     protected $table = 'review_media';
-
-    public $timestamps = false;
 
     protected $fillable = [
         'review_id',
@@ -25,32 +24,38 @@ class ReviewMedia extends Model
 
     /*
     |--------------------------------------------------------------------------
-    | Relationships
+    | RELATIONSHIPS
     |--------------------------------------------------------------------------
     */
 
-    public function review()
+    public function review(): BelongsTo
     {
-        return $this->belongsTo(Review::class);
+        return $this->belongsTo(Review::class, 'review_id');
     }
 
     /*
     |--------------------------------------------------------------------------
-    | Helper
+    | ACCESSORS
     |--------------------------------------------------------------------------
     */
 
-    public function getUrlAttribute()
+    public function getUrlAttribute(): string
     {
         return asset('storage/' . $this->file_path);
     }
 
-    public function isImage()
+    /*
+    |--------------------------------------------------------------------------
+    | HELPERS
+    |--------------------------------------------------------------------------
+    */
+
+    public function isImage(): bool
     {
         return $this->file_type === 'image';
     }
 
-    public function isVideo()
+    public function isVideo(): bool
     {
         return $this->file_type === 'video';
     }

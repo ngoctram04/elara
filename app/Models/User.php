@@ -23,6 +23,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'role',
         'is_active',
         'blocked_reason',
+        'locked_until',
         'loyalty_points',
         'total_spent',
         'yearly_spent',
@@ -47,7 +48,14 @@ class User extends Authenticatable implements MustVerifyEmail
         'total_spent'            => 'float',
         'yearly_spent'           => 'float',
         'membership_year'        => 'integer',
+        'locked_until'           => 'datetime',
     ];
+
+    /*
+    |--------------------------------------------------------------------------
+    | RELATIONSHIPS
+    |--------------------------------------------------------------------------
+    */
 
     public function orders()
     {
@@ -99,6 +107,12 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(ChatMessage::class, 'sender_id');
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | ACCESSORS
+    |--------------------------------------------------------------------------
+    */
+
     public function getAgeAttribute()
     {
         return $this->date_of_birth ? $this->date_of_birth->age : null;
@@ -115,18 +129,64 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function getYearlySpentCalculatedAttribute()
     {
-        return $this->orders()
+        return $this->calculateYearlySpent();
+    }
+
+    public function getTotalSpentCalculatedAttribute()
+    {
+        return $this->calculateTotalSpent();
+    }
+
+    public function getCalculatedMemberLevelAttribute()
+    {
+        return $this->calculateMemberLevel();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | CALCULATION METHODS
+    |--------------------------------------------------------------------------
+    */
+
+    public function calculateYearlySpent()
+    {
+        return (float) $this->orders()
             ->where('status', 3)
             ->whereYear('created_at', now()->year)
             ->sum('grand_total');
     }
 
-    public function getTotalSpentCalculatedAttribute()
+    public function calculateTotalSpent()
     {
-        return $this->orders()
+        return (float) $this->orders()
             ->where('status', 3)
             ->sum('grand_total');
     }
+
+    public function calculateMemberLevel()
+    {
+        $spent = (float) $this->calculateYearlySpent();
+
+        if ($spent >= 10000000) {
+            return 'diamond';
+        }
+
+        if ($spent >= 3000000) {
+            return 'gold';
+        }
+
+        if ($spent >= 1000000) {
+            return 'silver';
+        }
+
+        return 'bronze';
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | ROLE / STATUS
+    |--------------------------------------------------------------------------
+    */
 
     public function isAdmin()
     {
@@ -135,48 +195,82 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function isActive()
     {
-        return $this->is_active;
+        return (bool) $this->is_active;
     }
+
+    public function isTemporarilyLocked()
+    {
+        return !is_null($this->locked_until) && now()->lt($this->locked_until);
+    }
+
+    public function isBlocked()
+    {
+        return !$this->is_active || $this->isTemporarilyLocked();
+    }
+
+    public function lockForMinutes($minutes, $reason = null)
+    {
+        $this->forceFill([
+            'locked_until'   => now()->addMinutes($minutes),
+            'blocked_reason' => $reason,
+            'is_active'      => false,
+        ])->save();
+    }
+
+    public function unlockAccount()
+    {
+        $this->forceFill([
+            'locked_until'   => null,
+            'blocked_reason' => null,
+            'is_active'      => true,
+        ])->save();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | BIRTHDAY DISCOUNT
+    |--------------------------------------------------------------------------
+    */
 
     public function hasUsedBirthdayDiscount()
     {
-        return $this->birthday_discount_year == now()->year;
+        return (int) $this->birthday_discount_year === (int) now()->year;
     }
 
     public function markBirthdayDiscountUsed()
     {
-        $this->birthday_discount_year = now()->year;
-        $this->save();
+        $this->forceFill([
+            'birthday_discount_year' => now()->year,
+        ])->save();
     }
 
-    public function getMemberLevelAttribute($value)
-    {
-        $spent = (float) $this->yearly_spent_calculated;
-
-        if ($spent >= 10000000) return 'diamond';
-        if ($spent >= 3000000) return 'gold';
-        if ($spent >= 1000000) return 'silver';
-        return 'bronze';
-    }
+    /*
+    |--------------------------------------------------------------------------
+    | MEMBERSHIP
+    |--------------------------------------------------------------------------
+    */
 
     public function updateMemberLevel()
     {
-        $spent = (float) $this->yearly_spent_calculated;
-
-        if ($spent >= 10000000) {
-            $level = 'diamond';
-        } elseif ($spent >= 3000000) {
-            $level = 'gold';
-        } elseif ($spent >= 1000000) {
-            $level = 'silver';
-        } else {
-            $level = 'bronze';
-        }
+        $level = $this->calculateMemberLevel();
 
         $this->forceFill([
-            'member_level' => $level,
+            'member_level'    => $level,
             'membership_year' => now()->year,
         ])->save();
     }
-    
+
+    public function refreshMembershipData()
+    {
+        $yearlySpent = $this->calculateYearlySpent();
+        $totalSpent  = $this->calculateTotalSpent();
+        $level       = $this->calculateMemberLevel();
+
+        $this->forceFill([
+            'yearly_spent'    => $yearlySpent,
+            'total_spent'     => $totalSpent,
+            'member_level'    => $level,
+            'membership_year' => now()->year,
+        ])->save();
+    }
 }

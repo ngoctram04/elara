@@ -194,24 +194,19 @@ class RefundController extends Controller
                 $pivotUnitCost = 0;
                 $pivotLoss = 0;
                 $returnedToStock = 0;
+                $pivotStockImportId = null;
 
                 $totalRefund += $refundAmount;
 
                 if ($isRestockable) {
-                    foreach ($item->batches as $batch) {
-                        if ((int) ($batch->is_rolled_back ?? 0) === 1) {
-                            continue;
-                        }
+                    $stock = StockImport::where('variant_id', $variantId)
+                    ->orderBy('id',
+                        'desc'
+                    )
+                    ->first();
 
-                        $stock = StockImport::find($batch->stock_import_id);
-                        if (!$stock) {
-                            continue;
-                        }
-
-                        $batchQty = (int) $batch->quantity;
-                        if ($batchQty <= 0) {
-                            continue;
-                        }
+                    if ($stock) {
+                        $batchQty = $qty;
 
                         $before = (int) $stock->remaining_quantity;
                         $after = $before + $batchQty;
@@ -219,13 +214,14 @@ class RefundController extends Controller
 
                         $stock->increment('remaining_quantity', $batchQty);
 
-                        $batch->update([
-                            'is_rolled_back' => 1,
-                        ]);
+                        $pivotStockImportId = $stock->id;
+                        $pivotUnitCost = $unitCost;
+                        $returnedToStock = 1;
+                        $restockQty += $batchQty;
 
                         InventoryLog::create([
                             'variant_id'      => $variantId,
-                            'stock_import_id' => $batch->stock_import_id,
+                            'stock_import_id' => $stock->id,
                             'type'            => 'return_restock',
                             'quantity_change' => $batchQty,
                             'stock_before'    => $before,
@@ -236,35 +232,28 @@ class RefundController extends Controller
                             'reference_id'    => $refund->id,
                             'note'            => 'Hoàn kho do khách trả hàng còn nguyên seal',
                         ]);
-
-                        $restockQty += $batchQty;
-                        $pivotUnitCost = $unitCost;
-                        $returnedToStock = 1;
                     }
                 } else {
-                    foreach ($item->batches as $batch) {
-                        $stock = StockImport::find($batch->stock_import_id);
-                        if (!$stock) {
-                            continue;
-                        }
+                    $stock = StockImport::where('variant_id', $variantId)
+                    ->orderBy('id', 'desc')
+                    ->first();
 
-                        $batchQty = (int) $batch->quantity;
-                        if ($batchQty <= 0) {
-                            continue;
-                        }
-
+                    if ($stock) {
+                        $batchQty = $qty;
                         $unitCost = (float) ($stock->cost_price ?? 0);
                         $loss = $unitCost * $batchQty;
 
+                        $pivotStockImportId = $stock->id;
+                        $pivotUnitCost = $unitCost;
+                        $pivotLoss = $loss;
+                        $returnedToStock = 0;
+
                         $totalLoss += $loss;
                         $damagedQty += $batchQty;
-                        $pivotUnitCost = $unitCost;
-                        $pivotLoss += $loss;
-                        $returnedToStock = 0;
 
                         InventoryLog::create([
                             'variant_id'      => $variantId,
-                            'stock_import_id' => $batch->stock_import_id,
+                            'stock_import_id' => $stock->id,
                             'type'            => 'return_damaged',
                             'quantity_change' => $batchQty,
                             'stock_before'    => (int) $stock->remaining_quantity,
@@ -278,22 +267,13 @@ class RefundController extends Controller
                     }
                 }
 
-                /*
-                |--------------------------------------------------------------------------
-                | 2.1 Lưu thêm chi tiết vào pivot
-                |--------------------------------------------------------------------------
-                */
                 $item->pivot->refund_amount = $refundAmount;
                 $item->pivot->unit_cost = $pivotUnitCost;
                 $item->pivot->loss_amount = $pivotLoss;
                 $item->pivot->returned_to_stock = $returnedToStock;
+                $item->pivot->stock_import_id = $pivotStockImportId;
                 $item->pivot->save();
 
-                /*
-                |--------------------------------------------------------------------------
-                | 2.2 Đồng bộ tồn kho + trừ đã bán
-                |--------------------------------------------------------------------------
-                */
                 $totalStock = (int) StockImport::where('variant_id', $variantId)
                     ->sum('remaining_quantity');
 

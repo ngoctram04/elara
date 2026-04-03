@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\Review;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class CustomerController extends Controller
@@ -65,7 +66,7 @@ class CustomerController extends Controller
         | SẮP XẾP
         |--------------------------------------------------------------------------
         */
-        switch ($request->sort) {
+        switch ($request->get('sort')) {
             case 'oldest':
                 $query->oldest();
                 break;
@@ -109,12 +110,18 @@ class CustomerController extends Controller
         | ĐẾM ĐƠN HỦY TRONG 7 NGÀY
         |--------------------------------------------------------------------------
         */
+        $customerIds = $customers->pluck('id')->all();
+
+        $cancelCounts = Order::select('user_id', DB::raw('COUNT(*) as total'))
+            ->whereIn('user_id', $customerIds)
+            ->where('status', 4)
+            ->where('cancelled_by', 'customer')
+            ->where('updated_at', '>=', now()->subDays(7))
+            ->groupBy('user_id')
+            ->pluck('total', 'user_id');
+
         foreach ($customers as $customer) {
-            $customer->cancel_count = Order::where('user_id', $customer->id)
-                ->where('status', 4)
-                ->where('cancelled_by', 'customer')
-                ->where('updated_at', '>=', Carbon::now()->subDays(7))
-                ->count();
+            $customer->cancel_count = (int) ($cancelCounts[$customer->id] ?? 0);
         }
 
         return view('admin.customers.index', compact('customers'));
@@ -188,16 +195,17 @@ class CustomerController extends Controller
                 'blocked_reason' => 'required|string|min:5|max:1000',
             ], [
                 'blocked_reason.required' => 'Vui lòng nhập lý do khóa tài khoản',
-                'blocked_reason.min' => 'Lý do phải có ít nhất 5 ký tự',
+                'blocked_reason.min'      => 'Lý do phải có ít nhất 5 ký tự',
+                'blocked_reason.max'      => 'Lý do không được vượt quá 1000 ký tự',
             ]);
 
-            $lockedFrom = now();
+            $lockedFrom  = now();
             $lockedUntil = now()->addDays(7);
 
             $user->update([
-                'is_active' => false,
+                'is_active'      => false,
                 'blocked_reason' => $validated['blocked_reason'],
-                'locked_until' => $lockedUntil,
+                'locked_until'   => $lockedUntil,
             ]);
 
             /*
@@ -208,9 +216,9 @@ class CustomerController extends Controller
             Mail::send(
                 'emails.account_blocked',
                 [
-                    'user' => $user,
-                    'reason' => $validated['blocked_reason'],
-                    'locked_from' => $lockedFrom->format('d/m/Y H:i'),
+                    'user'         => $user,
+                    'reason'       => $validated['blocked_reason'],
+                    'locked_from'  => $lockedFrom->format('d/m/Y H:i'),
                     'locked_until' => $lockedUntil->format('d/m/Y H:i'),
                 ],
                 function ($message) use ($user) {
@@ -219,7 +227,7 @@ class CustomerController extends Controller
                 }
             );
 
-            return back()->with('success', 'Đã khóa tài khoản khách hàng (7 ngày)');
+            return back()->with('success', 'Đã khóa tài khoản khách hàng trong 7 ngày');
         }
 
         /*
@@ -228,9 +236,9 @@ class CustomerController extends Controller
         |--------------------------------------------------------------------------
         */
         $user->update([
-            'is_active' => true,
+            'is_active'      => true,
             'blocked_reason' => null,
-            'locked_until' => null,
+            'locked_until'   => null,
         ]);
 
         /*
