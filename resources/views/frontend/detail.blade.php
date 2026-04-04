@@ -29,77 +29,74 @@
 
 <div class="product-detail-page container py-4">
 
-    {{-- ===== TOP SECTION ===== --}}
     <div class="product-top-grid">
 
-        {{-- ===== LEFT: GALLERY ===== --}}
         <div class="gallery-area">
-    <div class="gallery-grid single-column">
+            <div class="gallery-grid single-column">
 
-        @php
-            $defaultMainImage = $defaultVariant?->images->first()
-                ? asset('storage/' . $defaultVariant->images->first()->image_path)
-                : ($product->mainImage
-                    ? asset('storage/' . $product->mainImage->image_path)
-                    : asset('images/no-image.png'));
+                @php
+                    $defaultMainImage = $defaultVariant?->images->first()
+                        ? asset('storage/' . $defaultVariant->images->first()->image_path)
+                        : ($product->mainImage
+                            ? asset('storage/' . $product->mainImage->image_path)
+                            : asset('images/no-image.png'));
 
-            $galleryThumbs = collect();
+                    $galleryThumbs = collect();
 
-            foreach ($product->images as $img) {
-                $galleryThumbs->push([
-                    'src' => asset('storage/' . $img->image_path),
-                    'variant_id' => null,
-                ]);
-            }
+                    foreach ($product->images as $img) {
+                        $galleryThumbs->push([
+                            'src' => asset('storage/' . $img->image_path),
+                            'variant_id' => null,
+                        ]);
+                    }
 
-            foreach ($product->variants as $variant) {
-                foreach ($variant->images as $vImg) {
-                    $galleryThumbs->push([
-                        'src' => asset('storage/' . $vImg->image_path),
-                        'variant_id' => $variant->id,
-                    ]);
-                }
-            }
+                    foreach ($product->variants as $variant) {
+                        foreach ($variant->images as $vImg) {
+                            $galleryThumbs->push([
+                                'src' => asset('storage/' . $vImg->image_path),
+                                'variant_id' => $variant->id,
+                            ]);
+                        }
+                    }
 
-            if ($galleryThumbs->isEmpty()) {
-                $galleryThumbs->push([
-                    'src' => asset('images/no-image.png'),
-                    'variant_id' => null,
-                ]);
-            }
-        @endphp
+                    if ($galleryThumbs->isEmpty()) {
+                        $galleryThumbs->push([
+                            'src' => asset('images/no-image.png'),
+                            'variant_id' => null,
+                        ]);
+                    }
+                @endphp
 
-        <div class="main-image-box">
-            <img id="main-image"
-                 src="{{ $defaultMainImage }}"
-                 class="main-product-image"
-                 alt="{{ $product->name }}">
-
-            <button type="button" class="main-nav prev" id="main-prev">
-                <i class="bi bi-chevron-left"></i>
-            </button>
-
-            <button type="button" class="main-nav next" id="main-next">
-                <i class="bi bi-chevron-right"></i>
-            </button>
-        </div>
-
-        <div class="thumb-slider-wrap">
-            <div class="thumb-row" id="thumbRow">
-                @foreach($galleryThumbs as $thumb)
-                    <img src="{{ $thumb['src'] }}"
-                         class="thumb-img {{ $thumb['src'] === $defaultMainImage ? 'active' : '' }}"
-                         data-image="{{ $thumb['src'] }}"
-                         @if($thumb['variant_id']) data-variant="{{ $thumb['variant_id'] }}" @endif
+                <div class="main-image-box">
+                    <img id="main-image"
+                         src="{{ $defaultMainImage }}"
+                         class="main-product-image"
                          alt="{{ $product->name }}">
-                @endforeach
+
+                    <button type="button" class="main-nav prev" id="main-prev">
+                        <i class="bi bi-chevron-left"></i>
+                    </button>
+
+                    <button type="button" class="main-nav next" id="main-next">
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+                </div>
+
+                <div class="thumb-slider-wrap">
+                    <div class="thumb-row" id="thumbRow">
+                        @foreach($galleryThumbs as $thumb)
+                            <img src="{{ $thumb['src'] }}"
+                                 class="thumb-img {{ $thumb['src'] === $defaultMainImage ? 'active' : '' }}"
+                                 data-image="{{ $thumb['src'] }}"
+                                 @if($thumb['variant_id']) data-variant="{{ $thumb['variant_id'] }}" @endif
+                                 alt="{{ $product->name }}">
+                        @endforeach
+                    </div>
+                </div>
+
             </div>
         </div>
 
-    </div>
-</div>
-
-        {{-- ===== RIGHT: INFO ===== --}}
         <div class="product-info-area">
 
             <h1 class="product-title">{{ $product->name }}</h1>
@@ -154,12 +151,11 @@
             </div>
 
             @if(!empty($product->description))
-    <div class="short-desc">
-        {{ \Illuminate\Support\Str::limit(strip_tags($product->description), 220) }}
-    </div>
-@endif
+                <div class="short-desc">
+                    {{ \Illuminate\Support\Str::limit(strip_tags($product->description), 220) }}
+                </div>
+            @endif
 
-            {{-- VARIANTS --}}
             @if($hasVariants)
                 <div class="variant-section">
                     @foreach($groupedVariants as $attributeName => $variants)
@@ -198,7 +194,6 @@
                 </div>
             @endif
 
-            {{-- ACTION --}}
             <div class="action-card">
                 <form method="POST"
                       action="{{ route('cart.add') }}"
@@ -234,10 +229,8 @@
         </div>
     </div>
 
-    {{-- ===== CONTENT AREA ===== --}}
     <div class="detail-content-grid">
 
-        {{-- LEFT CONTENT --}}
         <div class="detail-main-content">
 
             <div class="detail-tabs">
@@ -329,8 +322,7 @@
                                     <div class="review-media mt-3 d-flex gap-2 flex-wrap">
                                         @foreach($review->media as $m)
                                             @if($m->file_type == 'image')
-                                                <img src="{{ asset('storage/'.$m->file_path) }}"
-                                                     alt="Ảnh đánh giá">
+                                                <img src="{{ asset('storage/'.$m->file_path) }}" alt="Ảnh đánh giá">
                                             @else
                                                 <video width="120" controls>
                                                     <source src="{{ asset('storage/'.$m->file_path) }}">
@@ -422,14 +414,13 @@
 
         </div>
 
-        {{-- RIGHT SIDEBAR: RELATED PRODUCTS --}}
         <aside class="detail-sidebar">
             @if(!empty($relatedProducts) && $relatedProducts->count())
                 <div class="related-sidebar-section">
                     <div class="related-sidebar-head">
                         <h3 class="sidebar-related-title">Sản phẩm liên quan</h3>
 
-                        @if($relatedProducts->count() > 4)
+                        @if($relatedProducts->count() > 3)
                             <div class="related-vertical-nav">
                                 <button type="button" class="related-arrow up" id="related-prev">
                                     <i class="bi bi-chevron-up"></i>
@@ -449,8 +440,8 @@
                                 </div>
                             @endforeach
 
-                            @if($relatedProducts->count() > 4)
-                                @foreach($relatedProducts->take(4) as $item)
+                            @if($relatedProducts->count() > 3)
+                                @foreach($relatedProducts->take(3) as $item)
                                     <div class="related-vertical-slide related-vertical-slide-clone">
                                         @include('frontend.partials.product-card-category', ['product' => $item])
                                     </div>
@@ -463,7 +454,6 @@
         </aside>
     </div>
 
-    {{-- ===== RECENT VIEWED ===== --}}
     @if(!empty($recentProducts) && $recentProducts->count())
         <div class="recent-view-section">
             <div class="section-head">
@@ -503,7 +493,6 @@
 
 </div>
 
-{{-- LIGHTBOX --}}
 <div id="media-lightbox" style="display:none;">
     <span id="lightbox-close">&times;</span>
     <img id="lightbox-img" style="display:none;">
