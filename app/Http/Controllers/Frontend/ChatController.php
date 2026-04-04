@@ -10,13 +10,14 @@ use App\Notifications\SystemNotification;
 use App\Services\AI\ChatbotService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Throwable;
 
 class ChatController extends Controller
 {
     public function index()
     {
         $conversation = ChatConversation::firstOrCreate([
-            'user_id' => Auth::id()
+            'user_id' => Auth::id(),
         ]);
 
         return view('frontend.chat.index', compact('conversation'));
@@ -62,23 +63,23 @@ class ChatController extends Controller
             'file' => 'nullable|image|max:5120',
         ]);
 
+        $messageText = trim((string) $request->input('message', ''));
+
         $conversation = ChatConversation::firstOrCreate([
-            'user_id' => Auth::id()
+            'user_id' => Auth::id(),
         ]);
 
         $createdMessages = [];
 
-        // lưu text nếu có
-        if ($request->filled('message')) {
+        if ($messageText !== '') {
             $createdMessages[] = ChatMessage::create([
                 'conversation_id' => $conversation->id,
                 'sender_id' => Auth::id(),
-                'message' => trim($request->message),
+                'message' => $messageText,
                 'is_read' => 0,
             ]);
         }
 
-        // lưu ảnh nếu có
         if ($request->hasFile('file')) {
             $path = $request->file('file')->store('chat', 'public');
 
@@ -90,7 +91,6 @@ class ChatController extends Controller
             ]);
         }
 
-        // nếu không có gì thì báo lỗi
         if (empty($createdMessages)) {
             return response()->json([
                 'success' => false,
@@ -104,7 +104,9 @@ class ChatController extends Controller
                 'message' => 'Khách vừa gửi tin nhắn',
                 'url' => route('admin.messages.show', $conversation->id),
                 'type' => 'chat',
-                'meta' => ['conversation_id' => $conversation->id],
+                'meta' => [
+                    'conversation_id' => $conversation->id,
+                ],
             ]));
         });
 
@@ -112,6 +114,7 @@ class ChatController extends Controller
 
         return response()->json([
             'success' => true,
+            'message' => 'Gửi tin nhắn thành công',
         ]);
     }
 
@@ -121,9 +124,31 @@ class ChatController extends Controller
             'message' => 'required|string|max:2000',
         ]);
 
-        $result = $chatbotService->reply($request->message);
+        $message = trim((string) $request->input('message', ''));
 
-        return response()->json($result);
+        if ($message === '') {
+            return response()->json([
+                'type' => 'text',
+                'reply' => 'Bạn hãy nhập nội dung cần tư vấn nhé.',
+                'products' => [],
+            ], 422);
+        }
+
+        try {
+            $result = $chatbotService->reply($message);
+
+            return response()->json([
+                'type' => $result['type'] ?? 'text',
+                'reply' => $result['reply'] ?? 'Mình chưa thể trả lời lúc này, bạn thử lại nhé.',
+                'products' => $result['products'] ?? [],
+            ]);
+        } catch (Throwable $e) {
+            return response()->json([
+                'type' => 'text',
+                'reply' => 'AI đang bận, bạn thử lại sau nhé.',
+                'products' => [],
+            ], 500);
+        }
     }
 
     public function unreadCount()
@@ -131,7 +156,9 @@ class ChatController extends Controller
         $conversation = ChatConversation::where('user_id', Auth::id())->first();
 
         if (!$conversation) {
-            return response()->json(['count' => 0]);
+            return response()->json([
+                'count' => 0,
+            ]);
         }
 
         $count = ChatMessage::where('conversation_id', $conversation->id)
@@ -140,7 +167,12 @@ class ChatController extends Controller
             ->count();
 
         return response()->json([
-            'count' => $count
+            'count' => $count,
         ]);
+    }
+
+    public function aiChat()
+    {
+        return view('frontend.chat.ai');
     }
 }

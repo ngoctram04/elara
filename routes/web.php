@@ -39,6 +39,8 @@ use App\Http\Controllers\ProfileController;
 | ADMIN CONTROLLERS
 |--------------------------------------------------------------------------
 */
+use App\Services\AI\GeminiService;
+
 use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\BrandController;
@@ -765,4 +767,5 @@ Route::get('/notification/{id}', function ($id) {
 
     return redirect($noti->data['url']);
 })->middleware('auth')->name('notification.redirect');
+
 require __DIR__ . '/auth.php';

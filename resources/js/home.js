@@ -100,7 +100,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const secondsEl = document.getElementById("flash-seconds");
 
         if (endTime && daysEl && hoursEl && minutesEl && secondsEl) {
-            const target = new Date(endTime.replace(" ", "T")).getTime();
+            const target = parseInt(endTime, 10);
             const pad = (num) => String(num).padStart(2, "0");
 
             function updateCountdown() {

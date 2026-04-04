@@ -2,10 +2,12 @@
    HELPER
 ============================== */
 function escapeHtml(text) {
-    return text
+    return String(text ?? "")
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
 /* ==============================
@@ -24,8 +26,7 @@ window.toggleAIChat = function () {
 
         if (chat.innerHTML.trim() === "") {
             chat.innerHTML = `
-                <div><b>AI:</b> Xin chào! Tôi là trợ lý ELARA.
-                Bạn cần tư vấn mỹ phẩm gì?</div>
+                <div class="ai-msg"><b>AI:</b> Xin chào! Tôi là trợ lý ELARA. Bạn cần tư vấn mỹ phẩm gì?</div>
             `;
         }
     }
@@ -37,26 +38,34 @@ window.toggleAIChat = function () {
 window.sendAI = function () {
     const input = document.getElementById("ai-input");
     const chat = document.getElementById("ai-messages");
+    const aiSendUrl = document.body.dataset.aiSendUrl;
 
     if (!input || !chat) return;
 
     const msg = input.value.trim();
     if (!msg) return;
 
-    chat.innerHTML += `<div><b>Bạn:</b> ${escapeHtml(msg)}</div>`;
-
+    chat.innerHTML += `<div class="ai-msg"><b>Bạn:</b> ${escapeHtml(msg)}</div>`;
     input.value = "";
     chat.scrollTop = chat.scrollHeight;
 
     const loading = document.createElement("div");
+    loading.className = "ai-msg";
     loading.innerHTML = "<b>AI:</b> Đang tư vấn...";
     chat.appendChild(loading);
+    chat.scrollTop = chat.scrollHeight;
 
-    fetch("/ai-chat/send", {
+    if (!aiSendUrl) {
+        loading.innerHTML = "<b>AI:</b> Không tìm thấy đường dẫn gửi AI.";
+        return;
+    }
+
+    fetch(aiSendUrl, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.content || ""
+            "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.content || "",
+            "Accept": "application/json"
         },
         body: JSON.stringify({ message: msg })
     })
@@ -64,7 +73,7 @@ window.sendAI = function () {
             const data = await res.json();
 
             if (!res.ok) {
-                throw new Error(data.reply || "Server error");
+                throw new Error(data.reply || "AI đang bận, bạn thử lại sau nhé.");
             }
 
             return data;
@@ -72,17 +81,23 @@ window.sendAI = function () {
         .then((data) => {
             loading.remove();
 
-            chat.innerHTML += `<div class="ai-msg"><b>AI:</b> ${data.reply}</div>`;
+            chat.innerHTML += `
+    <div class="ai-msg"><b>AI:</b> ${data.reply ?? ""}</div>
+`;
 
-            if (data.products && Array.isArray(data.products)) {
+            if (Array.isArray(data.products) && data.products.length > 0) {
                 data.products.forEach((p) => {
                     chat.innerHTML += `
-                        <div style="display:flex;gap:8px;margin-top:6px;">
-                            <img src="${p.image}" style="width:50px;height:50px;border-radius:6px;object-fit:cover;">
+                        <div class="ai-product-row" style="display:flex;gap:8px;margin-top:8px;">
+                            <img
+                                src="${p.image}"
+                                alt="${escapeHtml(p.name ?? "")}"
+                                style="width:50px;height:50px;border-radius:6px;object-fit:cover;"
+                            >
                             <div>
-                                <a href="${p.url}" target="_blank">${p.name}</a>
+                                <a href="${p.url}" target="_blank">${escapeHtml(p.name ?? "")}</a>
                                 <div style="color:#e74c3c;font-weight:600;">
-                                    ${p.formatted_price}
+                                    ${escapeHtml(p.formatted_price ?? "")}
                                 </div>
                             </div>
                         </div>
@@ -94,6 +109,7 @@ window.sendAI = function () {
         })
         .catch((err) => {
             loading.innerHTML = `<b>AI:</b> ${escapeHtml(err.message)}`;
+            chat.scrollTop = chat.scrollHeight;
         });
 };
 
@@ -104,6 +120,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const voicePopup = document.getElementById("voice-popup");
     const aiInput = document.getElementById("ai-input");
     const markAllBtn = document.getElementById("markAllRead");
+
     const unreadChatUrl = document.body.dataset.chatUnreadUrl;
     const markAllReadUrl = document.body.dataset.markAllReadUrl;
     const isLoggedIn = document.body.dataset.auth === "1";
@@ -129,10 +146,10 @@ document.addEventListener("DOMContentLoaded", function () {
                         <div class="search-history-item history-row">
                             <div class="history-left suggest-item">
                                 <i class="bi bi-clock"></i>
-                                <span>${item}</span>
+                                <span>${escapeHtml(item)}</span>
                             </div>
 
-                            <span class="delete-history" data-key="${item}">
+                            <span class="delete-history" data-key="${escapeHtml(item)}">
                                 <i class="bi bi-x"></i>
                             </span>
                         </div>
@@ -140,6 +157,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 });
 
                 box.style.display = "block";
+            })
+            .catch(() => {
+                box.style.display = "none";
             });
     }
 
@@ -162,7 +182,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 .then((data) => {
                     box.innerHTML = "";
 
-                    if (data.length === 0) {
+                    if (!data.length) {
                         box.style.display = "none";
                         return;
                     }
@@ -170,12 +190,15 @@ document.addEventListener("DOMContentLoaded", function () {
                     data.forEach((item) => {
                         box.innerHTML += `
                             <div class="search-history-item suggest-item">
-                                ${item}
+                                ${escapeHtml(item)}
                             </div>
                         `;
                     });
 
                     box.style.display = "block";
+                })
+                .catch(() => {
+                    box.style.display = "none";
                 });
         });
     }
@@ -193,12 +216,13 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (!badge) return;
 
                 if (data.count > 0) {
-                    badge.innerText = data.count;
+                    badge.innerText = data.count > 99 ? "99+" : data.count;
                     badge.style.display = "block";
                 } else {
                     badge.style.display = "none";
                 }
-            });
+            })
+            .catch(() => {});
     }
 
     if (isLoggedIn && unreadChatUrl) {
@@ -211,8 +235,7 @@ document.addEventListener("DOMContentLoaded", function () {
     ============================== */
     if (voiceBtn && voicePopup && input) {
         voiceBtn.addEventListener("click", () => {
-            const SpeechRecognition =
-                window.SpeechRecognition || window.webkitSpeechRecognition;
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
             if (!SpeechRecognition) {
                 alert("Trình duyệt không hỗ trợ tìm kiếm giọng nói");
@@ -220,7 +243,6 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             const recognition = new SpeechRecognition();
-
             recognition.lang = "vi-VN";
             recognition.interimResults = false;
             recognition.start();
@@ -257,7 +279,8 @@ document.addEventListener("DOMContentLoaded", function () {
             fetch(markAllReadUrl, {
                 method: "POST",
                 headers: {
-                    "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.content || ""
+                    "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.content || "",
+                    "Accept": "application/json"
                 }
             })
                 .then((res) => res.json())
@@ -265,7 +288,8 @@ document.addEventListener("DOMContentLoaded", function () {
                     if (data.success) {
                         location.reload();
                     }
-                });
+                })
+                .catch(() => {});
         });
     }
 
@@ -294,7 +318,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.content || ""
+                    "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.content || "",
+                    "Accept": "application/json"
                 },
                 body: JSON.stringify({ keyword: key })
             });
@@ -327,26 +352,3 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 });
-function loadUnreadChat() {
-    fetch('/chat/unread-count')
-        .then(res => res.json())
-        .then(data => {
-            const badge = document.getElementById('chat-badge');
-
-            if (!badge) return;
-
-            if (data.count > 0) {
-                badge.innerText = data.count;
-                badge.style.display = 'block';
-            } else {
-                badge.style.display = 'none';
-            }
-        })
-        .catch(() => {});
-}
-
-// load lần đầu
-loadUnreadChat();
-
-// auto refresh mỗi 3s
-setInterval(loadUnreadChat, 3000);

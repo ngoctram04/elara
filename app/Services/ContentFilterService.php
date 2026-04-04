@@ -6,11 +6,6 @@ use Illuminate\Support\Str;
 
 class ContentFilterService
 {
-    /**
-     * Kiểm tra nội dung
-     * - Có từ không phù hợp => chặn luôn
-     * - Không có => cho qua
-     */
     public function filter(string $text): array
     {
         $normalized = $this->normalize($text);
@@ -45,14 +40,7 @@ class ContentFilterService
         ];
     }
 
-    /**
-     * Chuẩn hóa nội dung:
-     * - lowercase
-     * - bỏ dấu tiếng Việt
-     * - thay ký tự số hay dùng để lách
-     * - bỏ ký tự đặc biệt
-     * - gom khoảng trắng
-     */
+
     private function normalize(string $text): string
     {
         $text = mb_strtolower($text, 'UTF-8');
@@ -81,21 +69,12 @@ class ContentFilterService
         return trim($text);
     }
 
-    /**
-     * Kiểm tra từ cấm trong nội dung
-     * Bắt được:
-     * - dit
-     * - d i t
-     * - d-i-t
-     * - d!i.t
-     */
     private function matchWord(string $text, string $word): bool
     {
         if ($text === '' || $word === '') {
             return false;
         }
 
-        // match trực tiếp sau normalize
         if (str_contains($text, $word)) {
             return true;
         }

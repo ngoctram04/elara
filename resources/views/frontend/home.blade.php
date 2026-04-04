@@ -96,7 +96,7 @@
     {{-- ================= FLASH SALE ================= --}}
     @if(isset($flashSaleProducts) && $flashSaleProducts->count())
         <section class="flash-sale-section home-block mb-4"
-                 data-countdown-end="{{ now()->addDays(2)->addHours(15)->format('Y-m-d H:i:s') }}">
+                 data-countdown-end="{{ $flashSaleEndTime ? \Carbon\Carbon::parse($flashSaleEndTime)->timestamp * 1000 : '' }}">
 
             <div class="section-head flash-sale-head">
                 <div class="section-head-left">

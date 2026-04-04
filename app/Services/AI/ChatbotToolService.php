@@ -138,12 +138,12 @@ class ChatbotToolService
         $normalized = $this->normalizeVietnameseText($message);
 
         $groups = [
-            'tay_trang' => ['nuoc tay trang', 'tay trang', 'dau tay trang'],
+            'tay_trang' => ['nuoc tay trang', 'tay trang', 'dau tay trang', 'micellar'],
             'sua_rua_mat' => ['sua rua mat', 'rua mat', 'cleanser'],
             'toner' => ['toner', 'nuoc hoa hong'],
-            'serum' => ['serum', 'tinh chat'],
+            'serum' => ['serum', 'tinh chat', 'ampoule', 'essence'],
             'kem_chong_nang' => ['kem chong nang', 'chong nang', 'sunscreen'],
-            'duong_am' => ['duong am', 'kem duong', 'moisturizer'],
+            'duong_am' => ['duong am', 'kem duong', 'moisturizer', 'phuc hoi'],
             'tri_mun' => ['tri mun', 'mun', 'giam mun'],
             'mat_na' => ['mat na', 'mask'],
             'son' => ['son', 'lipstick', 'son moi'],
@@ -295,7 +295,7 @@ class ChatbotToolService
         $msg = $this->normalizeVietnameseText($message);
 
         $concerns = [
-            'mụn' => ['mun', 'tri mun', 'da mun', 'noi mun'],
+            'mụn' => ['mun', 'tri mun', 'da mun', 'noi mun', 'de noi mun'],
             'da dầu' => ['da dau', 'dau nhieu', 'do dau'],
             'da khô' => ['da kho', 'thieu am', 'bong troc'],
             'da nhạy cảm' => ['nhay cam', 'kich ung', 'de kich ung'],
@@ -326,19 +326,27 @@ class ChatbotToolService
 
         $steps = [];
 
-        if (str_contains($msg, 'mun')) {
+        if (
+            (str_contains($msg, 'da dau') || str_contains($msg, 'do dau'))
+            && (str_contains($msg, 'nhay cam') || str_contains($msg, 'kich ung'))
+        ) {
+            $steps[] = 'Sữa rửa mặt dịu nhẹ, làm sạch vừa đủ';
+            $steps[] = 'Toner hoặc serum phục hồi, làm dịu da';
+            $steps[] = 'Kem dưỡng mỏng nhẹ, không bí da';
+            $steps[] = 'Kem chống nắng dịu nhẹ cho da nhạy cảm';
+        } elseif (str_contains($msg, 'mun')) {
             $steps[] = 'Tẩy trang';
             $steps[] = 'Sữa rửa mặt dịu nhẹ';
-            $steps[] = 'Serum/kem hỗ trợ da mụn';
+            $steps[] = 'Serum hoặc kem hỗ trợ da mụn';
             $steps[] = 'Kem dưỡng mỏng nhẹ';
             $steps[] = 'Kem chống nắng ban ngày';
-        } elseif (str_contains($msg, 'kho')) {
+        } elseif (str_contains($msg, 'kho') || str_contains($msg, 'thieu am')) {
             $steps[] = 'Sữa rửa mặt dịu nhẹ';
             $steps[] = 'Toner cấp ẩm';
             $steps[] = 'Serum cấp ẩm';
             $steps[] = 'Kem dưỡng ẩm';
             $steps[] = 'Kem chống nắng ban ngày';
-        } elseif (str_contains($msg, 'nhay cam')) {
+        } elseif (str_contains($msg, 'nhay cam') || str_contains($msg, 'kich ung')) {
             $steps[] = 'Sữa rửa mặt dịu nhẹ';
             $steps[] = 'Toner phục hồi nhẹ';
             $steps[] = 'Serum phục hồi';
@@ -438,6 +446,13 @@ class ChatbotToolService
             'ha',
             'nhe',
             'nha',
+            'xu',
+            'ly',
+            'gap',
+            'don',
+            'hang',
+            'ho',
+            'tro',
         ];
 
         $parts = preg_split('/\s+/u', $text, -1, PREG_SPLIT_NO_EMPTY);
@@ -470,16 +485,23 @@ class ChatbotToolService
             'dau tay trang' => 'tay_trang',
             'sua rua mat' => 'sua_rua_mat',
             'rua mat' => 'sua_rua_mat',
+            'cleanser' => 'sua_rua_mat',
             'toner' => 'toner',
             'nuoc hoa hong' => 'toner',
             'serum' => 'serum',
             'tinh chat' => 'serum',
+            'ampoule' => 'serum',
+            'essence' => 'serum',
             'kem chong nang' => 'kem_chong_nang',
             'chong nang' => 'kem_chong_nang',
+            'sunscreen' => 'kem_chong_nang',
             'kem duong' => 'duong_am',
             'duong am' => 'duong_am',
+            'moisturizer' => 'duong_am',
+            'phuc hoi' => 'duong_am',
             'son' => 'son',
             'mat na' => 'mat_na',
+            'mask' => 'mat_na',
             'tri mun' => 'tri_mun',
         ];
 
@@ -499,12 +521,12 @@ class ChatbotToolService
         }
 
         $categoryMap = [
-            'tay_trang' => ['nuoc tay trang', 'tay trang', 'dau tay trang'],
+            'tay_trang' => ['nuoc tay trang', 'tay trang', 'dau tay trang', 'micellar'],
             'sua_rua_mat' => ['sua rua mat', 'rua mat', 'cleanser'],
             'toner' => ['toner', 'nuoc hoa hong'],
-            'serum' => ['serum', 'tinh chat'],
+            'serum' => ['serum', 'tinh chat', 'ampoule', 'essence'],
             'kem_chong_nang' => ['kem chong nang', 'chong nang', 'sunscreen'],
-            'duong_am' => ['kem duong', 'duong am', 'moisturizer'],
+            'duong_am' => ['kem duong', 'duong am', 'moisturizer', 'phuc hoi'],
             'tri_mun' => ['tri mun', 'mun'],
             'mat_na' => ['mat na', 'mask'],
             'son' => ['son', 'lipstick'],
@@ -633,6 +655,7 @@ class ChatbotToolService
             'maybelline',
             'loreal',
             '3ce',
+            'beplain',
         ];
 
         if (in_array($keyword, $genericPhrases, true)) {
@@ -651,14 +674,15 @@ class ChatbotToolService
         $normalized = $this->normalizeVietnameseText($keyword);
 
         $map = [
-            'tay trang' => ['nước tẩy trang', 'dầu tẩy trang', 'tay trang'],
+            'tay trang' => ['nước tẩy trang', 'dầu tẩy trang', 'tay trang', 'micellar'],
             'sua rua mat' => ['sữa rửa mặt', 'rua mat', 'cleanser'],
             'toner' => ['toner', 'nước hoa hồng'],
-            'serum' => ['serum', 'tinh chất'],
+            'serum' => ['serum', 'tinh chất', 'ampoule', 'essence'],
             'kem chong nang' => ['kem chống nắng', 'chong nang', 'sunscreen'],
             'duong am' => ['kem dưỡng', 'dưỡng ẩm', 'moisturizer'],
             'son' => ['son', 'lipstick', 'son moi'],
             'mun' => ['mụn', 'trị mụn', 'da mụn'],
+            'phuc hoi' => ['phục hồi', 'lam diu', 'repair'],
         ];
 
         $result = [];

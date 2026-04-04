@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\Promotion;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 
@@ -76,21 +77,52 @@ class HomeController extends Controller
             'mainImage',
             'brand',
             'variants',
-            'promotions',
+            'promotions' => function ($q) use ($now) {
+                $q->where('type', 'product')
+                    ->where('is_active', true)
+                    ->where('start_date', '<=', $now)
+                    ->where('end_date', '>=', $now);
+            },
         ])
-        ->withAvg('reviews', 'rating')
-        ->withCount('reviews')
-        ->withSum('variants as variants_sold_sum', 'sold_quantity')
-        ->where('is_active', true)
-        ->whereHas('promotions', function ($q) use ($now) {
-            $q->where('type', 'product')
+            ->withAvg('reviews', 'rating')
+            ->withCount('reviews')
+            ->withSum('variants as variants_sold_sum', 'sold_quantity')
+            ->where('is_active', true)
+            ->whereHas('promotions', function ($q) use ($now) {
+                $q->where('type', 'product')
+                    ->where('is_active', true)
+                    ->where('start_date', '<=', $now)
+                    ->where('end_date', '>=', $now);
+            })
+            ->orderByDesc('variants_sold_sum')
+            ->take(8)
+            ->get();
+
+        /* ===============================
+           THỜI GIAN KẾT THÚC FLASH SALE
+           Lấy mốc kết thúc sớm nhất trong các promotion đang áp dụng
+        =============================== */
+        $flashSaleEndTime = null;
+
+        if ($flashSaleProducts->isNotEmpty()) {
+            $allActivePromotions = $flashSaleProducts->flatMap(function ($product) {
+                return $product->promotions;
+            });
+
+            $flashSaleEndTime = $allActivePromotions->min('end_date');
+        }
+
+        /*
+        // Nếu muốn lấy trực tiếp từ bảng promotions thay vì theo sản phẩm đang hiển thị,
+        // thì dùng đoạn này thay cho block bên trên:
+
+        $flashSaleEndTime = Promotion::query()
+            ->where('type', 'product')
             ->where('is_active', true)
             ->where('start_date', '<=', $now)
-            ->where('end_date', '>=', $now);
-        })
-        ->orderByDesc('variants_sold_sum')
-        ->take(8)
-        ->get();
+            ->where('end_date', '>=', $now)
+            ->min('end_date');
+        */
 
         /* ===============================
            BLOG
@@ -104,7 +136,6 @@ class HomeController extends Controller
                 ->get();
         }
 
-
         /* ===============================
            VIEW
         =============================== */
@@ -114,6 +145,7 @@ class HomeController extends Controller
             'featuredProducts',
             'latestProducts',
             'flashSaleProducts',
+            'flashSaleEndTime',
             'blogs'
         ));
     }
