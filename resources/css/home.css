@@ -276,6 +276,7 @@
 .brand-slider .swiper-slide,
 .category-slider .swiper-slide {
     height: auto;
+    flex-shrink: 0;
 }
 
 .brand-card,
@@ -290,7 +291,9 @@
    BRAND CARD
 =============================== */
 .brand-card-inner {
-    height: 100%;
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
     border-radius: 16px;
     background: transparent;
     border: none;
@@ -306,7 +309,7 @@
 
 .brand-card-inner img {
     width: 100%;
-    height: 118px;
+    height: 100%;
     object-fit: cover;
     object-position: center;
     border-radius: 16px;
@@ -320,7 +323,9 @@
    HOME CATEGORY CARD
 =============================== */
 .home-category-card-inner {
-    height: 100%;
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
     border-radius: 16px;
     background: transparent;
     border: none;
@@ -337,7 +342,7 @@
 .home-category-image,
 .home-category-thumb-placeholder {
     width: 100%;
-    height: 118px;
+    height: 100%;
     object-fit: cover;
     object-position: center;
     border-radius: 16px;
@@ -449,6 +454,7 @@
 .category-section .swiper-button-next {
     right: 0;
 }
+
 /* ===============================
    BLOG SECTION
 =============================== */
@@ -817,10 +823,15 @@
         padding: 0 34px;
     }
 
+    .brand-card-inner,
+    .home-category-card-inner {
+        border-radius: 14px;
+    }
+
     .brand-card-inner img,
     .home-category-image,
     .home-category-thumb-placeholder {
-        height: 104px;
+        border-radius: 14px;
     }
 
     .blog-feature-content {
@@ -856,10 +867,15 @@
         padding: 0 30px;
     }
 
+    .brand-card-inner,
+    .home-category-card-inner {
+        border-radius: 12px;
+    }
+
     .brand-card-inner img,
     .home-category-image,
     .home-category-thumb-placeholder {
-        height: 92px;
+        border-radius: 12px;
     }
 
     .blog-side-item {
@@ -882,19 +898,15 @@
         width: 100%;
         margin-right: 0;
     }
-
-    .brand-card-inner img,
-    .home-category-image,
-    .home-category-thumb-placeholder {
-        height: 82px;
-    }
 }
-.brand-slider .swiper-wrapper,
-.category-slider .swiper-wrapper {
-    align-items: stretch;
-}
-
 .brand-slider .swiper-slide,
 .category-slider .swiper-slide {
+    width: 130px !important;
     flex-shrink: 0;
+}
+
+.brand-card-inner,
+.home-category-card-inner {
+    width: 100%;
+    aspect-ratio: 1 / 1;
 }

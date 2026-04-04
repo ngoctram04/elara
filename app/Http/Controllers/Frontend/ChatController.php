@@ -10,6 +10,7 @@ use App\Notifications\SystemNotification;
 use App\Services\AI\ChatbotService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class ChatController extends Controller
@@ -137,12 +138,28 @@ class ChatController extends Controller
         try {
             $result = $chatbotService->reply($message);
 
+            Log::info('chatbot_send_ai_success', [
+                'user_id' => Auth::id(),
+                'message' => $message,
+                'result_type' => $result['type'] ?? 'text',
+                'products_count' => count($result['products'] ?? []),
+            ]);
+
             return response()->json([
                 'type' => $result['type'] ?? 'text',
                 'reply' => $result['reply'] ?? 'Mình chưa thể trả lời lúc này, bạn thử lại nhé.',
                 'products' => $result['products'] ?? [],
             ]);
         } catch (Throwable $e) {
+            Log::error('chatbot_send_ai_error', [
+                'user_id' => Auth::id(),
+                'message' => $message,
+                'error_message' => $e->getMessage(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
             return response()->json([
                 'type' => 'text',
                 'reply' => 'AI đang bận, bạn thử lại sau nhé.',

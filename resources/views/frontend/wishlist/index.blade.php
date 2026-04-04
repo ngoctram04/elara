@@ -35,10 +35,12 @@
                         $product = $item->product;
                     @endphp
 
-                    @include('frontend.partials.product-card-common', [
-                        'product' => $product,
-                        'favorites' => $favorites ?? []
-                    ])
+                    <div class="col-6 col-md-4 col-lg-3">
+                        @include('frontend.partials.product-card-common', [
+                            'product' => $product,
+                            'favorites' => $favorites ?? []
+                        ])
+                    </div>
                 @endforeach
             </div>
         </div>

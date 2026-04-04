@@ -2,13 +2,6 @@
 $variants = $product->variants ?? collect();
 
 $addVariant = $variants->first(fn ($v) => $v->stock_quantity > 0);
-
-$priceVariant = $variants
-    ->sortBy(fn ($v) => $v->final_price ?? $v->price)
-    ->first();
-
-$saleVariant = $variants->first(fn ($v) => $v->is_on_sale);
-
 $outOfStock = !$addVariant;
 
 $imageUrl = $product->mainImage
@@ -17,13 +10,55 @@ $imageUrl = $product->mainImage
 
 $isFavorited = in_array($product->id, $favorites ?? []);
 
-$finalPrice = $priceVariant?->final_price ?? $priceVariant?->price;
-$originalPrice = ($priceVariant && $priceVariant->is_on_sale) ? $priceVariant->price : null;
-$hasSalePrice = $originalPrice && $originalPrice > $finalPrice;
+$saleVariant = $variants->first(fn ($v) => $v->is_on_sale);
+
+/*
+|--------------------------------------------------------------------------
+| TÍNH GIÁ KIỂU SHOPEE
+|--------------------------------------------------------------------------
+| - final_prices: giá bán thực tế (sau giảm nếu có)
+| - original_prices: giá gốc
+| - min/max để hiện khoảng giá
+*/
+$finalPrices = $variants
+    ->map(fn ($v) => (float) ($v->final_price ?? $v->price ?? 0))
+    ->filter(fn ($price) => $price > 0)
+    ->sort()
+    ->values();
+
+$originalPrices = $variants
+    ->map(fn ($v) => (float) ($v->price ?? 0))
+    ->filter(fn ($price) => $price > 0)
+    ->sort()
+    ->values();
+
+$minFinalPrice = $finalPrices->first();
+$maxFinalPrice = $finalPrices->last();
+
+$minOriginalPrice = $originalPrices->first();
+$maxOriginalPrice = $originalPrices->last();
+
+$hasPriceRange = $minFinalPrice && $maxFinalPrice && $minFinalPrice != $maxFinalPrice;
+$hasSalePrice = $saleVariant && $minOriginalPrice > $minFinalPrice;
+
+/*
+|--------------------------------------------------------------------------
+| FORMAT GIÁ
+|--------------------------------------------------------------------------
+*/
+$finalPriceText = $hasPriceRange
+    ? number_format($minFinalPrice, 0, ',', '.') . 'đ - ' . number_format($maxFinalPrice, 0, ',', '.') . 'đ'
+    : number_format($minFinalPrice, 0, ',', '.') . 'đ';
+
+$originalPriceText = '';
+if ($hasSalePrice) {
+    $originalPriceText = ($minOriginalPrice != $maxOriginalPrice)
+        ? number_format($minOriginalPrice, 0, ',', '.') . 'đ - ' . number_format($maxOriginalPrice, 0, ',', '.') . 'đ'
+        : number_format($minOriginalPrice, 0, ',', '.') . 'đ';
+}
 @endphp
 
-@if ($variants->isNotEmpty() && $priceVariant)
-
+@if ($variants->isNotEmpty() && $minFinalPrice)
 <div class="category-card h-100 js-category-card"
      data-href="{{ route('products.show', $product->slug) }}">
 
@@ -118,23 +153,14 @@ $hasSalePrice = $originalPrice && $originalPrice > $finalPrice;
         </div>
 
         <div class="category-price">
-            @if ($hasSalePrice)
-                <span class="new">
-                    {{ number_format($finalPrice, 0, ',', '.') }}đ
-                </span>
+            <span class="new">{{ $finalPriceText }}</span>
 
-                <span class="old">
-                    {{ number_format($originalPrice, 0, ',', '.') }}đ
-                </span>
-            @else
-                <span class="new">
-                    {{ number_format($finalPrice, 0, ',', '.') }}đ
-                </span>
+            @if ($hasSalePrice)
+                <span class="old">{{ $originalPriceText }}</span>
             @endif
         </div>
 
     </div>
-
 </div>
 @endif
 
@@ -183,24 +209,24 @@ $hasSalePrice = $originalPrice && $originalPrice > $finalPrice;
 
 .category-price{
     display:flex;
-    align-items:center;
-    gap:8px;
-    flex-wrap:wrap;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:4px;
     margin-top:6px;
 }
 
 .category-price .new{
     font-size:18px;
     font-weight:700;
-    color:#dc3545;
-    line-height:1;
+    color:#ee4d2d;
+    line-height:1.3;
 }
 
 .category-price .old{
-    font-size:14px;
+    font-size:13px;
     color:#9ca3af;
     text-decoration:line-through;
-    line-height:1;
+    line-height:1.2;
 }
 </style>
 

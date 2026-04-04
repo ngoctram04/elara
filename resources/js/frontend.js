@@ -10,6 +10,11 @@ function escapeHtml(text) {
         .replace(/'/g, "&#039;");
 }
 
+function formatPrice(value) {
+    const number = Number(value || 0);
+    return number.toLocaleString("vi-VN") + "₫";
+}
+
 /* ==============================
    MỞ / ĐÓNG AI CHAT
 ============================== */
@@ -29,6 +34,8 @@ window.toggleAIChat = function () {
                 <div class="ai-msg"><b>AI:</b> Xin chào! Tôi là trợ lý ELARA. Bạn cần tư vấn mỹ phẩm gì?</div>
             `;
         }
+
+        chat.scrollTop = chat.scrollHeight;
     }
 };
 
@@ -82,22 +89,90 @@ window.sendAI = function () {
             loading.remove();
 
             chat.innerHTML += `
-    <div class="ai-msg"><b>AI:</b> ${data.reply ?? ""}</div>
-`;
+                <div class="ai-msg"><b>AI:</b> ${escapeHtml(data.reply ?? "")}</div>
+            `;
 
             if (Array.isArray(data.products) && data.products.length > 0) {
                 data.products.forEach((p) => {
+                    const finalPrice = p.formatted_price
+                        ? escapeHtml(p.formatted_price)
+                        : formatPrice(p.price);
+
+                    const oldPrice = p.formatted_old_price
+                        ? escapeHtml(p.formatted_old_price)
+                        : (p.old_price ? formatPrice(p.old_price) : "");
+
                     chat.innerHTML += `
-                        <div class="ai-product-row" style="display:flex;gap:8px;margin-top:8px;">
+                        <div class="ai-product-row" style="display:flex;gap:8px;margin-top:8px;align-items:flex-start;">
                             <img
-                                src="${p.image}"
+                                src="${escapeHtml(p.image ?? "")}"
                                 alt="${escapeHtml(p.name ?? "")}"
                                 style="width:50px;height:50px;border-radius:6px;object-fit:cover;"
                             >
-                            <div>
-                                <a href="${p.url}" target="_blank">${escapeHtml(p.name ?? "")}</a>
-                                <div style="color:#e74c3c;font-weight:600;">
-                                    ${escapeHtml(p.formatted_price ?? "")}
+                            <div style="flex:1;min-width:0;">
+                                <a href="${escapeHtml(p.url ?? "#")}" target="_blank" style="display:block;font-weight:500;text-decoration:none;">
+                                    ${escapeHtml(p.name ?? "")}
+                                </a>
+
+                                ${p.brand ? `
+                                    <div style="font-size:12px;color:#888;margin-top:2px;">
+                                        ${escapeHtml(p.brand)}
+                                    </div>
+                                ` : ""}
+
+                                <div style="margin-top:4px;display:flex;align-items:center;flex-wrap:wrap;gap:6px;">
+                                    ${oldPrice ? `
+                                        <span style="color:#999;font-size:13px;text-decoration:line-through;">
+                                            ${oldPrice}
+                                        </span>
+                                    ` : ""}
+                                    <span style="color:#e74c3c;font-weight:700;">
+                                        ${finalPrice}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            if (Array.isArray(data.suggestions) && data.suggestions.length > 0) {
+                data.suggestions.forEach((p) => {
+                    const finalPrice = p.formatted_price
+                        ? escapeHtml(p.formatted_price)
+                        : formatPrice(p.price);
+
+                    const oldPrice = p.formatted_old_price
+                        ? escapeHtml(p.formatted_old_price)
+                        : (p.old_price ? formatPrice(p.old_price) : "");
+
+                    chat.innerHTML += `
+                        <div class="ai-product-row" style="display:flex;gap:8px;margin-top:8px;align-items:flex-start;">
+                            <img
+                                src="${escapeHtml(p.image ?? "")}"
+                                alt="${escapeHtml(p.name ?? "")}"
+                                style="width:50px;height:50px;border-radius:6px;object-fit:cover;"
+                            >
+                            <div style="flex:1;min-width:0;">
+                                <a href="${escapeHtml(p.url ?? "#")}" target="_blank" style="display:block;font-weight:500;text-decoration:none;">
+                                    ${escapeHtml(p.name ?? "")}
+                                </a>
+
+                                ${p.brand ? `
+                                    <div style="font-size:12px;color:#888;margin-top:2px;">
+                                        ${escapeHtml(p.brand)}
+                                    </div>
+                                ` : ""}
+
+                                <div style="margin-top:4px;display:flex;align-items:center;flex-wrap:wrap;gap:6px;">
+                                    ${oldPrice ? `
+                                        <span style="color:#999;font-size:13px;text-decoration:line-through;">
+                                            ${oldPrice}
+                                        </span>
+                                    ` : ""}
+                                    <span style="color:#e74c3c;font-weight:700;">
+                                        ${finalPrice}
+                                    </span>
                                 </div>
                             </div>
                         </div>

@@ -291,101 +291,128 @@
         @endphp
 
         <section class="home-blog-section mb-4">
-            <div class="section-head">
-                <h2 class="section-title mb-0">BLOG LÀM ĐẸP</h2>
+    <div class="section-head">
+        <h2 class="section-title mb-0">BLOG LÀM ĐẸP</h2>
 
-                @if(Route::has('blogs.index'))
-                    <a href="{{ route('blogs.index') }}" class="section-more-link">Xem thêm >></a>
-                @endif
-            </div>
+        @if(Route::has('blogs.index'))
+            <a href="{{ route('blogs.index') }}" class="section-more-link">Xem thêm >></a>
+        @endif
+    </div>
 
-            <div class="row g-4 blog-layout align-items-stretch">
-                @if($mainBlog)
-                    <div class="col-lg-7 d-flex">
-                        <article class="blog-feature-card w-100 h-100">
-                            <a href="{{ Route::has('blogs.show') ? route('blogs.show', $mainBlog->slug ?? $mainBlog->id) : '#' }}"
-                               class="blog-feature-image">
-                                <img
-                                    src="{{ $getBlogThumbnail($mainBlog->thumbnail ?? null) }}"
-                                    alt="{{ $mainBlog->title }}"
-                                    onerror="this.onerror=null;this.src='{{ asset('images/no-image.png') }}';"
-                                >
+    <div class="row g-4 blog-layout align-items-stretch">
+
+        {{-- BLOG CHÍNH --}}
+        @if($mainBlog)
+            <div class="col-lg-7 d-flex">
+                <article class="blog-feature-card w-100 h-100">
+
+                    <a href="{{ Route::has('blogs.show') ? route('blogs.show', $mainBlog->slug ?? $mainBlog->id) : '#' }}"
+                       class="blog-feature-image">
+                        <img
+                            src="{{ $getBlogThumbnail($mainBlog->thumbnail ?? null) }}"
+                            alt="{{ html_entity_decode($mainBlog->title, ENT_QUOTES, 'UTF-8') }}"
+                            onerror="this.onerror=null;this.src='{{ asset('images/no-image.png') }}';"
+                        >
+                    </a>
+
+                    <div class="blog-feature-content">
+
+                        <h3 class="blog-feature-title">
+                            <a href="{{ Route::has('blogs.show') ? route('blogs.show', $mainBlog->slug ?? $mainBlog->id) : '#' }}">
+                                {{ html_entity_decode($mainBlog->title, ENT_QUOTES, 'UTF-8') }}
                             </a>
+                        </h3>
 
-                            <div class="blog-feature-content">
-                                <h3 class="blog-feature-title">
-                                    <a href="{{ Route::has('blogs.show') ? route('blogs.show', $mainBlog->slug ?? $mainBlog->id) : '#' }}">
-                                        {{ $mainBlog->title }}
-                                    </a>
-                                </h3>
+                        <div class="blog-meta">
+                            <span>
+                                <i class="bi bi-calendar3"></i>
+                                {{ \Carbon\Carbon::parse($mainBlog->published_at ?? $mainBlog->created_at)->format('d.m.Y') }}
+                            </span>
+                            <span>/</span>
+                            <span>
+                                <i class="bi bi-person"></i>
+                                {{ optional($mainBlog->author)->name ?? 'ELARA Cosmetics' }}
+                            </span>
+                        </div>
 
-                                <div class="blog-meta">
-                                    <span>
-                                        <i class="bi bi-calendar3"></i>
-                                        {{ \Carbon\Carbon::parse($mainBlog->published_at ?? $mainBlog->created_at)->format('d.m.Y') }}
-                                    </span>
-                                    <span>/</span>
-                                    <span>
-                                        <i class="bi bi-person"></i>
-                                        {{ optional($mainBlog->author)->name ?? 'ELARA Cosmetics' }}
-                                    </span>
-                                </div>
+                        <p class="blog-excerpt">
+                            {{ \Illuminate\Support\Str::limit(
+                                html_entity_decode(
+                                    strip_tags($mainBlog->excerpt ?: $mainBlog->content),
+                                    ENT_QUOTES,
+                                    'UTF-8'
+                                ),
+                                220
+                            ) }}
+                        </p>
 
-                                <p class="blog-excerpt">
-                                    {{ \Illuminate\Support\Str::limit(strip_tags($mainBlog->excerpt ?: $mainBlog->content), 220) }}
-                                </p>
+                        <a href="{{ Route::has('blogs.show') ? route('blogs.show', $mainBlog->slug ?? $mainBlog->id) : '#' }}"
+                           class="blog-read-more">
+                            Đọc tiếp
+                        </a>
 
-                                <a href="{{ Route::has('blogs.show') ? route('blogs.show', $mainBlog->slug ?? $mainBlog->id) : '#' }}"
-                                   class="blog-read-more">
-                                    Đọc tiếp
-                                </a>
-                            </div>
-                        </article>
                     </div>
-                @endif
-
-                <div class="col-lg-5 d-flex">
-                    <div class="blog-side-list w-100 h-100">
-                        @foreach($sideBlogs as $blog)
-                            <article class="blog-side-item">
-                                <a href="{{ Route::has('blogs.show') ? route('blogs.show', $blog->slug ?? $blog->id) : '#' }}"
-                                   class="blog-side-thumb">
-                                    <img
-                                        src="{{ $getBlogThumbnail($blog->thumbnail ?? null) }}"
-                                        alt="{{ $blog->title }}"
-                                        onerror="this.onerror=null;this.src='{{ asset('images/no-image.png') }}';"
-                                    >
-                                </a>
-
-                                <div class="blog-side-content">
-                                    <h4 class="blog-side-title">
-                                        <a href="{{ Route::has('blogs.show') ? route('blogs.show', $blog->slug ?? $blog->id) : '#' }}">
-                                            {{ $blog->title }}
-                                        </a>
-                                    </h4>
-
-                                    <div class="blog-meta">
-                                        <span>
-                                            <i class="bi bi-calendar3"></i>
-                                            {{ \Carbon\Carbon::parse($blog->published_at ?? $blog->created_at)->format('d.m.Y') }}
-                                        </span>
-                                        <span>/</span>
-                                        <span>
-                                            <i class="bi bi-person"></i>
-                                            {{ optional($blog->author)->name ?? 'ELARA Cosmetics' }}
-                                        </span>
-                                    </div>
-
-                                    <p class="blog-side-excerpt">
-                                        {{ \Illuminate\Support\Str::limit(strip_tags($blog->excerpt ?: $blog->content), 95) }}
-                                    </p>
-                                </div>
-                            </article>
-                        @endforeach
-                    </div>
-                </div>
+                </article>
             </div>
-        </section>
+        @endif
+
+
+        {{-- BLOG PHỤ --}}
+        <div class="col-lg-5 d-flex">
+            <div class="blog-side-list w-100 h-100">
+
+                @foreach($sideBlogs as $blog)
+                    <article class="blog-side-item">
+
+                        <a href="{{ Route::has('blogs.show') ? route('blogs.show', $blog->slug ?? $blog->id) : '#' }}"
+                           class="blog-side-thumb">
+                            <img
+                                src="{{ $getBlogThumbnail($blog->thumbnail ?? null) }}"
+                                alt="{{ html_entity_decode($blog->title, ENT_QUOTES, 'UTF-8') }}"
+                                onerror="this.onerror=null;this.src='{{ asset('images/no-image.png') }}';"
+                            >
+                        </a>
+
+                        <div class="blog-side-content">
+
+                            <h4 class="blog-side-title">
+                                <a href="{{ Route::has('blogs.show') ? route('blogs.show', $blog->slug ?? $blog->id) : '#' }}">
+                                    {{ html_entity_decode($blog->title, ENT_QUOTES, 'UTF-8') }}
+                                </a>
+                            </h4>
+
+                            <div class="blog-meta">
+                                <span>
+                                    <i class="bi bi-calendar3"></i>
+                                    {{ \Carbon\Carbon::parse($blog->published_at ?? $blog->created_at)->format('d.m.Y') }}
+                                </span>
+                                <span>/</span>
+                                <span>
+                                    <i class="bi bi-person"></i>
+                                    {{ optional($blog->author)->name ?? 'ELARA Cosmetics' }}
+                                </span>
+                            </div>
+
+                            <p class="blog-side-excerpt">
+                                {{ \Illuminate\Support\Str::limit(
+                                    html_entity_decode(
+                                        strip_tags($blog->excerpt ?: $blog->content),
+                                        ENT_QUOTES,
+                                        'UTF-8'
+                                    ),
+                                    95
+                                ) }}
+                            </p>
+
+                        </div>
+                    </article>
+                @endforeach
+
+            </div>
+        </div>
+
+    </div>
+</section>
     @endif
 
 </div>

@@ -22,15 +22,18 @@ class ChatbotToolService
 
         $limit = isset($args['limit']) ? max(1, min((int) $args['limit'], 12)) : 8;
 
-        $query = Product::with(['mainImage', 'brand'])
-            ->where('is_active', 1);
+        $query = Product::with([
+            'mainImage',
+            'brand',
+            'variants.promotions',
+            'variants.mainImage',
+        ])->where('is_active', 1);
 
-        if ($minPrice !== null) {
-            $query->where('min_price', '>=', $minPrice);
-        }
-
-        if ($maxPrice !== null) {
-            $query->where('min_price', '<=', $maxPrice);
+        if ($minPrice !== null || $maxPrice !== null) {
+            $query->whereHas('variants', function ($q) {
+                $q->where('stock_quantity', '>', 0)
+                    ->where('is_active', 1);
+            });
         }
 
         $tokens = $this->extractSearchTokens($normalizedKeyword);
@@ -76,17 +79,29 @@ class ChatbotToolService
             ];
         }
 
-        $scored = $products->map(function ($product) use ($normalizedKeyword, $mainCategory) {
+        $scored = $products->map(function ($product) use ($normalizedKeyword, $mainCategory, $minPrice, $maxPrice) {
             $score = $this->scoreProductMatch($product, $normalizedKeyword, $mainCategory);
             $product->match_score = $score;
+            $product->selected_variant = $this->pickDisplayVariant($product, $minPrice, $maxPrice);
             return $product;
         })
             ->filter(function ($product) use ($normalizedKeyword) {
+                if (!$product->selected_variant) {
+                    return false;
+                }
+
                 return $product->match_score > 0 || $normalizedKeyword === '';
             })
             ->sort(function ($a, $b) {
                 if ($a->match_score === $b->match_score) {
-                    return $b->id <=> $a->id;
+                    $aPrice = $this->getVariantEffectivePrice($a->selected_variant);
+                    $bPrice = $this->getVariantEffectivePrice($b->selected_variant);
+
+                    if ($aPrice === $bPrice) {
+                        return $b->id <=> $a->id;
+                    }
+
+                    return $aPrice <=> $bPrice;
                 }
 
                 return $b->match_score <=> $a->match_score;
@@ -263,7 +278,12 @@ class ChatbotToolService
 
     public function getPromotions(): array
     {
-        $products = Product::with(['mainImage', 'brand'])
+        $products = Product::with([
+            'mainImage',
+            'brand',
+            'variants.promotions',
+            'variants.mainImage',
+        ])
             ->where('is_active', 1)
             ->whereHas('promotions', function ($q) {
                 $q->where('is_active', 1)
@@ -273,7 +293,15 @@ class ChatbotToolService
             })
             ->orderByDesc('id')
             ->limit(4)
-            ->get();
+            ->get()
+            ->map(function ($product) {
+                $product->selected_variant = $this->pickDisplayVariant($product);
+                return $product;
+            })
+            ->filter(function ($product) {
+                return (bool) $product->selected_variant;
+            })
+            ->values();
 
         return [
             'products' => $this->formatProducts($products)->toArray(),
@@ -366,20 +394,165 @@ class ChatbotToolService
         ];
     }
 
+    protected function buildProductPriceData(Collection $variants): array
+    {
+        $finalPrices = [];
+        $oldPrices = [];
+
+        foreach ($variants as $variant) {
+            $finalPrice = $this->getVariantEffectivePrice($variant);
+            $oldPrice = $this->getVariantOldPrice($variant);
+
+            $finalPrices[] = $finalPrice;
+
+            if ($oldPrice !== null) {
+                $oldPrices[] = $oldPrice;
+            }
+        }
+
+        sort($finalPrices);
+        sort($oldPrices);
+
+        $minPrice = $finalPrices[0] ?? 0;
+        $maxPrice = $finalPrices[count($finalPrices) - 1] ?? $minPrice;
+
+        $minOldPrice = !empty($oldPrices) ? $oldPrices[0] : null;
+        $maxOldPrice = !empty($oldPrices) ? $oldPrices[count($oldPrices) - 1] : null;
+
+        $formattedPrice = $minPrice === $maxPrice
+            ? number_format($minPrice, 0, ',', '.') . '₫'
+            : number_format($minPrice, 0, ',', '.') . '₫ - ' . number_format($maxPrice, 0, ',', '.') . '₫';
+
+        $formattedOldPrice = null;
+        if ($minOldPrice !== null && $maxOldPrice !== null) {
+            $formattedOldPrice = $minOldPrice === $maxOldPrice
+                ? number_format($minOldPrice, 0, ',', '.') . '₫'
+                : number_format($minOldPrice, 0, ',', '.') . '₫ - ' . number_format($maxOldPrice, 0, ',', '.') . '₫';
+        }
+
+        return [
+            'min_price' => $minPrice,
+            'max_price' => $maxPrice,
+            'formatted_price' => $formattedPrice,
+            'min_old_price' => $minOldPrice,
+            'max_old_price' => $maxOldPrice,
+            'formatted_old_price' => $formattedOldPrice,
+        ];
+    }
+
     protected function formatProducts(Collection $products): Collection
     {
         return $products->map(function ($product) {
+            $variants = $this->getAvailableVariants($product);
+
+            if ($variants->isEmpty()) {
+                return null;
+            }
+
+            $priceData = $this->buildProductPriceData($variants);
+
             return [
                 'id' => $product->id,
                 'name' => $product->name,
                 'slug' => $product->slug,
-                'price' => (float) $product->min_price,
-                'formatted_price' => number_format((float) $product->min_price, 0, ',', '.') . '₫',
+
+                'price' => $priceData['min_price'],
+                'max_price' => $priceData['max_price'],
+                'formatted_price' => $priceData['formatted_price'],
+
+                'old_price' => $priceData['min_old_price'],
+                'max_old_price' => $priceData['max_old_price'],
+                'formatted_old_price' => $priceData['formatted_old_price'],
+
                 'image' => $product->main_image_url ?: asset('images/no-image.png'),
                 'url' => route('products.show', $product->slug),
                 'brand' => optional($product->brand)->name,
             ];
-        })->values();
+        })->filter()->values();
+    }
+
+    protected function getAvailableVariants($product): Collection
+    {
+        $variants = collect($product->variants ?? []);
+
+        $activeVariants = $variants->filter(function ($variant) {
+            return (bool) ($variant->is_active ?? true);
+        });
+
+        $inStock = $activeVariants->filter(function ($variant) {
+            return (int) ($variant->stock_quantity ?? 0) > 0;
+        });
+
+        if ($inStock->isNotEmpty()) {
+            return $inStock->values();
+        }
+
+        if ($activeVariants->isNotEmpty()) {
+            return $activeVariants->values();
+        }
+
+        return $variants->values();
+    }
+
+    protected function pickDisplayVariant($product, ?float $minPrice = null, ?float $maxPrice = null)
+    {
+        $variants = $this->getAvailableVariants($product);
+
+        if ($variants->isEmpty()) {
+            return null;
+        }
+
+        $matched = $variants->filter(function ($variant) use ($minPrice, $maxPrice) {
+            $price = $this->getVariantEffectivePrice($variant);
+
+            if ($minPrice !== null && $price < $minPrice) {
+                return false;
+            }
+
+            if ($maxPrice !== null && $price > $maxPrice) {
+                return false;
+            }
+
+            return true;
+        });
+
+        if ($matched->isEmpty()) {
+            return null;
+        }
+
+        return $matched
+            ->sort(function ($a, $b) {
+                $aPrice = $this->getVariantEffectivePrice($a);
+                $bPrice = $this->getVariantEffectivePrice($b);
+
+                if ($aPrice === $bPrice) {
+                    $aSale = $this->getVariantOldPrice($a) !== null ? 1 : 0;
+                    $bSale = $this->getVariantOldPrice($b) !== null ? 1 : 0;
+
+                    return $bSale <=> $aSale;
+                }
+
+                return $aPrice <=> $bPrice;
+            })
+            ->first();
+    }
+
+    protected function getVariantEffectivePrice($variant): float
+    {
+        return (float) ($variant->final_price ?? $variant->price ?? 0);
+    }
+
+    protected function getVariantOldPrice($variant): ?float
+    {
+        $price = (float) ($variant->price ?? 0);
+        $finalPrice = $this->getVariantEffectivePrice($variant);
+        $isOnSale = (bool) ($variant->is_on_sale ?? false);
+
+        if (($isOnSale || $price > $finalPrice) && $price > $finalPrice) {
+            return $price;
+        }
+
+        return null;
     }
 
     protected function buildKeywordCandidates(string $keyword): array

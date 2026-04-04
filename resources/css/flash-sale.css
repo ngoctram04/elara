@@ -48,16 +48,18 @@
     position: absolute;
     top: 8px;
     left: 8px;
-    background: #ff4d4f;
+    background: linear-gradient(135deg, #ff7337, #ee4d2d);
     color: #fff;
     font-size: 12px;
     font-weight: 700;
-    padding: 4px 10px;
+    padding: 5px 10px;
     border-radius: 999px;
     z-index: 3;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, .12);
 }
 
 .fs-badge-stockout {
+    top: 42px;
     background: #6b7280;
 }
 
@@ -185,26 +187,27 @@
 
 .fs-price {
     display: flex;
-    align-items: baseline;
-    gap: 8px;
-    flex-wrap: nowrap;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
 }
 
 .fs-price .old {
     font-size: 12px;
-    line-height: 1;
+    line-height: 1.25;
     text-decoration: line-through;
-    color: #111827 !important;
-    opacity: .7;
-    white-space: nowrap;
+    color: #6b7280 !important;
+    opacity: .9;
+    word-break: break-word;
 }
 
 .fs-price .new {
-    font-size: 18px;
-    line-height: 1;
-    font-weight: 800;
+    font-size: 17px;
+    line-height: 1.35;
+    font-weight: 600;
+    /* bớt đậm */
     color: #dc2626 !important;
-    white-space: nowrap;
+    word-break: break-word;
 }
 
 /* ================= OUT OF STOCK ================= */
@@ -236,6 +239,10 @@
     }
 
     .fs-price .new {
-        font-size: 16px;
+        font-size: 15px;
+    }
+
+    .fs-price .old {
+        font-size: 11px;
     }
 }

@@ -27,7 +27,7 @@ class ChatbotService
         if ($this->isGreetingOnly($msg)) {
             return $this->text(
                 "Xin chào! Mình là trợ lý tư vấn của ELARA.\n" .
-                "Bạn có thể hỏi về sản phẩm, giá, khuyến mãi, phí ship, routine skincare hoặc tình trạng da nhé."
+                    "Bạn có thể hỏi về sản phẩm, giá, khuyến mãi, phí ship, routine skincare hoặc tình trạng da nhé."
             );
         }
 
@@ -47,16 +47,16 @@ class ChatbotService
         if ($this->isHumanSupport($msg)) {
             return $this->text(
                 'Nếu bạn cần hỗ trợ gấp hoặc muốn gặp nhân viên, bạn vui lòng ' .
-                '<a href="http://127.0.0.1:8000/chat" target="_blank" rel="noopener noreferrer">nhấn vào đây để chat với nhân viên</a> ' .
-                'để được hỗ trợ trực tiếp nhanh hơn nhé.'
+                    '<a href="http://127.0.0.1:8000/chat" target="_blank" rel="noopener noreferrer">nhấn vào đây để chat với nhân viên</a> ' .
+                    'để được hỗ trợ trực tiếp nhanh hơn nhé.'
             );
         }
 
         if ($this->isOrderQuestion($msg)) {
             return $this->text(
                 'Nếu bạn cần xử lý đơn hàng gấp, kiểm tra tình trạng đơn, đổi địa chỉ hoặc hủy đơn, bạn vui lòng ' .
-                '<a href="http://127.0.0.1:8000/orders" target="_blank" rel="noopener noreferrer">vào mục Đơn hàng của tôi</a> ' .
-                'hoặc nhắn nhân viên để được hỗ trợ nhanh hơn nhé.'
+                    '<a href="http://127.0.0.1:8000/orders" target="_blank" rel="noopener noreferrer">vào mục Đơn hàng của tôi</a> ' .
+                    'hoặc nhắn nhân viên để được hỗ trợ nhanh hơn nhé.'
             );
         }
 
@@ -98,7 +98,7 @@ class ChatbotService
 
             return $this->text(
                 'Với tình trạng da như bạn mô tả, mình khuyên ưu tiên làm sạch dịu nhẹ, phục hồi hàng rào da và chống nắng đều đặn. ' .
-                'Bạn có thể nhắn rõ hơn như da dầu, da khô, da mụn hay nhạy cảm để mình gợi ý routine sát hơn nhé.'
+                    'Bạn có thể nhắn rõ hơn như da dầu, da khô, da mụn hay nhạy cảm để mình gợi ý routine sát hơn nhé.'
             );
         }
 
@@ -149,7 +149,7 @@ class ChatbotService
 
             return $this->text(
                 "Một số thông tin nhanh của shop:\n" .
-                "- Ship: " . ($policies['shipping'] ?? 'Đang cập nhật') . "\n" .
+                    "- Ship: " . ($policies['shipping'] ?? 'Đang cập nhật') . "\n" .
                     "- Thành viên: " . ($policies['membership'] ?? 'Đang cập nhật') . "\n" .
                     "- Hỗ trợ: " . ($policies['support'] ?? 'Đang cập nhật')
             );
@@ -163,11 +163,26 @@ class ChatbotService
         $budget = $this->extractBudget($msg);
         $keyword = $this->extractProductKeyword($original);
 
+        logger()->info('chatbot_debug', [
+            'original' => $original,
+            'normalized' => $msg,
+            'budget' => $budget,
+            'keyword' => $keyword,
+        ]);
+
         if ($this->looksLikeNonProductSupport($msg)) {
             return $this->text('Vấn đề này bạn vui lòng nhắn nhân viên để được hỗ trợ nhanh hơn nhé.');
         }
 
         $intent = $this->detectSearchIntent($msg, $keyword, $budget);
+
+        logger()->info('chatbot_debug_intent', [
+            'original' => $original,
+            'normalized' => $msg,
+            'budget' => $budget,
+            'keyword' => $keyword,
+            'intent' => $intent,
+        ]);
 
         if ($intent === 'list_by_price_only') {
             $result = $this->tools->searchProducts([
@@ -256,7 +271,7 @@ class ChatbotService
         if ($budget['min'] !== null || $budget['max'] !== null) {
             return $this->text(
                 "Hiện mình chưa tìm thấy sản phẩm đúng với mức giá bạn cần.\n" .
-                'Bạn có thể thử tăng/giảm ngân sách hoặc nhập tên sản phẩm cụ thể hơn nhé.'
+                    'Bạn có thể thử tăng/giảm ngân sách hoặc nhập tên sản phẩm cụ thể hơn nhé.'
             );
         }
 
@@ -283,7 +298,7 @@ class ChatbotService
 
         return $this->text(
             "Mình chưa tìm thấy đúng thông tin bạn cần.\n" .
-            'Bạn có thể nhập rõ hơn tên sản phẩm, thương hiệu, mức giá hoặc nhắn nhân viên để được hỗ trợ trực tiếp nhé.'
+                'Bạn có thể nhập rõ hơn tên sản phẩm, thương hiệu, mức giá hoặc nhắn nhân viên để được hỗ trợ trực tiếp nhé.'
         );
     }
 
@@ -498,18 +513,20 @@ class ChatbotService
         $min = null;
         $max = null;
 
-        if (preg_match('/tu\s*(\d+)\s*(k|ngan|trieu)?\s*(den|toi)\s*(\d+)\s*(k|ngan|trieu)?/u', $msg, $m)) {
+        $msg = $this->normalizeMoneyText($msg);
+
+        if (preg_match('/tu\s*(\d+)\s*(k|ngan|nghin|trieu)?\s*(den|toi)\s*(\d+)\s*(k|ngan|nghin|trieu)?/u', $msg, $m)) {
             $min = $this->parseMoneyValue($m[1], $m[2] ?? null);
             $max = $this->parseMoneyValue($m[4], $m[5] ?? null);
-        } elseif (preg_match('/(\d+)\s*(k|ngan|trieu)?\s*(den|toi)\s*(\d+)\s*(k|ngan|trieu)?/u', $msg, $m)) {
+        } elseif (preg_match('/(\d+)\s*(k|ngan|nghin|trieu)?\s*(den|toi)\s*(\d+)\s*(k|ngan|nghin|trieu)?/u', $msg, $m)) {
             $min = $this->parseMoneyValue($m[1], $m[2] ?? null);
             $max = $this->parseMoneyValue($m[4], $m[5] ?? null);
-        } elseif (preg_match('/(\d+)\s*-\s*(\d+)\s*(k|ngan|trieu)?/u', $msg, $m)) {
+        } elseif (preg_match('/(\d+)\s*-\s*(\d+)\s*(k|ngan|nghin|trieu)?/u', $msg, $m)) {
             $min = $this->parseMoneyValue($m[1], $m[3] ?? null);
             $max = $this->parseMoneyValue($m[2], $m[3] ?? null);
-        } elseif (preg_match('/duoi\s*(\d+)\s*(k|ngan|trieu)?/u', $msg, $m)) {
+        } elseif (preg_match('/duoi\s*(\d+)\s*(k|ngan|nghin|trieu)?/u', $msg, $m)) {
             $max = $this->parseMoneyValue($m[1], $m[2] ?? null);
-        } elseif (preg_match('/tren\s*(\d+)\s*(k|ngan|trieu)?/u', $msg, $m)) {
+        } elseif (preg_match('/tren\s*(\d+)\s*(k|ngan|nghin|trieu)?/u', $msg, $m)) {
             $min = $this->parseMoneyValue($m[1], $m[2] ?? null);
         }
 
@@ -525,10 +542,15 @@ class ChatbotService
 
     protected function parseMoneyValue(string $number, ?string $unit = null): float
     {
+        $number = preg_replace('/[^\d]/', '', $number);
         $value = (float) $number;
-        $unit = strtolower((string) $unit);
+        $unit = strtolower(trim((string) $unit));
 
-        if (in_array($unit, ['k', 'ngan'], true)) {
+        if ($value <= 0) {
+            return 0;
+        }
+
+        if (in_array($unit, ['k', 'ngan', 'nghin'], true)) {
             return $value * 1000;
         }
 
@@ -543,9 +565,20 @@ class ChatbotService
         return $value;
     }
 
+    protected function normalizeMoneyText(string $text): string
+    {
+        $text = $this->normalize($text);
+
+        $text = preg_replace('/(?<=\d)[\.\,](?=\d{3}\b)/u', '', $text);
+        $text = preg_replace('/(?<=\d)\s(?=\d{3}\b)/u', '', $text);
+
+        return trim((string) $text);
+    }
+
     protected function extractProductKeyword(string $message): string
     {
         $cleaned = $this->normalize($message);
+        $cleaned = $this->normalizeMoneyText($cleaned);
 
         $noisePhrases = [
             'san pham',
@@ -572,11 +605,11 @@ class ChatbotService
             $cleaned = str_replace($phrase, ' ', $cleaned);
         }
 
-        $cleaned = preg_replace('/tu\s*\d+\s*(k|ngan|trieu)?\s*(den|toi)\s*\d+\s*(k|ngan|trieu)?/u', ' ', $cleaned);
-        $cleaned = preg_replace('/\d+\s*(k|ngan|trieu)?\s*(den|toi)\s*\d+\s*(k|ngan|trieu)?/u', ' ', $cleaned);
-        $cleaned = preg_replace('/duoi\s*\d+\s*(k|ngan|trieu)?/u', ' ', $cleaned);
-        $cleaned = preg_replace('/tren\s*\d+\s*(k|ngan|trieu)?/u', ' ', $cleaned);
-        $cleaned = preg_replace('/\d+\s*-\s*\d+\s*(k|ngan|trieu)?/u', ' ', $cleaned);
+        $cleaned = preg_replace('/tu\s*\d+\s*(k|ngan|nghin|trieu)?\s*(den|toi)\s*\d+\s*(k|ngan|nghin|trieu)?/u', ' ', $cleaned);
+        $cleaned = preg_replace('/\d+\s*(k|ngan|nghin|trieu)?\s*(den|toi)\s*\d+\s*(k|ngan|nghin|trieu)?/u', ' ', $cleaned);
+        $cleaned = preg_replace('/duoi\s*\d+\s*(k|ngan|nghin|trieu)?/u', ' ', $cleaned);
+        $cleaned = preg_replace('/tren\s*\d+\s*(k|ngan|nghin|trieu)?/u', ' ', $cleaned);
+        $cleaned = preg_replace('/\d+\s*-\s*\d+\s*(k|ngan|nghin|trieu)?/u', ' ', $cleaned);
 
         $cleaned = preg_replace('/\d+/', ' ', $cleaned);
         $cleaned = preg_replace('/\s+/', ' ', trim($cleaned));

@@ -1,38 +1,81 @@
 @php
-    $addVariant = $product->variants->first(fn ($v) => $v->stock_quantity > 0);
+    $variants = $product->variants ?? collect();
 
-    $saleVariant = $product->variants
-    ->filter(function ($v) {
-        $final = $v->final_price ?? $v->price;
-        return $v->is_on_sale || ($v->price > $final);
-    })
-    ->sortBy(fn ($v) => $v->final_price ?? $v->price)
-    ->first();
-
-    $priceVariant = $saleVariant
-        ?? $product->variants->sortBy(fn ($v) => $v->final_price ?? $v->price)->first();
-
-    $finalPrice = $priceVariant->final_price ?? $priceVariant->price;
-    $oldPrice = null;
-
-    if ($priceVariant && $priceVariant->is_on_sale && $priceVariant->price > $finalPrice) {
-    $oldPrice = $priceVariant->price;
-}
-
+    $addVariant = $variants->first(fn ($v) => (int) $v->stock_quantity > 0);
     $outOfStock = !$addVariant;
     $isFavorited = in_array($product->id, $favorites ?? []);
+
+    /*
+    |--------------------------------------------------------------------------
+    | GIÁ FLASH SALE KIỂU RANGE
+    |--------------------------------------------------------------------------
+    */
+    $pricedVariants = $variants
+        ->filter(fn ($v) => (float) ($v->price ?? 0) > 0)
+        ->values();
+
+    $finalPrices = $pricedVariants
+        ->map(fn ($v) => (float) ($v->final_price ?? $v->price ?? 0))
+        ->filter(fn ($price) => $price > 0)
+        ->sort()
+        ->values();
+
+    $originalPrices = $pricedVariants
+        ->map(fn ($v) => (float) ($v->price ?? 0))
+        ->filter(fn ($price) => $price > 0)
+        ->sort()
+        ->values();
+
+    $minFinalPrice = $finalPrices->first();
+    $maxFinalPrice = $finalPrices->last();
+
+    $minOriginalPrice = $originalPrices->first();
+    $maxOriginalPrice = $originalPrices->last();
+
+    $hasPriceRange = $minFinalPrice !== null && $maxFinalPrice !== null && $minFinalPrice != $maxFinalPrice;
+    $hasOriginalRange = $minOriginalPrice !== null && $maxOriginalPrice !== null && $minOriginalPrice != $maxOriginalPrice;
+
+    $hasSalePrice = false;
+    $maxDiscountPercent = 0;
+
+    foreach ($pricedVariants as $variant) {
+        $price = (float) ($variant->price ?? 0);
+        $final = (float) ($variant->final_price ?? $variant->price ?? 0);
+
+        if ($price > 0 && $final > 0 && $final < $price) {
+            $hasSalePrice = true;
+            $discountPercent = round((($price - $final) / $price) * 100);
+            $maxDiscountPercent = max($maxDiscountPercent, $discountPercent);
+        }
+    }
+
+    $finalPriceText = '';
+    if ($minFinalPrice !== null) {
+        $finalPriceText = $hasPriceRange
+            ? number_format($minFinalPrice, 0, ',', '.') . 'đ - ' . number_format($maxFinalPrice, 0, ',', '.') . 'đ'
+            : number_format($minFinalPrice, 0, ',', '.') . 'đ';
+    }
+
+    $originalPriceText = '';
+    if ($hasSalePrice && $minOriginalPrice !== null) {
+        $originalPriceText = $hasOriginalRange
+            ? number_format($minOriginalPrice, 0, ',', '.') . 'đ - ' . number_format($maxOriginalPrice, 0, ',', '.') . 'đ'
+            : number_format($minOriginalPrice, 0, ',', '.') . 'đ';
+    }
+
+    $saleBadgeText = $maxDiscountPercent > 0 ? 'Giảm đến ' . $maxDiscountPercent . '%' : null;
 @endphp
 
-@if ($priceVariant)
+@if ($pricedVariants->isNotEmpty() && $minFinalPrice)
 <div class="product-item">
     <div class="fs-card js-card {{ $outOfStock ? 'is-out-of-stock' : '' }}"
          data-href="{{ route('products.show', $product->slug) }}">
 
         <div class="fs-image position-relative">
 
-            @if ($saleVariant)
+            @if ($saleBadgeText)
                 <span class="fs-badge">
-                    {{ $saleVariant->discount_label }}
+                    {{ $saleBadgeText }}
                 </span>
             @endif
 
@@ -57,21 +100,23 @@
                     <i class="bi bi-eye"></i>
                 </span>
 
-                <button type="button"
-                        class="fs-buy btn-buy-now"
-                        data-variant-id="{{ $addVariant?->id }}"
-                        data-out-stock="{{ $outOfStock ? 1 : 0 }}">
-                    <i class="bi bi-lightning-charge-fill"></i>
-                    Mua ngay
-                </button>
+                @unless($outOfStock)
+                    <button type="button"
+                            class="fs-buy btn-buy-now"
+                            data-variant-id="{{ $addVariant?->id }}"
+                            data-out-stock="0">
+                        <i class="bi bi-lightning-charge-fill"></i>
+                        Mua ngay
+                    </button>
 
-                <button type="button"
-                        class="fs-icon fs-right btn-add-to-cart"
-                        data-variant-id="{{ $addVariant?->id }}"
-                        data-out-stock="{{ $outOfStock ? 1 : 0 }}"
-                        aria-label="Thêm vào giỏ">
-                    <i class="bi bi-cart-plus"></i>
-                </button>
+                    <button type="button"
+                            class="fs-icon fs-right btn-add-to-cart"
+                            data-variant-id="{{ $addVariant?->id }}"
+                            data-out-stock="0"
+                            aria-label="Thêm vào giỏ">
+                        <i class="bi bi-cart-plus"></i>
+                    </button>
+                @endunless
             </div>
         </div>
 
@@ -114,15 +159,15 @@
             </div>
 
             <div class="fs-price">
-                @if ($oldPrice)
+                <span class="new">
+                    {{ $finalPriceText }}
+                </span>
+
+                @if ($hasSalePrice && $originalPriceText)
                     <span class="old">
-                        {{ number_format($oldPrice, 0, ',', '.') }}đ
+                        {{ $originalPriceText }}
                     </span>
                 @endif
-
-                <span class="new">
-                    {{ number_format($finalPrice, 0, ',', '.') }}đ
-                </span>
             </div>
         </div>
     </div>
