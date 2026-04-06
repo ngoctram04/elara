@@ -19,6 +19,7 @@
         "vite": "^7.0.7"
     },
     "dependencies": {
+        "@mediapipe/tasks-vision": "^0.10.34",
         "sweetalert2": "^11.26.24"
     }
 }

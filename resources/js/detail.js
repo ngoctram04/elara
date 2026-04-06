@@ -647,17 +647,20 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!productId) return;
 
             try {
-                const response = await fetch(typeof wishlistToggleUrl !== 'undefined' ? wishlistToggleUrl : '/wishlist/toggle', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Accept: 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
-                    },
-                    body: JSON.stringify({
-                        product_id: productId
-                    })
-                });
+                const response = await fetch(
+                    typeof wishlistToggleUrl !== 'undefined' ? wishlistToggleUrl : '/wishlist/toggle',
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Accept: 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                        },
+                        body: JSON.stringify({
+                            product_id: productId
+                        })
+                    }
+                );
 
                 const data = await response.json().catch(() => null);
                 if (!response.ok || !data) throw new Error();
@@ -719,6 +722,20 @@ document.addEventListener('DOMContentLoaded', () => {
             switchToTab(btn.dataset.tab);
         });
     });
+
+    if (window.location.hash === '#tab-reviews') {
+        switchToTab('tab-reviews');
+
+        const reviewPanel = document.getElementById('tab-reviews');
+        if (reviewPanel) {
+            setTimeout(() => {
+                reviewPanel.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }, 120);
+        }
+    }
 
     if (reviewAnchor) {
         reviewAnchor.addEventListener('click', function (e) {

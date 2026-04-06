@@ -102,7 +102,7 @@
                             </td>
 
                             <td class="text-center text-muted">
-                                {{ \Carbon\Carbon::parse($o->created_at)->format('d/m/Y') }}
+                                {{ \Carbon\Carbon::parse($o->cancelled_at)->format('d/m/Y') }}
                             </td>
                         </tr>
                     @empty

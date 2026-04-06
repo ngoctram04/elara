@@ -1,0 +1,190 @@
+.try-lipstick-box {
+    margin-top: 14px;
+}
+
+.btn-try-lipstick {
+    border-radius: 999px;
+    padding: 10px 18px;
+    font-weight: 500;
+}
+
+.try-lipstick-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.try-lipstick-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+}
+
+.try-lipstick-content {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    max-width: 560px;
+    max-height: 90vh;
+    overflow-y: auto;
+    background: #fff;
+    border-radius: 18px;
+    padding: 22px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.18);
+}
+
+.try-lipstick-close {
+    position: absolute;
+    top: 10px;
+    right: 14px;
+    border: none;
+    background: transparent;
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+    color: #333;
+}
+
+.try-lipstick-title {
+    margin-bottom: 6px;
+    font-size: 22px;
+    font-weight: 700;
+    text-align: center;
+    color: #222;
+}
+
+.try-lipstick-note {
+    margin-bottom: 14px;
+    text-align: center;
+    color: #666;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.try-upload-box {
+    text-align: center;
+    margin-bottom: 14px;
+}
+
+.try-lipstick-preview {
+    position: relative;
+    width: fit-content;
+    max-width: 100%;
+    margin: 0 auto 16px;
+    line-height: 0;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #f5f5f5;
+}
+
+.try-lipstick-image {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    max-height: 420px;
+    height: auto;
+    object-fit: contain;
+    border-radius: 16px;
+}
+
+.try-lipstick-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    pointer-events: none;
+    border-radius: 16px;
+}
+
+.try-adjust-box {
+    width: 100%;
+    max-width: 350px;
+    margin: 0 auto 16px;
+}
+
+.try-adjust-box .form-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 14px;
+    color: #444;
+    font-weight: 500;
+}
+
+.try-lipstick-colors {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.lip-color-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px #ddd;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    padding: 0;
+    flex: 0 0 auto;
+}
+
+.lip-color-btn:hover,
+.lip-color-btn.active {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 2px #222;
+}
+
+.try-lipstick-label {
+    text-align: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: #444;
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.try-lipstick-hint {
+    text-align: center;
+    font-size: 12px;
+    color: #777;
+    line-height: 1.5;
+}
+
+@media (max-width: 576px) {
+    .try-lipstick-modal {
+        padding: 14px;
+    }
+
+    .try-lipstick-content {
+        padding: 18px 16px;
+        border-radius: 16px;
+    }
+
+    .try-lipstick-title {
+        font-size: 20px;
+    }
+
+    .try-lipstick-note {
+        font-size: 13px;
+    }
+
+    .try-lipstick-image {
+        max-height: 360px;
+    }
+
+    .try-adjust-box {
+        max-width: 100%;
+    }
+
+    .lip-color-btn {
+        width: 32px;
+        height: 32px;
+    }
+}

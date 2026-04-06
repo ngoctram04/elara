@@ -32,7 +32,7 @@ class ProductController extends Controller
 
             $query->where(function ($q) use ($keyword, $numberKeyword) {
                 $q->where('name', 'like', '%' . $keyword . '%')
-                ->orWhereRaw("CONCAT('SP', LPAD(id, 5, '0')) LIKE ?", ['%' . $keyword . '%']);
+                    ->orWhereRaw("CONCAT('SP', LPAD(id, 5, '0')) LIKE ?", ['%' . $keyword . '%']);
 
                 if ($numberKeyword !== '') {
                     $q->orWhere('id', (int) $numberKeyword);
@@ -155,9 +155,25 @@ class ProductController extends Controller
             'variants.*.attribute_value' => 'required|string|max:100',
             'variants.*.price'           => 'required|numeric|min:0',
             'variants.*.image'           => 'nullable|image',
+            'variants.*.color_code'      => 'nullable|string|max:20',
         ]);
 
-        DB::transaction(function () use ($request, $data) {
+        $category = Category::findOrFail($data['category_id']);
+        $isLipstick = $this->isLipstickCategory($category);
+
+        if ($isLipstick) {
+            foreach ($request->input('variants', []) as $index => $variant) {
+                if (blank($variant['color_code'] ?? null)) {
+                    return back()
+                        ->withErrors([
+                            "variants.$index.color_code" => 'Vui lòng chọn màu cho biến thể son.',
+                        ])
+                        ->withInput();
+                }
+            }
+        }
+
+        DB::transaction(function () use ($request, $data, $isLipstick) {
             $baseSlug = Str::slug($data['name']);
             $slug = $baseSlug;
             $i = 1;
@@ -194,6 +210,7 @@ class ProductController extends Controller
                 $variant = $product->variants()->create([
                     'attribute_name'  => $data['variant_attribute_name'],
                     'attribute_value' => $variantData['attribute_value'],
+                    'color_code'      => $isLipstick ? ($variantData['color_code'] ?? null) : null,
                     'price'           => $variantData['price'],
                     'cost_price'      => 0,
                     'stock_quantity'  => 0,
@@ -286,9 +303,25 @@ class ProductController extends Controller
             'variants.*.attribute_value' => 'required|string|max:100',
             'variants.*.price'           => 'required|numeric|min:0',
             'variants.*.image'           => 'nullable|image',
+            'variants.*.color_code'      => 'nullable|string|max:20',
         ]);
 
-        DB::transaction(function () use ($request, $data, $product) {
+        $category = Category::findOrFail($data['category_id']);
+        $isLipstick = $this->isLipstickCategory($category);
+
+        if ($isLipstick) {
+            foreach ($request->input('variants', []) as $index => $variant) {
+                if (blank($variant['color_code'] ?? null)) {
+                    return back()
+                        ->withErrors([
+                            "variants.$index.color_code" => 'Vui lòng chọn màu cho biến thể son.',
+                        ])
+                        ->withInput();
+                }
+            }
+        }
+
+        DB::transaction(function () use ($request, $data, $product, $isLipstick) {
             $product->update([
                 'name'        => $data['name'],
                 'category_id' => $data['category_id'],
@@ -349,12 +382,14 @@ class ProductController extends Controller
                     $variant->update([
                         'attribute_name'  => $data['variant_attribute_name'],
                         'attribute_value' => $variantData['attribute_value'],
+                        'color_code'      => $isLipstick ? ($variantData['color_code'] ?? null) : null,
                         'price'           => $variantData['price'],
                     ]);
                 } else {
                     $variant = $product->variants()->create([
                         'attribute_name'  => $data['variant_attribute_name'],
                         'attribute_value' => $variantData['attribute_value'],
+                        'color_code'      => $isLipstick ? ($variantData['color_code'] ?? null) : null,
                         'price'           => $variantData['price'],
                         'cost_price'      => 0,
                         'stock_quantity'  => 0,
@@ -413,6 +448,14 @@ class ProductController extends Controller
             'min_price' => $product->variants()->min('price'),
             'max_price' => $product->variants()->max('price'),
         ]);
+    }
+
+    private function isLipstickCategory(Category $category): bool
+    {
+        $name = Str::lower($category->name ?? '');
+        $slug = Str::lower($category->slug ?? '');
+
+        return str_contains($name, 'son') || str_contains($slug, 'son');
     }
 
     /* =======================

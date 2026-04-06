@@ -3,7 +3,12 @@
 @section('title', $product->name)
 
 @section('content')
-@vite(['resources/css/detail.css', 'resources/js/detail.js'])
+@vite([
+    'resources/css/detail.css',
+    'resources/css/try-lipstick.css',
+    'resources/js/detail.js',
+    'resources/js/try-lipstick.js'
+])
 
 <x-breadcrumb :items="[
     ['label' => 'Trang chủ', 'url' => url('/')],
@@ -25,6 +30,19 @@
     }
 
     $groupedVariants = $product->variants->groupBy('attribute_name');
+
+    $isLipstick = false;
+    if ($product->category) {
+        $categoryName = \Illuminate\Support\Str::lower($product->category->name ?? '');
+        $categorySlug = \Illuminate\Support\Str::lower($product->category->slug ?? '');
+        $isLipstick = str_contains($categoryName, 'son') || str_contains($categorySlug, 'son');
+    }
+
+    $lipstickVariants = $product->variants->filter(function ($variant) {
+        return !empty($variant->color_code);
+    })->values();
+
+    $hasTryLipstick = $isLipstick && $lipstickVariants->count() > 0;
 @endphp
 
 <div class="product-detail-page container py-4">
@@ -156,6 +174,15 @@
                 </div>
             @endif
 
+            @if($hasTryLipstick)
+                <div class="try-lipstick-box mt-3">
+                    <button type="button" class="btn btn-outline-danger btn-try-lipstick" id="open-try-lipstick">
+                        <i class="bi bi-magic"></i>
+                        Thử màu son
+                    </button>
+                </div>
+            @endif
+
             @if($hasVariants)
                 <div class="variant-section">
                     @foreach($groupedVariants as $attributeName => $variants)
@@ -258,27 +285,27 @@
                         </div>
 
                         <div class="review-filter-row">
-                            <a href="{{ request()->fullUrlWithQuery(['rating' => 'all']) }}"
+                            <a href="{{ request()->fullUrlWithQuery(['rating' => 'all']) }}#tab-reviews"
                                class="btn btn-sm {{ request('rating') == 'all' || !request('rating') ? 'btn-primary' : 'btn-outline-primary' }}">
                                 Tất cả
                             </a>
-                            <a href="{{ request()->fullUrlWithQuery(['rating' => 5]) }}"
+                            <a href="{{ request()->fullUrlWithQuery(['rating' => 5]) }}#tab-reviews"
                                class="btn btn-sm {{ request('rating') == 5 ? 'btn-primary' : 'btn-outline-primary' }}">
                                 5 Sao
                             </a>
-                            <a href="{{ request()->fullUrlWithQuery(['rating' => 4]) }}"
+                            <a href="{{ request()->fullUrlWithQuery(['rating' => 4]) }}#tab-reviews"
                                class="btn btn-sm {{ request('rating') == 4 ? 'btn-primary' : 'btn-outline-primary' }}">
                                 4 Sao
                             </a>
-                            <a href="{{ request()->fullUrlWithQuery(['rating' => 3]) }}"
+                            <a href="{{ request()->fullUrlWithQuery(['rating' => 3]) }}#tab-reviews"
                                class="btn btn-sm {{ request('rating') == 3 ? 'btn-primary' : 'btn-outline-primary' }}">
                                 3 Sao
                             </a>
-                            <a href="{{ request()->fullUrlWithQuery(['rating' => 2]) }}"
+                            <a href="{{ request()->fullUrlWithQuery(['rating' => 2]) }}#tab-reviews"
                                class="btn btn-sm {{ request('rating') == 2 ? 'btn-primary' : 'btn-outline-primary' }}">
                                 2 Sao
                             </a>
-                            <a href="{{ request()->fullUrlWithQuery(['rating' => 1]) }}"
+                            <a href="{{ request()->fullUrlWithQuery(['rating' => 1]) }}#tab-reviews"
                                class="btn btn-sm {{ request('rating') == 1 ? 'btn-primary' : 'btn-outline-primary' }}">
                                 1 Sao
                             </a>
@@ -306,6 +333,15 @@
                                             <div class="fw-semibold">{{ $review->user->name }}</div>
                                             <small class="text-muted">{{ $review->created_at->format('d/m/Y H:i') }}</small>
                                         </div>
+
+                                        @if($review->variant)
+                                            <div class="review-variant small text-muted mb-1">
+                                                @if(!empty($review->variant->attribute_name))
+                                                    {{ $review->variant->attribute_name }}:
+                                                @endif
+                                                {{ $review->variant->attribute_value }}
+                                            </div>
+                                        @endif
 
                                         <div class="review-stars mb-1">
                                             {!! str_repeat('★', (int) $review->rating) !!}
@@ -492,6 +528,62 @@
     @endif
 
 </div>
+
+@if($hasTryLipstick)
+<div class="try-lipstick-modal" id="try-lipstick-modal" style="display:none;">
+    <div class="try-lipstick-overlay" id="try-lipstick-overlay"></div>
+
+    <div class="try-lipstick-content">
+        <button type="button" class="try-lipstick-close" id="close-try-lipstick">
+            &times;
+        </button>
+
+        <h4 class="try-lipstick-title">Thử màu son</h4>
+        <p class="try-lipstick-note">Tải ảnh của bạn lên để hệ thống nhận diện môi và mô phỏng màu son.</p>
+
+        <div class="try-upload-box">
+            <label for="try-lipstick-upload" class="btn btn-outline-secondary btn-sm">
+                Tải ảnh của bạn
+            </label>
+            <input type="file" id="try-lipstick-upload" accept="image/*" hidden>
+        </div>
+
+        <div class="try-lipstick-preview" id="try-lipstick-preview">
+            <img src="{{ $defaultVariant?->images->first()
+                ? asset('storage/' . $defaultVariant->images->first()->image_path)
+                : $defaultMainImage }}"
+                 alt="{{ $product->name }}"
+                 class="try-lipstick-image"
+                 id="try-lipstick-image">
+
+            <canvas id="try-lipstick-canvas" class="try-lipstick-canvas"></canvas>
+        </div>
+
+        <div class="try-adjust-box">
+            <label class="form-label small mb-1">Độ đậm màu son</label>
+            <input type="range" id="lip-opacity-range" min="20" max="90" value="55" class="form-range">
+        </div>
+
+        <div class="try-lipstick-colors">
+            @foreach($lipstickVariants as $index => $variant)
+                <button type="button"
+                        class="lip-color-btn {{ $index === 0 ? 'active' : '' }}"
+                        data-color="{{ $variant->color_code }}"
+                        title="{{ $variant->attribute_value }}">
+                </button>
+            @endforeach
+        </div>
+
+        <div class="try-lipstick-label" id="try-lipstick-label">
+            {{ $lipstickVariants->first()?->attribute_value }}
+        </div>
+
+        <div class="try-lipstick-hint" id="try-lipstick-hint">
+            Nên dùng ảnh chụp chính diện, thấy rõ khuôn mặt và môi.
+        </div>
+    </div>
+</div>
+@endif
 
 <div id="media-lightbox" style="display:none;">
     <span id="lightbox-close">&times;</span>
