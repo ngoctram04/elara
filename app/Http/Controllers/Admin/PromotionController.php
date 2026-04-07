@@ -16,12 +16,106 @@ use App\Notifications\SystemNotification;
 class PromotionController extends Controller
 {
     /* =========================================================
-        LIST
+        LIST + FILTER
     ========================================================= */
-    public function index()
+    public function index(Request $request)
     {
-        $promotions = Promotion::latest()->paginate(5);
-        $rewards = PointReward::latest()->paginate(5);
+        $promotionQuery = Promotion::query();
+        $rewardQuery = PointReward::query();
+
+        /*
+        |--------------------------------------------------------------------------
+        | FILTER KHUYẾN MÃI HỆ THỐNG
+        |--------------------------------------------------------------------------
+        */
+        if ($request->filled('search')) {
+            $keyword = trim($request->search);
+
+            $promotionQuery->where(function ($q) use ($keyword) {
+                $q->where('name', 'like', '%' . $keyword . '%')
+                    ->orWhere('code', 'like', '%' . $keyword . '%');
+            });
+        }
+
+        if ($request->filled('type')) {
+            $promotionQuery->where('type', $request->type);
+        }
+
+        if ($request->filled('status')) {
+            if ($request->status === 'active') {
+                $promotionQuery->where('is_active', 1);
+            } elseif ($request->status === 'inactive') {
+                $promotionQuery->where('is_active', 0);
+            }
+        }
+
+        if ($request->filled('progress')) {
+            if ($request->progress === 'upcoming') {
+                $promotionQuery->where('start_date', '>', now());
+            } elseif ($request->progress === 'ongoing') {
+                $promotionQuery->where('start_date', '<=', now())
+                    ->where('end_date', '>=', now());
+            } elseif ($request->progress === 'expired') {
+                $promotionQuery->where('end_date', '<', now());
+            }
+        }
+
+        switch ($request->get('sort', 'new')) {
+            case 'old':
+                $promotionQuery->oldest();
+                break;
+            case 'name_asc':
+                $promotionQuery->orderBy('name', 'asc');
+                break;
+            case 'name_desc':
+                $promotionQuery->orderBy('name', 'desc');
+                break;
+            case 'discount_desc':
+                $promotionQuery->orderBy('discount_value', 'desc')->latest('id');
+                break;
+            case 'discount_asc':
+                $promotionQuery->orderBy('discount_value', 'asc')->latest('id');
+                break;
+            default:
+                $promotionQuery->latest();
+                break;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | FILTER VOUCHER ĐỔI ĐIỂM
+        |--------------------------------------------------------------------------
+        */
+        if ($request->filled('reward_search')) {
+            $rewardKeyword = trim($request->reward_search);
+            $rewardQuery->where('title', 'like', '%' . $rewardKeyword . '%');
+        }
+
+        if ($request->filled('reward_status')) {
+            if ($request->reward_status === 'active') {
+                $rewardQuery->where('is_active', 1);
+            } elseif ($request->reward_status === 'inactive') {
+                $rewardQuery->where('is_active', 0);
+            }
+        }
+
+        switch ($request->get('reward_sort', 'new')) {
+            case 'old':
+                $rewardQuery->oldest();
+                break;
+            case 'points_desc':
+                $rewardQuery->orderBy('points_required', 'desc')->latest('id');
+                break;
+            case 'points_asc':
+                $rewardQuery->orderBy('points_required', 'asc')->latest('id');
+                break;
+            default:
+                $rewardQuery->latest();
+                break;
+        }
+
+        $promotions = $promotionQuery->paginate(5, ['*'], 'promotions_page');
+        $rewards = $rewardQuery->paginate(5, ['*'], 'rewards_page');
 
         return view('admin.promotions.index', compact('promotions', 'rewards'));
     }
@@ -52,21 +146,9 @@ class PromotionController extends Controller
     ========================================================= */
     public function createProduct()
     {
-        $products = Product::with('variants')->get();
+        $products = Product::with(['variants', 'mainImage'])->get();
 
-        $activeVariantIds = PromotionProduct::whereHas('promotion', function ($q) {
-            $q->where('type', 'product')
-                ->where('is_active', true)
-                ->where('start_date', '<=', now())
-                ->where('end_date', '>=', now());
-        })
-            ->pluck('variant_id')
-            ->toArray();
-
-        return view('admin.promotions.create_product', compact(
-            'products',
-            'activeVariantIds'
-        ));
+        return view('admin.promotions.create_product', compact('products'));
     }
 
     /* =========================================================
@@ -82,6 +164,10 @@ class PromotionController extends Controller
     ========================================================= */
     public function store(Request $request)
     {
+        $request->merge([
+            'code' => $request->filled('code') ? strtoupper(trim($request->code)) : null,
+        ]);
+
         $request->validate([
             'name'           => 'required|string|max:255',
             'type'           => 'required|in:product,order,reward',
@@ -95,6 +181,10 @@ class PromotionController extends Controller
                 'string',
                 'max:50',
                 function ($attr, $value, $fail) {
+                    if (!$value) {
+                        return;
+                    }
+
                     if (
                         Promotion::where('type', 'order')
                         ->where('code', $value)
@@ -110,14 +200,13 @@ class PromotionController extends Controller
             'usage_limit'     => 'nullable|integer|min:1',
         ]);
 
-        // Check trùng product promotion
         if (
             $request->type === 'product'
-            && $this->hasActiveProductConflict($request)
+            && $this->hasProductConflictByDateRange($request)
         ) {
             return back()
                 ->withErrors([
-                    'products' => 'Một số sản phẩm / biến thể đang có khuyến mãi khác đang diễn ra'
+                    'products' => 'Một số sản phẩm / biến thể đã có khuyến mãi khác bị trùng thời gian áp dụng.'
                 ])
                 ->withInput();
         }
@@ -126,9 +215,7 @@ class PromotionController extends Controller
 
         DB::transaction(function () use ($request, &$promotion) {
             $promotion = Promotion::create([
-                'code'            => $request->type === 'order'
-                    ? strtoupper($request->code)
-                    : null,
+                'code'            => $request->type === 'order' ? $request->code : null,
                 'name'            => $request->name,
                 'type'            => $request->type,
                 'discount_type'   => 'percent',
@@ -141,7 +228,6 @@ class PromotionController extends Controller
                 'is_active'       => $request->boolean('is_active'),
             ]);
 
-            // PRODUCT PROMOTION
             if ($promotion->type === 'product') {
                 foreach ($request->products ?? [] as $productId => $variantIds) {
                     foreach ($variantIds as $variantId) {
@@ -155,13 +241,7 @@ class PromotionController extends Controller
             }
         });
 
-        /*
-        |--------------------------------------------------------------------------
-        | THÔNG BÁO CHO KHÁCH HÀNG KHI TẠO MÃ KHUYẾN MÃI
-        |--------------------------------------------------------------------------
-        */
-        if ($promotion && $promotion->type === 'order'
-        ) {
+        if ($promotion && $promotion->type === 'order') {
             $this->notifyCustomers(new SystemNotification([
                 'title'   => 'Mã khuyến mãi mới',
                 'message' => 'Cửa hàng vừa tạo mã khuyến mãi "' . $promotion->code . '" - giảm ' . $promotion->discount_value . '%.',
@@ -188,24 +268,13 @@ class PromotionController extends Controller
     public function edit(Promotion $promotion)
     {
         if ($promotion->type === 'product') {
-            $products = Product::with('variants')->get();
+            $products = Product::with(['variants', 'mainImage'])->get();
             $selected = $promotion->promotionProducts;
-
-            $activeVariantIds = PromotionProduct::whereHas('promotion', function ($q) use ($promotion) {
-                $q->where('type', 'product')
-                    ->where('is_active', true)
-                    ->where('start_date', '<=', now())
-                    ->where('end_date', '>=', now())
-                    ->where('id', '!=', $promotion->id);
-            })
-                ->pluck('variant_id')
-                ->toArray();
 
             return view('admin.promotions.edit_product', compact(
                 'promotion',
                 'products',
-                'selected',
-                'activeVariantIds'
+                'selected'
             ));
         }
 
@@ -229,11 +298,11 @@ class PromotionController extends Controller
 
         if (
             $promotion->type === 'product'
-            && $this->hasActiveProductConflict($request, $promotion)
+            && $this->hasProductConflictByDateRange($request, $promotion)
         ) {
             return back()
                 ->withErrors([
-                    'products' => 'Một số sản phẩm / biến thể đang có khuyến mãi khác đang diễn ra'
+                    'products' => 'Một số sản phẩm / biến thể đã có khuyến mãi khác bị trùng thời gian áp dụng.'
                 ])
                 ->withInput();
         }
@@ -276,34 +345,80 @@ class PromotionController extends Controller
     ========================================================= */
     public function toggle(Promotion $promotion)
     {
+        $newStatus = !$promotion->is_active;
+
+        if ($newStatus) {
+            if ($promotion->end_date && $promotion->end_date < now()) {
+                return back()->with('error', 'Không thể kích hoạt khuyến mãi đã hết hạn.');
+            }
+
+            if ($promotion->type === 'product' && $this->promotionHasConflictWhenActivating($promotion)) {
+                return back()->with('error', 'Không thể kích hoạt vì một số biến thể đang bị trùng thời gian với khuyến mãi sản phẩm khác.');
+            }
+        }
+
         $promotion->update([
-            'is_active' => !$promotion->is_active
+            'is_active' => $newStatus
         ]);
 
         return back()->with('success', 'Đã cập nhật trạng thái');
     }
 
     /* =========================================================
-        CHECK TRÙNG PRODUCT
+        CHECK TRÙNG PRODUCT THEO KHOẢNG THỜI GIAN
     ========================================================= */
-    private function hasActiveProductConflict(Request $request, Promotion $ignore = null): bool
+    private function hasProductConflictByDateRange(Request $request, Promotion $ignore = null): bool
     {
         if (empty($request->products)) {
             return false;
         }
 
-        $variantIds = collect($request->products)->flatten()->filter();
+        $variantIds = collect($request->products)
+            ->flatten()
+            ->filter()
+            ->map(fn($id) => (int) $id)
+            ->values()
+            ->all();
+
+        if (empty($variantIds)) {
+            return false;
+        }
 
         return PromotionProduct::whereIn('variant_id', $variantIds)
-            ->whereHas('promotion', function ($q) use ($ignore) {
+            ->whereHas('promotion', function ($q) use ($request, $ignore) {
                 $q->where('type', 'product')
                     ->where('is_active', true)
-                    ->where('start_date', '<=', now())
-                    ->where('end_date', '>=', now());
+                    ->where('start_date', '<=', $request->end_date)
+                    ->where('end_date', '>=', $request->start_date);
 
                 if ($ignore) {
                     $q->where('id', '!=', $ignore->id);
                 }
+            })
+            ->exists();
+    }
+
+    /* =========================================================
+        CHECK TRÙNG KHI BẬT LẠI KHUYẾN MÃI PRODUCT
+    ========================================================= */
+    private function promotionHasConflictWhenActivating(Promotion $promotion): bool
+    {
+        $variantIds = PromotionProduct::where('promotion_id', $promotion->id)
+            ->pluck('variant_id')
+            ->map(fn($id) => (int) $id)
+            ->all();
+
+        if (empty($variantIds)) {
+            return false;
+        }
+
+        return PromotionProduct::whereIn('variant_id', $variantIds)
+            ->whereHas('promotion', function ($q) use ($promotion) {
+                $q->where('type', 'product')
+                    ->where('is_active', true)
+                    ->where('id', '!=', $promotion->id)
+                    ->where('start_date', '<=', $promotion->end_date)
+                    ->where('end_date', '>=', $promotion->start_date);
             })
             ->exists();
     }
@@ -339,11 +454,6 @@ class PromotionController extends Controller
             ]);
         });
 
-        /*
-        |--------------------------------------------------------------------------
-        | THÔNG BÁO CHO KHÁCH HÀNG KHI TẠO VOUCHER ĐỔI ĐIỂM
-        |--------------------------------------------------------------------------
-        */
         if ($reward) {
             $discountText = $reward->discount_type === 'percent'
                 ? $reward->discount_value . '%'
@@ -427,17 +537,14 @@ class PromotionController extends Controller
     {
         $query = User::query();
 
-        // Trường hợp bảng users có cột is_admin
         if (Schema::hasColumn('users', 'is_admin')) {
             $query->where('is_admin', 0);
         }
 
-        // Trường hợp bảng users có cột role
         if (Schema::hasColumn('users', 'role')) {
             $query->where('role', '!=', 'admin');
         }
 
-        // Trường hợp bảng users có cột user_type
         if (Schema::hasColumn('users', 'user_type')) {
             $query->where('user_type', '!=', 'admin');
         }
@@ -451,7 +558,6 @@ class PromotionController extends Controller
     private function notifyCustomers(SystemNotification $notification): void
     {
         $this->customerQuery()
-            ->select('id')
             ->chunkById(100, function ($users) use ($notification) {
                 foreach ($users as $user) {
                     $user->notify($notification);

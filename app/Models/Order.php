@@ -125,7 +125,7 @@ class Order extends Model
             self::STATUS_PROCESSING => 'Đang giao',
             self::STATUS_COMPLETED  => 'Hoàn tất',
             self::STATUS_CANCELLED  => 'Đã huỷ',
-            self::STATUS_RETURNED   => 'Đổi trả',
+            self::STATUS_RETURNED   => 'Trả hàng',
             default                 => 'Không xác định',
         };
     }

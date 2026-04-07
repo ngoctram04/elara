@@ -88,13 +88,13 @@
                 <thead class="table-light text-center">
                     <tr>
                         <th width="70">Mã</th>
-                        <th width="80">Ảnh</th>
+                        <th width="70">Ảnh</th>
                         <th>Tên sản phẩm</th>
                         <th width="170">Giá</th>
                         <th width="150">Danh mục</th>
                         <th width="120">Kho</th>
                         <th width="140">Tình trạng</th>
-                        <th width="185">Hành động</th>
+                        <th width="190">Hành động</th>
                     </tr>
                 </thead>
 
@@ -244,19 +244,21 @@
                                 </a>
 
                                 <form action="{{ route('admin.products.toggle', $product) }}"
-                                      method="POST"
-                                      class="d-inline">
-                                    @csrf
-                                    @method('PATCH')
+      method="POST"
+      class="d-inline">
+    @csrf
+    @method('PATCH')
 
-                                    <button class="btn btn-sm {{ $product->is_active ? 'btn-secondary' : 'btn-success' }}">
-                                        @if($product->is_active)
-                                            <i class="bi bi-eye-slash"></i>
-                                        @else
-                                            <i class="bi bi-eye"></i>
-                                        @endif
-                                    </button>
-                                </form>
+    @if($product->is_active)
+        <button class="btn btn-sm btn-outline-secondary">
+            <span class="fw-semibold">Ẩn</span>
+        </button>
+    @else
+        <button class="btn btn-sm btn-outline-success">
+            <span class="fw-semibold">Hiện</span>
+        </button>
+    @endif
+</form>
 
                                 <form action="{{ route('admin.products.destroy', $product) }}"
                                       method="POST"

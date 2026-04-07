@@ -34,7 +34,6 @@ class ProductController extends Controller
                 $q->where('is_active', 1);
             },
 
-            // Q&A
             'questions' => function ($q) {
                 $q->where('is_active', 1)
                     ->latest()
@@ -49,30 +48,34 @@ class ProductController extends Controller
             ->firstOrFail();
 
         /* ======================================================
-         * 2. REVIEWS (FILTER + SORT + PAGINATION)
+         * 2. REVIEW BASE QUERY
+         * - CHỈ LẤY REVIEW ĐANG HIỂN THỊ
          * ====================================================== */
-        $reviewsQuery = $product->reviews()
+        $visibleReviewsQuery = $product->reviews()
+            ->where('is_visible', 1);
+
+        /* ======================================================
+         * 3. REVIEWS (FILTER + SORT)
+         * ====================================================== */
+        $reviewsQuery = (clone $visibleReviewsQuery)
             ->with([
                 'user:id,name,avatar',
                 'media'
             ]);
 
-        // FILTER RATING
-        if ($request->rating && $request->rating !== 'all') {
+        if ($request->filled('rating') && $request->rating !== 'all') {
             $reviewsQuery->where('rating', $request->rating);
         }
 
-        // FILTER COMMENT
         if ($request->type === 'comment') {
-            $reviewsQuery->whereNotNull('comment');
+            $reviewsQuery->whereNotNull('comment')
+                ->where('comment', '!=', '');
         }
 
-        // FILTER MEDIA
         if ($request->type === 'media') {
             $reviewsQuery->whereHas('media');
         }
 
-        // SORT
         if ($request->sort === 'old') {
             $reviewsQuery->orderBy('created_at', 'asc');
         } else {
@@ -82,36 +85,38 @@ class ProductController extends Controller
         $reviews = $reviewsQuery->get();
 
         /* ======================================================
-         * 3. REVIEW STATS
+         * 4. REVIEW STATS
          * ====================================================== */
-        $reviewCount = $product->reviews()->count();
+        $reviewCount = (clone $visibleReviewsQuery)->count();
 
-        $avgRating = $reviewCount
-            ? round($product->reviews()->avg('rating'), 1)
+        $avgRating = $reviewCount > 0
+            ? round((clone $visibleReviewsQuery)->avg('rating'), 1)
             : 0;
 
         $ratingStats = [];
 
         for ($i = 1; $i <= 5; $i++) {
-            $ratingStats[$i] = $product->reviews()
+            $ratingStats[$i] = (clone $visibleReviewsQuery)
                 ->where('rating', $i)
                 ->count();
         }
 
-        $withComment = $product->reviews()
+        $withComment = (clone $visibleReviewsQuery)
             ->whereNotNull('comment')
+            ->where('comment', '!=', '')
             ->count();
 
-        $withMedia = $product->reviews()
+        $withMedia = (clone $visibleReviewsQuery)
             ->whereHas('media')
             ->count();
 
         /* ======================================================
-         * 4. TOTAL SOLD
+         * 5. TOTAL SOLD
          * ====================================================== */
         $totalSold = $product->total_sold;
+
         /* ======================================================
-         * 5. WISHLIST
+         * 6. WISHLIST
          * ====================================================== */
         $favorites = [];
 
@@ -124,14 +129,22 @@ class ProductController extends Controller
         $favoritesCount = Wishlist::where('product_id', $product->id)->count();
 
         /* ======================================================
-         * 6. RELATED PRODUCTS
+         * 7. RELATED PRODUCTS
          * ====================================================== */
         $relatedProducts = Product::with([
             'mainImage',
             'brand'
         ])
-            ->withAvg('reviews', 'rating')
-            ->withCount('reviews')
+            ->withAvg([
+                'reviews' => function ($q) {
+                    $q->where('is_visible', 1);
+                }
+            ], 'rating')
+            ->withCount([
+                'reviews' => function ($q) {
+                    $q->where('is_visible', 1);
+                }
+            ])
             ->withSum('variants as variants_sold_sum', 'sold_quantity')
             ->where('is_active', 1)
             ->where('id', '!=', $product->id)
@@ -146,7 +159,7 @@ class ProductController extends Controller
             ->get();
 
         /* ======================================================
-         * 7. FALLBACK RELATED
+         * 8. FALLBACK RELATED
          * ====================================================== */
         if ($relatedProducts->count() < 8) {
             $excludeIds = $relatedProducts
@@ -157,8 +170,16 @@ class ProductController extends Controller
                 'mainImage',
                 'brand'
             ])
-                ->withAvg('reviews', 'rating')
-                ->withCount('reviews')
+                ->withAvg([
+                    'reviews' => function ($q) {
+                        $q->where('is_visible', 1);
+                    }
+                ], 'rating')
+                ->withCount([
+                    'reviews' => function ($q) {
+                        $q->where('is_visible', 1);
+                    }
+                ])
                 ->where('is_active', 1)
                 ->where('category_id', $product->category_id)
                 ->whereNotIn('id', $excludeIds)
@@ -174,23 +195,16 @@ class ProductController extends Controller
         }
 
         /* ======================================================
-         * 8. RECENT VIEWED PRODUCTS (SESSION)
+         * 9. RECENT VIEWED PRODUCTS (SESSION)
          * ====================================================== */
         $recentViewed = session()->get('recent_viewed_products', []);
 
-        // nếu sản phẩm đã có trong danh sách thì xóa vị trí cũ
         $recentViewed = array_values(array_diff($recentViewed, [$product->id]));
-
-        // thêm sản phẩm hiện tại lên đầu
         array_unshift($recentViewed, $product->id);
-
-        // giới hạn tối đa 8 sản phẩm đã xem
         $recentViewed = array_slice($recentViewed, 0, 8);
 
-        // lưu lại session
         session()->put('recent_viewed_products', $recentViewed);
 
-        // lấy danh sách sản phẩm vừa xem, bỏ sản phẩm hiện tại
         $recentProducts = collect();
 
         $recentIdsWithoutCurrent = array_values(array_diff($recentViewed, [$product->id]));
@@ -200,8 +214,16 @@ class ProductController extends Controller
                 'mainImage',
                 'brand'
             ])
-                ->withAvg('reviews', 'rating')
-                ->withCount('reviews')
+                ->withAvg([
+                    'reviews' => function ($q) {
+                        $q->where('is_visible', 1);
+                    }
+                ], 'rating')
+                ->withCount([
+                    'reviews' => function ($q) {
+                        $q->where('is_visible', 1);
+                    }
+                ])
                 ->withSum('variants as variants_sold_sum', 'sold_quantity')
                 ->where('is_active', 1)
                 ->whereIn('id', $recentIdsWithoutCurrent)
@@ -216,7 +238,7 @@ class ProductController extends Controller
         }
 
         /* ======================================================
-         * 9. RETURN VIEW
+         * 10. RETURN VIEW
          * ====================================================== */
         return view('frontend.detail', compact(
             'product',
@@ -240,7 +262,8 @@ class ProductController extends Controller
             'images',
             'mainImage',
             'variants' => function ($q) {
-                $q->orderBy('id')
+                $q->where('is_active', 1)
+                    ->orderBy('id')
                     ->with('images');
             },
             'category',
@@ -249,6 +272,16 @@ class ProductController extends Controller
                 $q->where('is_active', 1);
             }
         ])
+            ->withAvg([
+                'reviews' => function ($q) {
+                    $q->where('is_visible', 1);
+                }
+            ], 'rating')
+            ->withCount([
+                'reviews' => function ($q) {
+                    $q->where('is_visible', 1);
+                }
+            ])
             ->where('id', $id)
             ->where('is_active', 1)
             ->firstOrFail();

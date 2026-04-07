@@ -20,14 +20,16 @@ class Review extends Model
         'rating',
         'comment',
         'is_visible',
+        'is_flagged',
         'admin_reply',
-        'replied_at'
+        'replied_at',
     ];
 
     protected $casts = [
         'rating' => 'integer',
         'is_visible' => 'boolean',
-        'replied_at' => 'datetime'
+        'is_flagged' => 'boolean',
+        'replied_at' => 'datetime',
     ];
 
     /*
@@ -86,7 +88,7 @@ class Review extends Model
 
     /*
     |--------------------------------------------------------------------------
-    | Rating Helpers
+    | Rating / Status Helpers
     |--------------------------------------------------------------------------
     */
 
@@ -100,11 +102,10 @@ class Review extends Model
         return $this->rating <= 2;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Admin Helpers
-    |--------------------------------------------------------------------------
-    */
+    public function getIsNeutralAttribute()
+    {
+        return $this->rating == 3;
+    }
 
     public function getIsRepliedAttribute()
     {
@@ -116,6 +117,19 @@ class Review extends Model
         return $this->is_visible ? 'Hiển thị' : 'Đã ẩn';
     }
 
+    public function getSentimentLabelAttribute()
+    {
+        if ($this->is_negative) {
+            return 'Tiêu cực';
+        }
+
+        if ($this->is_neutral) {
+            return 'Trung lập';
+        }
+
+        return 'Tích cực';
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Query Scopes
@@ -125,6 +139,21 @@ class Review extends Model
     public function scopeVisible($query)
     {
         return $query->where('is_visible', 1);
+    }
+
+    public function scopeHidden($query)
+    {
+        return $query->where('is_visible', 0);
+    }
+
+    public function scopeFlagged($query)
+    {
+        return $query->where('is_flagged', 1);
+    }
+
+    public function scopeNegative($query)
+    {
+        return $query->where('rating', '<=', 2);
     }
 
     public function scopePendingReply($query)

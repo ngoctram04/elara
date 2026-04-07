@@ -8,9 +8,9 @@
     <div class="card-body">
 
         {{-- HEADER --}}
-        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
             <div>
-                <h5 class="fw-bold mb-1">Quản lý Blog</h5>
+                <h5 class="mb-1">Quản lý Blog</h5>
                 <small class="text-muted">
                     Quản lý các bài viết blog trong hệ thống
                 </small>
@@ -18,14 +18,13 @@
 
             <a href="{{ route('admin.blogs.create') }}"
                class="btn btn-primary btn-sm">
-                <i class="bi bi-plus-lg"></i>
+                <i class="bi bi-plus-lg me-1"></i>
                 Thêm bài viết
             </a>
         </div>
 
         {{-- FILTER --}}
         <form method="GET" class="row g-2 mb-4 align-items-center">
-
             <div class="col-md-4">
                 <input
                     type="text"
@@ -39,11 +38,9 @@
             <div class="col-md-3">
                 <select name="sort" class="form-select form-select-sm">
                     <option value="">Mặc định</option>
-
                     <option value="most" {{ request('sort') == 'most' ? 'selected' : '' }}>
                         Xem nhiều nhất
                     </option>
-
                     <option value="least" {{ request('sort') == 'least' ? 'selected' : '' }}>
                         Xem ít nhất
                     </option>
@@ -51,8 +48,8 @@
             </div>
 
             <div class="col-md-5 d-flex gap-2">
-                <button class="btn btn-outline-primary btn-sm">
-                    <i class="bi bi-search"></i>
+                <button class="btn btn-outline-primary btn-sm" type="submit">
+                    <i class="bi bi-search me-1"></i>
                     Lọc
                 </button>
 
@@ -61,16 +58,14 @@
                     Đặt lại
                 </a>
             </div>
-
         </form>
 
         {{-- TABLE --}}
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
-
                 <thead class="table-light">
                     <tr>
-                        <th style="width:70px">STT</th>
+                        <th style="width:70px">Mã</th>
                         <th style="width:120px">Ảnh</th>
                         <th>Tiêu đề</th>
                         <th style="width:120px">Lượt xem</th>
@@ -83,71 +78,71 @@
                 <tbody>
                     @forelse($blogs as $blog)
                         <tr>
-                            <td class="text-muted fw-semibold">
-                                {{ $blog->id }}
+                            <td class="text-muted">
+                                BL{{ str_pad($blog->id, 4, '0', STR_PAD_LEFT) }}
                             </td>
 
                             <td>
                                 @if($blog->thumbnail)
                                     <img
                                         src="{{ asset('storage/' . $blog->thumbnail) }}"
-                                        width="80"
-                                        class="rounded"
                                         alt="{{ $blog->title }}"
+                                        class="rounded border"
+                                        style="width:80px;height:60px;object-fit:cover;"
                                     >
                                 @else
-                                    <span class="text-muted small">
+                                    <div class="d-flex align-items-center justify-content-center rounded border bg-light text-muted"
+                                         style="width:80px;height:60px;font-size:12px;">
                                         Không có
-                                    </span>
+                                    </div>
                                 @endif
                             </td>
 
                             <td>
-                                <strong>{{ $blog->title }}</strong>
+                                <div>{{ $blog->title }}</div>
                             </td>
 
                             <td>
-                                <span class="badge bg-secondary">
-                                    {{ $blog->views }}
-                                </span>
-                            </td>
+    {{ number_format($blog->views, 0, ',', '.') }}
+</td>
 
                             <td>
                                 @if($blog->is_active)
-                                    <span class="badge bg-success">
+                                    <span class="badge text-success border bg-success-subtle">
                                         Hiển thị
                                     </span>
                                 @else
-                                    <span class="badge bg-secondary">
+                                    <span class="badge text-secondary border bg-light">
                                         Đã ẩn
                                     </span>
                                 @endif
                             </td>
 
                             <td class="text-muted">
-                                {{ $blog->created_at?->format('d/m/Y') }}
+                                {{ $blog->created_at?->format('d/m/Y') ?? '---' }}
                             </td>
 
                             <td>
-                                <div class="d-flex gap-1">
+                                <div class="d-flex gap-2 flex-wrap">
                                     <a href="{{ route('admin.blogs.edit', $blog->id) }}"
-                                       class="btn btn-sm btn-outline-warning">
+                                       class="btn btn-sm btn-outline-warning"
+                                       title="Chỉnh sửa">
                                         <i class="bi bi-pencil"></i>
                                     </a>
 
                                     <form
                                         action="{{ route('admin.blogs.toggle', $blog->id) }}"
                                         method="POST"
-                                        class="toggle-form">
+                                        class="toggle-form d-inline">
                                         @csrf
 
                                         <button
                                             type="button"
                                             class="btn btn-sm {{ $blog->is_active ? 'btn-outline-secondary' : 'btn-outline-success' }} btn-toggle">
                                             @if($blog->is_active)
-                                                <i class="bi bi-eye-slash"></i>
+                                                <i class="bi bi-eye-slash me-1"></i>Ẩn
                                             @else
-                                                <i class="bi bi-eye"></i>
+                                                <i class="bi bi-eye me-1"></i>Hiện
                                             @endif
                                         </button>
                                     </form>
@@ -157,14 +152,11 @@
                     @empty
                         <tr>
                             <td colspan="7" class="text-center py-4 text-muted">
-                                <i class="bi bi-inbox"></i>
-                                <br>
                                 Chưa có bài viết nào
                             </td>
                         </tr>
                     @endforelse
                 </tbody>
-
             </table>
         </div>
 

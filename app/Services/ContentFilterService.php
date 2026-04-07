@@ -6,19 +6,32 @@ use Illuminate\Support\Str;
 
 class ContentFilterService
 {
-    public function filter(string $text): array
+    public function filter(?string $text): array
     {
+        $text = trim((string) $text);
+
+        if ($text === '') {
+            return [
+                'blocked' => false,
+                'flagged' => false,
+                'text'    => '',
+                'found'   => null,
+                'type'    => null,
+            ];
+        }
+
         $normalized = $this->normalize($text);
-        $badWords   = config('content_filter.bad_words', []);
 
-        foreach ($badWords as $word) {
-            $word = trim((string) $word);
+        // 1. Chặn hoàn toàn
+        $blockedWords = config('content_filter.blocked_words', []);
+        foreach ($blockedWords as $word) {
+            $originalWord = trim((string) $word);
 
-            if ($word === '') {
+            if ($originalWord === '') {
                 continue;
             }
 
-            $normalizedWord = $this->normalize($word);
+            $normalizedWord = $this->normalize($originalWord);
 
             if ($normalizedWord === '') {
                 continue;
@@ -27,43 +40,77 @@ class ContentFilterService
             if ($this->matchWord($normalized, $normalizedWord)) {
                 return [
                     'blocked' => true,
+                    'flagged' => false,
                     'text'    => null,
-                    'found'   => $normalizedWord,
+                    'found'   => $originalWord,
+                    'type'    => 'blocked',
+                ];
+            }
+        }
+
+        // 2. Chỉ đánh dấu nghi vấn
+        $flagWords = config('content_filter.flag_words', []);
+        foreach ($flagWords as $word) {
+            $originalWord = trim((string) $word);
+
+            if ($originalWord === '') {
+                continue;
+            }
+
+            $normalizedWord = $this->normalize($originalWord);
+
+            if ($normalizedWord === '') {
+                continue;
+            }
+
+            if ($this->matchWord($normalized, $normalizedWord)) {
+                return [
+                    'blocked' => false,
+                    'flagged' => true,
+                    'text'    => $text,
+                    'found'   => $originalWord,
+                    'type'    => 'flagged',
                 ];
             }
         }
 
         return [
             'blocked' => false,
+            'flagged' => false,
             'text'    => $text,
             'found'   => null,
+            'type'    => null,
         ];
     }
-
 
     private function normalize(string $text): string
     {
         $text = mb_strtolower($text, 'UTF-8');
 
-        // đổi các kiểu lách phổ biến
+        // thay các kiểu lách phổ biến
         $text = strtr($text, [
             '0' => 'o',
             '1' => 'i',
+            '2' => 'z',
             '3' => 'e',
             '4' => 'a',
             '5' => 's',
+            '6' => 'g',
             '7' => 't',
+            '8' => 'b',
+            '9' => 'g',
             '@' => 'a',
             '$' => 's',
+            '!' => 'i',
         ]);
 
         // bỏ dấu tiếng Việt
         $text = Str::ascii($text);
 
-        // giữ lại chữ, số, khoảng trắng
+        // bỏ ký tự đặc biệt nhưng giữ chữ, số, khoảng trắng
         $text = preg_replace('/[^a-z0-9\s]/', ' ', $text);
 
-        // gom khoảng trắng
+        // gom nhiều khoảng trắng
         $text = preg_replace('/\s+/', ' ', $text);
 
         return trim($text);
@@ -75,18 +122,22 @@ class ContentFilterService
             return false;
         }
 
-        if (str_contains($text, $word)) {
+        // match nguyên cụm từ
+        $exactPattern = '/(?:^|\s)' . preg_quote($word, '/') . '(?:\s|$)/i';
+        if (preg_match($exactPattern, $text)) {
             return true;
         }
 
-        // match có khoảng trắng xen giữa
+        // match kiểu chèn khoảng trắng giữa các ký tự: d i t, s c a m
         $chars = preg_split('//u', $word, -1, PREG_SPLIT_NO_EMPTY);
 
         if (!$chars) {
             return false;
         }
 
-        $pattern = '/' . implode('\s*', array_map('preg_quote', $chars)) . '/i';
+        $pattern = '/(?:^|\s)' . implode('\s*', array_map(function ($char) {
+            return preg_quote($char, '/');
+        }, $chars)) . '(?:\s|$)/i';
 
         return preg_match($pattern, $text) === 1;
     }

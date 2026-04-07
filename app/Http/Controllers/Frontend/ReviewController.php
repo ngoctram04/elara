@@ -119,7 +119,6 @@ class ReviewController extends Controller
 
         try {
             $createdReviews = [];
-            $reviewedProductNames = [];
             $hasAtLeastOneReview = false;
 
             foreach ($reviewsInput as $orderItemId => $data) {
@@ -156,6 +155,12 @@ class ReviewController extends Controller
                     ]);
                 }
 
+                $filterResult = [
+                    'blocked' => false,
+                    'flagged' => false,
+                    'text'    => $comment,
+                ];
+
                 // Lọc comment
                 if (!empty($comment)) {
                     $filterResult = app(ContentFilterService::class)->filter($comment);
@@ -184,6 +189,7 @@ class ReviewController extends Controller
                     'rating'        => $rating,
                     'comment'       => $comment,
                     'is_visible'    => 1,
+                    'is_flagged'    => !empty($filterResult['flagged']),
                 ]);
 
                 // Upload ảnh
@@ -212,7 +218,6 @@ class ReviewController extends Controller
                 }
 
                 $createdReviews[] = $review;
-                $reviewedProductNames[] = optional($orderItem->variant->product)->name ?? 'Sản phẩm';
                 $hasAtLeastOneReview = true;
             }
 

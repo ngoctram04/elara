@@ -25,8 +25,16 @@ class ShopController extends Controller
             'brand',
             'category'
         ])
-            ->withAvg('reviews', 'rating')
-            ->withCount('reviews')
+            ->withAvg([
+                'reviews' => function ($q) {
+                    $q->where('is_visible', 1);
+                }
+            ], 'rating')
+            ->withCount([
+                'reviews' => function ($q) {
+                    $q->where('is_visible', 1);
+                }
+            ])
             ->withSum('variants as variants_total_sold', 'sold_quantity')
             ->where('is_active', 1);
 
@@ -80,12 +88,10 @@ class ShopController extends Controller
             };
         }
 
-        // ✅ lọc 1 thương hiệu từ home
         if ($request->filled('brand')) {
             $baseQuery->where('brand_id', $request->brand);
         }
 
-        // ✅ lọc nhiều thương hiệu từ sidebar/filter
         if ($request->filled('brands') && is_array($request->brands)) {
             $baseQuery->whereIn('brand_id', $request->brands);
         }
@@ -127,12 +133,12 @@ class ShopController extends Controller
 
                 $query->whereHas('promotions', function ($sub) use ($now) {
                     $sub->where('type', 'product')
-                    ->where('is_active', 1)
-                    ->where('start_date', '<=', $now)
-                    ->where('end_date', '>=', $now);
+                        ->where('is_active', 1)
+                        ->where('start_date', '<=', $now)
+                        ->where('end_date', '>=', $now);
                 })
-                ->orderByDesc('variants_total_sold')
-                ->orderByDesc('id');
+                    ->orderByDesc('variants_total_sold')
+                    ->orderByDesc('id');
                 break;
 
             default:

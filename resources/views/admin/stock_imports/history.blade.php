@@ -3,148 +3,155 @@
 @section('title','Lịch sử nhập kho')
 
 @section('content')
+<div class="container-fluid">
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-4">
 
-<div class="card border-0 shadow-sm">
-    <div class="card-body">
+            {{-- HEADER --}}
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                <div>
+                    <h4 class="fw-bold mb-1">Lịch sử nhập kho</h4>
+                    <small class="text-muted">
+                        Danh sách các phiếu nhập kho trong hệ thống
+                    </small>
+                </div>
 
-        {{-- HEADER --}}
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h5 class="fw-bold mb-1">Lịch sử nhập kho</h5>
-                <small class="text-muted">
-                    Danh sách các phiếu nhập kho trong hệ thống
-                </small>
-            </div>
-
-            <a href="{{ route('admin.stock.create') }}"
-               class="btn btn-primary btn-sm">
-                <i class="bi bi-plus-lg me-1"></i>
-                Nhập hàng
-            </a>
-        </div>
-
-        {{-- ================= FILTER ================= --}}
-        <form method="GET" class="row g-2 mb-4 align-items-center">
-
-            <div class="col-md-4">
-                <input
-                    type="text"
-                    name="keyword"
-                    value="{{ request('keyword') }}"
-                    class="form-control form-control-sm"
-                    placeholder="Tìm mã phiếu hoặc nhà cung cấp..."
-                >
-            </div>
-
-            <div class="col-md-2">
-                <input
-                    type="date"
-                    name="from"
-                    value="{{ request('from') }}"
-                    class="form-control form-control-sm"
-                >
-            </div>
-
-            <div class="col-md-2">
-                <input
-                    type="date"
-                    name="to"
-                    value="{{ request('to') }}"
-                    class="form-control form-control-sm"
-                >
-            </div>
-
-            <div class="col-md-4 d-flex gap-2">
-                <button class="btn btn-outline-primary btn-sm">
-                    <i class="bi bi-search"></i>
-                    Lọc
-                </button>
-
-                <a href="{{ route('admin.stock.history') }}"
-                   class="btn btn-outline-secondary btn-sm">
-                    Đặt lại
+                <a href="{{ route('admin.stock.create') }}"
+                   class="btn btn-primary">
+                    <i class="bi bi-plus-lg me-1"></i>
+                    Nhập hàng
                 </a>
             </div>
 
-        </form>
+            {{-- FILTER --}}
+            <div class="border rounded-4 p-3 bg-light-subtle mb-4">
+                <form method="GET" class="row g-3 align-items-end">
 
-        {{-- ================= TABLE ================= --}}
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
+                    <div class="col-lg-4 col-md-6">
+                        <label class="form-label small fw-semibold text-muted">Từ khóa</label>
+                        <input
+                            type="text"
+                            name="keyword"
+                            value="{{ request('keyword') }}"
+                            class="form-control"
+                            placeholder="Tìm mã phiếu hoặc nhà cung cấp..."
+                        >
+                    </div>
 
-                <thead class="table-light">
-                    <tr>
-                        <th style="width:80px" class="text-center">STT</th>
-                        <th style="width:180px">Mã phiếu</th>
-                        <th>Nhà cung cấp</th>
-                        <th style="width:120px" class="text-center">Số SP</th>
-                        <th style="width:140px" class="text-center">Tổng SL</th>
-                        <th style="width:180px" class="text-center">Ngày nhập</th>
-                        <th style="width:140px" class="text-center">Thao tác</th>
-                    </tr>
-                </thead>
+                    <div class="col-lg-2 col-md-6">
+                        <label class="form-label small fw-semibold text-muted">Từ ngày</label>
+                        <input
+                            type="date"
+                            name="from"
+                            value="{{ request('from') }}"
+                            class="form-control"
+                        >
+                    </div>
 
-                <tbody>
-                    @forelse($imports as $index => $item)
-                        <tr>
-                            <td class="text-center text-muted fw-semibold">
-                                {{ $imports->firstItem() + $index }}
-                            </td>
+                    <div class="col-lg-2 col-md-6">
+                        <label class="form-label small fw-semibold text-muted">Đến ngày</label>
+                        <input
+                            type="date"
+                            name="to"
+                            value="{{ request('to') }}"
+                            class="form-control"
+                        >
+                    </div>
 
-                            <td>
-                                <span class="badge bg-secondary">
-                                    {{ $item->code }}
-                                </span>
-                            </td>
+                    <div class="col-lg-4 col-md-12 d-flex gap-2">
+                        <button class="btn btn-primary">
+                            <i class="bi bi-search me-1"></i>
+                            Lọc
+                        </button>
 
-                            <td class="fw-medium">
-                                {{ $item->supplier ?? '—' }}
-                            </td>
+                        <a href="{{ route('admin.stock.history') }}"
+                           class="btn btn-outline-secondary">
+                            Đặt lại
+                        </a>
+                    </div>
 
-                            <td class="text-center">
-                                <span class="badge bg-info">
-                                    {{ $item->total_items }}
-                                </span>
-                            </td>
-
-                            <td class="text-center">
-                                <span class="badge bg-success">
-                                    {{ $item->total_qty }}
-                                </span>
-                            </td>
-
-                            <td class="text-center text-muted small">
-                                {{ optional($item->created_at)->format('d/m/Y H:i') }}
-                            </td>
-
-                            <td class="text-center">
-                                <a href="{{ url('admin/stock-import/' . $item->code) }}"
-                                   class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-eye"></i>
-                                </a>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="7" class="text-center text-muted py-4">
-                                <i class="bi bi-inbox me-1"></i>
-                                Chưa có phiếu nhập kho
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-
-            </table>
-        </div>
-
-        {{-- ================= PAGINATION ================= --}}
-        @if($imports->hasPages())
-            <div class="mt-4">
-                {{ $imports->links('vendor.pagination.custom-blue') }}
+                </form>
             </div>
-        @endif
 
+            {{-- TABLE --}}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr class="align-middle text-center">
+                            <th style="width:80px">STT</th>
+                            <th style="width:180px" class="text-start">Mã phiếu</th>
+                            <th class="text-start">Nhà cung cấp</th>
+                            <th style="width:120px">Số SP</th>
+                            <th style="width:140px">Tổng SL</th>
+                            <th style="width:180px">Ngày nhập</th>
+                            <th style="width:140px">Thao tác</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @forelse($imports as $index => $item)
+                            <tr>
+                                <td class="text-center text-muted fw-semibold">
+                                    {{ $imports->firstItem() + $index }}
+                                </td>
+
+                                <td class="fw-semibold text-dark">
+                                    {{ $item->code }}
+                                </td>
+
+                                <td>
+                                    <div class="fw-semibold">
+                                        {{ $item->supplier ?? '—' }}
+                                    </div>
+                                </td>
+
+                                <td class="text-center fw-semibold text-dark">
+                                    {{ $item->total_items }}
+                                </td>
+
+                                <td class="text-center fw-semibold text-dark">
+                                    {{ $item->total_qty }}
+                                </td>
+
+                                <td class="text-center text-muted small">
+                                    {{ optional($item->created_at)->format('d/m/Y H:i') }}
+                                </td>
+
+                                <td class="text-center">
+                                    <a href="{{ url('admin/stock-import/' . $item->code) }}"
+                                       class="btn btn-sm btn-outline-primary">
+                                        Chi tiết
+                                    </a>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-5">
+                                    Chưa có phiếu nhập kho
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            {{-- PAGINATION --}}
+            <div class="mt-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <small class="text-muted">
+                    @if($imports->total() > 0)
+                        Hiển thị {{ $imports->firstItem() }} – {{ $imports->lastItem() }}
+                        / {{ $imports->total() }} phiếu nhập
+                    @else
+                        Không có dữ liệu
+                    @endif
+                </small>
+
+                @if($imports->hasPages())
+                    {{ $imports->links('vendor.pagination.custom-blue') }}
+                @endif
+            </div>
+
+        </div>
     </div>
 </div>
-
 @endsection

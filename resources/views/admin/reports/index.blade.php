@@ -10,9 +10,6 @@
 <div class="report-page">
     <div class="report-header-card">
         <div class="report-header-left">
-            <div class="report-icon">
-                <i class="bi bi-bar-chart-line-fill"></i>
-            </div>
             <div>
                 <h4 class="report-page-title mb-1">Dashboard báo cáo</h4>
                 <p class="report-page-subtitle mb-0">
