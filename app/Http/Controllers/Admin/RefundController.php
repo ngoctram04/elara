@@ -12,7 +12,10 @@ use App\Models\UserPointHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use App\Notifications\SystemNotification;
+use App\Mail\RefundCompletedMail;
+use App\Mail\RefundRejectedMail;
 
 class RefundController extends Controller
 {
@@ -58,7 +61,7 @@ class RefundController extends Controller
                 ->orderBy('id', 'asc');
         } else {
             $query->orderBy('created_at', 'desc')
-            ->orderBy('id', 'desc');
+                ->orderBy('id', 'desc');
         }
 
         $refunds = $query->paginate(10)->withQueryString();
@@ -106,7 +109,7 @@ class RefundController extends Controller
             'admin_note' => 'required|string|max:1000',
         ]);
 
-        $refund = RefundRequest::with('user', 'order')->findOrFail($id);
+        $refund = RefundRequest::with('user', 'order.user')->findOrFail($id);
 
         if ($refund->status !== RefundRequest::STATUS_PENDING) {
             return back()->with('error', 'Không thể từ chối yêu cầu này');
@@ -124,6 +127,18 @@ class RefundController extends Controller
                 'url'     => route('orders.show', $refund->order_id),
                 'type'    => 'refund',
             ]));
+
+            if (!empty($refund->user->email)) {
+                try {
+                    Mail::to($refund->user->email)->send(new RefundRejectedMail($refund));
+                } catch (\Exception $e) {
+                    Log::error('Send refund rejected mail failed: ' . $e->getMessage(), [
+                        'refund_id' => $refund->id,
+                        'user_id'   => $refund->user->id ?? null,
+                        'email'     => $refund->user->email ?? null,
+                    ]);
+                }
+            }
         }
 
         return back()->with('success', 'Đã từ chối yêu cầu hoàn tiền');
@@ -146,7 +161,7 @@ class RefundController extends Controller
         $restockQty = 0;
         $damagedQty = 0;
 
-        // Tổng tiền sản phẩm hoàn
+        // Tổng tiền sản phẩm hoàn (sau khi phân bổ discount, chưa trừ ship)
         $totalRefundProductAmount = 0;
 
         // Ship bị khấu trừ khi hoàn
@@ -159,6 +174,7 @@ class RefundController extends Controller
 
         try {
             $refund = RefundRequest::with([
+                'user',
                 'order.user',
                 'order.items',
                 'items.variant.product',
@@ -176,6 +192,7 @@ class RefundController extends Controller
                 throw new \Exception('Chỉ có thể xác nhận hoàn tiền khi yêu cầu đã được duyệt');
             }
 
+            $order->loadMissing('items');
             $manualNote = trim((string) $request->input('admin_note'));
 
             /*
@@ -198,9 +215,8 @@ class RefundController extends Controller
                 $variantId = (int) ($item->pivot->variant_id ?: $item->variant_id);
                 $qty = max(1, (int) ($item->pivot->quantity ?? 1));
 
-                // Giá sản phẩm của item, không phải tiền ship
-                $unitPrice = (float) ($item->price ?? 0);
-                $refundAmount = $unitPrice * $qty;
+                // Tiền hoàn của item sau khi phân bổ giảm giá của đơn
+                $refundAmount = $this->getRefundItemAmountAfterDiscount($order, $item, $qty);
 
                 $conditionStatus = $item->pivot->condition_status ?? 'sealed';
                 $isRestockable = $this->shouldRestock($conditionStatus);
@@ -210,7 +226,7 @@ class RefundController extends Controller
                 $returnedToStock = 0;
                 $pivotStockImportId = null;
 
-                // Chỉ cộng tiền sản phẩm hoàn
+                // Chỉ cộng tiền sản phẩm hoàn, chưa trừ ship
                 $totalRefundProductAmount += $refundAmount;
 
                 if ($isRestockable) {
@@ -353,6 +369,7 @@ class RefundController extends Controller
             |--------------------------------------------------------------------------
             | - Nếu khách đã trả ship: không trừ nữa
             | - Nếu free ship: trừ shipping_cost của chính đơn đó
+            |--------------------------------------------------------------------------
             */
             $shippingDeduction = $this->getRefundShippingDeduction($order);
             $finalRefundAmount = max(0, $totalRefundProductAmount - $shippingDeduction);
@@ -447,6 +464,21 @@ class RefundController extends Controller
                 'url'     => route('orders.show', $refund->order->id),
                 'type'    => 'refund',
             ]));
+
+            if (!empty($refund->order->user->email)) {
+                try {
+                    Mail::to($refund->order->user->email)->send(
+                        new RefundCompletedMail($refund->order, $finalRefundAmount)
+                    );
+                } catch (\Exception $e) {
+                    Log::error('Send refund completed mail failed: ' . $e->getMessage(), [
+                        'refund_id' => $refund->id,
+                        'order_id'  => $refund->order->id ?? null,
+                        'user_id'   => $refund->order->user->id ?? null,
+                        'email'     => $refund->order->user->email ?? null,
+                    ]);
+                }
+            }
         }
 
         return back()->with('success', 'Đã hoàn tiền và cập nhật tồn kho / đã bán');
@@ -500,5 +532,74 @@ class RefundController extends Controller
 
         // Free ship thì trừ ship thực tế của đơn
         return max(0, (int) ($order->shipping_cost ?? 0));
+    }
+
+    /**
+     * Tính tiền hoàn của 1 item sau khi phân bổ discount của toàn đơn
+     *
+     * Rule:
+     * - Hoàn theo giá trị thực trả của sản phẩm
+     * - Không tính ship ở đây
+     * - Ship sẽ khấu trừ riêng phía dưới
+     */
+    private function getRefundItemAmountAfterDiscount(Order $order, $refundItem, int $refundQty): int
+    {
+        $order->loadMissing('items');
+
+        $targetOrderItemId = (int) $refundItem->id;
+        $orderDiscountTotal = $this->getOrderDiscountTotal($order);
+
+        $orderProductSubtotal = 0;
+        foreach ($order->items as $orderItem) {
+            $lineSubtotal = (float) ($orderItem->price ?? 0) * (int) ($orderItem->quantity ?? 0);
+            $orderProductSubtotal += $lineSubtotal;
+        }
+
+        foreach ($order->items as $orderItem) {
+            if ((int) $orderItem->id !== $targetOrderItemId) {
+                continue;
+            }
+
+            $orderedQty = max(1, (int) ($orderItem->quantity ?? 1));
+            $refundQty = min($refundQty, $orderedQty);
+
+            $unitPrice = (float) ($orderItem->price ?? 0);
+            $refundLineSubtotal = $unitPrice * $refundQty;
+            $fullLineSubtotal = $unitPrice * $orderedQty;
+
+            if ($orderProductSubtotal <= 0 || $orderDiscountTotal <= 0) {
+                return max(0, (int) round($refundLineSubtotal));
+            }
+
+            $lineDiscountShare = ($fullLineSubtotal / $orderProductSubtotal) * $orderDiscountTotal;
+            $discountPerUnit = $lineDiscountShare / $orderedQty;
+
+            $refundAmount = $refundLineSubtotal - ($discountPerUnit * $refundQty);
+
+            return max(0, (int) round($refundAmount));
+        }
+
+        return 0;
+    }
+
+    /**
+     * Lấy tổng discount của đơn
+     *
+     * Ưu tiên:
+     * - discount tổng nếu đã có sẵn
+     * - nếu không thì cộng birthday_discount + voucher_discount
+     */
+    private function getOrderDiscountTotal(Order $order): float
+    {
+        $discount = (float) ($order->discount ?? 0);
+
+        if ($discount > 0) {
+            return $discount;
+        }
+
+        $birthdayDiscount = (float) ($order->birthday_discount ?? 0);
+        $voucherDiscount = (float) ($order->voucher_discount ?? 0);
+
+        return $birthdayDiscount + $voucherDiscount;
     }
 }

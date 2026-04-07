@@ -100,7 +100,7 @@ if ($hasSalePrice) {
             {{-- BUY --}}
             <button
                 type="button"
-                class="category-buy card-buy-now"
+                class="category-buy btn-buy-now"
                 data-variant-id="{{ $addVariant?->id }}"
                 data-out-stock="{{ $outOfStock ? 1 : 0 }}">
                 <i class="bi bi-lightning-charge-fill"></i>
@@ -229,44 +229,3 @@ if ($hasSalePrice) {
     line-height:1.2;
 }
 </style>
-
-<script>
-function showToast(message){
-    const toast = document.createElement('div');
-    toast.innerText = message;
-
-    toast.style = `
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        background: #dc3545;
-        color: #fff;
-        padding: 10px 16px;
-        border-radius: 8px;
-        z-index: 9999;
-        font-size: 14px;
-    `;
-
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 2000);
-}
-
-document.addEventListener('click', function(e){
-
-    const btn = e.target.closest('.btn-add-to-cart, .card-buy-now');
-    if(btn){
-        if(btn.dataset.outStock == "1"){
-            e.preventDefault();
-            e.stopPropagation();
-            showToast('Sản phẩm đã hết hàng!');
-            return;
-        }
-    }
-
-    const card = e.target.closest('.js-category-card');
-    if(card && !e.target.closest('button')){
-        window.location.href = card.dataset.href;
-    }
-
-});
-</script>
