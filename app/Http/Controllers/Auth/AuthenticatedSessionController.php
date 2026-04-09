@@ -11,32 +11,22 @@ use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
 {
-    /**
-     * Hiển thị form đăng nhập
-     */
+
     public function create(): View
     {
         return view('auth.login');
     }
 
-    /**
-     * Xử lý đăng nhập
-     */
+
     public function store(LoginRequest $request): RedirectResponse
     {
-        // Xác thực tài khoản + mật khẩu
         $request->authenticate();
 
-        // Tạo lại session
+
         $request->session()->regenerate();
 
         $user = Auth::user();
 
-        /*
-        |--------------------------------------------------------------------------
-        | ❌ CHẶN LOGIN NẾU TÀI KHOẢN BỊ KHÓA
-        |--------------------------------------------------------------------------
-        */
         if ((int) $user->is_active !== 1) {
 
             Auth::logout();
@@ -51,7 +41,7 @@ class AuthenticatedSessionController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | (OPTIONAL) ❌ CHẶN LOGIN NẾU CHƯA XÁC THỰC EMAIL
+        | (OPTIONAL) CHẶN LOGIN NẾU CHƯA XÁC THỰC EMAIL
         |--------------------------------------------------------------------------
         */
         /*
@@ -68,11 +58,6 @@ class AuthenticatedSessionController extends Controller
         }
         */
 
-        /*
-        |--------------------------------------------------------------------------
-        | REDIRECT SAU LOGIN
-        |--------------------------------------------------------------------------
-        */
 
 
         if ($user->role === 'admin') {
@@ -83,9 +68,7 @@ class AuthenticatedSessionController extends Controller
         return redirect()->route('home');
     }
 
-    /**
-     * Đăng xuất
-     */
+
     public function destroy(Request $request): RedirectResponse
     {
         Auth::logout();

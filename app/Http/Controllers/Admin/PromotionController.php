@@ -15,19 +15,13 @@ use App\Notifications\SystemNotification;
 
 class PromotionController extends Controller
 {
-    /* =========================================================
-        LIST + FILTER
-    ========================================================= */
+
     public function index(Request $request)
     {
         $promotionQuery = Promotion::query();
         $rewardQuery = PointReward::query();
 
-        /*
-        |--------------------------------------------------------------------------
-        | FILTER KHUYẾN MÃI HỆ THỐNG
-        |--------------------------------------------------------------------------
-        */
+
         if ($request->filled('search')) {
             $keyword = trim($request->search);
 
@@ -81,11 +75,7 @@ class PromotionController extends Controller
                 break;
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | FILTER VOUCHER ĐỔI ĐIỂM
-        |--------------------------------------------------------------------------
-        */
+
         if ($request->filled('reward_search')) {
             $rewardKeyword = trim($request->reward_search);
             $rewardQuery->where('title', 'like', '%' . $rewardKeyword . '%');
@@ -138,9 +128,7 @@ class PromotionController extends Controller
         return view('admin.promotions.index', compact('promotions', 'rewards'));
     }
 
-    /* =========================================================
-        CREATE (Redirect chọn loại)
-    ========================================================= */
+ 
     public function create()
     {
         return redirect()->route('admin.promotions.choose');
@@ -151,17 +139,13 @@ class PromotionController extends Controller
         return view('admin.promotions.choose');
     }
 
-    /* =========================================================
-        CREATE – REWARD
-    ========================================================= */
+ 
     public function createReward()
     {
         return view('admin.promotions.create_reward');
     }
 
-    /* =========================================================
-        CREATE – PRODUCT
-    ========================================================= */
+
     public function createProduct()
     {
         $products = Product::with(['variants', 'mainImage'])->get();
@@ -169,17 +153,12 @@ class PromotionController extends Controller
         return view('admin.promotions.create_product', compact('products'));
     }
 
-    /* =========================================================
-        CREATE – ORDER
-    ========================================================= */
     public function createOrder()
     {
         return view('admin.promotions.create_order');
     }
 
-    /* =========================================================
-        STORE PROMOTION
-    ========================================================= */
+    
     public function store(Request $request)
     {
         $request->merge([
@@ -280,9 +259,7 @@ class PromotionController extends Controller
             ->with('success', 'Tạo khuyến mãi thành công');
     }
 
-    /* =========================================================
-        EDIT
-    ========================================================= */
+
     public function edit(Promotion $promotion)
     {
         if ($promotion->type === 'product') {
@@ -299,9 +276,6 @@ class PromotionController extends Controller
         return view('admin.promotions.edit_order', compact('promotion'));
     }
 
-    /* =========================================================
-        UPDATE
-    ========================================================= */
     public function update(Request $request, Promotion $promotion)
     {
         $request->validate([
@@ -358,9 +332,7 @@ class PromotionController extends Controller
             ->with('success', 'Cập nhật khuyến mãi thành công');
     }
 
-    /* =========================================================
-        TOGGLE ACTIVE
-    ========================================================= */
+
     public function toggle(Promotion $promotion)
     {
         $newStatus = !$promotion->is_active;
@@ -382,9 +354,7 @@ class PromotionController extends Controller
         return back()->with('success', 'Đã cập nhật trạng thái');
     }
 
-    /* =========================================================
-        CHECK TRÙNG PRODUCT THEO KHOẢNG THỜI GIAN
-    ========================================================= */
+
     private function hasProductConflictByDateRange(Request $request, Promotion $ignore = null): bool
     {
         if (empty($request->products)) {
@@ -416,9 +386,7 @@ class PromotionController extends Controller
             ->exists();
     }
 
-    /* =========================================================
-        CHECK TRÙNG KHI BẬT LẠI KHUYẾN MÃI PRODUCT
-    ========================================================= */
+
     private function promotionHasConflictWhenActivating(Promotion $promotion): bool
     {
         $variantIds = PromotionProduct::where('promotion_id', $promotion->id)
@@ -441,9 +409,6 @@ class PromotionController extends Controller
             ->exists();
     }
 
-    /* =========================================================
-        STORE REWARD
-    ========================================================= */
     public function storeReward(Request $request)
     {
         $request->validate([
@@ -504,17 +469,12 @@ class PromotionController extends Controller
             ->with('success', 'Tạo voucher đổi điểm thành công');
     }
 
-    /* =========================================================
-        EDIT REWARD
-    ========================================================= */
+
     public function editReward(PointReward $reward)
     {
         return view('admin.promotions.edit_reward', compact('reward'));
     }
 
-    /* =========================================================
-        UPDATE REWARD
-    ========================================================= */
     public function updateReward(Request $request, PointReward $reward)
     {
         $request->validate([
@@ -546,9 +506,7 @@ class PromotionController extends Controller
             ->with('success', 'Cập nhật voucher thành công');
     }
 
-    /* =========================================================
-        TOGGLE REWARD
-    ========================================================= */
+
     public function toggleReward(PointReward $reward)
     {
         $newStatus = !$reward->is_active;
@@ -566,9 +524,6 @@ class PromotionController extends Controller
         return back()->with('success', 'Đã cập nhật trạng thái voucher');
     }
 
-    /* =========================================================
-        CHỈ LẤY KHÁCH HÀNG, KHÔNG LẤY ADMIN
-    ========================================================= */
     private function customerQuery()
     {
         $query = User::query();
@@ -588,9 +543,7 @@ class PromotionController extends Controller
         return $query;
     }
 
-    /* =========================================================
-        GỬI THÔNG BÁO CHO KHÁCH HÀNG
-    ========================================================= */
+
     private function notifyCustomers(SystemNotification $notification): void
     {
         $this->customerQuery()

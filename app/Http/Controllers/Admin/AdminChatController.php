@@ -11,9 +11,6 @@ use App\Notifications\SystemNotification;
 class AdminChatController extends Controller
 {
 
-    /**
-     * Danh sách cuộc trò chuyện
-     */
     public function index(Request $request)
     {
 
@@ -22,12 +19,6 @@ class AdminChatController extends Controller
             'messages'
         ]);
 
-
-        /*
-        ============================
-        TÌM KIẾM KHÁCH HÀNG
-        ============================
-        */
 
         if ($request->filled('keyword')) {
 
@@ -39,12 +30,6 @@ class AdminChatController extends Controller
             });
         }
 
-
-        /*
-        ============================
-        LỌC TIN NHẮN
-        ============================
-        */
 
         if ($request->status == 'unread') {
 
@@ -64,13 +49,6 @@ class AdminChatController extends Controller
             });
         }
 
-
-        /*
-        ============================
-        SẮP XẾP CHAT MỚI
-        ============================
-        */
-
         $conversations = $query
             ->orderBy('updated_at', 'desc')
             ->paginate(10)
@@ -81,10 +59,6 @@ class AdminChatController extends Controller
     }
 
 
-
-    /**
-     * Xem chi tiết chat
-     */
     public function show($id)
     {
 
@@ -93,12 +67,6 @@ class AdminChatController extends Controller
             'messages.sender'
         ])->findOrFail($id);
 
-
-        /*
-        ============================
-        ĐÁNH DẤU ĐÃ ĐỌC
-        ============================
-        */
 
         ChatMessage::where('conversation_id', $conversation->id)
             ->where('sender_id', '!=', Auth::id())
@@ -111,16 +79,10 @@ class AdminChatController extends Controller
         return view('admin.messages.show', compact('conversation'));
     }
 
-
-
-    /**
-     * Admin gửi tin nhắn
-     */
     public function send(Request $request, $id)
     {
         $conversation = ChatConversation::findOrFail($id);
 
-        // Gán admin phụ trách nếu chưa có
         if (is_null($conversation->admin_id)) {
             $conversation->admin_id = Auth::id();
             $conversation->save();
@@ -128,39 +90,22 @@ class AdminChatController extends Controller
 
         $message = $request->message;
 
-        /*
-    ============================
-    Upload ảnh nếu có
-    ============================
-    */
         if ($request->hasFile('image')) {
             $file = $request->file('image');
             $path = $file->store('chat', 'public');
             $message = '/storage/' . $path;
         }
 
-        /*
-    ============================
-    Không gửi nếu rỗng
-    ============================
-    */
         if (!$message) {
             return back();
         }
 
-        /*
-    ============================
-    Lưu tin nhắn
-    ============================
-    */
         $msg = ChatMessage::create([
             'conversation_id' => $conversation->id,
             'sender_id'       => Auth::id(),
             'message'         => $message,
             'is_read'         => 0
         ]);
-
-        // 🔔 THÔNG BÁO CHO USER
         $conversation->user->notify(new SystemNotification([
             'title'   => 'Tin nhắn mới từ shop',
             'message' => 'Bạn có tin nhắn mới từ nhân viên',
@@ -171,11 +116,6 @@ class AdminChatController extends Controller
             ]
         ]));
 
-        /*
-    ============================
-    Cập nhật thời gian chat
-    ============================
-    */
         $conversation->touch();
 
         return back();

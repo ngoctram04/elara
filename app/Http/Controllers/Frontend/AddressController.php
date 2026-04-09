@@ -11,9 +11,7 @@ use App\Models\UserAddress;
 
 class AddressController extends Controller
 {
-    /**
-     * Danh sách địa chỉ
-     */
+
     public function index()
     {
         /** @var User $user */
@@ -27,9 +25,7 @@ class AddressController extends Controller
         return view('frontend.profile.addresses', compact('addresses'));
     }
 
-    /**
-     * Thêm địa chỉ mới
-     */
+
     public function store(Request $request)
     {
         $request->validate([

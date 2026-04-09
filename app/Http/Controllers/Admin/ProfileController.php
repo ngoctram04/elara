@@ -11,9 +11,7 @@ use Illuminate\Support\Facades\Storage;
 
 class ProfileController extends Controller
 {
-    // ==============================
-    // XEM THÔNG TIN
-    // ==============================
+
     public function show()
     {
         $admin = Auth::user();
@@ -25,9 +23,7 @@ class ProfileController extends Controller
         return view('admin.profile.show', compact('admin'));
     }
 
-    // ==============================
-    // FORM CHỈNH SỬA
-    // ==============================
+
     public function edit()
     {
         $admin = Auth::user();
@@ -39,9 +35,6 @@ class ProfileController extends Controller
         return view('admin.profile.edit', compact('admin'));
     }
 
-    // ==============================
-    // CẬP NHẬT
-    // ==============================
     public function update(Request $request)
     {
         $admin = Auth::user();
@@ -52,7 +45,7 @@ class ProfileController extends Controller
             );
         }
 
-        // ===== VALIDATION =====
+
         $validated = $request->validate([
             'name'  => 'required|string|max:255',
             'phone' => 'nullable|string|max:15',
@@ -76,7 +69,7 @@ class ProfileController extends Controller
             'avatar.max' => 'Ảnh tối đa 2MB',
         ]);
 
-        // ===== CẬP NHẬT THÔNG TIN CƠ BẢN =====
+
         $admin->fill([
             'name'          => $validated['name'],
             'phone'         => $validated['phone'] ?? null,
@@ -84,13 +77,11 @@ class ProfileController extends Controller
             'gender'        => $validated['gender'] ?? null,
         ]);
 
-        // Kiểm tra thay đổi thật sự
         $changed = $admin->isDirty();
 
-        // ===== ĐỔI MẬT KHẨU =====
+
         if ($request->filled('password')) {
 
-            // Sai mật khẩu hiện tại
             if (!Hash::check($request->current_password, $admin->password)) {
                 return back()
                     ->withErrors([
@@ -99,7 +90,6 @@ class ProfileController extends Controller
                     ->withInput();
             }
 
-            // Trùng mật khẩu cũ
             if (Hash::check($validated['password'], $admin->password)) {
                 return back()
                     ->withErrors([
@@ -112,7 +102,7 @@ class ProfileController extends Controller
             $changed = true;
         }
 
-        // ===== AVATAR =====
+    
         if ($request->hasFile('avatar')) {
 
             if ($admin->avatar && Storage::disk('public')->exists($admin->avatar)) {
@@ -123,12 +113,11 @@ class ProfileController extends Controller
             $changed = true;
         }
 
-        // ===== KHÔNG CÓ THAY ĐỔI =====
+
         if (!$changed) {
             return back()->with('info', 'Không có thay đổi nào.');
         }
 
-        // ===== LƯU =====
         $admin->save();
 
         return redirect()

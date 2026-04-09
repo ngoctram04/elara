@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Log;
 class BlogController extends Controller
 {
 
-    // ================= LIST + SEARCH + FILTER =================
+
     public function index(Request $request)
     {
         $query = Blog::query();
@@ -36,14 +36,10 @@ class BlogController extends Controller
     }
 
 
-    // ================= CREATE =================
     public function create()
     {
         return view('admin.blogs.create');
     }
-
-
-    // ================= STORE =================
 
 
     public function store(Request $request)
@@ -55,9 +51,6 @@ class BlogController extends Controller
             'thumbnail' => 'nullable|image|max:2048'
         ]);
 
-        /* ======================
-       SLUG
-    ====================== */
         $slug = Str::slug($request->title);
 
         if (empty($slug)) {
@@ -75,25 +68,17 @@ class BlogController extends Controller
         $data['slug'] = $slug;
         $data['is_active'] = 1;
 
-        /* ======================
-       UPLOAD
-    ====================== */
         if ($request->hasFile('thumbnail')) {
             $data['thumbnail'] = $request
             ->file('thumbnail')
                 ->store('blogs', 'public');
         }
 
-        /* ======================
-       CREATE
-    ====================== */
+
         $blog = Blog::create($data);
 
-        /* ======================
-       🔥 NOTIFY CHỈ KHÁCH
-    ====================== */
         User::where('is_active', 1)
-        ->where('role', 'customer') // 🔥 QUAN TRỌNG
+        ->where('role', 'customer') 
             ->chunk(100, function ($users) use ($blog) {
 
                 foreach ($users as $user) {
@@ -118,7 +103,6 @@ class BlogController extends Controller
             ->with('success', 'Thêm bài viết thành công');
     }
 
-    // ================= EDIT =================
     public function edit($id)
     {
         $blog = Blog::findOrFail($id);
@@ -127,7 +111,6 @@ class BlogController extends Controller
     }
 
 
-    // ================= UPDATE =================
     public function update(Request $request, $id)
     {
         $blog = Blog::findOrFail($id);
@@ -139,7 +122,6 @@ class BlogController extends Controller
             'thumbnail' => 'nullable|image|max:2048'
         ]);
 
-        // slug unique
         $slug = Str::slug($request->title);
         $originalSlug = $slug;
         $counter = 1;
@@ -154,8 +136,6 @@ class BlogController extends Controller
         }
 
         $data['slug'] = $slug;
-
-        // upload thumbnail mới
         if ($request->hasFile('thumbnail')) {
 
             if ($blog->thumbnail) {
@@ -174,8 +154,6 @@ class BlogController extends Controller
             ->with('success', 'Cập nhật bài viết thành công');
     }
 
-
-    // ================= DELETE =================
     public function destroy($id)
     {
         $blog = Blog::findOrFail($id);
@@ -191,8 +169,6 @@ class BlogController extends Controller
             ->with('success', 'Xóa bài viết thành công');
     }
 
-
-    // ================= TOGGLE ACTIVE =================
     public function toggle($id)
     {
         $blog = Blog::findOrFail($id);
@@ -206,7 +182,6 @@ class BlogController extends Controller
     }
 
 
-    // ================= UPLOAD IMAGE / VIDEO FOR TINYMCE =================
     public function uploadImage(Request $request)
     {
         $request->validate([

@@ -10,11 +10,7 @@ use Illuminate\Support\Facades\DB;
 
 class InventoryController extends Controller
 {
-    /*
-    |--------------------------------------------------------------------------
-    | LỊCH SỬ THAY ĐỔI KHO
-    |--------------------------------------------------------------------------
-    */
+
     public function logs(Request $request)
     {
         $query = InventoryLog::query();
@@ -65,11 +61,6 @@ class InventoryController extends Controller
         return view('admin.inventory.logs', compact('logs'));
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | BÁO CÁO TỒN KHO
-    |--------------------------------------------------------------------------
-    */
     public function report(Request $request)
     {
         $query = ProductVariant::with([
@@ -122,11 +113,6 @@ class InventoryController extends Controller
         return view('admin.inventory.report', compact('variants'));
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | SẢN PHẨM SẮP HẾT HÀNG
-    |--------------------------------------------------------------------------
-    */
     public function lowStock(Request $request)
     {
         $query = ProductVariant::with([
@@ -168,11 +154,6 @@ class InventoryController extends Controller
         return view('admin.inventory.low_stock', compact('variants'));
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | LÔ SẮP HẾT HẠN
-    |--------------------------------------------------------------------------
-    */
     public function nearExpiry(Request $request)
     {
         $query = DB::table('stock_imports as si')

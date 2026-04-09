@@ -43,11 +43,7 @@ class ReportController extends Controller
 
     private function buildViewData(array $data): array
     {
-        /*
-        |--------------------------------------------------------------------------
-        | KPI THEO KỲ LỌC
-        |--------------------------------------------------------------------------
-        */
+
         $data['grossRevenue']      = (float) ($data['finance']->gross_revenue ?? 0);
         $data['refundTotal']       = (float) ($data['finance']->refund_total ?? 0);
         $data['netRevenue']        = (float) ($data['finance']->net_revenue ?? 0);
@@ -77,23 +73,13 @@ class ReportController extends Controller
         $data['averageOrder'] = $data['totalOrders'] > 0
             ? $data['netRevenue'] / $data['totalOrders']
             : 0;
-
-        /*
-        |--------------------------------------------------------------------------
-        | SỐ THEO KỲ
-        |--------------------------------------------------------------------------
-        */
         $data['periodCost']   = (float) ($data['finance']->cost ?? 0);
         $data['periodLoss']   = (float) ($data['periodLoss'] ?? 0);
         $data['periodImport'] = (float) ($data['periodInventoryMetrics']->period_import ?? 0);
         $data['openingInventoryValue'] = (float) ($data['periodInventoryMetrics']->opening_inventory_value ?? 0);
         $data['closingInventoryValue'] = (float) ($data['periodInventoryMetrics']->closing_inventory_value ?? 0);
 
-        /*
-        |--------------------------------------------------------------------------
-        | LỢI NHUẬN THEO KỲ
-        |--------------------------------------------------------------------------
-        */
+
         $data['saleProfit'] = $data['netRevenue'] - $data['periodCost'];
 
         $data['realProfit'] =
@@ -108,42 +94,26 @@ class ReportController extends Controller
             ? ($data['profit'] / $data['netRevenue']) * 100
             : 0;
 
-        /*
-        |--------------------------------------------------------------------------
-        | SỐ HIỆN TẠI / LŨY KẾ
-        |--------------------------------------------------------------------------
-        */
+
         $data['totalImportAll']    = (float) ($data['inventoryMetrics']->total_import ?? 0);
         $data['inventoryValueNow'] = (float) ($data['inventoryMetrics']->inventory_value ?? 0);
         $data['totalCostAll']      = (float) ($data['inventoryMetrics']->sold_cost_all ?? 0);
         $data['inventoryLossAll']  = (float) ($data['inventoryMetrics']->loss_total_all ?? 0);
 
-        /*
-        |--------------------------------------------------------------------------
-        | BIẾN HIỂN THỊ TRÊN DASHBOARD
-        |--------------------------------------------------------------------------
-        */
+
         $data['totalCost']      = $data['periodCost'];
         $data['inventoryLoss']  = $data['periodLoss'];
         $data['totalImport']    = $data['periodImport'];
         $data['inventoryValue'] = $data['closingInventoryValue'];
 
-        /*
-        |--------------------------------------------------------------------------
-        | CHECK CÂN KHO TOÀN HỆ THỐNG
-        |--------------------------------------------------------------------------
-        */
+
         $data['inventoryBalanceCheck'] =
             ($data['totalImportAll'] ?? 0)
             - ($data['totalCostAll'] ?? 0)
             - ($data['inventoryLossAll'] ?? 0)
             - ($data['inventoryValueNow'] ?? 0);
 
-        /*
-        |--------------------------------------------------------------------------
-        | CHECK BIẾN ĐỘNG KHO THEO KỲ
-        |--------------------------------------------------------------------------
-        */
+
         $data['periodInventoryCheck'] =
             $data['openingInventoryValue']
             + $data['periodImport']
@@ -200,10 +170,6 @@ class ReportController extends Controller
             ->groupBy('rri.order_item_id');
     }
 
-    /**
-     * Giá vốn của toàn bộ số lượng đã hoàn (seal + hư)
-     * Dùng để trừ ra khỏi "tổng vốn đã bán"
-     */
     private function getRefundReturnedCostAggSubquery()
     {
         return DB::table('refund_request_items as rri')
@@ -236,10 +202,6 @@ class ReportController extends Controller
             ->groupBy('rri.order_item_id');
     }
 
-    /**
-     * Chỉ lấy giá vốn hàng hoàn còn seal
-     * Dùng cho tham khảo / debug nếu cần
-     */
     private function getRefundRestockCostAggSubquery()
     {
         return DB::table('refund_request_items as rri')
@@ -457,11 +419,7 @@ class ReportController extends Controller
         $refundRestockCostAggSub = $this->getRefundRestockCostAggSubquery();
         $refundByOrderSub = $this->getRefundByOrderSubquery();
 
-        /*
-        =====================================
-        1. TÀI CHÍNH THEO KỲ
-        =====================================
-        */
+
         $grossRevenue = (float) DB::table('orders')
             ->whereIn('status', $statuses)
             ->whereBetween('delivered_at', [$from, $to])
@@ -506,15 +464,7 @@ class ReportController extends Controller
             ->whereBetween('delivered_at', [$from, $to])
             ->sum(DB::raw('COALESCE(discount, 0)'));
 
-        /*
-        =====================================
-        GIÁ VỐN ĐÃ BÁN THEO KỲ
-        =====================================
-        grossCost      = toàn bộ vốn của hàng đã giao
-        returnedCost   = vốn của toàn bộ hàng đã hoàn (seal + hư)
-        cost           = vốn thực còn được xem là đã bán
-        =====================================
-        */
+
         $grossCost = (float) DB::table('order_item_batches as oib')
             ->join('order_items as oi', 'oi.id', '=', 'oib.order_item_id')
             ->join('orders as o', 'o.id', '=', 'oi.order_id')
@@ -554,11 +504,6 @@ class ReportController extends Controller
 
         $cost = max(0, $grossCost - $returnedCostInRange);
 
-        /*
-        =====================================
-        HAO HỤT THEO KỲ
-        =====================================
-        */
         $periodExpiredLoss = (float) DB::table('stock_imports')
             ->whereNotNull('expired_at')
             ->whereBetween('expired_at', [$from, $to])
@@ -583,11 +528,7 @@ class ReportController extends Controller
             'discount_total'         => $discountTotal,
         ];
 
-        /*
-        =====================================
-        2. TĂNG TRƯỞNG
-        =====================================
-        */
+
         $days = $from->diffInDays($to) + 1;
         $prevFrom = (clone $from)->subDays($days);
         $prevTo   = (clone $from)->subSecond();
@@ -608,11 +549,7 @@ class ReportController extends Controller
             ? (($netRevenue - $previousNetRevenue) / $previousNetRevenue) * 100
             : 0;
 
-        /*
-        =====================================
-        3. THỐNG KÊ ĐƠN
-        =====================================
-        */
+
         $orderStats = DB::table('orders')
             ->selectRaw('
                 COUNT(CASE WHEN created_at BETWEEN ? AND ? THEN 1 END) as total,
@@ -643,11 +580,7 @@ class ReportController extends Controller
         ? (($orderStats->cancelled ?? 0) / $cancelBase) * 100
         : 0;
 
-        /*
-        =====================================
-        4. THỜI GIAN XỬ LÝ TB
-        =====================================
-        */
+
         $avgProcessingTime = DB::table('orders')
             ->whereIn('status', $statuses)
             ->whereNotNull('delivered_at')
@@ -655,11 +588,7 @@ class ReportController extends Controller
             ->selectRaw('AVG(TIMESTAMPDIFF(HOUR, created_at, delivered_at)) as hours')
             ->value('hours');
 
-        /*
-        =====================================
-        5. DOANH THU / LỢI NHUẬN CHART
-        =====================================
-        */
+
         $dailyGrossRevenue = DB::table('orders')
             ->whereIn('status', $statuses)
             ->whereBetween('delivered_at', [$from, $to])
@@ -886,11 +815,7 @@ class ReportController extends Controller
             $currentDate->addDay();
         }
 
-        /*
-        =====================================
-        TOP SẢN PHẨM / KHÁCH HÀNG
-        =====================================
-        */
+
         $topProducts = DB::table('order_items as oi')
             ->join('orders as o', 'o.id', '=', 'oi.order_id')
             ->join('product_variants as pv', 'pv.id', '=', 'oi.variant_id')

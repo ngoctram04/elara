@@ -10,11 +10,7 @@ use Illuminate\Support\Str;
 
 class CategoryController extends Controller
 {
-    /*
-    |------------------------------------------------------------------
-    | TẠO SLUG KHÔNG TRÙNG
-    |------------------------------------------------------------------
-    */
+
     private function generateUniqueSlug(string $name, ?int $ignoreId = null): string
     {
         $slug = Str::slug($name);
@@ -32,11 +28,6 @@ class CategoryController extends Controller
         return $slug;
     }
 
-    /*
-    |------------------------------------------------------------------
-    | DANH SÁCH DANH MỤC CHA
-    |------------------------------------------------------------------
-    */
     public function index(Request $request)
     {
         $query = Category::query()
@@ -68,11 +59,6 @@ class CategoryController extends Controller
         return view('admin.categories.index', compact('categories'));
     }
 
-    /*
-    |------------------------------------------------------------------
-    | FORM TẠO DANH MỤC CHA / CON
-    |------------------------------------------------------------------
-    */
     public function create(Request $request)
     {
         $parent = null;
@@ -85,11 +71,6 @@ class CategoryController extends Controller
         return view('admin.categories.create', compact('parent'));
     }
 
-    /*
-    |------------------------------------------------------------------
-    | LƯU DANH MỤC CHA / CON
-    |------------------------------------------------------------------
-    */
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -100,7 +81,7 @@ class CategoryController extends Controller
 
         $imagePath = null;
 
-        // Chỉ danh mục nhỏ mới được lưu ảnh
+
         if (!empty($data['parent_id']) && $request->hasFile('image')) {
             $imagePath = $request->file('image')->store('categories', 'public');
         }
@@ -119,11 +100,6 @@ class CategoryController extends Controller
             ->with('success', 'Thêm danh mục lớn thành công');
     }
 
-    /*
-    |------------------------------------------------------------------
-    | CHI TIẾT DANH MỤC CHA – DANH SÁCH DANH MỤC CON
-    |------------------------------------------------------------------
-    */
     public function show(Request $request, Category $category)
     {
         abort_if($category->parent_id !== null, 404);
@@ -156,21 +132,11 @@ class CategoryController extends Controller
         return view('admin.categories.show', compact('category', 'children'));
     }
 
-    /*
-    |------------------------------------------------------------------
-    | FORM CHỈNH SỬA
-    |------------------------------------------------------------------
-    */
     public function edit(Category $category)
     {
         return view('admin.categories.edit', compact('category'));
     }
 
-    /*
-    |------------------------------------------------------------------
-    | CẬP NHẬT DANH MỤC
-    |------------------------------------------------------------------
-    */
     public function update(Request $request, Category $category)
     {
         $data = $request->validate([
@@ -189,7 +155,6 @@ class CategoryController extends Controller
             );
         }
 
-        // Chỉ danh mục nhỏ mới được cập nhật ảnh
         if ($category->parent_id) {
             if ($request->hasFile('image')) {
                 if ($category->image && Storage::disk('public')->exists($category->image)) {
@@ -199,7 +164,7 @@ class CategoryController extends Controller
                 $updateData['image'] = $request->file('image')->store('categories', 'public');
             }
         } else {
-            // Danh mục lớn thì luôn không có ảnh
+     
             if ($category->image && Storage::disk('public')->exists($category->image)) {
                 Storage::disk('public')->delete($category->image);
             }
@@ -216,11 +181,6 @@ class CategoryController extends Controller
             ->with('success', 'Cập nhật danh mục thành công');
     }
 
-    /*
-    |------------------------------------------------------------------
-    | XÓA DANH MỤC
-    |------------------------------------------------------------------
-    */
     public function destroy(Category $category)
     {
         if ($category->parent_id === null && $category->children()->exists()) {

@@ -7,19 +7,10 @@ use App\Models\Order;
 
 class AutoConfirmDeliveredOrders extends Command
 {
-    /**
-     * Tên command artisan
-     */
-    protected $signature = 'orders:auto-confirm-delivered';
 
-    /**
-     * Mô tả command
-     */
+    protected $signature = 'orders:auto-confirm-delivered';
     protected $description = 'Tự động xác nhận đơn hàng sau 7 ngày nếu khách chưa xác nhận';
 
-    /**
-     * Execute the console command.
-     */
     public function handle(): int
     {
         $this->info('Bắt đầu kiểm tra đơn hàng cần tự động xác nhận...');

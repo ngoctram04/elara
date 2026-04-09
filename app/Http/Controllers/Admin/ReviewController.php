@@ -10,17 +10,13 @@ use App\Notifications\SystemNotification;
 
 class ReviewController extends Controller
 {
-    /**
-     * Danh sách đánh giá
-     */
+
     public function index(Request $request)
     {
         $query = Review::with(['user', 'product'])
             ->latest();
 
-        /**
-         * 🔎 TÌM KIẾM
-         */
+
         if ($request->filled('keyword')) {
             $keyword = trim($request->keyword);
             $numberKeyword = preg_replace('/\D/', '', $keyword);
@@ -43,30 +39,21 @@ class ReviewController extends Controller
             });
         }
 
-        /**
-         * ⭐ LỌC SỐ SAO
-         */
+
         if ($request->filled('rating')) {
             $query->where('rating', $request->rating);
         }
 
-        /**
-         * 👁 LỌC TRẠNG THÁI HIỂN THỊ
-         */
+
         if ($request->filled('visible')) {
             $query->where('is_visible', $request->visible);
         }
 
-        /**
-         * 🚩 LỌC NGHI VẤN
-         */
+
         if ($request->filled('flagged')) {
             $query->where('is_flagged', $request->flagged);
         }
 
-        /**
-         * 💬 LỌC ĐÃ TRẢ LỜI / CHƯA
-         */
         if ($request->filled('reply')) {
             if ($request->reply === 'replied') {
                 $query->whereNotNull('admin_reply');
@@ -77,17 +64,13 @@ class ReviewController extends Controller
             }
         }
 
-        /**
-         * 📄 PHÂN TRANG
-         */
+
         $reviews = $query->paginate(7)->withQueryString();
 
         return view('admin.reviews.index', compact('reviews'));
     }
 
-    /**
-     * Chi tiết đánh giá
-     */
+
     public function show($id)
     {
         $review = Review::with([
@@ -100,9 +83,6 @@ class ReviewController extends Controller
         return view('admin.reviews.show', compact('review'));
     }
 
-    /**
-     * Ẩn / hiện đánh giá
-     */
     public function toggleVisibility($id)
     {
         $review = Review::findOrFail($id);
@@ -113,9 +93,7 @@ class ReviewController extends Controller
         return back()->with('success', 'Cập nhật trạng thái đánh giá thành công');
     }
 
-    /**
-     * Trả lời đánh giá
-     */
+
     public function reply(Request $request, $id)
     {
         $request->validate([

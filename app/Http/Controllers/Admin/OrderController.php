@@ -15,9 +15,7 @@ use App\Notifications\SystemNotification;
 
 class OrderController extends Controller
 {
-    /**
-     * Danh sách đơn hàng
-     */
+
     public function index(Request $request)
     {
         $query = Order::with(['user', 'cancelledByUser']);
@@ -103,9 +101,6 @@ class OrderController extends Controller
         ));
     }
 
-    /**
-     * Chi tiết đơn hàng
-     */
     public function show($id)
     {
         $order = Order::with([
@@ -122,10 +117,6 @@ class OrderController extends Controller
 
         return view('admin.orders.show', compact('order'));
     }
-
-    /**
-     * Cập nhật trạng thái đơn hàng
-     */
     public function updateStatus(Request $request, $id)
     {
         $request->validate([
@@ -172,10 +163,7 @@ class OrderController extends Controller
         DB::beginTransaction();
 
         try {
-            /**
-             * STATUS_PROCESSING (2 - đang giao)
-             * -> STATUS_COMPLETED (3 - đã giao / chờ khách xác nhận)
-             */
+
             if (
                 $oldStatus == Order::STATUS_PROCESSING &&
                 $newStatus == Order::STATUS_COMPLETED
@@ -290,9 +278,7 @@ class OrderController extends Controller
         }
     }
 
-    /**
-     * Admin huỷ đơn
-     */
+
     public function cancel(Request $request, $id)
     {
         $request->validate([

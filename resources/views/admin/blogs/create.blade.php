@@ -7,7 +7,6 @@
 <div class="card border-0 shadow-sm">
 <div class="card-body">
 
-{{-- HEADER --}}
 
 <div class="d-flex justify-content-between align-items-center mb-4">
 
@@ -31,7 +30,6 @@ Quay lại
 
 </div>
 
-{{-- ERROR --}}
 @if ($errors->any())
 
 <div class="alert alert-danger">
@@ -56,7 +54,7 @@ enctype="multipart/form-data">
 
 @csrf
 
-{{-- TIÊU ĐỀ --}}
+
 
 <div class="mb-3">
 
@@ -72,7 +70,7 @@ required>
 
 </div>
 
-{{-- MÔ TẢ --}}
+
 
 <div class="mb-3">
 
@@ -87,7 +85,7 @@ rows="3">{{ old('excerpt') }}</textarea>
 
 </div>
 
-{{-- THUMBNAIL --}}
+
 
 <div class="mb-4">
 
@@ -117,7 +115,7 @@ Chưa có ảnh
 
 </div>
 
-{{-- NỘI DUNG --}}
+
 
 <div class="mb-4">
 
@@ -138,7 +136,7 @@ Bạn có thể upload ảnh hoặc video trực tiếp vào nội dung.
 
 </div>
 
-{{-- ACTION --}}
+
 
 <div class="d-flex gap-2">
 
@@ -191,7 +189,7 @@ toolbar:
 
 automatic_uploads:true,
 
-/* upload ảnh */
+
 images_upload_handler:function(blobInfo){
 
 return new Promise(function(resolve,reject){
@@ -229,7 +227,6 @@ xhr.send(formData);
 
 },
 
-/* upload video */
 file_picker_types:'media',
 
 file_picker_callback:function(callback,value,meta){
@@ -275,7 +272,7 @@ input.click();
 });
 
 
-/* preview thumbnail */
+
 
 document.getElementById('thumbnailInput')
 .addEventListener('change',function(e){

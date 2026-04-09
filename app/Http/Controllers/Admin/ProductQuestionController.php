@@ -11,9 +11,6 @@ use App\Notifications\SystemNotification;
 class ProductQuestionController extends Controller
 {
 
-    /**
-     * Danh sách câu hỏi
-     */
 
     public function index(Request $request)
     {
@@ -25,12 +22,6 @@ class ProductQuestionController extends Controller
             'answers.user:id,name'
         ]);
 
-
-        /*
-        |------------------------------------------------
-        | SEARCH
-        |------------------------------------------------
-        */
 
         if ($request->filled('keyword')) {
 
@@ -51,12 +42,6 @@ class ProductQuestionController extends Controller
         }
 
 
-        /*
-        |------------------------------------------------
-        | FILTER STATUS
-        |------------------------------------------------
-        */
-
         if ($request->status == 'answered') {
 
             $query->has('answers');
@@ -68,12 +53,6 @@ class ProductQuestionController extends Controller
         }
 
 
-        /*
-        |------------------------------------------------
-        | SORT
-        |------------------------------------------------
-        */
-
         if ($request->sort == 'old') {
 
             $query->oldest();
@@ -82,12 +61,6 @@ class ProductQuestionController extends Controller
             $query->latest();
         }
 
-
-        /*
-        |------------------------------------------------
-        | PAGINATION
-        |------------------------------------------------
-        */
 
         $questions = $query
             ->paginate(10)
@@ -98,11 +71,6 @@ class ProductQuestionController extends Controller
     }
 
 
-
-    /**
-     * Admin trả lời câu hỏi
-     */
-
     public function answer(Request $request)
     {
         $request->validate([
@@ -110,10 +78,8 @@ class ProductQuestionController extends Controller
             'answer' => 'required|string|max:2000'
         ]);
 
-        // lấy câu hỏi
         $question = ProductQuestion::with('user', 'product')->findOrFail($request->question_id);
 
-        // tạo câu trả lời
         $answer = ProductAnswer::create([
             'question_id' => $question->id,
             'user_id' => Auth::id(),
@@ -121,7 +87,6 @@ class ProductQuestionController extends Controller
             'is_admin' => 1
         ]);
 
-        // 🔔 GỬI THÔNG BÁO CHO USER
         if ($question->user) {
             $question->user->notify(new SystemNotification([
                 'title' => 'Câu hỏi đã được trả lời',

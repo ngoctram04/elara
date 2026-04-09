@@ -19,9 +19,7 @@ use App\Mail\RefundRejectedMail;
 
 class RefundController extends Controller
 {
-    /**
-     * Danh sách yêu cầu hoàn tiền
-     */
+
     public function index(Request $request)
     {
         $query = RefundRequest::with([
@@ -69,9 +67,7 @@ class RefundController extends Controller
         return view('admin.refunds.index', compact('refunds'));
     }
 
-    /**
-     * Duyệt yêu cầu hoàn tiền
-     */
+
     public function approve($id)
     {
         $refund = null;
@@ -100,9 +96,7 @@ class RefundController extends Controller
         return back()->with('success', 'Đã chấp nhận yêu cầu hoàn tiền');
     }
 
-    /**
-     * Từ chối yêu cầu
-     */
+
     public function reject(Request $request, $id)
     {
         $request->validate([
@@ -144,12 +138,7 @@ class RefundController extends Controller
         return back()->with('success', 'Đã từ chối yêu cầu hoàn tiền');
     }
 
-    /**
-     * Xác nhận đã hoàn tiền
-     *
-     * sealed  => hoàn kho + trừ đã bán + hoàn tiền
-     * damaged => không hoàn kho + vẫn trừ đã bán + ghi nhận hao hụt
-     */
+
     public function refunded(Request $request, $id)
     {
         $request->validate([
@@ -161,13 +150,11 @@ class RefundController extends Controller
         $restockQty = 0;
         $damagedQty = 0;
 
-        // Tổng tiền sản phẩm hoàn (sau khi phân bổ discount, chưa trừ ship)
         $totalRefundProductAmount = 0;
 
-        // Ship bị khấu trừ khi hoàn
         $shippingDeduction = 0;
 
-        // Tiền hoàn thực tế cuối cùng
+
         $finalRefundAmount = 0;
 
         DB::beginTransaction();
@@ -194,28 +181,15 @@ class RefundController extends Controller
 
             $order->loadMissing('items');
             $manualNote = trim((string) $request->input('admin_note'));
-
-            /*
-            |--------------------------------------------------------------------------
-            | 1. Cập nhật refund ban đầu
-            |--------------------------------------------------------------------------
-            */
             $refund->update([
                 'status'      => RefundRequest::STATUS_REFUNDED,
                 'admin_note'  => $manualNote !== '' ? $manualNote : $refund->admin_note,
                 'loss_amount' => 0,
             ]);
 
-            /*
-            |--------------------------------------------------------------------------
-            | 2. Xử lý từng item hoàn
-            |--------------------------------------------------------------------------
-            */
             foreach ($refund->items as $item) {
                 $variantId = (int) ($item->pivot->variant_id ?: $item->variant_id);
                 $qty = max(1, (int) ($item->pivot->quantity ?? 1));
-
-                // Tiền hoàn của item sau khi phân bổ giảm giá của đơn
                 $refundAmount = $this->getRefundItemAmountAfterDiscount($order, $item, $qty);
 
                 $conditionStatus = $item->pivot->condition_status ?? 'sealed';
@@ -226,7 +200,6 @@ class RefundController extends Controller
                 $returnedToStock = 0;
                 $pivotStockImportId = null;
 
-                // Chỉ cộng tiền sản phẩm hoàn, chưa trừ ship
                 $totalRefundProductAmount += $refundAmount;
 
                 if ($isRestockable) {
@@ -319,12 +292,6 @@ class RefundController extends Controller
                 }
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | 3. Trừ điểm + chi tiêu user theo TIỀN SẢN PHẨM hoàn
-            |    Không tính ship
-            |--------------------------------------------------------------------------
-            */
             $user = $order->user;
 
             if ($user && $totalRefundProductAmount > 0) {
@@ -363,22 +330,9 @@ class RefundController extends Controller
                 }
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | 4. Tính khấu trừ ship
-            |--------------------------------------------------------------------------
-            | - Nếu khách đã trả ship: không trừ nữa
-            | - Nếu free ship: trừ shipping_cost của chính đơn đó
-            |--------------------------------------------------------------------------
-            */
             $shippingDeduction = $this->getRefundShippingDeduction($order);
             $finalRefundAmount = max(0, $totalRefundProductAmount - $shippingDeduction);
 
-            /*
-            |--------------------------------------------------------------------------
-            | 5. Cập nhật trạng thái đơn hàng
-            |--------------------------------------------------------------------------
-            */
             $isFullRefund = $this->isFullRefundOrder($order, $refund);
 
             if ($isFullRefund) {
@@ -398,11 +352,6 @@ class RefundController extends Controller
                 }
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | 6. Ghi note + cập nhật tổng
-            |--------------------------------------------------------------------------
-            */
             $extraNote = [];
 
             if ($restockQty > 0) {
@@ -484,17 +433,11 @@ class RefundController extends Controller
         return back()->with('success', 'Đã hoàn tiền và cập nhật tồn kho / đã bán');
     }
 
-    /**
-     * Xác định có được hoàn kho không
-     */
     private function shouldRestock(?string $condition): bool
     {
         return $condition === 'sealed';
     }
 
-    /**
-     * Kiểm tra refund hiện tại có phải hoàn toàn bộ đơn hay không
-     */
     private function isFullRefundOrder(Order $order, RefundRequest $refund): bool
     {
         $order->loadMissing('items');
@@ -519,29 +462,15 @@ class RefundController extends Controller
 
         return true;
     }
-
-    /**
-     * Tính phần ship cần khấu trừ khi hoàn tiền
-     */
     private function getRefundShippingDeduction(Order $order): int
     {
-        // Khách đã trả ship rồi thì không trừ nữa
+
         if ((int) ($order->shipping_fee ?? 0) > 0) {
             return 0;
         }
 
-        // Free ship thì trừ ship thực tế của đơn
         return max(0, (int) ($order->shipping_cost ?? 0));
     }
-
-    /**
-     * Tính tiền hoàn của 1 item sau khi phân bổ discount của toàn đơn
-     *
-     * Rule:
-     * - Hoàn theo giá trị thực trả của sản phẩm
-     * - Không tính ship ở đây
-     * - Ship sẽ khấu trừ riêng phía dưới
-     */
     private function getRefundItemAmountAfterDiscount(Order $order, $refundItem, int $refundQty): int
     {
         $order->loadMissing('items');
@@ -582,13 +511,7 @@ class RefundController extends Controller
         return 0;
     }
 
-    /**
-     * Lấy tổng discount của đơn
-     *
-     * Ưu tiên:
-     * - discount tổng nếu đã có sẵn
-     * - nếu không thì cộng birthday_discount + voucher_discount
-     */
+
     private function getOrderDiscountTotal(Order $order): float
     {
         $discount = (float) ($order->discount ?? 0);

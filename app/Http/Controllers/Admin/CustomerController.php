@@ -12,11 +12,7 @@ use Illuminate\Support\Carbon;
 
 class CustomerController extends Controller
 {
-    /**
-     * ================================
-     * DANH SÁCH KHÁCH HÀNG
-     * ================================
-     */
+
     public function index(Request $request)
     {
         $this->autoUnlockExpiredCustomers();
@@ -24,11 +20,6 @@ class CustomerController extends Controller
         $query = User::query()
             ->where('role', 'customer');
 
-        /*
-        |--------------------------------------------------------------------------
-        | TÌM KIẾM
-        |--------------------------------------------------------------------------
-        */
         if ($request->filled('keyword')) {
             $keyword = trim($request->keyword);
             $numberKeyword = preg_replace('/\D/', '', $keyword);
@@ -44,29 +35,14 @@ class CustomerController extends Controller
             });
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | LỌC HẠNG THÀNH VIÊN
-        |--------------------------------------------------------------------------
-        */
         if ($request->filled('member_level')) {
             $query->where('member_level', $request->member_level);
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | LỌC TRẠNG THÁI
-        |--------------------------------------------------------------------------
-        */
         if ($request->filled('status')) {
             $query->where('is_active', (int) $request->status);
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | SẮP XẾP
-        |--------------------------------------------------------------------------
-        */
         switch ($request->get('sort')) {
             case 'oldest':
                 $query->oldest();
@@ -95,11 +71,6 @@ class CustomerController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        /*
-        |--------------------------------------------------------------------------
-        | GÁN DỮ LIỆU HIỂN THỊ
-        |--------------------------------------------------------------------------
-        */
         foreach ($customers as $customer) {
             $customer->spending = (float) ($customer->total_spent ?? 0);
             $customer->yearly_spending = (float) ($customer->yearly_spent ?? 0);
@@ -118,11 +89,6 @@ class CustomerController extends Controller
         return view('admin.customers.index', compact('customers'));
     }
 
-    /**
-     * ================================
-     * CHI TIẾT KHÁCH HÀNG
-     * ================================
-     */
     public function show(User $user)
     {
         abort_if($user->role !== 'customer', 404);
@@ -130,27 +96,12 @@ class CustomerController extends Controller
         $this->autoUnlockUserIfExpired($user);
         $user->refresh();
 
-        /*
-        |--------------------------------------------------------------------------
-        | LỊCH SỬ ĐƠN HÀNG
-        |--------------------------------------------------------------------------
-        */
         $orders = Order::where('user_id', $user->id)
             ->latest()
             ->get();
 
-        /*
-        |--------------------------------------------------------------------------
-        | TỔNG CHI TIÊU LẤY TỪ USERS
-        |--------------------------------------------------------------------------
-        */
         $totalSpent = (float) ($user->total_spent ?? 0);
 
-        /*
-        |--------------------------------------------------------------------------
-        | ĐÁNH GIÁ SẢN PHẨM + ẢNH + VIDEO
-        |--------------------------------------------------------------------------
-        */
         $reviews = Review::with([
             'product',
             'images',
@@ -160,11 +111,6 @@ class CustomerController extends Controller
             ->latest()
             ->get();
 
-        /*
-        |--------------------------------------------------------------------------
-        | DỮ LIỆU HIỂN THỊ TRẠNG THÁI KHÓA
-        |--------------------------------------------------------------------------
-        */
         $lockStatusText = $this->getLockStatusText($user);
         $lockUntilText = $this->formatLockedUntil($user->locked_until);
         $remainingLockTime = $this->getRemainingLockTime($user->locked_until, $user->is_active);
@@ -180,20 +126,10 @@ class CustomerController extends Controller
         ));
     }
 
-    /**
-     * ================================
-     * KHÓA / MỞ TÀI KHOẢN
-     * ================================
-     */
     public function toggleStatus(Request $request, User $user)
     {
         abort_if($user->role !== 'customer', 404);
 
-        /*
-        |--------------------------------------------------------------------------
-        | KHÓA TÀI KHOẢN
-        |--------------------------------------------------------------------------
-        */
         if ($user->is_active) {
             $validated = $request->validate([
                 'blocked_reason' => 'required|string|min:5|max:1000',
@@ -229,11 +165,6 @@ class CustomerController extends Controller
             return back()->with('success', 'Đã khóa tài khoản khách hàng trong 7 ngày');
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | MỞ KHÓA THỦ CÔNG
-        |--------------------------------------------------------------------------
-        */
         $user->update([
             'is_active'      => true,
             'blocked_reason' => null,
@@ -254,11 +185,6 @@ class CustomerController extends Controller
         return back()->with('success', 'Đã mở khóa tài khoản khách hàng');
     }
 
-    /**
-     * ================================
-     * TỰ ĐỘNG MỞ KHÓA TOÀN BỘ USER HẾT HẠN
-     * ================================
-     */
     protected function autoUnlockExpiredCustomers(): void
     {
         User::where('role', 'customer')
@@ -272,11 +198,6 @@ class CustomerController extends Controller
             ]);
     }
 
-    /**
-     * ================================
-     * TỰ ĐỘNG MỞ KHÓA 1 USER NẾU HẾT HẠN
-     * ================================
-     */
     protected function autoUnlockUserIfExpired(User $user): void
     {
         if (
@@ -292,11 +213,6 @@ class CustomerController extends Controller
         }
     }
 
-    /**
-     * ================================
-     * TEXT TRẠNG THÁI KHÓA
-     * ================================
-     */
     protected function getLockStatusText(User $user): string
     {
         if ($user->is_active) {
@@ -306,11 +222,7 @@ class CustomerController extends Controller
         return 'Đang khóa';
     }
 
-    /**
-     * ================================
-     * FORMAT THỜI GIAN MỞ KHÓA
-     * ================================
-     */
+
     protected function formatLockedUntil($lockedUntil): ?string
     {
         if (empty($lockedUntil)) {
@@ -320,11 +232,7 @@ class CustomerController extends Controller
         return Carbon::parse($lockedUntil)->format('d/m/Y H:i');
     }
 
-    /**
-     * ================================
-     * THỜI GIAN CÒN LẠI ĐỂ MỞ KHÓA
-     * ================================
-     */
+
     protected function getRemainingLockTime($lockedUntil, bool $isActive): ?string
     {
         if ($isActive || empty($lockedUntil)) {
@@ -340,7 +248,7 @@ class CustomerController extends Controller
 
         $totalMinutes = $now->diffInMinutes($lockedUntil);
 
-        $days = intdiv($totalMinutes, 1440); // 1 ngày = 1440 phút
+        $days = intdiv($totalMinutes, 1440);
         $remainingMinutesAfterDays = $totalMinutes % 1440;
 
         $hours = intdiv($remainingMinutesAfterDays, 60);

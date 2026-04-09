@@ -14,9 +14,7 @@ use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
-    /* =======================
-        DANH SÁCH
-    ======================= */
+
     public function index(Request $request)
     {
         $query = Product::with([
@@ -120,9 +118,7 @@ class ProductController extends Controller
         ]);
     }
 
-    /* =======================
-        FORM THÊM
-    ======================= */
+
     public function create()
     {
         return view('admin.products.create', [
@@ -131,9 +127,6 @@ class ProductController extends Controller
         ]);
     }
 
-    /* =======================
-        LƯU
-    ======================= */
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -233,9 +226,7 @@ class ProductController extends Controller
             ->with('success', 'Thêm sản phẩm thành công');
     }
 
-    /* =======================
-        SỬA
-    ======================= */
+
     public function edit(Product $product)
     {
         $product->load([
@@ -253,9 +244,6 @@ class ProductController extends Controller
         ]);
     }
 
-    /* =======================
-        CHI TIẾT
-    ======================= */
     public function show(Product $product)
     {
         $product->load([
@@ -277,9 +265,7 @@ class ProductController extends Controller
         return view('admin.products.show', compact('product'));
     }
 
-    /* =======================
-        CẬP NHẬT
-    ======================= */
+
     public function update(Request $request, Product $product)
     {
         $data = $request->validate([
@@ -439,9 +425,7 @@ class ProductController extends Controller
             ->with('success', 'Cập nhật sản phẩm thành công');
     }
 
-    /* =======================
-        HELPER
-    ======================= */
+
     private function recalculateProduct(Product $product): void
     {
         $product->update([
@@ -458,9 +442,7 @@ class ProductController extends Controller
         return str_contains($name, 'son') || str_contains($slug, 'son');
     }
 
-    /* =======================
-        XÓA
-    ======================= */
+
     public function destroy(Product $product)
     {
         $stock = $product->variants()->sum('stock_quantity');
