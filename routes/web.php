@@ -309,6 +309,8 @@ Route::prefix('admin')
         // Top khách hàng
         Route::get('/reports/customers', [ReportController::class, 'customers'])
             ->name('reports.customers');
+    Route::get('/reports/customers/{customer}/orders', [ReportController::class, 'customerOrders'])
+    ->name('reports.customerOrders');
 
         // Sản phẩm tồn lâu
         Route::get('/reports/slow-products', [ReportController::class, 'slowProducts'])
@@ -323,6 +325,8 @@ Route::prefix('admin')
             ->name('reports.wishlist');
         Route::get('reports/cancel-orders', [ReportController::class, 'cancelOrders'])
     ->name('reports.cancelOrders');
+    Route::get('/reports/refund-orders', [ReportController::class, 'refundOrders'])
+    ->name('reports.refundOrders');
 
 
         /*

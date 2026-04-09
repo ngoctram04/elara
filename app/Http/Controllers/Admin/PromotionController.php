@@ -99,6 +99,24 @@ class PromotionController extends Controller
             }
         }
 
+        if ($request->filled('reward_progress')) {
+            if ($request->reward_progress === 'upcoming') {
+                $rewardQuery->whereNotNull('redeem_start_at')
+                    ->where('redeem_start_at', '>', now());
+            } elseif ($request->reward_progress === 'ongoing') {
+                $rewardQuery->where(function ($q) {
+                    $q->whereNull('redeem_start_at')
+                        ->orWhere('redeem_start_at', '<=', now());
+                })->where(function ($q) {
+                    $q->whereNull('redeem_end_at')
+                        ->orWhere('redeem_end_at', '>=', now());
+                });
+            } elseif ($request->reward_progress === 'expired') {
+                $rewardQuery->whereNotNull('redeem_end_at')
+                    ->where('redeem_end_at', '<', now());
+            }
+        }
+
         switch ($request->get('reward_sort', 'new')) {
             case 'old':
                 $rewardQuery->oldest();
@@ -436,6 +454,8 @@ class PromotionController extends Controller
             'min_order_value' => 'nullable|numeric|min:0',
             'max_discount'    => 'nullable|numeric|min:0',
             'valid_days'      => 'required|integer|min:1',
+            'redeem_start_at' => 'nullable|date',
+            'redeem_end_at'   => 'nullable|date|after_or_equal:redeem_start_at',
         ]);
 
         $reward = null;
@@ -450,6 +470,8 @@ class PromotionController extends Controller
                 'min_order_value' => $request->min_order_value,
                 'max_discount'    => $request->max_discount,
                 'valid_days'      => $request->valid_days,
+                'redeem_start_at' => $request->redeem_start_at,
+                'redeem_end_at'   => $request->redeem_end_at,
                 'is_active'       => 1,
             ]);
         });
@@ -471,12 +493,14 @@ class PromotionController extends Controller
                     'discount_type'    => $reward->discount_type,
                     'discount_value'   => $reward->discount_value,
                     'valid_days'       => $reward->valid_days,
+                    'redeem_start_at'  => $reward->redeem_start_at,
+                    'redeem_end_at'    => $reward->redeem_end_at,
                 ]
             ]));
         }
 
         return redirect()
-            ->route('admin.promotions.index')
+            ->route('admin.promotions.index', ['tab' => 'rewards'])
             ->with('success', 'Tạo voucher đổi điểm thành công');
     }
 
@@ -501,6 +525,8 @@ class PromotionController extends Controller
             'min_order_value' => 'nullable|numeric|min:0',
             'max_discount'    => 'nullable|numeric|min:0',
             'valid_days'      => 'required|integer|min:1',
+            'redeem_start_at' => 'nullable|date',
+            'redeem_end_at'   => 'nullable|date|after_or_equal:redeem_start_at',
         ]);
 
         $reward->update([
@@ -511,10 +537,12 @@ class PromotionController extends Controller
             'min_order_value' => $request->min_order_value,
             'max_discount'    => $request->max_discount,
             'valid_days'      => $request->valid_days,
+            'redeem_start_at' => $request->redeem_start_at,
+            'redeem_end_at'   => $request->redeem_end_at,
         ]);
 
         return redirect()
-            ->route('admin.promotions.index')
+            ->route('admin.promotions.index', ['tab' => 'rewards'])
             ->with('success', 'Cập nhật voucher thành công');
     }
 
@@ -523,8 +551,16 @@ class PromotionController extends Controller
     ========================================================= */
     public function toggleReward(PointReward $reward)
     {
+        $newStatus = !$reward->is_active;
+
+        if ($newStatus) {
+            if ($reward->redeem_end_at && $reward->redeem_end_at->lt(now())) {
+                return back()->with('error', 'Không thể bật voucher đổi điểm đã hết hạn.');
+            }
+        }
+
         $reward->update([
-            'is_active' => !$reward->is_active
+            'is_active' => $newStatus
         ]);
 
         return back()->with('success', 'Đã cập nhật trạng thái voucher');

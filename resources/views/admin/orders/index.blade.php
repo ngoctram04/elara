@@ -3,6 +3,14 @@
 
 @section('content')
 
+@php
+    $pendingCount = $pendingCount ?? 0;
+    $processingCount = $processingCount ?? 0;
+    $completedCount = $completedCount ?? 0;
+    $cancelledCount = $cancelledCount ?? 0;
+    $returnedCount = $returnedCount ?? 0;
+@endphp
+
 <style>
     .order-page .page-title {
         font-size: 20px;
@@ -183,6 +191,25 @@
         font-size: 14px;
     }
 
+    .order-page .table-header {
+        padding: 18px 20px 12px;
+        border-bottom: 1px solid #eef2f7;
+        background: #fff;
+    }
+
+    .order-page .table-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #0f172a;
+        margin: 0;
+    }
+
+    .order-page .table-desc {
+        font-size: 13px;
+        color: #64748b;
+        margin-top: 4px;
+    }
+
     @media (max-width: 991.98px) {
         .order-page .table thead th,
         .order-page .table tbody td {
@@ -218,11 +245,25 @@
                 <div class="col-md-2">
                     <label class="form-label">Trạng thái đơn</label>
                     <select name="status" class="form-select">
-                        <option value="">Tất cả</option>
-                        <option value="1" {{ request('status') == 1 ? 'selected' : '' }}>Đang xử lý</option>
-                        <option value="2" {{ request('status') == 2 ? 'selected' : '' }}>Đang giao</option>
-                        <option value="3" {{ request('status') == 3 ? 'selected' : '' }}>Đã giao</option>
-                        <option value="4" {{ request('status') == 4 ? 'selected' : '' }}>Đã huỷ</option>
+                        <option value="">
+                            Tất cả
+                            ({{ $pendingCount + $processingCount + $completedCount + $cancelledCount + $returnedCount }})
+                        </option>
+                        <option value="1" {{ (string) request('status') === '1' ? 'selected' : '' }}>
+                            Đang xử lý ({{ $pendingCount }})
+                        </option>
+                        <option value="2" {{ (string) request('status') === '2' ? 'selected' : '' }}>
+                            Đang giao ({{ $processingCount }})
+                        </option>
+                        <option value="3" {{ (string) request('status') === '3' ? 'selected' : '' }}>
+                            Đã giao ({{ $completedCount }})
+                        </option>
+                        <option value="4" {{ (string) request('status') === '4' ? 'selected' : '' }}>
+                            Đã huỷ ({{ $cancelledCount }})
+                        </option>
+                        <option value="5" {{ (string) request('status') === '5' ? 'selected' : '' }}>
+                            Trả hàng ({{ $returnedCount }})
+                        </option>
                     </select>
                 </div>
 
@@ -263,6 +304,11 @@
     </div>
 
     <div class="card table-card">
+        <div class="table-header">
+            <h5 class="table-title mb-0">Danh sách đơn hàng</h5>
+            <div class="table-desc">Hiển thị các đơn phù hợp với bộ lọc hiện tại</div>
+        </div>
+
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table align-middle">

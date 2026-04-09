@@ -8,6 +8,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use App\Models\Order;
+use App\Models\ProductVariant;
+use App\Models\StockImport;
+use App\Models\InventoryLog;
 use App\Notifications\SystemNotification;
 
 class OrderController extends Controller
@@ -37,7 +40,7 @@ class OrderController extends Controller
         }
 
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            $query->where('status', (int) $request->status);
         }
 
         if ($request->filled('payment_status')) {
@@ -47,11 +50,10 @@ class OrderController extends Controller
                         $q->where(function ($sub) {
                             $sub->where('payment_method', 'vnpay')
                                 ->where('payment_status', Order::PAYMENT_PAID);
-                        })
-                            ->orWhere(function ($sub) {
-                                $sub->where('payment_method', 'cod')
-                                    ->where('status', Order::STATUS_COMPLETED);
-                            });
+                        })->orWhere(function ($sub) {
+                            $sub->where('payment_method', 'cod')
+                                ->where('status', Order::STATUS_COMPLETED);
+                        });
                     });
                     break;
 
@@ -60,11 +62,10 @@ class OrderController extends Controller
                         $q->where(function ($sub) {
                             $sub->where('payment_method', 'cod')
                                 ->where('status', '!=', Order::STATUS_COMPLETED);
-                        })
-                            ->orWhere(function ($sub) {
-                                $sub->where('payment_method', 'vnpay')
-                                    ->where('payment_status', Order::PAYMENT_UNPAID);
-                            });
+                        })->orWhere(function ($sub) {
+                            $sub->where('payment_method', 'vnpay')
+                                ->where('payment_status', Order::PAYMENT_UNPAID);
+                        });
                     });
                     break;
 
@@ -78,7 +79,7 @@ class OrderController extends Controller
             }
         }
 
-        if ($request->sort == 'oldest') {
+        if ($request->sort === 'oldest') {
             $query->oldest();
         } else {
             $query->latest();
@@ -86,7 +87,20 @@ class OrderController extends Controller
 
         $orders = $query->paginate(7)->withQueryString();
 
-        return view('admin.orders.index', compact('orders'));
+        $pendingCount = Order::where('status', Order::STATUS_PENDING)->count();
+        $processingCount = Order::where('status', Order::STATUS_PROCESSING)->count();
+        $completedCount = Order::where('status', Order::STATUS_COMPLETED)->count();
+        $cancelledCount = Order::where('status', Order::STATUS_CANCELLED)->count();
+        $returnedCount = Order::where('status', Order::STATUS_RETURNED)->count();
+
+        return view('admin.orders.index', compact(
+            'orders',
+            'pendingCount',
+            'processingCount',
+            'completedCount',
+            'cancelledCount',
+            'returnedCount'
+        ));
     }
 
     /**
@@ -110,7 +124,7 @@ class OrderController extends Controller
     }
 
     /**
-     * Cập nhật trạng thái
+     * Cập nhật trạng thái đơn hàng
      */
     public function updateStatus(Request $request, $id)
     {
@@ -123,34 +137,45 @@ class OrderController extends Controller
         $oldStatus = (int) $order->status;
         $newStatus = (int) $request->status;
 
+        if ($oldStatus == Order::STATUS_CANCELLED) {
+            return back()->with('error', 'Đơn đã huỷ, không thể thay đổi trạng thái.');
+        }
+
+        if ($oldStatus == Order::STATUS_RETURNED) {
+            return back()->with('error', 'Đơn đã trả hàng, không thể thay đổi trạng thái.');
+        }
+
+        if ($newStatus == Order::STATUS_CANCELLED) {
+            return back()->with('error', 'Muốn huỷ đơn hãy dùng chức năng huỷ đơn riêng.');
+        }
+
+        if ($newStatus == Order::STATUS_RETURNED) {
+            return back()->with('error', 'Trạng thái trả hàng nên được xử lý ở chức năng hoàn/trả riêng.');
+        }
+
+        if ($newStatus <= $oldStatus) {
+            return back()->with('error', 'Không thể chuyển trạng thái ngược hoặc giữ nguyên.');
+        }
+
+        if (($newStatus - $oldStatus) > 1) {
+            return back()->with('error', 'Phải chuyển trạng thái đúng theo thứ tự.');
+        }
+
         if (
             $newStatus == Order::STATUS_COMPLETED &&
             !$request->hasFile('delivery_proof') &&
             !$order->delivery_image
         ) {
-            return back()->with('error', 'Phải upload ảnh khi xác nhận đã giao');
-        }
-
-        if ($oldStatus == Order::STATUS_CANCELLED) {
-            return back()->with('error', 'Đơn đã huỷ không thể thay đổi.');
-        }
-
-        if ($newStatus <= $oldStatus) {
-            return back()->with('error', 'Không thể chuyển trạng thái ngược.');
-        }
-
-        if ($newStatus - $oldStatus > 1) {
-            return back()->with('error', 'Phải chuyển trạng thái theo thứ tự.');
+            return back()->with('error', 'Phải upload ảnh giao hàng khi xác nhận đã giao.');
         }
 
         DB::beginTransaction();
 
         try {
-            /*
-            |--------------------------------------------------
-            | 2 -> 3 (đã giao)
-            |--------------------------------------------------
-            */
+            /**
+             * STATUS_PROCESSING (2 - đang giao)
+             * -> STATUS_COMPLETED (3 - đã giao / chờ khách xác nhận)
+             */
             if (
                 $oldStatus == Order::STATUS_PROCESSING &&
                 $newStatus == Order::STATUS_COMPLETED
@@ -161,24 +186,18 @@ class OrderController extends Controller
                 }
 
                 $order->delivered_at = now();
+                $order->customer_confirmed = false;
+                $order->received_at = null;
 
-                // Tăng sold_quantity
                 foreach ($order->items as $item) {
                     if ($item->variant) {
                         $item->variant->increment('sold_quantity', (int) $item->quantity);
                     }
                 }
 
-                // Cộng điểm + tổng chi tiêu
                 $user = $order->user;
 
                 if ($user) {
-                    /**
-                     * total = tiền sản phẩm sau giảm
-                     * grand_total = total + shipping_fee
-                     *
-                     * => TÍCH ĐIỂM / CHI TIÊU chỉ lấy total, KHÔNG lấy grand_total
-                     */
                     $productAmount = (float) ($order->total ?? 0);
                     $points = (int) floor($productAmount / 1000);
 
@@ -191,21 +210,12 @@ class OrderController extends Controller
                     }
 
                     $user->loyalty_points = (int) ($user->loyalty_points ?? 0) + $points;
-                    $user->total_spent    = (float) ($user->total_spent ?? 0) + $productAmount;
-                    $user->yearly_spent   = (float) ($user->yearly_spent ?? 0) + $productAmount;
+                    $user->total_spent = (float) ($user->total_spent ?? 0) + $productAmount;
+                    $user->yearly_spent = (float) ($user->yearly_spent ?? 0) + $productAmount;
 
                     if (method_exists($user, 'updateMemberLevel')) {
                         $user->updateMemberLevel();
                     } else {
-                        /**
-                         * Nếu không có hàm updateMemberLevel
-                         * thì nên xét hạng theo yearly_spent thay vì loyalty_points
-                         * vì hệ thống của bạn đang dùng mốc chi tiêu:
-                         * bronze 0
-                         * silver 1.000.000
-                         * gold 3.000.000
-                         * diamond 10.000.000
-                         */
                         $yearlySpent = (float) ($user->yearly_spent ?? 0);
 
                         if ($yearlySpent >= 10000000) {
@@ -239,23 +249,28 @@ class OrderController extends Controller
 
             if ($order->user) {
                 $title = 'Cập nhật đơn hàng';
-                $message = 'Đơn #' . $order->id . ' đã được cập nhật';
+                $message = 'Đơn #' . $order->id . ' đã được cập nhật trạng thái.';
+                $type = 'order_updated';
 
-                if ($newStatus == Order::STATUS_PROCESSING) {
-                    $title = 'Đơn đang được giao';
-                    $message = 'Đơn #' . $order->id . ' đang được giao đến bạn';
-                }
-
-                if ($newStatus == Order::STATUS_COMPLETED) {
-                    $title = 'Đơn đã giao thành công';
-                    $message = 'Đơn #' . $order->id . ' đã được giao thành công. Vui lòng xác nhận đã nhận hàng';
+                if ($newStatus == Order::STATUS_PENDING) {
+                    $title = 'Đơn hàng đang được xử lý';
+                    $message = 'Đơn #' . $order->id . ' đang được cửa hàng xử lý.';
+                    $type = 'order_processing';
+                } elseif ($newStatus == Order::STATUS_PROCESSING) {
+                    $title = 'Đơn hàng đang được giao';
+                    $message = 'Đơn #' . $order->id . ' đang được giao đến bạn.';
+                    $type = 'order_shipping';
+                } elseif ($newStatus == Order::STATUS_COMPLETED) {
+                    $title = 'Đơn hàng đã giao thành công';
+                    $message = 'Đơn #' . $order->id . ' đã được giao thành công. Vui lòng xác nhận đã nhận hàng.';
+                    $type = 'order_completed';
                 }
 
                 $order->user->notify(new SystemNotification([
                     'title'   => $title,
                     'message' => $message,
                     'url'     => route('orders.show', $order->id),
-                    'type'    => 'order_completed'
+                    'type'    => $type
                 ]));
             }
 
@@ -271,7 +286,7 @@ class OrderController extends Controller
                 'new_status' => $newStatus,
             ]);
 
-            return back()->with('error', 'Cập nhật thất bại!');
+            return back()->with('error', 'Cập nhật trạng thái thất bại!');
         }
     }
 
@@ -302,7 +317,7 @@ class OrderController extends Controller
             ]);
 
             foreach ($order->items as $item) {
-                $variant = \App\Models\ProductVariant::where('id', $item->variant_id)
+                $variant = ProductVariant::where('id', $item->variant_id)
                     ->lockForUpdate()
                     ->first();
 
@@ -310,7 +325,7 @@ class OrderController extends Controller
                     continue;
                 }
 
-                $before = \App\Models\StockImport::where('variant_id', $item->variant_id)
+                $before = StockImport::where('variant_id', $item->variant_id)
                     ->sum('remaining_quantity');
 
                 $change = 0;
@@ -320,7 +335,7 @@ class OrderController extends Controller
                         continue;
                     }
 
-                    $stock = \App\Models\StockImport::find($batch->stock_import_id);
+                    $stock = StockImport::find($batch->stock_import_id);
                     if (!$stock) {
                         continue;
                     }
@@ -335,14 +350,14 @@ class OrderController extends Controller
                     $change += $batch->quantity;
                 }
 
-                $after = \App\Models\StockImport::where('variant_id', $item->variant_id)
+                $after = StockImport::where('variant_id', $item->variant_id)
                     ->sum('remaining_quantity');
 
                 $variant->update([
                     'stock_quantity' => $after
                 ]);
 
-                \App\Models\InventoryLog::create([
+                InventoryLog::create([
                     'variant_id'      => $variant->id,
                     'type'            => 'cancel',
                     'quantity_change' => $change,
@@ -358,7 +373,7 @@ class OrderController extends Controller
             if ($order->user) {
                 $order->user->notify(new SystemNotification([
                     'title'   => 'Đơn hàng bị huỷ',
-                    'message' => 'Đơn #' . $order->id . ' đã bị huỷ bởi cửa hàng',
+                    'message' => 'Đơn #' . $order->id . ' đã bị huỷ bởi cửa hàng.',
                     'url'     => route('orders.show', $order->id),
                     'type'    => 'order_cancelled',
                     'meta'    => [

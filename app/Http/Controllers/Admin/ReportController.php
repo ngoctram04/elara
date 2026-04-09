@@ -59,7 +59,11 @@ class ReportController extends Controller
 
         $completed = (int) ($data['orderStats']->completed ?? 0);
         $returned  = (int) ($data['orderStats']->returned ?? 0);
+        $cancelled = (int) ($data['orderStats']->cancelled ?? 0);
 
+        $data['completedOrders'] = $completed;
+        $data['returnedOrders']  = $returned;
+        $data['cancelledOrders'] = $cancelled;
         $data['totalOrders'] = $completed + $returned;
         $data['cancelRate']  = (float) ($data['cancelRate'] ?? 0);
 
@@ -633,11 +637,11 @@ class ReportController extends Controller
             ])
             ->first();
 
-        $cancelBase = ($orderStats->completed ?? 0) + ($orderStats->cancelled ?? 0) + ($orderStats->returned ?? 0);
+        $cancelBase = ($orderStats->completed ?? 0) + ($orderStats->cancelled ?? 0);
 
         $cancelRate = $cancelBase > 0
-            ? ((($orderStats->cancelled ?? 0) + ($orderStats->returned ?? 0)) / $cancelBase) * 100
-            : 0;
+        ? (($orderStats->cancelled ?? 0) / $cancelBase) * 100
+        : 0;
 
         /*
         =====================================
@@ -940,19 +944,20 @@ class ReportController extends Controller
             ->limit(5)
             ->get();
 
-        $slowMoving = DB::table('product_variants as pv')
-            ->join('products as p', 'p.id', '=', 'pv.product_id')
-            ->leftJoin('order_items as oi', 'oi.variant_id', '=', 'pv.id')
-            ->select(
-                'p.name',
-                'pv.stock_quantity',
-                DB::raw('MAX(oi.created_at) as last_sold')
-            )
-            ->groupBy('pv.id', 'p.name', 'pv.stock_quantity')
-            ->orderByRaw('MAX(oi.created_at) IS NULL DESC')
-            ->orderByRaw('MAX(oi.created_at) ASC')
-            ->limit(5)
-            ->get();
+        $slowMoving = DB::table('products as p')
+        ->join('product_variants as pv', 'pv.product_id', '=', 'p.id')
+        ->leftJoin('order_items as oi', 'oi.variant_id', '=', 'pv.id')
+        ->select(
+            'p.id',
+            'p.name',
+            DB::raw('SUM(COALESCE(pv.stock_quantity, 0)) as stock_quantity'),
+            DB::raw('MAX(oi.created_at) as last_sold')
+        )
+        ->groupBy('p.id', 'p.name')
+        ->orderByRaw('MAX(oi.created_at) IS NULL DESC')
+        ->orderByRaw('MAX(oi.created_at) ASC')
+        ->limit(5)
+        ->get();
 
         $mostViewed = DB::table('wishlists as w')
             ->join('products as p', 'p.id', '=', 'w.product_id')
@@ -966,27 +971,28 @@ class ReportController extends Controller
             ->get();
 
         $topCustomers = DB::table('orders')
-            ->join('users', 'users.id', '=', 'orders.user_id')
-            ->leftJoinSub($refundByOrderSub, 'rbo', function ($join) {
-                $join->on('rbo.order_id', '=', 'orders.id');
-            })
-            ->whereIn('orders.status', $statuses)
-            ->whereBetween('orders.delivered_at', [$from, $to])
-            ->select(
-                'users.name',
-                DB::raw('COUNT(*) as orders'),
-                DB::raw('SUM(
-                    CASE
-                        WHEN (COALESCE(orders.total, 0) + COALESCE(orders.shipping_fee, 0)) - COALESCE(rbo.refund_total, 0) > 0
-                            THEN (COALESCE(orders.total, 0) + COALESCE(orders.shipping_fee, 0)) - COALESCE(rbo.refund_total, 0)
-                        ELSE 0
-                    END
-                ) as spending')
-            )
-            ->groupBy('users.id', 'users.name')
-            ->orderByDesc('spending')
-            ->limit(5)
-            ->get();
+        ->join('users', 'users.id', '=', 'orders.user_id')
+        ->leftJoinSub($refundByOrderSub, 'rbo', function ($join) {
+            $join->on('rbo.order_id', '=', 'orders.id');
+        })
+        ->whereIn('orders.status', $statuses)
+        ->whereBetween('orders.delivered_at', [$from, $to])
+        ->select(
+            'users.id',
+            'users.name',
+            DB::raw('COUNT(*) as orders'),
+            DB::raw('SUM(
+            CASE
+                WHEN (COALESCE(orders.total, 0) + COALESCE(orders.shipping_fee, 0)) - COALESCE(rbo.refund_total, 0) > 0
+                    THEN (COALESCE(orders.total, 0) + COALESCE(orders.shipping_fee, 0)) - COALESCE(rbo.refund_total, 0)
+                ELSE 0
+            END
+        ) as spending')
+        )
+        ->groupBy('users.id', 'users.name')
+        ->orderByDesc('spending')
+        ->limit(5)
+        ->get();
 
         $lowStock = DB::table('product_variants as pv')
             ->join('products as p', 'p.id', '=', 'pv.product_id')
@@ -1012,6 +1018,23 @@ class ReportController extends Controller
             ->orderByDesc(DB::raw('COALESCE(orders.cancelled_at, orders.updated_at, orders.created_at)'))
             ->limit(5)
             ->get();
+        $refunds = DB::table('refund_requests as rr')
+        ->join('orders as o', 'o.id', '=', 'rr.order_id')
+        ->join('users as u', 'u.id', '=', 'rr.user_id')
+        ->where('rr.status', 'refunded')
+        ->whereBetween('rr.updated_at', [$from, $to])
+        ->select(
+            'rr.id',
+            'o.id as order_id',
+            'u.name as customer_name',
+            'rr.refund_total',
+            'rr.loss_amount',
+            'rr.reason',
+            'rr.updated_at as refunded_at'
+        )
+        ->orderByDesc('rr.updated_at')
+        ->limit(5)
+        ->get();
 
         return [
             'from' => $range['from_date'],
@@ -1063,6 +1086,7 @@ class ReportController extends Controller
 
             'lowStock'   => $lowStock,
             'cancelList' => $cancelList,
+            'refunds' => $refunds,
         ];
     }
 
@@ -1126,22 +1150,23 @@ class ReportController extends Controller
         $refundByOrderSub = $this->getRefundByOrderSubquery();
 
         $query = DB::table('orders')
-            ->join('users', 'users.id', '=', 'orders.user_id')
-            ->leftJoinSub($refundByOrderSub, 'rbo', function ($join) {
-                $join->on('rbo.order_id', '=', 'orders.id');
-            })
+        ->join('users', 'users.id', '=', 'orders.user_id')
+        ->leftJoinSub($refundByOrderSub, 'rbo', function ($join) {
+            $join->on('rbo.order_id', '=', 'orders.id');
+        })
             ->whereIn('orders.status', $statuses)
             ->whereBetween('orders.delivered_at', [$range['from'], $range['to']])
             ->select(
+                'users.id',
                 'users.name',
                 DB::raw('COUNT(*) as orders'),
                 DB::raw('SUM(
-                    CASE
-                        WHEN (COALESCE(orders.total, 0) + COALESCE(orders.shipping_fee, 0)) - COALESCE(rbo.refund_total, 0) > 0
-                            THEN (COALESCE(orders.total, 0) + COALESCE(orders.shipping_fee, 0)) - COALESCE(rbo.refund_total, 0)
-                        ELSE 0
-                    END
-                ) as spending')
+                CASE
+                    WHEN (COALESCE(orders.total, 0) + COALESCE(orders.shipping_fee, 0)) - COALESCE(rbo.refund_total, 0) > 0
+                        THEN (COALESCE(orders.total, 0) + COALESCE(orders.shipping_fee, 0)) - COALESCE(rbo.refund_total, 0)
+                    ELSE 0
+                END
+            ) as spending')
             )
             ->groupBy('users.id', 'users.name')
             ->orderByDesc('spending');
@@ -1165,15 +1190,16 @@ class ReportController extends Controller
         $keyword = trim((string) $request->keyword);
         $days = $request->days;
 
-        $query = DB::table('product_variants as pv')
-            ->join('products as p', 'p.id', '=', 'pv.product_id')
+        $query = DB::table('products as p')
+        ->join('product_variants as pv', 'pv.product_id', '=', 'p.id')
             ->leftJoin('order_items as oi', 'oi.variant_id', '=', 'pv.id')
             ->select(
+                'p.id',
                 'p.name',
-                'pv.stock_quantity',
+                DB::raw('SUM(COALESCE(pv.stock_quantity, 0)) as stock_quantity'),
                 DB::raw('MAX(oi.created_at) as last_sold')
             )
-            ->groupBy('pv.id', 'p.name', 'pv.stock_quantity');
+            ->groupBy('p.id', 'p.name');
 
         if ($keyword !== '') {
             $query->where('p.name', 'like', "%{$keyword}%");
@@ -1187,7 +1213,7 @@ class ReportController extends Controller
         }
 
         $query->orderByRaw('MAX(oi.created_at) IS NULL DESC')
-            ->orderByRaw('MAX(oi.created_at) ASC');
+        ->orderByRaw('MAX(oi.created_at) ASC');
 
         $products = $query->paginate(20)->withQueryString();
 
@@ -1280,4 +1306,83 @@ class ReportController extends Controller
             'keyword' => $keyword,
         ]);
     }
+    public function refundOrders(Request $request)
+    {
+        $range = $this->getDateRange($request);
+        $keyword = trim((string) $request->keyword);
+
+        $query = DB::table('refund_requests as rr')
+        ->join('orders as o', 'o.id', '=', 'rr.order_id')
+        ->join('users as u', 'u.id', '=', 'rr.user_id')
+        ->where('rr.status', 'refunded')
+        ->whereBetween('rr.updated_at', [$range['from'], $range['to']])
+        ->select(
+            'rr.id',
+            'o.id as order_id',
+            'u.name as customer_name',
+            'rr.refund_total',
+            'rr.loss_amount',
+            'rr.reason',
+            'rr.updated_at as refunded_at',
+            'rr.status'
+        )
+            ->orderByDesc('rr.updated_at');
+
+        if ($keyword !== '') {
+            $query->where(function ($q) use ($keyword) {
+                $q->where('u.name', 'like', "%{$keyword}%")
+                ->orWhere('o.id', 'like', "%{$keyword}%");
+            });
+        }
+
+        $refunds = $query->paginate(20)->withQueryString();
+
+        return view('admin.reports.refund_orders', [
+            'refunds' => $refunds,
+            'from' => $range['from_date'],
+            'to' => $range['to_date'],
+            'keyword' => $keyword,
+        ]);
+    }
+    public function customerOrders(Request $request, $customerId)
+{
+    $range = $this->getDateRange($request);
+    $statuses = $this->deliveredStatuses();
+
+    $orders = DB::table('orders')
+        ->where('user_id', $customerId)
+        ->whereIn('status', $statuses)
+        ->whereBetween('delivered_at', [$range['from'], $range['to']])
+        ->select(
+            'id',
+            'status',
+            'created_at',
+            'delivered_at',
+            DB::raw('COALESCE(total, 0) + COALESCE(shipping_fee, 0) as total')
+        )
+        ->orderByDesc('delivered_at')
+        ->get()
+            ->map(function ($order) {
+                return [
+                    'id' => $order->id,
+                    'created_at' => $order->created_at
+                        ? Carbon::parse($order->created_at)->format('d/m/Y H:i')
+                        : '',
+                    'total' => number_format((int) ($order->total ?? 0)) . ' đ',
+                    'status_label' => match ((int) $order->status) {
+                        Order::STATUS_PENDING => '<span class="badge bg-warning text-dark">Chờ xử lý</span>',
+                        Order::STATUS_PROCESSING => '<span class="badge bg-info text-dark">Đang giao</span>',
+                        Order::STATUS_COMPLETED => '<span class="badge bg-success">Hoàn thành</span>',
+                        Order::STATUS_CANCELLED => '<span class="badge bg-danger">Đã hủy</span>',
+                        Order::STATUS_RETURNED => '<span class="badge bg-secondary">Hoàn trả</span>',
+                        default => '<span class="badge bg-light text-dark">Không rõ</span>',
+                    },
+                ];
+            })
+            ->values();
+
+    return response()->json([
+        'orders' => $orders,
+    ]);
+}
 }

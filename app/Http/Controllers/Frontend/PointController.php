@@ -42,13 +42,21 @@ class PointController extends Controller
         $levels = ['bronze', 'silver', 'gold', 'diamond'];
         $userIndex = array_search($user->member_level, $levels);
 
-        // Fix lỗi nếu member_level sai
         if ($userIndex === false) {
             $userIndex = 0;
         }
 
-        // Lấy reward phù hợp hạng
+        $now = now();
+
         $rewards = PointReward::where('is_active', 1)
+            ->where(function ($q) use ($now) {
+                $q->whereNull('redeem_start_at')
+                    ->orWhere('redeem_start_at', '<=', $now);
+            })
+            ->where(function ($q) use ($now) {
+                $q->whereNull('redeem_end_at')
+                    ->orWhere('redeem_end_at', '>=', $now);
+            })
             ->get()
             ->filter(function ($reward) use ($levels, $userIndex) {
                 $rewardIndex = array_search($reward->member_level, $levels);
@@ -56,7 +64,6 @@ class PointController extends Controller
                 return $rewardIndex !== false && $rewardIndex <= $userIndex;
             });
 
-        // Lấy reward đã đổi
         $redeemedRewardIds = DB::table('user_point_rewards')
             ->where('user_id', $user->id)
             ->pluck('point_reward_id')
@@ -99,6 +106,30 @@ class PointController extends Controller
                 throw new \Exception("Voucher này không còn khả dụng.");
             }
 
+            $now = now();
+
+            // Check thời gian đổi
+            if ($reward->redeem_start_at && $now->lt($reward->redeem_start_at)) {
+                throw new \Exception("Voucher chưa đến thời gian đổi.");
+            }
+
+            if ($reward->redeem_end_at && $now->gt($reward->redeem_end_at)) {
+                throw new \Exception("Voucher đã hết thời gian đổi.");
+            }
+
+            // Check hạng thành viên
+            $levels = ['bronze', 'silver', 'gold', 'diamond'];
+            $userIndex = array_search($user->member_level, $levels);
+            $rewardIndex = array_search($reward->member_level, $levels);
+
+            if ($userIndex === false) {
+                $userIndex = 0;
+            }
+
+            if ($rewardIndex === false || $rewardIndex > $userIndex) {
+                throw new \Exception("Hạng thành viên của bạn chưa đủ để đổi voucher này.");
+            }
+
             // Check đã đổi chưa
             $alreadyRedeemed = DB::table('user_point_rewards')
                 ->where('user_id', $user->id)
@@ -120,35 +151,22 @@ class PointController extends Controller
             |--------------------------------------------------------------------------
             */
             $user->decrement('loyalty_points', $reward->points_required);
-
-            /*
-            |--------------------------------------------------------------------------
-            | UPDATE MEMBER LEVEL
-            |--------------------------------------------------------------------------
-            */
             $user->refresh();
 
-            $points = $user->loyalty_points;
-
-            if ($points >= 10000) {
-                $user->member_level = 'diamond';
-            } elseif ($points >= 3000) {
-                $user->member_level = 'gold';
-            } elseif ($points >= 1000) {
-                $user->member_level = 'silver';
-            } else {
-                $user->member_level = 'bronze';
-            }
-
-            $user->save();
+            /*
+            |--------------------------------------------------------------------------
+            | TẠO MÃ KHÔNG TRÙNG
+            |--------------------------------------------------------------------------
+            */
+            do {
+                $code = 'POINT-' . strtoupper(Str::random(6));
+            } while (Promotion::where('code', $code)->exists());
 
             /*
             |--------------------------------------------------------------------------
-            | TẠO VOUCHER (QUAN TRỌNG: GẮN USER)
+            | TẠO VOUCHER (GẮN USER)
             |--------------------------------------------------------------------------
             */
-            $code = 'POINT-' . strtoupper(Str::random(6));
-
             $promotion = Promotion::create([
                 'code' => $code,
                 'name' => $reward->title,
@@ -162,8 +180,6 @@ class PointController extends Controller
                 'start_date' => Carbon::now(),
                 'end_date' => Carbon::now()->addDays($reward->valid_days),
                 'is_active' => 1,
-
-                // 🔥 FIX QUAN TRỌNG
                 'user_id' => $user->id,
             ]);
 
@@ -195,16 +211,13 @@ class PointController extends Controller
 
             /*
             |--------------------------------------------------------------------------
-            | NOTIFICATION (FIX ĐÚNG ROUTE)
+            | THÔNG BÁO
             |--------------------------------------------------------------------------
             */
             $user->notify(new SystemNotification([
                 'title' => 'Đổi điểm thành công',
                 'message' => 'Bạn đã nhận voucher: ' . $code,
-
-                // 🔥 FIX: KHÔNG dùng POST route nữa
                 'url' => route('cart.index'),
-
                 'type' => 'voucher',
                 'meta' => [
                     'code' => $code,
@@ -216,7 +229,6 @@ class PointController extends Controller
                 ->route('points.redeem.page')
                 ->with('success', "Đổi thành công. Mã: {$code}");
         } catch (\Exception $e) {
-
             DB::rollBack();
 
             return back()->with('error', $e->getMessage());

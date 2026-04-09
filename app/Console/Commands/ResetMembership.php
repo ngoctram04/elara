@@ -3,36 +3,40 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use App\Models\User;
 
 class ResetMembership extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
-    protected $signature = 'app:reset-membership';
+    protected $signature = 'membership:reset {--force-test : Giả lập ngày 01/01/2027 để demo}';
+    protected $description = 'Reset hạng thành viên vào đầu năm';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
-    protected $description = 'Command description';
+    public function handle(): int
+    {
+        $now = now();
 
-    /**
-     * Execute the console command.
-     */
-    public function handle()
-{
-\App\Models\User::query()->update([
-'yearly_spent'    => 0,
-'member_level'    => 'bronze',
-'membership_year' => now()->year
-]);
+        // TEST: giả lập năm 2027
+        if ($this->option('force-test')) {
+            $now = now()->setDate(2027, 1, 1);
+            $this->info('Đang chạy chế độ TEST: giả lập ngày 01/01/2027.');
+        }
 
-$this->info('Membership reset completed');
+        // Chỉ chạy vào ngày 01/01
+        if ($now->month != 1 || $now->day != 1) {
+            $this->info('Hôm nay không phải ngày 01/01, bỏ qua reset hạng thành viên.');
+            return self::SUCCESS;
+        }
 
-}
+        // Reset user chưa được cập nhật năm mới
+        $updated = User::query()
+            ->where('membership_year', '<', $now->year)
+            ->update([
+                'yearly_spent'    => 0,
+                'member_level'    => 'bronze',
+                'membership_year' => $now->year,
+            ]);
 
+        $this->info("Đã reset hạng thành viên cho {$updated} người dùng.");
+
+        return self::SUCCESS;
+    }
 }

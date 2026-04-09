@@ -52,6 +52,49 @@
                         $checked = in_array($item->id, old('items', []));
                         $oldCondition = old("item_conditions.{$item->id}", 'sealed');
                         $oldNote = old("item_notes.{$item->id}");
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | TÊN BIẾN THỂ HIỂN THỊ CHO KHÁCH
+                        |--------------------------------------------------------------------------
+                        | Ưu tiên lấy các field phổ biến:
+                        | - variant_name / name
+                        | - attribute_value / value
+                        | - attribute_name + attribute_value
+                        | - option1/option2/option3
+                        | - dung tích / màu / size nếu có
+                        */
+                        $variantDisplay = null;
+
+                        if ($variant) {
+                            if (!empty($variant->variant_name)) {
+                                $variantDisplay = $variant->variant_name;
+                            } elseif (!empty($variant->name)) {
+                                $variantDisplay = $variant->name;
+                            } elseif (!empty($variant->attribute_name) && !empty($variant->attribute_value)) {
+                                $variantDisplay = $variant->attribute_name . ': ' . $variant->attribute_value;
+                            } elseif (!empty($variant->attribute_value)) {
+                                $variantDisplay = $variant->attribute_value;
+                            } else {
+                                $parts = collect([
+                                    $variant->option1 ?? null,
+                                    $variant->option2 ?? null,
+                                    $variant->option3 ?? null,
+                                    $variant->color ?? null,
+                                    $variant->shade ?? null,
+                                    $variant->size ?? null,
+                                    $variant->volume ?? null,
+                                    $variant->capacity ?? null,
+                                    $variant->weight ?? null,
+                                ])->filter(fn ($value) => filled($value))->values();
+
+                                if ($parts->isNotEmpty()) {
+                                    $variantDisplay = $parts->implode(' - ');
+                                }
+                            }
+                        }
+
+                        $variantDisplay = $variantDisplay ?: 'Mặc định';
                     @endphp
 
                     <div class="refund-item-card {{ $checked ? 'checked' : '' }}">
@@ -78,9 +121,11 @@
                                     {{ $product->name ?? 'Sản phẩm' }}
                                 </label>
 
+                                <div class="refund-item-variant">
+                                    {{ $variantDisplay }}
+                                </div>
+
                                 <div class="refund-item-meta">
-                                    BT{{ str_pad($variant->id ?? 0, 5, '0', STR_PAD_LEFT) }}
-                                    <span class="dot">•</span>
                                     Số lượng: x{{ $item->quantity ?? 1 }}
                                 </div>
 
@@ -326,6 +371,13 @@
     font-weight:700;
     color:var(--rf-text);
     margin-bottom:4px;
+    line-height:1.5;
+}
+
+.refund-item-variant{
+    font-size:13px;
+    color:#334155;
+    margin-bottom:6px;
     line-height:1.5;
 }
 

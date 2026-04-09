@@ -70,7 +70,7 @@ class Order extends Model
     */
     public const STATUS_PENDING    = 1; // Đang xử lý
     public const STATUS_PROCESSING = 2; // Đang giao
-    public const STATUS_COMPLETED  = 3; // Đã giao
+    public const STATUS_COMPLETED  = 3; // Đã giao / hoàn tất
     public const STATUS_CANCELLED  = 4; // Đã huỷ
     public const STATUS_RETURNED   = 5; // Đổi trả / hoàn tiền
 
@@ -214,6 +214,16 @@ class Order extends Model
 
     public function isCompleted(): bool
     {
+        return $this->status == self::STATUS_COMPLETED && $this->customer_confirmed;
+    }
+
+    public function isWaitingCustomerConfirm(): bool
+    {
+        return $this->status == self::STATUS_COMPLETED && !$this->customer_confirmed;
+    }
+
+    public function isDelivered(): bool
+    {
         return $this->status == self::STATUS_COMPLETED;
     }
 
@@ -282,6 +292,21 @@ class Order extends Model
         return $query->where('status', self::STATUS_COMPLETED);
     }
 
+    public function scopeConfirmedCompleted($query)
+    {
+        return $query->where('status', self::STATUS_COMPLETED)
+            ->where('customer_confirmed', true);
+    }
+
+    public function scopeWaitingCustomerConfirm($query)
+    {
+        return $query->where('status', self::STATUS_COMPLETED)
+            ->where(function ($q) {
+                $q->where('customer_confirmed', false)
+                    ->orWhereNull('customer_confirmed');
+            });
+    }
+
     public function scopeCancelled($query)
     {
         return $query->where('status', self::STATUS_CANCELLED);
@@ -321,13 +346,22 @@ class Order extends Model
         static::updating(function ($order) {
             /*
             |------------------------------------------------------------------
-            | 1. GIAO THÀNH CÔNG -> GỬI MAIL HOÀN TẤT
+            | 1. GIAO THÀNH CÔNG -> GỬI MAIL
+            | status = COMPLETED nghĩa là đơn đã giao thành công
             |------------------------------------------------------------------
             */
             if (
                 $order->isDirty('status') &&
                 $order->status == self::STATUS_COMPLETED
             ) {
+                if (!$order->delivered_at) {
+                    $order->delivered_at = now();
+                }
+
+                if (is_null($order->customer_confirmed)) {
+                    $order->customer_confirmed = false;
+                }
+
                 $order->loadMissing('user');
 
                 if ($order->user && $order->user->email) {
@@ -339,8 +373,6 @@ class Order extends Model
             /*
             |------------------------------------------------------------------
             | 2. HUỶ ĐƠN
-            | Chỉ set cancelled_at + trạng thái hoàn tiền VNPAY nếu cần
-            | KHÔNG hoàn kho tại đây vì controller đã xử lý theo batch
             |------------------------------------------------------------------
             */
             if (
@@ -370,6 +402,19 @@ class Order extends Model
                 $order->status == self::STATUS_COMPLETED
             ) {
                 $order->payment_status = self::PAYMENT_PAID;
+            }
+
+            /*
+            |------------------------------------------------------------------
+            | 4. Khi khách xác nhận nhận hàng mà chưa có received_at
+            |------------------------------------------------------------------
+            */
+            if (
+                $order->isDirty('customer_confirmed') &&
+                (bool) $order->customer_confirmed === true &&
+                !$order->received_at
+            ) {
+                $order->received_at = now();
             }
         });
     }
