@@ -15,6 +15,20 @@ function formatPrice(value) {
     return number.toLocaleString("vi-VN") + "₫";
 }
 
+function appendAiMessage(chat, label, content, isHtml = false) {
+    const div = document.createElement("div");
+    div.className = "ai-msg";
+
+    if (isHtml) {
+        div.innerHTML = `<b>${label}:</b> ${content}`;
+    } else {
+        div.innerHTML = `<b>${label}:</b> ${escapeHtml(content)}`;
+    }
+
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+}
+
 /* ==============================
    MỞ / ĐÓNG AI CHAT
 ============================== */
@@ -30,9 +44,7 @@ window.toggleAIChat = function () {
         box.style.display = "flex";
 
         if (chat.innerHTML.trim() === "") {
-            chat.innerHTML = `
-                <div class="ai-msg"><b>AI:</b> Xin chào! Tôi là trợ lý ELARA. Bạn cần tư vấn mỹ phẩm gì?</div>
-            `;
+            appendAiMessage(chat, "AI", "Xin chào! Tôi là trợ lý ELARA. Bạn cần tư vấn mỹ phẩm gì?");
         }
 
         chat.scrollTop = chat.scrollHeight;
@@ -45,16 +57,15 @@ window.toggleAIChat = function () {
 window.sendAI = function () {
     const input = document.getElementById("ai-input");
     const chat = document.getElementById("ai-messages");
-    const aiSendUrl = document.body.dataset.aiSendUrl;
+    const aiSendUrl = document.body?.dataset?.aiSendUrl || "";
 
     if (!input || !chat) return;
 
     const msg = input.value.trim();
     if (!msg) return;
 
-    chat.innerHTML += `<div class="ai-msg"><b>Bạn:</b> ${escapeHtml(msg)}</div>`;
+    appendAiMessage(chat, "Bạn", msg);
     input.value = "";
-    chat.scrollTop = chat.scrollHeight;
 
     const loading = document.createElement("div");
     loading.className = "ai-msg";
@@ -72,15 +83,22 @@ window.sendAI = function () {
         headers: {
             "Content-Type": "application/json",
             "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.content || "",
-            "Accept": "application/json"
+            "Accept": "application/json",
+            "X-Requested-With": "XMLHttpRequest"
         },
         body: JSON.stringify({ message: msg })
     })
         .then(async (res) => {
-            const data = await res.json();
+            let data = {};
+
+            try {
+                data = await res.json();
+            } catch (e) {
+                throw new Error("Phản hồi từ AI không hợp lệ.");
+            }
 
             if (!res.ok) {
-                throw new Error(data.reply || "AI đang bận, bạn thử lại sau nhé.");
+                throw new Error(data.reply || data.message || "AI đang bận, bạn thử lại sau nhé.");
             }
 
             return data;
@@ -88,12 +106,19 @@ window.sendAI = function () {
         .then((data) => {
             loading.remove();
 
-            chat.innerHTML += `
-                <div class="ai-msg"><b>AI:</b> ${escapeHtml(data.reply ?? "")}</div>
-            `;
+            const reply = data.reply ?? "";
+            const type = data.type ?? "text";
 
-            if (Array.isArray(data.products) && data.products.length > 0) {
-                data.products.forEach((p) => {
+            if (type === "html") {
+                appendAiMessage(chat, "AI", reply, true);
+            } else {
+                appendAiMessage(chat, "AI", reply, false);
+            }
+
+            const renderProducts = (items) => {
+                if (!Array.isArray(items) || items.length === 0) return;
+
+                items.forEach((p) => {
                     const finalPrice = p.formatted_price
                         ? escapeHtml(p.formatted_price)
                         : formatPrice(p.price);
@@ -102,88 +127,55 @@ window.sendAI = function () {
                         ? escapeHtml(p.formatted_old_price)
                         : (p.old_price ? formatPrice(p.old_price) : "");
 
-                    chat.innerHTML += `
-                        <div class="ai-product-row" style="display:flex;gap:8px;margin-top:8px;align-items:flex-start;">
-                            <img
-                                src="${escapeHtml(p.image ?? "")}"
-                                alt="${escapeHtml(p.name ?? "")}"
-                                style="width:50px;height:50px;border-radius:6px;object-fit:cover;"
-                            >
-                            <div style="flex:1;min-width:0;">
-                                <a href="${escapeHtml(p.url ?? "#")}" target="_blank" style="display:block;font-weight:500;text-decoration:none;">
-                                    ${escapeHtml(p.name ?? "")}
-                                </a>
+                    const row = document.createElement("div");
+                    row.className = "ai-product-row";
+                    row.style.display = "flex";
+                    row.style.gap = "8px";
+                    row.style.marginTop = "8px";
+                    row.style.alignItems = "flex-start";
 
-                                ${p.brand ? `
-                                    <div style="font-size:12px;color:#888;margin-top:2px;">
-                                        ${escapeHtml(p.brand)}
-                                    </div>
-                                ` : ""}
+                    row.innerHTML = `
+                        <img
+                            src="${escapeHtml(p.image ?? "")}"
+                            alt="${escapeHtml(p.name ?? "")}"
+                            style="width:50px;height:50px;border-radius:6px;object-fit:cover;"
+                        >
 
-                                <div style="margin-top:4px;display:flex;align-items:center;flex-wrap:wrap;gap:6px;">
-                                    ${oldPrice ? `
-                                        <span style="color:#999;font-size:13px;text-decoration:line-through;">
-                                            ${oldPrice}
-                                        </span>
-                                    ` : ""}
-                                    <span style="color:#e74c3c;font-weight:700;">
-                                        ${finalPrice}
-                                    </span>
+                        <div style="flex:1;min-width:0;">
+                            <a href="${escapeHtml(p.url ?? "#")}" target="_blank" style="display:block;font-weight:500;text-decoration:none;">
+                                ${escapeHtml(p.name ?? "")}
+                            </a>
+
+                            ${p.brand ? `
+                                <div style="font-size:12px;color:#888;margin-top:2px;">
+                                    ${escapeHtml(p.brand)}
                                 </div>
+                            ` : ""}
+
+                            <div style="margin-top:4px;display:flex;align-items:center;flex-wrap:wrap;gap:6px;">
+                                ${oldPrice ? `
+                                    <span style="color:#999;font-size:13px;text-decoration:line-through;">
+                                        ${oldPrice}
+                                    </span>
+                                ` : ""}
+                                <span style="color:#e74c3c;font-weight:700;">
+                                    ${finalPrice}
+                                </span>
                             </div>
                         </div>
                     `;
+
+                    chat.appendChild(row);
                 });
-            }
+            };
 
-            if (Array.isArray(data.suggestions) && data.suggestions.length > 0) {
-                data.suggestions.forEach((p) => {
-                    const finalPrice = p.formatted_price
-                        ? escapeHtml(p.formatted_price)
-                        : formatPrice(p.price);
-
-                    const oldPrice = p.formatted_old_price
-                        ? escapeHtml(p.formatted_old_price)
-                        : (p.old_price ? formatPrice(p.old_price) : "");
-
-                    chat.innerHTML += `
-                        <div class="ai-product-row" style="display:flex;gap:8px;margin-top:8px;align-items:flex-start;">
-                            <img
-                                src="${escapeHtml(p.image ?? "")}"
-                                alt="${escapeHtml(p.name ?? "")}"
-                                style="width:50px;height:50px;border-radius:6px;object-fit:cover;"
-                            >
-                            <div style="flex:1;min-width:0;">
-                                <a href="${escapeHtml(p.url ?? "#")}" target="_blank" style="display:block;font-weight:500;text-decoration:none;">
-                                    ${escapeHtml(p.name ?? "")}
-                                </a>
-
-                                ${p.brand ? `
-                                    <div style="font-size:12px;color:#888;margin-top:2px;">
-                                        ${escapeHtml(p.brand)}
-                                    </div>
-                                ` : ""}
-
-                                <div style="margin-top:4px;display:flex;align-items:center;flex-wrap:wrap;gap:6px;">
-                                    ${oldPrice ? `
-                                        <span style="color:#999;font-size:13px;text-decoration:line-through;">
-                                            ${oldPrice}
-                                        </span>
-                                    ` : ""}
-                                    <span style="color:#e74c3c;font-weight:700;">
-                                        ${finalPrice}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-            }
+            renderProducts(data.products);
+            renderProducts(data.suggestions);
 
             chat.scrollTop = chat.scrollHeight;
         })
         .catch((err) => {
-            loading.innerHTML = `<b>AI:</b> ${escapeHtml(err.message)}`;
+            loading.innerHTML = `<b>AI:</b> ${escapeHtml(err.message || "AI đang bận, bạn thử lại sau nhé.")}`;
             chat.scrollTop = chat.scrollHeight;
         });
 };

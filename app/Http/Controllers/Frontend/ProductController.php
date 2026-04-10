@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Frontend;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Wishlist;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class ProductController extends Controller
 {
@@ -16,14 +16,15 @@ class ProductController extends Controller
 
         /* ======================================================
          * 1. LOAD PRODUCT
+         * - CHI TIẾT SẢN PHẨM PHẢI LOAD TẤT CẢ BIẾN THỂ
+         * - ĐỂ BIẾN THỂ HẾT HÀNG VẪN HIỂN THỊ
          * ====================================================== */
         $product = Product::with([
             'images',
             'mainImage',
 
             'variants' => function ($q) {
-                $q->where('is_active', 1)
-                    ->orderBy('id')
+                $q->orderBy('id')
                     ->with('images');
             },
 
@@ -130,6 +131,8 @@ class ProductController extends Controller
 
         /* ======================================================
          * 7. RELATED PRODUCTS
+         * - CHỈ HIỂN THỊ SẢN PHẨM ĐANG BÁN
+         * - PHẢI CÓ ÍT NHẤT 1 BIẾN THỂ ACTIVE VÀ CÒN HÀNG
          * ====================================================== */
         $relatedProducts = Product::with([
             'mainImage',
@@ -262,8 +265,7 @@ class ProductController extends Controller
             'images',
             'mainImage',
             'variants' => function ($q) {
-                $q->where('is_active', 1)
-                    ->orderBy('id')
+                $q->orderBy('id')
                     ->with('images');
             },
             'category',

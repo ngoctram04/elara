@@ -30,7 +30,6 @@
                 });
             @endphp
 
-
             @if($hasUnreviewedItems)
                 <a href="{{ route('reviews.create', $order->id) }}"
                    class="btn btn-primary btn-sm btn-action-soft">
@@ -373,20 +372,22 @@
                     <span class="summary-total-price">{{ number_format($order->grand_total) }}đ</span>
                 </div>
 
-                @if($order->isCompleted() || $order->refundRequest)
-                    @php
-                        $refund = $order->refundRequest;
-                    @endphp
+                @php
+                    $refund = $order->refundRequest;
+                @endphp
 
+                @if($order->isCompleted() || $refund)
                     <div class="refund-box">
-                        @if(!$refund)
+                        @if($order->canRequestRefund())
                             <button type="button"
                                     class="btn btn-outline-danger btn-sm px-3 btn-action-soft btn-refund"
                                     data-url="{{ route('refund.create', $order->id) }}">
                                 <i class="bi bi-arrow-counterclockwise me-1"></i>
                                 Yêu cầu trả hàng / hoàn tiền
                             </button>
-                        @else
+                        @endif
+
+                        @if($refund)
                             <div class="refund-top-action mb-2">
                                 <a href="{{ route('refund.show', $refund->id) }}"
                                    class="btn btn-outline-danger btn-sm btn-action-soft">

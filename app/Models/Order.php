@@ -418,4 +418,30 @@ class Order extends Model
             }
         });
     }
+    public function canRequestRefund(): bool
+    {
+        if ($this->status != self::STATUS_COMPLETED) {
+            return false;
+        }
+
+        if (!(bool) $this->customer_confirmed) {
+            return false;
+        }
+
+        if (!$this->received_at) {
+            return false;
+        }
+
+        // đã từng gửi hoàn trả rồi thì ẩn luôn
+        if ($this->refundRequest) {
+            return false;
+        }
+
+        // quá 3 ngày thì ẩn luôn
+        return now()->lte($this->received_at->copy()->addDays(3));
+    }
+    public function getRefundDeadlineAttribute()
+    {
+        return $this->received_at?->copy()->addDays(3);
+    }
 }

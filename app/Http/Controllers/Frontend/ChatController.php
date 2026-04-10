@@ -17,8 +17,14 @@ class ChatController extends Controller
 {
     public function index()
     {
+        $userId = Auth::id();
+
+        if (!$userId) {
+            return redirect()->route('login')->with('error', 'Bạn cần đăng nhập để chat với nhân viên.');
+        }
+
         $conversation = ChatConversation::firstOrCreate([
-            'user_id' => Auth::id(),
+            'user_id' => $userId,
         ]);
 
         return view('frontend.chat.index', compact('conversation'));
@@ -26,22 +32,28 @@ class ChatController extends Controller
 
     public function messages()
     {
-        $conversation = ChatConversation::where('user_id', Auth::id())->first();
+        $userId = Auth::id();
+
+        if (!$userId) {
+            return response()->json([], 401);
+        }
+
+        $conversation = ChatConversation::where('user_id', $userId)->first();
 
         if (!$conversation) {
             return response()->json([]);
         }
 
         ChatMessage::where('conversation_id', $conversation->id)
-            ->where('sender_id', '!=', Auth::id())
+            ->where('sender_id', '!=', $userId)
             ->update(['is_read' => 1]);
 
         $messages = ChatMessage::with('sender')
             ->where('conversation_id', $conversation->id)
             ->orderBy('created_at', 'asc')
             ->get()
-            ->map(function ($msg) {
-                $isUser = (int) $msg->sender_id === (int) Auth::id();
+            ->map(function ($msg) use ($userId) {
+                $isUser = (int) $msg->sender_id === (int) $userId;
 
                 return [
                     'id' => $msg->id,
@@ -59,6 +71,15 @@ class ChatController extends Controller
 
     public function send(Request $request)
     {
+        $userId = Auth::id();
+
+        if (!$userId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Bạn cần đăng nhập để gửi tin nhắn cho nhân viên.',
+            ], 401);
+        }
+
         $request->validate([
             'message' => 'nullable|string|max:2000',
             'file' => 'nullable|image|max:5120',
@@ -67,7 +88,7 @@ class ChatController extends Controller
         $messageText = trim((string) $request->input('message', ''));
 
         $conversation = ChatConversation::firstOrCreate([
-            'user_id' => Auth::id(),
+            'user_id' => $userId,
         ]);
 
         $createdMessages = [];
@@ -75,7 +96,7 @@ class ChatController extends Controller
         if ($messageText !== '') {
             $createdMessages[] = ChatMessage::create([
                 'conversation_id' => $conversation->id,
-                'sender_id' => Auth::id(),
+                'sender_id' => $userId,
                 'message' => $messageText,
                 'is_read' => 0,
             ]);
@@ -86,7 +107,7 @@ class ChatController extends Controller
 
             $createdMessages[] = ChatMessage::create([
                 'conversation_id' => $conversation->id,
-                'sender_id' => Auth::id(),
+                'sender_id' => $userId,
                 'message' => '/storage/' . $path,
                 'is_read' => 0,
             ]);
@@ -140,6 +161,7 @@ class ChatController extends Controller
 
             Log::info('chatbot_send_ai_success', [
                 'user_id' => Auth::id(),
+                'is_guest' => Auth::guest(),
                 'message' => $message,
                 'result_type' => $result['type'] ?? 'text',
                 'products_count' => count($result['products'] ?? []),
@@ -153,6 +175,7 @@ class ChatController extends Controller
         } catch (Throwable $e) {
             Log::error('chatbot_send_ai_error', [
                 'user_id' => Auth::id(),
+                'is_guest' => Auth::guest(),
                 'message' => $message,
                 'error_message' => $e->getMessage(),
                 'error_file' => $e->getFile(),
@@ -170,7 +193,15 @@ class ChatController extends Controller
 
     public function unreadCount()
     {
-        $conversation = ChatConversation::where('user_id', Auth::id())->first();
+        $userId = Auth::id();
+
+        if (!$userId) {
+            return response()->json([
+                'count' => 0,
+            ]);
+        }
+
+        $conversation = ChatConversation::where('user_id', $userId)->first();
 
         if (!$conversation) {
             return response()->json([
@@ -179,7 +210,7 @@ class ChatController extends Controller
         }
 
         $count = ChatMessage::where('conversation_id', $conversation->id)
-            ->where('sender_id', '!=', Auth::id())
+            ->where('sender_id', '!=', $userId)
             ->where('is_read', 0)
             ->count();
 

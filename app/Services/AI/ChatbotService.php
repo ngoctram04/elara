@@ -20,10 +20,10 @@ class ChatbotService
         $msg = $this->normalize($original);
 
         /*
-    |--------------------------------------------------------------------------
-    | NHÓM CÂU NGẮN CƠ BẢN
-    |--------------------------------------------------------------------------
-    */
+        |--------------------------------------------------------------------------
+        | NHÓM CÂU NGẮN CƠ BẢN
+        |--------------------------------------------------------------------------
+        */
         if ($this->isGreetingOnly($msg)) {
             return $this->text(
                 "Xin chào! Mình là trợ lý tư vấn của ELARA.\n" .
@@ -40,31 +40,31 @@ class ChatbotService
         }
 
         /*
-    |--------------------------------------------------------------------------
-    | ƯU TIÊN SUPPORT / ĐƠN HÀNG TRƯỚC KHI SEARCH SẢN PHẨM
-    |--------------------------------------------------------------------------
-    */
+        |--------------------------------------------------------------------------
+        | ƯU TIÊN SUPPORT / ĐƠN HÀNG TRƯỚC KHI SEARCH SẢN PHẨM
+        |--------------------------------------------------------------------------
+        */
         if ($this->isHumanSupport($msg)) {
-            return $this->text(
+            return $this->html(
                 'Nếu bạn cần hỗ trợ gấp hoặc muốn gặp nhân viên, bạn vui lòng ' .
-                    '<a href="http://127.0.0.1:8000/chat" target="_blank" rel="noopener noreferrer">nhấn vào đây để chat với nhân viên</a> ' .
+                    '<a href="' . url('/chat') . '" target="_blank" rel="noopener noreferrer">nhấn vào đây để chat với nhân viên</a> ' .
                     'để được hỗ trợ trực tiếp nhanh hơn nhé.'
             );
         }
 
         if ($this->isOrderQuestion($msg)) {
-            return $this->text(
+            return $this->html(
                 'Nếu bạn cần xử lý đơn hàng gấp, kiểm tra tình trạng đơn, đổi địa chỉ hoặc hủy đơn, bạn vui lòng ' .
-                    '<a href="http://127.0.0.1:8000/orders" target="_blank" rel="noopener noreferrer">vào mục Đơn hàng của tôi</a> ' .
+                    '<a href="' . url('/orders') . '" target="_blank" rel="noopener noreferrer">vào mục Đơn hàng của tôi</a> ' .
                     'hoặc nhắn nhân viên để được hỗ trợ nhanh hơn nhé.'
             );
         }
 
         /*
-    |--------------------------------------------------------------------------
-    | CHĂM SÓC DA / ROUTINE
-    |--------------------------------------------------------------------------
-    */
+        |--------------------------------------------------------------------------
+        | CHĂM SÓC DA / ROUTINE
+        |--------------------------------------------------------------------------
+        */
         if ($this->isRoutineQuestion($msg)) {
             $routine = $this->tools->suggestRoutineByMessage($original);
             $steps = $routine['routine'] ?? [];
@@ -103,10 +103,10 @@ class ChatbotService
         }
 
         /*
-    |--------------------------------------------------------------------------
-    | THÔNG TIN SHOP
-    |--------------------------------------------------------------------------
-    */
+        |--------------------------------------------------------------------------
+        | THÔNG TIN SHOP
+        |--------------------------------------------------------------------------
+        */
         if ($this->isPromotionQuestion($msg)) {
             $promo = $this->tools->getPromotions();
 
@@ -156,10 +156,10 @@ class ChatbotService
         }
 
         /*
-    |--------------------------------------------------------------------------
-    | TÌM SẢN PHẨM / GIÁ
-    |--------------------------------------------------------------------------
-    */
+        |--------------------------------------------------------------------------
+        | TÌM SẢN PHẨM / GIÁ
+        |--------------------------------------------------------------------------
+        */
         $budget = $this->extractBudget($msg);
         $keyword = $this->extractProductKeyword($original);
 
@@ -280,10 +280,10 @@ class ChatbotService
         }
 
         /*
-    |--------------------------------------------------------------------------
-    | FALLBACK AI - NHƯNG VẪN BÁM CSDL
-    |--------------------------------------------------------------------------
-    */
+        |--------------------------------------------------------------------------
+        | FALLBACK AI - NHƯNG VẪN BÁM CSDL
+        |--------------------------------------------------------------------------
+        */
         if ($this->gemini->isConfigured()) {
             $dbContext = $this->buildDatabaseContext($original, $keyword, $budget);
 
@@ -306,6 +306,15 @@ class ChatbotService
     {
         return [
             'type' => 'text',
+            'reply' => $msg,
+            'products' => [],
+        ];
+    }
+
+    protected function html(string $msg): array
+    {
+        return [
+            'type' => 'html',
             'reply' => $msg,
             'products' => [],
         ];
@@ -373,6 +382,7 @@ class ChatbotService
             'gap gap',
             'gap nguoi',
             'tu van truc tiep',
+            'lien he nhan vien',
         ]);
     }
 

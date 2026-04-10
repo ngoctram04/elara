@@ -28,7 +28,7 @@ class OrderController extends Controller
             'refundRequest'
         ])
             ->where('user_id', Auth::id())
-            ->latest();
+            ->orderByRaw('COALESCE(updated_at, created_at) DESC');
 
         if ($request->filled('keyword')) {
             $keyword = trim($request->keyword);

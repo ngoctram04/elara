@@ -31,7 +31,7 @@
     data-auth="{{ auth()->check() ? '1' : '0' }}"
     data-chat-unread-url="{{ auth()->check() ? route('chat.unreadCount') : '' }}"
     data-mark-all-read-url="{{ auth()->check() ? route('notifications.markAllRead') : '' }}"
-    data-ai-send-url="{{ auth()->check() ? route('chat.ai.send') : '' }}"
+    data-ai-send-url="{{ route('chat.ai.send') }}"
 >
     <header class="header-box">
         <div class="header-inner">
@@ -211,7 +211,11 @@
                         <li><a href="{{ route('home') }}">Trang chủ</a></li>
                         <li><a href="{{ route('shop') }}">Sản phẩm</a></li>
                         <li><a href="{{ route('cart.index') }}">Giỏ hàng</a></li>
-                        <li><a href="{{ route('chat.index') }}">Liên hệ</a></li>
+                        <li>
+                            <a href="{{ auth()->check() ? route('chat.index') : route('login') }}">
+                                Liên hệ
+                            </a>
+                        </li>
                     </ul>
                 </div>
 
@@ -263,7 +267,7 @@
 
     {{-- CHAT NHÂN VIÊN --}}
     <div class="floating-right">
-        <a href="{{ route('chat.index') }}" class="float-btn contact-btn position-relative">
+        <a href="{{ auth()->check() ? route('chat.index') : route('login') }}" class="float-btn contact-btn position-relative">
             <div class="chat-float">
                 <i class="bi bi-chat-dots"></i>
                 <span id="chat-badge" class="chat-badge" style="display:none;">0</span>

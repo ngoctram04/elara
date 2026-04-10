@@ -708,13 +708,11 @@ body{
                             @endif
 
                             {{-- TRẢ HÀNG / HOÀN TIỀN --}}
-                            @if($order->isCompleted() && !$order->refundRequest)
-                                <button type="button"
-                                        class="btn btn-outline-danger btn-sm btn-action btn-refund"
-                                        data-url="{{ route('refund.create', $order->id) }}">
-                                    Trả hàng / Hoàn tiền
-                                </button>
-                            @endif
+                            @if($order->canRequestRefund())
+    <a href="{{ route('refund.create', $order->id) }}" class="btn btn-outline-danger">
+        Trả hàng / Hoàn tiền
+    </a>
+@endif
 
                             {{-- ĐÁNH GIÁ TẤT CẢ --}}
                             @php

@@ -55,7 +55,10 @@
                     <li>Thời gian giao hàng dự kiến từ <b>2 - 5 ngày</b>.</li>
                     <li>Hỗ trợ <b>thanh toán khi nhận hàng (COD)</b>.</li>
                     <li>Khách hàng được <b>kiểm tra sản phẩm</b> trước khi thanh toán.</li>
-                    <li>Hỗ trợ <b>đổi trả/hoàn tiền</b> khi sản phẩm gặp lỗi, hư hỏng hoặc có vấn đề phát sinh theo quy định của hệ thống.</li>
+                    <li>
+                        Hỗ trợ <b>đổi trả/hoàn tiền trong vòng 3 ngày</b> kể từ khi nhận hàng
+                        nếu sản phẩm bị lỗi, hư hỏng hoặc giao sai sản phẩm.
+                    </li>
                 </ul>
 
                 <div class="policy-alert warning mt-2">
@@ -63,12 +66,11 @@
                         <i class="bi bi-exclamation-triangle-fill"></i>
                     </div>
                     <div class="alert-content">
-                        <div class="alert-title">Lưu ý về phí vận chuyển khi hoàn tiền</div>
+                        <div class="alert-title">Lưu ý về đổi trả và hoàn tiền</div>
                         <div>
-                            Trong trường hợp khách hàng yêu cầu <b>đổi trả/hoàn tiền</b>, 
-                            <b>phí vận chuyển sẽ do khách hàng chịu</b>. 
-                            Số tiền hoàn lại thực tế sẽ được tính sau khi <b>trừ phí vận chuyển</b> liên quan đến đơn hàng.
-                            Nếu đơn hàng có phát sinh tiền ship, hệ thống sẽ <b>khấu trừ trực tiếp tiền ship vào số tiền hoàn</b>.
+                            Khách hàng chỉ được yêu cầu đổi trả trong vòng <b>3 ngày</b> kể từ khi nhận hàng.
+                            <b>Phí vận chuyển khi đổi trả sẽ do khách hàng chịu</b>.
+                            Số tiền hoàn lại sẽ được tính sau khi <b>trừ phí vận chuyển</b> phát sinh (nếu có).
                         </div>
                     </div>
                 </div>
@@ -87,14 +89,14 @@
                 </div>
 
                 <p class="policy-text">
-                    Khi sử dụng hệ thống ELARA, bạn đồng ý tuân thủ các điều khoản cơ bản sau:
+                    Khi sử dụng hệ thống ELARA, khách hàng đồng ý tuân thủ các điều khoản sau:
                 </p>
 
                 <ul class="policy-list">
                     <li>Không sử dụng website cho mục đích gian lận hoặc vi phạm pháp luật.</li>
                     <li>Cung cấp thông tin cá nhân chính xác khi mua hàng.</li>
-                    <li>Tôn trọng hệ thống và những người dùng khác trong quá trình sử dụng.</li>
-                    <li>Trong trường hợp phát sinh yêu cầu đổi trả/hoàn tiền, khách hàng cần cung cấp thông tin trung thực và phối hợp với hệ thống để xác minh đơn hàng.</li>
+                    <li>Tôn trọng hệ thống và người dùng khác trong quá trình sử dụng.</li>
+                    <li>Khi yêu cầu đổi trả/hoàn tiền, khách hàng cần cung cấp thông tin trung thực để hệ thống xác minh đơn hàng.</li>
                 </ul>
 
                 <div class="policy-alert warning mt-2">
@@ -106,7 +108,7 @@
                         <div>
                             Nếu tài khoản thực hiện <b>7 lần hủy đơn trong vòng 7 ngày</b>,
                             hệ thống có thể <b>tạm khóa tài khoản</b> để hạn chế hành vi đặt hàng không nghiêm túc.
-                            Việc mở khóa sẽ được quản trị viên xem xét.
+                            Việc mở khóa sẽ do quản trị viên xem xét.
                         </div>
                     </div>
                 </div>
@@ -130,7 +132,7 @@
                     </div>
                     <div class="alert-content">
                         Hạng thành viên được xét theo <b>tổng chi tiêu trong năm</b>.
-                        Điểm tích lũy vẫn được giữ để <b>đổi voucher hoặc quà tặng</b>.
+                        Điểm tích lũy được giữ lại để <b>đổi voucher hoặc quà tặng</b>.
                     </div>
                 </div>
 

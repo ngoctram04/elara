@@ -17,32 +17,57 @@ use Illuminate\Support\Facades\Mail;
 class RefundController extends Controller
 {
     /**
-     * Form yêu cầu hoàn tiền
+     * Kiểm tra đơn có còn trong thời hạn yêu cầu hoàn tiền hay không
      */
-    public function create(Order $order)
+    protected function ensureRefundAllowed(Order $order): void
     {
         if ((int) $order->user_id !== (int) Auth::id()) {
             abort(403);
         }
 
         if ((int) $order->status !== (int) Order::STATUS_COMPLETED) {
-            return redirect()
-                ->route('orders.show', $order->id)
-                ->with('error', 'Chỉ đơn đã giao mới được yêu cầu hoàn tiền.');
+            throw new \Exception('Chỉ đơn đã hoàn tất mới được yêu cầu trả hàng / hoàn tiền.');
+        }
+
+        if (!(bool) $order->customer_confirmed) {
+            throw new \Exception('Bạn cần xác nhận đã nhận hàng trước khi yêu cầu trả hàng / hoàn tiền.');
+        }
+
+        if (!$order->received_at) {
+            throw new \Exception('Không xác định được thời điểm nhận hàng.');
         }
 
         if ($order->refundRequest) {
-            return redirect()
-                ->route('refund.show', $order->refundRequest->id)
-                ->with('error', 'Đơn hàng này đã gửi yêu cầu hoàn tiền.');
+            throw new \Exception('Đơn hàng này đã gửi yêu cầu hoàn tiền.');
         }
 
-        $order->load([
-            'items.variant.product',
-            'items.variant.mainImage',
-        ]);
+        $deadline = $order->received_at->copy()->addDays(3);
 
-        return view('frontend.refund.create', compact('order'));
+        if (now()->gt($deadline)) {
+            throw new \Exception('Đơn hàng đã quá thời hạn 3 ngày để yêu cầu trả hàng / hoàn tiền.');
+        }
+    }
+
+    /**
+     * Form yêu cầu hoàn tiền
+     */
+    public function create(Order $order)
+    {
+        try {
+            $order->load([
+                'refundRequest',
+                'items.variant.product',
+                'items.variant.mainImage',
+            ]);
+
+            $this->ensureRefundAllowed($order);
+
+            return view('frontend.refund.create', compact('order'));
+        } catch (\Exception $e) {
+            return redirect()
+                ->route('orders.show', $order->id)
+                ->with('error', $e->getMessage());
+        }
     }
 
     /**
@@ -71,23 +96,13 @@ class RefundController extends Controller
                 'refundRequest',
             ])->findOrFail($request->order_id);
 
-            if ((int) $order->user_id !== (int) Auth::id()) {
-                abort(403);
-            }
-
-            if ((int) $order->status !== (int) Order::STATUS_COMPLETED) {
-                throw new \Exception('Chỉ đơn đã giao mới được yêu cầu hoàn tiền');
-            }
-
-            if ($order->refundRequest) {
-                throw new \Exception('Đơn hàng này đã gửi yêu cầu hoàn tiền');
-            }
+            $this->ensureRefundAllowed($order);
 
             $validItemIds = $order->items->pluck('id')->map(fn($id) => (int) $id)->toArray();
 
             foreach ($request->items as $itemId) {
                 if (!in_array((int) $itemId, $validItemIds, true)) {
-                    throw new \Exception('Sản phẩm không hợp lệ');
+                    throw new \Exception('Sản phẩm không hợp lệ.');
                 }
             }
 
@@ -243,7 +258,7 @@ class RefundController extends Controller
 
             return redirect()
                 ->route('orders.show', $order->id)
-                ->with('success', 'Yêu cầu hoàn tiền đã được gửi');
+                ->with('success', 'Yêu cầu hoàn tiền đã được gửi.');
         } catch (\Exception $e) {
             DB::rollBack();
 
