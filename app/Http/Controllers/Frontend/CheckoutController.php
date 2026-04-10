@@ -806,7 +806,7 @@ class CheckoutController extends Controller
 
         if (!isset($inputData['vnp_SecureHash'])) {
             return redirect()->route('home')
-                ->with('error', 'Thiếu dữ liệu VNPay');
+            ->with('error', 'Thiếu dữ liệu VNPay');
         }
 
         $vnp_SecureHash = $inputData['vnp_SecureHash'];
@@ -834,7 +834,7 @@ class CheckoutController extends Controller
         // ================= KIỂM TRA CHỮ KÝ =================
         if ($secureHash !== $vnp_SecureHash) {
             return redirect()->route('home')
-                ->with('error', 'Chữ ký VNPay không hợp lệ');
+            ->with('error', 'Chữ ký VNPay không hợp lệ');
         }
 
         // ================= LẤY THÔNG TIN =================
@@ -842,40 +842,51 @@ class CheckoutController extends Controller
         $responseCode  = $request->vnp_ResponseCode;
         $transactionNo = $request->vnp_TransactionNo ?? null;
 
-        $order = Order::with('items.batches', 'items.variant')->find($orderId);
+        $order = Order::with('items.batches', 'items.variant', 'user')->find($orderId);
+
         if (!$order) {
             return redirect()->route('home')
-                ->with('error', 'Đơn hàng không tồn tại');
+            ->with('error', 'Đơn hàng không tồn tại');
         }
 
         // ================= THANH TOÁN THÀNH CÔNG =================
         if ($responseCode === '00') {
-
             DB::beginTransaction();
 
             try {
-                // Tránh xử lý lại nếu đã thanh toán trước đó
                 if ($order->payment_status != Order::PAYMENT_PAID) {
-
                     $order->update([
                         'payment_status'   => Order::PAYMENT_PAID,
                         'payment_method'   => 'vnpay',
+                        'paid_at'          => now(),
+                        'transaction_code' => $transactionNo,
                     ]);
+
+                    $order->refresh();
                 }
 
                 DB::commit();
-                $order->user->notify(new SystemNotification([
-                    'title' => 'Thanh toán thành công',
-                    'message' => 'Đơn #' . $order->id . ' đã thanh toán',
-                    'url' => route('orders.show', $order->id),
-                    'type' => 'order_completed'
-                ]));
+
+                if ($order->user) {
+                    $order->user->notify(new SystemNotification([
+                        'title'   => 'Thanh toán thành công',
+                        'message' => 'Đơn #' . $order->id . ' đã thanh toán',
+                        'url'     => route('orders.show', $order->id),
+                        'type'    => 'order_completed'
+                    ]));
+                }
+
                 return redirect()
                     ->route('checkout.success', $order->id)
                     ->with('success', 'Thanh toán VNPay thành công!');
             } catch (\Exception $e) {
-
                 DB::rollBack();
+
+                Log::error('VNPay success update error: ' . $e->getMessage(), [
+                    'order_id' => $order->id ?? null,
+                    'response_code' => $responseCode,
+                    'transaction_no' => $transactionNo,
+                ]);
 
                 return redirect()
                     ->route('checkout.success', $order->id)
@@ -887,26 +898,41 @@ class CheckoutController extends Controller
         DB::beginTransaction();
 
         try {
+            Log::info('VNPay fail before update', [
+                'order_id' => $order->id,
+                'response_code' => $responseCode,
+                'payment_status' => $order->payment_status,
+                'status' => $order->status,
+            ]);
 
             if ($order->payment_status != Order::PAYMENT_PAID) {
-
                 $order->update([
                     'payment_status' => Order::PAYMENT_FAILED,
-                    'status' => Order::STATUS_CANCELLED,
-                    'cancelled_at' => now(), // 👈 THÊM DÒNG NÀY
-                    'cancelled_by' => 'system',
+                    'status'         => Order::STATUS_CANCELLED,
+                    'cancelled_at'   => now(),
+                    'cancelled_by'   => 'system',
+                ]);
+
+                $order->refresh();
+
+                Log::info('VNPay fail after update', [
+                    'order_id' => $order->id,
+                    'payment_status' => $order->payment_status,
+                    'status' => $order->status,
                 ]);
 
                 // hoàn tồn kho
                 foreach ($order->items as $item) {
-
                     foreach ($item->batches as $batch) {
-
-                        if ($batch->is_rolled_back) continue;
+                        if ($batch->is_rolled_back) {
+                            continue;
+                        }
 
                         $stock = \App\Models\StockImport::find($batch->stock_import_id);
 
-                        if (!$stock) continue;
+                        if (!$stock) {
+                            continue;
+                        }
 
                         $stock->increment('remaining_quantity', $batch->quantity);
 
@@ -918,19 +944,27 @@ class CheckoutController extends Controller
 
                     // sync lại tồn
                     $total = \App\Models\StockImport::where('variant_id', $item->variant_id)
-                    ->sum('remaining_quantity');
+                        ->sum('remaining_quantity');
 
                     \App\Models\ProductVariant::where('id', $item->variant_id)
-                    ->update([
-                        'stock_quantity' => $total
-                    ]);
+                        ->update([
+                            'stock_quantity' => $total
+                        ]);
                 }
             }
 
             DB::commit();
         } catch (\Exception $e) {
-
             DB::rollBack();
+
+            Log::error('VNPay fail update error: ' . $e->getMessage(), [
+                'order_id' => $order->id ?? null,
+                'response_code' => $responseCode ?? null,
+            ]);
+
+            return redirect()
+                ->route('checkout.success', $order->id)
+                ->with('error', 'Lỗi khi cập nhật trạng thái thanh toán thất bại.');
         }
 
         return redirect()
@@ -940,10 +974,11 @@ class CheckoutController extends Controller
 
     public function success(Order $order)
     {
-        // Bảo mật: chỉ chủ đơn được xem
         if ($order->user_id != Auth::id()) {
             abort(403);
         }
+
+        $order->refresh();
 
         return view('frontend.checkout.success', compact('order'));
     }

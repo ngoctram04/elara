@@ -48,7 +48,7 @@ class ReportController extends Controller
         $data['refundTotal']       = (float) ($data['finance']->refund_total ?? 0);
         $data['netRevenue']        = (float) ($data['finance']->net_revenue ?? 0);
         $data['revenue']           = $data['netRevenue'];
-
+        $data['paidInAdvance']     = (float) ($data['paidInAdvance'] ?? 0);
         $data['totalDiscount']     = (float) ($data['finance']->discount_total ?? 0);
         $data['shippingCollected'] = (float) ($data['finance']->shipping_total ?? 0);
         $data['shippingCostTotal'] = (float) ($data['finance']->shipping_cost_total ?? 0);
@@ -410,6 +410,14 @@ class ReportController extends Controller
         $from  = $range['from'];
         $to    = $range['to'];
 
+        // Tiền thu trước = tiền đã thanh toán online nhưng CHƯA trở thành doanh thu chính thức
+        $paidInAdvance = (float) DB::table('orders')
+        ->where('payment_status', Order::PAYMENT_PAID)
+            ->whereNotNull('paid_at')
+            ->whereBetween('paid_at', [$from, $to])
+            ->whereNotIn('status', array_merge($statuses, [Order::STATUS_CANCELLED]))
+            ->sum(DB::raw('COALESCE(grand_total, 0)'));
+
         $inventoryMetrics = $this->getInventoryMetrics();
         $periodInventoryMetrics = $this->getPeriodInventoryMetrics($from, $to);
 
@@ -419,99 +427,97 @@ class ReportController extends Controller
         $refundRestockCostAggSub = $this->getRefundRestockCostAggSubquery();
         $refundByOrderSub = $this->getRefundByOrderSubquery();
 
-
         $grossRevenue = (float) DB::table('orders')
-            ->whereIn('status', $statuses)
+        ->whereIn('status', $statuses)
             ->whereBetween('delivered_at', [$from, $to])
             ->sum(DB::raw('COALESCE(total, 0) + COALESCE(shipping_fee, 0)'));
 
         $refundAmountInRange = (float) DB::table('refund_requests')
-            ->where('status', 'refunded')
-            ->whereBetween('updated_at', [$from, $to])
+        ->where('status', 'refunded')
+        ->whereBetween('updated_at', [$from, $to])
             ->sum(DB::raw('COALESCE(refund_total, 0)'));
 
         $netRevenue = max(0, $grossRevenue - $refundAmountInRange);
 
         $shippingTotal = (float) DB::table('orders')
-            ->where(function ($q) use ($statuses) {
-                $q->whereIn('status', $statuses)
-                    ->orWhere(function ($sub) {
-                        $sub->where('status', Order::STATUS_CANCELLED)
-                            ->whereNotNull('delivered_at');
-                    });
-            })
+        ->where(function ($q) use ($statuses) {
+            $q->whereIn('status', $statuses)
+                ->orWhere(function ($sub) {
+                    $sub->where('status', Order::STATUS_CANCELLED)
+                        ->whereNotNull('delivered_at');
+                });
+        })
             ->whereBetween('delivered_at', [$from, $to])
             ->sum(DB::raw('COALESCE(shipping_fee, 0)'));
 
         $shippingCostTotal = (float) DB::table('orders')
-            ->where(function ($q) use ($statuses) {
-                $q->whereIn('status', $statuses)
-                    ->orWhere(function ($sub) {
-                        $sub->where('status', Order::STATUS_CANCELLED)
-                            ->whereNotNull('delivered_at');
-                    });
-            })
+        ->where(function ($q) use ($statuses) {
+            $q->whereIn('status', $statuses)
+                ->orWhere(function ($sub) {
+                    $sub->where('status', Order::STATUS_CANCELLED)
+                        ->whereNotNull('delivered_at');
+                });
+        })
             ->whereBetween('delivered_at', [$from, $to])
             ->sum(DB::raw("
-                CASE
-                    WHEN COALESCE(shipping_cost, 0) > 0 THEN shipping_cost
-                    ELSE COALESCE(shipping_fee, 0)
-                END
-            "));
+            CASE
+                WHEN COALESCE(shipping_cost, 0) > 0 THEN shipping_cost
+                ELSE COALESCE(shipping_fee, 0)
+            END
+        "));
 
         $discountTotal = (float) DB::table('orders')
-            ->whereIn('status', $statuses)
+        ->whereIn('status', $statuses)
             ->whereBetween('delivered_at', [$from, $to])
             ->sum(DB::raw('COALESCE(discount, 0)'));
 
-
         $grossCost = (float) DB::table('order_item_batches as oib')
-            ->join('order_items as oi', 'oi.id', '=', 'oib.order_item_id')
-            ->join('orders as o', 'o.id', '=', 'oi.order_id')
-            ->join('stock_imports as si', 'si.id', '=', 'oib.stock_import_id')
-            ->whereIn('o.status', $statuses)
+        ->join('order_items as oi', 'oi.id', '=', 'oib.order_item_id')
+        ->join('orders as o', 'o.id', '=', 'oi.order_id')
+        ->join('stock_imports as si', 'si.id', '=', 'oib.stock_import_id')
+        ->whereIn('o.status', $statuses)
             ->whereBetween('o.delivered_at', [$from, $to])
             ->sum(DB::raw('COALESCE(oib.quantity, 0) * COALESCE(si.cost_price, 0)'));
 
         $returnedCostInRange = (float) DB::table('refund_request_items as rri')
-            ->join('refund_requests as rr', 'rr.id', '=', 'rri.refund_request_id')
-            ->join('order_items as oi', 'oi.id', '=', 'rri.order_item_id')
-            ->join('orders as o', 'o.id', '=', 'rr.order_id')
-            ->joinSub(
-                DB::table('order_item_batches as oib')
-                    ->join('stock_imports as si', 'si.id', '=', 'oib.stock_import_id')
-                    ->selectRaw('
-                        oib.order_item_id,
-                        SUM(COALESCE(oib.quantity, 0) * COALESCE(si.cost_price, 0)) as batch_cost,
-                        SUM(COALESCE(oib.quantity, 0)) as batch_qty
-                    ')
-                    ->groupBy('oib.order_item_id'),
-                'batch_costs',
-                function ($join) {
-                    $join->on('batch_costs.order_item_id', '=', 'oi.id');
-                }
-            )
+        ->join('refund_requests as rr', 'rr.id', '=', 'rri.refund_request_id')
+        ->join('order_items as oi', 'oi.id', '=', 'rri.order_item_id')
+        ->join('orders as o', 'o.id', '=', 'rr.order_id')
+        ->joinSub(
+            DB::table('order_item_batches as oib')
+            ->join('stock_imports as si', 'si.id', '=', 'oib.stock_import_id')
+            ->selectRaw('
+                    oib.order_item_id,
+                    SUM(COALESCE(oib.quantity, 0) * COALESCE(si.cost_price, 0)) as batch_cost,
+                    SUM(COALESCE(oib.quantity, 0)) as batch_qty
+                ')
+            ->groupBy('oib.order_item_id'),
+            'batch_costs',
+            function ($join) {
+                $join->on('batch_costs.order_item_id', '=', 'oi.id');
+            }
+        )
             ->where('rr.status', 'refunded')
             ->whereBetween('rr.updated_at', [$from, $to])
             ->whereIn('o.status', $statuses)
             ->sum(DB::raw('
-                CASE
-                    WHEN COALESCE(batch_costs.batch_qty, 0) > 0
-                        THEN (COALESCE(rri.quantity, 0) / batch_costs.batch_qty) * batch_costs.batch_cost
-                    ELSE 0
-                END
-            '));
+            CASE
+                WHEN COALESCE(batch_costs.batch_qty, 0) > 0
+                    THEN (COALESCE(rri.quantity, 0) / batch_costs.batch_qty) * batch_costs.batch_cost
+                ELSE 0
+            END
+        '));
 
         $cost = max(0, $grossCost - $returnedCostInRange);
 
         $periodExpiredLoss = (float) DB::table('stock_imports')
-            ->whereNotNull('expired_at')
-            ->whereBetween('expired_at', [$from, $to])
+        ->whereNotNull('expired_at')
+        ->whereBetween('expired_at', [$from, $to])
             ->sum(DB::raw('COALESCE(expired_quantity, 0) * COALESCE(cost_price, 0)'));
 
         $periodRefundLoss = (float) DB::table('refund_requests')
-            ->where('status', 'refunded')
-            ->whereBetween('updated_at', [$from, $to])
+        ->where('status', 'refunded')
+        ->whereBetween('updated_at', [$from, $to])
             ->sum(DB::raw('COALESCE(loss_amount, 0)'));
 
         $finance = (object) [
@@ -528,19 +534,18 @@ class ReportController extends Controller
             'discount_total'         => $discountTotal,
         ];
 
-
         $days = $from->diffInDays($to) + 1;
         $prevFrom = (clone $from)->subDays($days);
         $prevTo   = (clone $from)->subSecond();
 
         $previousGrossRevenue = (float) DB::table('orders')
-            ->whereIn('status', $statuses)
+        ->whereIn('status', $statuses)
             ->whereBetween('delivered_at', [$prevFrom, $prevTo])
             ->sum(DB::raw('COALESCE(total, 0) + COALESCE(shipping_fee, 0)'));
 
         $previousRefundTotal = (float) DB::table('refund_requests')
-            ->where('status', 'refunded')
-            ->whereBetween('updated_at', [$prevFrom, $prevTo])
+        ->where('status', 'refunded')
+        ->whereBetween('updated_at', [$prevFrom, $prevTo])
             ->sum(DB::raw('COALESCE(refund_total, 0)'));
 
         $previousNetRevenue = max(0, $previousGrossRevenue - $previousRefundTotal);
@@ -549,84 +554,81 @@ class ReportController extends Controller
             ? (($netRevenue - $previousNetRevenue) / $previousNetRevenue) * 100
             : 0;
 
-
         $orderStats = DB::table('orders')
-            ->selectRaw('
-                COUNT(CASE WHEN created_at BETWEEN ? AND ? THEN 1 END) as total,
-                SUM(CASE WHEN status = 1 AND created_at BETWEEN ? AND ? THEN 1 ELSE 0 END) as pending,
-                SUM(CASE WHEN status = 2 AND created_at BETWEEN ? AND ? THEN 1 ELSE 0 END) as shipping,
-                SUM(CASE WHEN status = 3 AND delivered_at BETWEEN ? AND ? THEN 1 ELSE 0 END) as completed,
-                SUM(CASE WHEN status = 4 AND cancelled_at BETWEEN ? AND ? THEN 1 ELSE 0 END) as cancelled,
-                SUM(CASE WHEN status = 5 AND updated_at BETWEEN ? AND ? THEN 1 ELSE 0 END) as returned
-            ', [
-                $from,
-                $to,
-                $from,
-                $to,
-                $from,
-                $to,
-                $from,
-                $to,
-                $from,
-                $to,
-                $from,
-                $to,
-            ])
+        ->selectRaw('
+            COUNT(CASE WHEN created_at BETWEEN ? AND ? THEN 1 END) as total,
+            SUM(CASE WHEN status = 1 AND created_at BETWEEN ? AND ? THEN 1 ELSE 0 END) as pending,
+            SUM(CASE WHEN status = 2 AND created_at BETWEEN ? AND ? THEN 1 ELSE 0 END) as shipping,
+            SUM(CASE WHEN status = 3 AND delivered_at BETWEEN ? AND ? THEN 1 ELSE 0 END) as completed,
+            SUM(CASE WHEN status = 4 AND cancelled_at BETWEEN ? AND ? THEN 1 ELSE 0 END) as cancelled,
+            SUM(CASE WHEN status = 5 AND updated_at BETWEEN ? AND ? THEN 1 ELSE 0 END) as returned
+        ', [
+            $from,
+            $to,
+            $from,
+            $to,
+            $from,
+            $to,
+            $from,
+            $to,
+            $from,
+            $to,
+            $from,
+            $to,
+        ])
             ->first();
 
         $cancelBase = ($orderStats->completed ?? 0) + ($orderStats->cancelled ?? 0);
 
         $cancelRate = $cancelBase > 0
-        ? (($orderStats->cancelled ?? 0) / $cancelBase) * 100
-        : 0;
-
+            ? (($orderStats->cancelled ?? 0) / $cancelBase) * 100
+            : 0;
 
         $avgProcessingTime = DB::table('orders')
-            ->whereIn('status', $statuses)
+        ->whereIn('status', $statuses)
             ->whereNotNull('delivered_at')
             ->whereBetween('created_at', [$from, $to])
             ->selectRaw('AVG(TIMESTAMPDIFF(HOUR, created_at, delivered_at)) as hours')
             ->value('hours');
 
-
         $dailyGrossRevenue = DB::table('orders')
-            ->whereIn('status', $statuses)
+        ->whereIn('status', $statuses)
             ->whereBetween('delivered_at', [$from, $to])
             ->selectRaw('
-                DATE(delivered_at) as date,
-                SUM(COALESCE(total, 0) + COALESCE(shipping_fee, 0)) as revenue
-            ')
+            DATE(delivered_at) as date,
+            SUM(COALESCE(total, 0) + COALESCE(shipping_fee, 0)) as revenue
+        ')
             ->groupBy('date')
             ->orderBy('date')
             ->get()
             ->keyBy('date');
 
         $dailyRefund = DB::table('refund_requests')
-            ->where('status', 'refunded')
-            ->whereBetween('updated_at', [$from, $to])
+        ->where('status', 'refunded')
+        ->whereBetween('updated_at', [$from, $to])
             ->selectRaw('
-                DATE(updated_at) as date,
-                SUM(COALESCE(refund_total, 0)) as refund_total
-            ')
+            DATE(updated_at) as date,
+            SUM(COALESCE(refund_total, 0)) as refund_total
+        ')
             ->groupBy('date')
             ->orderBy('date')
             ->get()
             ->keyBy('date');
 
         $weeklyRevenue = DB::table('orders')
-            ->whereIn('status', $statuses)
+        ->whereIn('status', $statuses)
             ->whereBetween('delivered_at', [$from, $to])
             ->selectRaw('
-                YEARWEEK(delivered_at) as week,
-                SUM(COALESCE(total, 0) + COALESCE(shipping_fee, 0)) as gross_revenue
-            ')
+            YEARWEEK(delivered_at) as week,
+            SUM(COALESCE(total, 0) + COALESCE(shipping_fee, 0)) as gross_revenue
+        ')
             ->groupBy('week')
             ->orderBy('week')
             ->get()
             ->map(function ($row) use ($from, $to) {
                 $refundInWeek = (float) DB::table('refund_requests')
-                    ->where('status', 'refunded')
-                    ->whereBetween('updated_at', [$from, $to])
+                ->where('status', 'refunded')
+                ->whereBetween('updated_at', [$from, $to])
                     ->whereRaw('YEARWEEK(updated_at) = ?', [$row->week])
                     ->sum(DB::raw('COALESCE(refund_total, 0)'));
 
@@ -637,19 +639,19 @@ class ReportController extends Controller
             });
 
         $monthlyRevenue = DB::table('orders')
-            ->whereIn('status', $statuses)
+        ->whereIn('status', $statuses)
             ->whereBetween('delivered_at', [$from, $to])
             ->selectRaw('
-                DATE_FORMAT(delivered_at, "%Y-%m") as month,
-                SUM(COALESCE(total, 0) + COALESCE(shipping_fee, 0)) as gross_revenue
-            ')
+            DATE_FORMAT(delivered_at, "%Y-%m") as month,
+            SUM(COALESCE(total, 0) + COALESCE(shipping_fee, 0)) as gross_revenue
+        ')
             ->groupBy('month')
             ->orderBy('month')
             ->get()
             ->map(function ($row) use ($from, $to) {
                 $refundInMonth = (float) DB::table('refund_requests')
-                    ->where('status', 'refunded')
-                    ->whereBetween('updated_at', [$from, $to])
+                ->where('status', 'refunded')
+                ->whereBetween('updated_at', [$from, $to])
                     ->whereRaw('DATE_FORMAT(updated_at, "%Y-%m") = ?', [$row->month])
                     ->sum(DB::raw('COALESCE(refund_total, 0)'));
 
@@ -660,19 +662,19 @@ class ReportController extends Controller
             });
 
         $yearlyRevenue = DB::table('orders')
-            ->whereIn('status', $statuses)
+        ->whereIn('status', $statuses)
             ->whereNotNull('delivered_at')
             ->selectRaw('
-                YEAR(delivered_at) as year,
-                SUM(COALESCE(total, 0) + COALESCE(shipping_fee, 0)) as gross_revenue
-            ')
+            YEAR(delivered_at) as year,
+            SUM(COALESCE(total, 0) + COALESCE(shipping_fee, 0)) as gross_revenue
+        ')
             ->groupBy('year')
             ->orderBy('year')
             ->get()
             ->map(function ($row) {
                 $refundInYear = (float) DB::table('refund_requests')
-                    ->where('status', 'refunded')
-                    ->whereRaw('YEAR(updated_at) = ?', [$row->year])
+                ->where('status', 'refunded')
+                ->whereRaw('YEAR(updated_at) = ?', [$row->year])
                     ->sum(DB::raw('COALESCE(refund_total, 0)'));
 
                 $row->revenue = max(0, (float) $row->gross_revenue - $refundInYear);
@@ -682,98 +684,98 @@ class ReportController extends Controller
             });
 
         $dailyGrossCost = DB::table('order_item_batches as oib')
-            ->join('order_items as oi', 'oi.id', '=', 'oib.order_item_id')
-            ->join('orders as o', 'o.id', '=', 'oi.order_id')
-            ->join('stock_imports as si', 'si.id', '=', 'oib.stock_import_id')
-            ->whereIn('o.status', $statuses)
+        ->join('order_items as oi', 'oi.id', '=', 'oib.order_item_id')
+        ->join('orders as o', 'o.id', '=', 'oi.order_id')
+        ->join('stock_imports as si', 'si.id', '=', 'oib.stock_import_id')
+        ->whereIn('o.status', $statuses)
             ->whereBetween('o.delivered_at', [$from, $to])
             ->selectRaw('
-                DATE(o.delivered_at) as date,
-                SUM(COALESCE(oib.quantity, 0) * COALESCE(si.cost_price, 0)) as gross_cost
-            ')
+            DATE(o.delivered_at) as date,
+            SUM(COALESCE(oib.quantity, 0) * COALESCE(si.cost_price, 0)) as gross_cost
+        ')
             ->groupByRaw('DATE(o.delivered_at)')
             ->orderBy('date')
             ->get()
             ->keyBy('date');
 
         $dailyReturnedCost = DB::table('refund_request_items as rri')
-            ->join('refund_requests as rr', 'rr.id', '=', 'rri.refund_request_id')
-            ->join('order_items as oi', 'oi.id', '=', 'rri.order_item_id')
-            ->join('orders as o', 'o.id', '=', 'rr.order_id')
-            ->joinSub(
-                DB::table('order_item_batches as oib')
-                    ->join('stock_imports as si', 'si.id', '=', 'oib.stock_import_id')
-                    ->selectRaw('
-                        oib.order_item_id,
-                        SUM(COALESCE(oib.quantity, 0) * COALESCE(si.cost_price, 0)) as batch_cost,
-                        SUM(COALESCE(oib.quantity, 0)) as batch_qty
-                    ')
-                    ->groupBy('oib.order_item_id'),
-                'batch_costs',
-                function ($join) {
-                    $join->on('batch_costs.order_item_id', '=', 'oi.id');
-                }
-            )
+        ->join('refund_requests as rr', 'rr.id', '=', 'rri.refund_request_id')
+        ->join('order_items as oi', 'oi.id', '=', 'rri.order_item_id')
+        ->join('orders as o', 'o.id', '=', 'rr.order_id')
+        ->joinSub(
+            DB::table('order_item_batches as oib')
+            ->join('stock_imports as si', 'si.id', '=', 'oib.stock_import_id')
+            ->selectRaw('
+                    oib.order_item_id,
+                    SUM(COALESCE(oib.quantity, 0) * COALESCE(si.cost_price, 0)) as batch_cost,
+                    SUM(COALESCE(oib.quantity, 0)) as batch_qty
+                ')
+            ->groupBy('oib.order_item_id'),
+            'batch_costs',
+            function ($join) {
+                $join->on('batch_costs.order_item_id', '=', 'oi.id');
+            }
+        )
             ->where('rr.status', 'refunded')
             ->whereIn('o.status', $statuses)
             ->whereBetween('rr.updated_at', [$from, $to])
             ->selectRaw('
-                DATE(rr.updated_at) as date,
-                SUM(
-                    CASE
-                        WHEN COALESCE(batch_costs.batch_qty, 0) > 0
-                            THEN (COALESCE(rri.quantity, 0) / batch_costs.batch_qty) * batch_costs.batch_cost
-                        ELSE 0
-                    END
-                ) as returned_cost
-            ')
+            DATE(rr.updated_at) as date,
+            SUM(
+                CASE
+                    WHEN COALESCE(batch_costs.batch_qty, 0) > 0
+                        THEN (COALESCE(rri.quantity, 0) / batch_costs.batch_qty) * batch_costs.batch_cost
+                    ELSE 0
+                END
+            ) as returned_cost
+        ')
             ->groupByRaw('DATE(rr.updated_at)')
             ->orderBy('date')
             ->get()
             ->keyBy('date');
 
         $dailyShippingCost = DB::table('orders')
-            ->where(function ($q) use ($statuses) {
-                $q->whereIn('status', $statuses)
-                    ->orWhere(function ($sub) {
-                        $sub->where('status', Order::STATUS_CANCELLED)
-                            ->whereNotNull('delivered_at');
-                    });
-            })
+        ->where(function ($q) use ($statuses) {
+            $q->whereIn('status', $statuses)
+                ->orWhere(function ($sub) {
+                    $sub->where('status', Order::STATUS_CANCELLED)
+                        ->whereNotNull('delivered_at');
+                });
+        })
             ->whereBetween('delivered_at', [$from, $to])
             ->selectRaw('
-                DATE(delivered_at) as date,
-                SUM(
-                    CASE
-                        WHEN COALESCE(shipping_cost, 0) > 0 THEN shipping_cost
-                        ELSE COALESCE(shipping_fee, 0)
-                    END
-                ) as shipping_cost
-            ')
+            DATE(delivered_at) as date,
+            SUM(
+                CASE
+                    WHEN COALESCE(shipping_cost, 0) > 0 THEN shipping_cost
+                    ELSE COALESCE(shipping_fee, 0)
+                END
+            ) as shipping_cost
+        ')
             ->groupByRaw('DATE(delivered_at)')
             ->orderBy('date')
             ->get()
             ->keyBy('date');
 
         $dailyExpiredLoss = DB::table('stock_imports')
-            ->whereNotNull('expired_at')
-            ->whereBetween('expired_at', [$from, $to])
+        ->whereNotNull('expired_at')
+        ->whereBetween('expired_at', [$from, $to])
             ->selectRaw('
-                DATE(expired_at) as date,
-                SUM(COALESCE(expired_quantity, 0) * COALESCE(cost_price, 0)) as expired_loss
-            ')
+            DATE(expired_at) as date,
+            SUM(COALESCE(expired_quantity, 0) * COALESCE(cost_price, 0)) as expired_loss
+        ')
             ->groupByRaw('DATE(expired_at)')
             ->orderBy('date')
             ->get()
             ->keyBy('date');
 
         $dailyRefundLoss = DB::table('refund_requests')
-            ->where('status', 'refunded')
-            ->whereBetween('updated_at', [$from, $to])
+        ->where('status', 'refunded')
+        ->whereBetween('updated_at', [$from, $to])
             ->selectRaw('
-                DATE(updated_at) as date,
-                SUM(COALESCE(loss_amount, 0)) as refund_loss
-            ')
+            DATE(updated_at) as date,
+            SUM(COALESCE(loss_amount, 0)) as refund_loss
+        ')
             ->groupByRaw('DATE(updated_at)')
             ->orderBy('date')
             ->get()
@@ -815,14 +817,13 @@ class ReportController extends Controller
             $currentDate->addDay();
         }
 
-
         $topProducts = DB::table('order_items as oi')
-            ->join('orders as o', 'o.id', '=', 'oi.order_id')
-            ->join('product_variants as pv', 'pv.id', '=', 'oi.variant_id')
-            ->join('products as p', 'p.id', '=', 'pv.product_id')
-            ->leftJoinSub($refundItemAggSub, 'ria', function ($join) {
-                $join->on('ria.order_item_id', '=', 'oi.id');
-            })
+        ->join('orders as o', 'o.id', '=', 'oi.order_id')
+        ->join('product_variants as pv', 'pv.id', '=', 'oi.variant_id')
+        ->join('products as p', 'p.id', '=', 'pv.product_id')
+        ->leftJoinSub($refundItemAggSub, 'ria', function ($join) {
+            $join->on('ria.order_item_id', '=', 'oi.id');
+        })
             ->leftJoinSub($orderItemCostSub, 'oic', function ($join) {
                 $join->on('oic.order_item_id', '=', 'oi.id');
             })
@@ -834,35 +835,35 @@ class ReportController extends Controller
             ->select(
                 'p.name',
                 DB::raw('SUM(
-                    CASE
-                        WHEN COALESCE(oi.quantity, 0) - COALESCE(ria.refunded_qty, 0) > 0
-                            THEN COALESCE(oi.quantity, 0) - COALESCE(ria.refunded_qty, 0)
-                        ELSE 0
-                    END
-                ) as total_sold'),
+                CASE
+                    WHEN COALESCE(oi.quantity, 0) - COALESCE(ria.refunded_qty, 0) > 0
+                        THEN COALESCE(oi.quantity, 0) - COALESCE(ria.refunded_qty, 0)
+                    ELSE 0
+                END
+            ) as total_sold'),
                 DB::raw('SUM(
+                CASE
+                    WHEN (COALESCE(oi.quantity, 0) * COALESCE(oi.price, 0)) - COALESCE(ria.refunded_amount, 0) > 0
+                        THEN (COALESCE(oi.quantity, 0) * COALESCE(oi.price, 0)) - COALESCE(ria.refunded_amount, 0)
+                    ELSE 0
+                END
+            ) as revenue'),
+                DB::raw('SUM(
+                (
                     CASE
                         WHEN (COALESCE(oi.quantity, 0) * COALESCE(oi.price, 0)) - COALESCE(ria.refunded_amount, 0) > 0
                             THEN (COALESCE(oi.quantity, 0) * COALESCE(oi.price, 0)) - COALESCE(ria.refunded_amount, 0)
                         ELSE 0
                     END
-                ) as revenue'),
-                DB::raw('SUM(
-                    (
-                        CASE
-                            WHEN (COALESCE(oi.quantity, 0) * COALESCE(oi.price, 0)) - COALESCE(ria.refunded_amount, 0) > 0
-                                THEN (COALESCE(oi.quantity, 0) * COALESCE(oi.price, 0)) - COALESCE(ria.refunded_amount, 0)
-                            ELSE 0
-                        END
-                    ) -
-                    (
-                        CASE
-                            WHEN COALESCE(oic.item_cost, 0) - COALESCE(rrtca.returned_cost, 0) > 0
-                                THEN COALESCE(oic.item_cost, 0) - COALESCE(rrtca.returned_cost, 0)
-                            ELSE 0
-                        END
-                    )
-                ) as profit')
+                ) -
+                (
+                    CASE
+                        WHEN COALESCE(oic.item_cost, 0) - COALESCE(rrtca.returned_cost, 0) > 0
+                            THEN COALESCE(oic.item_cost, 0) - COALESCE(rrtca.returned_cost, 0)
+                        ELSE 0
+                    END
+                )
+            ) as profit')
             )
             ->groupBy('p.id', 'p.name')
             ->orderByDesc('revenue')
@@ -871,25 +872,25 @@ class ReportController extends Controller
 
         $slowMoving = DB::table('products as p')
         ->join('product_variants as pv', 'pv.product_id', '=', 'p.id')
-        ->leftJoin('order_items as oi', 'oi.variant_id', '=', 'pv.id')
-        ->select(
-            'p.id',
-            'p.name',
-            DB::raw('SUM(COALESCE(pv.stock_quantity, 0)) as stock_quantity'),
-            DB::raw('MAX(oi.created_at) as last_sold')
-        )
-        ->groupBy('p.id', 'p.name')
-        ->orderByRaw('MAX(oi.created_at) IS NULL DESC')
-        ->orderByRaw('MAX(oi.created_at) ASC')
-        ->limit(5)
-        ->get();
+            ->leftJoin('order_items as oi', 'oi.variant_id', '=', 'pv.id')
+            ->select(
+                'p.id',
+                'p.name',
+                DB::raw('SUM(COALESCE(pv.stock_quantity, 0)) as stock_quantity'),
+                DB::raw('MAX(oi.created_at) as last_sold')
+            )
+            ->groupBy('p.id', 'p.name')
+            ->orderByRaw('MAX(oi.created_at) IS NULL DESC')
+            ->orderByRaw('MAX(oi.created_at) ASC')
+            ->limit(5)
+            ->get();
 
         $mostViewed = DB::table('wishlists as w')
-            ->join('products as p', 'p.id', '=', 'w.product_id')
-            ->select(
-                'p.name',
-                DB::raw('COUNT(w.id) as total_wishlist')
-            )
+        ->join('products as p', 'p.id', '=', 'w.product_id')
+        ->select(
+            'p.name',
+            DB::raw('COUNT(w.id) as total_wishlist')
+        )
             ->groupBy('p.id', 'p.name')
             ->orderByDesc('total_wishlist')
             ->limit(5)
@@ -900,36 +901,36 @@ class ReportController extends Controller
         ->leftJoinSub($refundByOrderSub, 'rbo', function ($join) {
             $join->on('rbo.order_id', '=', 'orders.id');
         })
-        ->whereIn('orders.status', $statuses)
-        ->whereBetween('orders.delivered_at', [$from, $to])
-        ->select(
-            'users.id',
-            'users.name',
-            DB::raw('COUNT(*) as orders'),
-            DB::raw('SUM(
-            CASE
-                WHEN (COALESCE(orders.total, 0) + COALESCE(orders.shipping_fee, 0)) - COALESCE(rbo.refund_total, 0) > 0
-                    THEN (COALESCE(orders.total, 0) + COALESCE(orders.shipping_fee, 0)) - COALESCE(rbo.refund_total, 0)
-                ELSE 0
-            END
-        ) as spending')
-        )
-        ->groupBy('users.id', 'users.name')
-        ->orderByDesc('spending')
-        ->limit(5)
-        ->get();
+            ->whereIn('orders.status', $statuses)
+            ->whereBetween('orders.delivered_at', [$from, $to])
+            ->select(
+                'users.id',
+                'users.name',
+                DB::raw('COUNT(*) as orders'),
+                DB::raw('SUM(
+                CASE
+                    WHEN (COALESCE(orders.total, 0) + COALESCE(orders.shipping_fee, 0)) - COALESCE(rbo.refund_total, 0) > 0
+                        THEN (COALESCE(orders.total, 0) + COALESCE(orders.shipping_fee, 0)) - COALESCE(rbo.refund_total, 0)
+                    ELSE 0
+                END
+            ) as spending')
+            )
+            ->groupBy('users.id', 'users.name')
+            ->orderByDesc('spending')
+            ->limit(5)
+            ->get();
 
         $lowStock = DB::table('product_variants as pv')
-            ->join('products as p', 'p.id', '=', 'pv.product_id')
-            ->where('pv.stock_quantity', '<=', 5)
+        ->join('products as p', 'p.id', '=', 'pv.product_id')
+        ->where('pv.stock_quantity', '<=', 5)
             ->select('p.name', 'pv.attribute_value', 'pv.stock_quantity')
             ->orderBy('pv.stock_quantity')
             ->limit(5)
             ->get();
 
         $cancelList = DB::table('orders')
-            ->join('users', 'users.id', '=', 'orders.user_id')
-            ->where('orders.status', Order::STATUS_CANCELLED)
+        ->join('users', 'users.id', '=', 'orders.user_id')
+        ->where('orders.status', Order::STATUS_CANCELLED)
             ->whereBetween(
                 DB::raw('COALESCE(orders.cancelled_at, orders.updated_at, orders.created_at)'),
                 [$from, $to]
@@ -943,23 +944,24 @@ class ReportController extends Controller
             ->orderByDesc(DB::raw('COALESCE(orders.cancelled_at, orders.updated_at, orders.created_at)'))
             ->limit(5)
             ->get();
+
         $refunds = DB::table('refund_requests as rr')
         ->join('orders as o', 'o.id', '=', 'rr.order_id')
         ->join('users as u', 'u.id', '=', 'rr.user_id')
         ->where('rr.status', 'refunded')
         ->whereBetween('rr.updated_at', [$from, $to])
-        ->select(
-            'rr.id',
-            'o.id as order_id',
-            'u.name as customer_name',
-            'rr.refund_total',
-            'rr.loss_amount',
-            'rr.reason',
-            'rr.updated_at as refunded_at'
-        )
-        ->orderByDesc('rr.updated_at')
-        ->limit(5)
-        ->get();
+            ->select(
+                'rr.id',
+                'o.id as order_id',
+                'u.name as customer_name',
+                'rr.refund_total',
+                'rr.loss_amount',
+                'rr.reason',
+                'rr.updated_at as refunded_at'
+            )
+            ->orderByDesc('rr.updated_at')
+            ->limit(5)
+            ->get();
 
         return [
             'from' => $range['from_date'],
@@ -1011,7 +1013,8 @@ class ReportController extends Controller
 
             'lowStock'   => $lowStock,
             'cancelList' => $cancelList,
-            'refunds' => $refunds,
+            'refunds'    => $refunds,
+            'paidInAdvance' => $paidInAdvance,
         ];
     }
 

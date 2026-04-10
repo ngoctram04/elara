@@ -72,7 +72,6 @@
 @php
     $refundList = $refunds ?? collect();
 
-    // Dữ liệu biểu đồ cơ cấu đơn hàng
     $completedOrders = $completedOrders ?? 0;
     $returnedOrders = $returnedOrders ?? 0;
     $cancelledOrders = $cancelledOrders ?? 0;
@@ -143,7 +142,7 @@
 
     {{-- KPI CHÍNH --}}
     <div class="row g-3 mb-4">
-        <div class="col-lg-4 col-md-6">
+        <div class="col-lg-3 col-md-6">
             <div class="report-stat-card stat-primary h-100">
                 <div class="report-stat-top">
                     <span class="report-stat-label">Doanh thu thuần</span>
@@ -156,7 +155,20 @@
             </div>
         </div>
 
-        <div class="col-lg-4 col-md-6">
+        <div class="col-lg-3 col-md-6">
+            <div class="report-stat-card stat-info h-100">
+                <div class="report-stat-top">
+                    <span class="report-stat-label">Tiền thu trước</span>
+                    <span class="report-stat-icon"><i class="bi bi-wallet2"></i></span>
+                </div>
+                <div class="report-stat-value">{{ number_format($paidInAdvance ?? 0) }} đ</div>
+                <div class="report-stat-note text-muted small mt-2">
+                    Tiền khách đã thanh toán online, chưa đồng nghĩa doanh thu chính thức
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
             <div class="report-stat-card {{ ($profit ?? 0) >= 0 ? 'stat-success' : 'stat-danger' }} h-100">
                 <div class="report-stat-top">
                     <span class="report-stat-label">Lợi nhuận thực</span>
@@ -169,7 +181,7 @@
             </div>
         </div>
 
-        <div class="col-lg-4 col-md-12">
+        <div class="col-lg-3 col-md-6">
             <div class="report-stat-card stat-warning h-100">
                 <div class="report-stat-top">
                     <span class="report-stat-label">Vận chuyển</span>
@@ -200,6 +212,11 @@
                     <div class="report-ship-row">
                         <span>Tổng giảm giá</span>
                         <strong>{{ number_format($totalDiscount ?? 0) }} đ</strong>
+                    </div>
+
+                    <div class="report-ship-row">
+                        <span>Tiền thu trước</span>
+                        <strong class="text-info">{{ number_format($paidInAdvance ?? 0) }} đ</strong>
                     </div>
 
                     <div class="report-ship-row">

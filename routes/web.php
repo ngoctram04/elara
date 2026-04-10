@@ -548,22 +548,24 @@ Route::get('/test-order-created', function () {
 | NOTIFICATIONS
 |--------------------------------------------------------------------------
 */
-Route::post('/notifications/mark-all-read', function () {
-    auth()->user()->unreadNotifications->markAsRead();
+Route::post('/notifications/mark-all-read', function (\Illuminate\Http\Request $request) {
+    $user = $request->user();
+    abort_unless($user, 401);
+
+    $user->unreadNotifications->markAsRead();
+
     return response()->json(['success' => true]);
 })->middleware('auth')->name('notifications.markAllRead');
 
-Route::get('/notification/{id}', function ($id) {
-
-    $user = Auth::user();
+Route::get('/notification/{id}', function (\Illuminate\Http\Request $request, $id) {
+    $user = $request->user();
+    abort_unless($user, 401);
 
     $noti = $user->notifications()->findOrFail($id);
-
     $noti->markAsRead();
 
-    return redirect($noti->data['url']);
+    return redirect($noti->data['url'] ?? route('home'));
 })->middleware('auth')->name('notification.redirect');
-
 /*
 |--------------------------------------------------------------------------
 | AUTH
