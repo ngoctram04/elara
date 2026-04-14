@@ -264,4 +264,19 @@ class ProductVariant extends Model
             ]);
         });
     }
+    public function latestStockImport(): HasOne
+    {
+        return $this->hasOne(StockImport::class, 'variant_id')->latestOfMany();
+    }
+
+    public function getSuggestedImportPriceAttribute(): float
+    {
+        $latest = $this->latestStockImport()->first();
+
+        if ($latest && !is_null($latest->cost_price)) {
+            return (float) $latest->cost_price;
+        }
+
+        return (float) ($this->cost_price ?? 0);
+    }
 }

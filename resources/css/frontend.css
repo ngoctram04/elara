@@ -888,9 +888,23 @@ body {
     width: 480px;
     max-height: 420px;
     overflow-y: auto;
+    overflow-x: hidden;
     border-radius: 14px;
 }
+.noti-item {
+    display: flex;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    transition: all 0.2s ease;
+    overflow: hidden;
+}
 
+.noti-message {
+    font-size: 13px;
+    color: #666;
+    word-break: break-word;
+}
 .noti-dropdown::-webkit-scrollbar {
     width: 5px;
 }

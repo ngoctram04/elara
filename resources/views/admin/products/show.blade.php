@@ -33,7 +33,7 @@
                 $attributeName = $product->variants->first()?->attribute_name;
 
                 $displayPrices = $product->variants->map(function ($variant) {
-                    return $variant->final_price;
+                    return $variant->final_price ?? $variant->price;
                 });
 
                 $minDisplayPrice = $displayPrices->min();
@@ -170,8 +170,8 @@
                         <tbody>
                         @forelse($product->variants as $variant)
                             @php
-                                $salePrice = $variant->final_price < $variant->price
-                                    ? $variant->final_price
+                                $salePrice = ($variant->final_price ?? $variant->price) < $variant->price
+                                    ? ($variant->final_price ?? $variant->price)
                                     : $variant->price;
 
                                 $lots = collect($variant->stockImports ?? [])
@@ -203,7 +203,7 @@
                                 </td>
 
                                 <td>
-                                    @if ($variant->final_price < $variant->price)
+                                    @if (($variant->final_price ?? $variant->price) < $variant->price)
                                         <div class="fw-bold text-danger">
                                             {{ number_format($variant->final_price, 0, ',', '.') }}đ
                                         </div>
@@ -279,8 +279,8 @@
 {{-- MODAL CHI TIẾT LÔ --}}
 @foreach($product->variants as $variant)
     @php
-        $salePrice = $variant->final_price < $variant->price
-            ? $variant->final_price
+        $salePrice = ($variant->final_price ?? $variant->price) < $variant->price
+            ? ($variant->final_price ?? $variant->price)
             : $variant->price;
 
         $lots = collect($variant->stockImports ?? [])
@@ -380,6 +380,8 @@
                                     <th>Biến thể</th>
                                     <th class="text-end">Giá bán</th>
                                     <th>Lô nhập</th>
+                                    <th class="text-center">Ngày sản xuất</th>
+                                    <th class="text-center">HSD</th>
                                     <th class="text-end">Giá nhập</th>
                                     <th class="text-center">Còn lại</th>
                                     <th class="text-end">Chênh lệch</th>
@@ -389,6 +391,16 @@
                                 @forelse($lots as $index => $lot)
                                     @php
                                         $diff = $salePrice - ($lot->cost_price ?? 0);
+
+                                        $manufacturedAt = $lot->manufactured_at
+                                            ?? $lot->manufacture_date
+                                            ?? $lot->production_date
+                                            ?? null;
+
+                                        $expiredAt = $lot->expired_at
+                                            ?? $lot->expiry_date
+                                            ?? $lot->expiration_date
+                                            ?? null;
                                     @endphp
                                     <tr>
                                         <td class="fw-semibold">
@@ -405,6 +417,14 @@
 
                                         <td class="fw-semibold">
                                             {{ $lot->lot_code ?? $lot->batch_code ?? ('L' . $lot->id) }}
+                                        </td>
+
+                                        <td class="text-center">
+                                            {{ $manufacturedAt ? \Carbon\Carbon::parse($manufacturedAt)->format('d/m/Y') : '--' }}
+                                        </td>
+
+                                        <td class="text-center">
+                                            {{ $expiredAt ? \Carbon\Carbon::parse($expiredAt)->format('d/m/Y') : '--' }}
                                         </td>
 
                                         <td class="text-end">
@@ -425,7 +445,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="6" class="text-center text-muted py-4">
+                                        <td colspan="8" class="text-center text-muted py-4">
                                             Không có dữ liệu lô nhập còn tồn
                                         </td>
                                     </tr>

@@ -83,7 +83,7 @@ class OrderController extends Controller
             $query->latest();
         }
 
-        $orders = $query->paginate(7)->withQueryString();
+        $orders = $query->paginate(10)->withQueryString();
 
         $pendingCount = Order::where('status', Order::STATUS_PENDING)->count();
         $processingCount = Order::where('status', Order::STATUS_PROCESSING)->count();

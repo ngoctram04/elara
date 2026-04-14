@@ -23,7 +23,7 @@ class DestroyExpiredBatch extends Command
                 ->where('remaining_quantity', '>', 0)
                 ->lockForUpdate()
                 ->get();
-
+// php artisan inventory:destroy-expired
             if ($expiredLots->isEmpty()) {
                 $this->info('Không có lô nào cần huỷ');
                 DB::rollBack();

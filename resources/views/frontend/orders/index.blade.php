@@ -52,7 +52,8 @@ body{
 .search-box .form-control{
     border:1px solid #dbe3ee;
     border-left:0;
-    border-radius:0 10px 10px 0;
+    border-right:0;
+    border-radius:0;
     height:42px;
     font-size:14px;
     color:#334155;
@@ -62,6 +63,14 @@ body{
 .search-box .form-control:focus{
     border-color:#c9d7ea;
     box-shadow:none;
+}
+
+.search-box .btn-search{
+    height:42px;
+    border-radius:0 10px 10px 0;
+    font-size:13px;
+    font-weight:500;
+    padding:0 14px;
 }
 
 .order-tabs{
@@ -432,7 +441,6 @@ body{
                         <div class="col-lg-4 col-md-5">
                             <div class="input-group search-box">
                                 <span class="input-group-text">
-                                    <i class="bi bi-search"></i>
                                 </span>
 
                                 <input
@@ -441,8 +449,11 @@ body{
                                     value="{{ request('keyword') }}"
                                     class="form-control"
                                     placeholder="Nhập mã đơn..."
-                                    oninput="autoSearch()"
                                 >
+
+                                <button type="submit" class="btn btn-primary btn-search">
+                                    Tìm
+                                </button>
                             </div>
                         </div>
 
@@ -450,34 +461,36 @@ body{
                         <div class="col-lg-8 col-md-7">
                             <div class="order-tabs justify-content-md-end">
                                 <a href="{{ route('orders.history', ['keyword' => request('keyword')]) }}"
-                                   class="tab {{ request('status') == '' ? 'active' : '' }}">
+                                   class="tab {{ request('filter', request('status')) == '' ? 'active' : '' }}">
                                     Tất cả
                                 </a>
 
-                                <a href="{{ route('orders.history', ['status' => 'processing', 'keyword' => request('keyword')]) }}"
-                                   class="tab {{ request('status') == 'processing' ? 'active' : '' }}">
+                                <a href="{{ route('orders.history', ['filter' => 'processing', 'keyword' => request('keyword')]) }}"
+                                   class="tab {{ request('filter', request('status')) == 'processing' ? 'active' : '' }}">
                                     Đang xử lý
                                 </a>
 
-                                <a href="{{ route('orders.history', ['status' => 'shipping', 'keyword' => request('keyword')]) }}"
-                                   class="tab {{ request('status') == 'shipping' ? 'active' : '' }}">
+                                <a href="{{ route('orders.history', ['filter' => 'shipping', 'keyword' => request('keyword')]) }}"
+                                   class="tab {{ request('filter', request('status')) == 'shipping' ? 'active' : '' }}">
                                     Đang giao
                                 </a>
 
-                                <a href="{{ route('orders.history', ['status' => 'completed', 'keyword' => request('keyword')]) }}"
-                                   class="tab {{ request('status') == 'completed' ? 'active' : '' }}">
-                                    Đã giao
+
+                                <a href="{{ route('orders.history', ['filter' => 'completed', 'keyword' => request('keyword')]) }}"
+                                   class="tab {{ request('filter', request('status')) == 'completed' ? 'active' : '' }}">
+                                    Hoàn tất
                                 </a>
 
-                                <a href="{{ route('orders.history', ['status' => 'cancelled', 'keyword' => request('keyword')]) }}"
-                                   class="tab {{ request('status') == 'cancelled' ? 'active' : '' }}">
+                                <a href="{{ route('orders.history', ['filter' => 'cancelled', 'keyword' => request('keyword')]) }}"
+                                   class="tab {{ request('filter', request('status')) == 'cancelled' ? 'active' : '' }}">
                                     Đã huỷ
                                 </a>
 
-                                <a href="{{ route('orders.history', ['status' => 'return', 'keyword' => request('keyword')]) }}"
-                                   class="tab {{ request('status') == 'return' ? 'active' : '' }}">
+                                <a href="{{ route('orders.history', ['filter' => 'refund_all', 'keyword' => request('keyword')]) }}"
+                                   class="tab {{ request('filter', request('status')) == 'refund_all' ? 'active' : '' }}">
                                     Trả hàng / Hoàn tiền
                                 </a>
+
                             </div>
                         </div>
 
@@ -592,8 +605,7 @@ body{
                             </div>
 
                             <div class="order-variant">
-                                {{ $variant->attribute_value ?? '' }}
-                                x{{ $item->quantity }}
+                                {{ $variant->attribute_value ?? '' }} x{{ $item->quantity }}
                             </div>
                         </div>
 
@@ -709,16 +721,20 @@ body{
 
                             {{-- TRẢ HÀNG / HOÀN TIỀN --}}
                             @if($order->canRequestRefund())
-    <a href="{{ route('refund.create', $order->id) }}" class="btn btn-outline-danger">
-        Trả hàng / Hoàn tiền
-    </a>
-@endif
+                                <a href="javascript:void(0)"
+                                   class="btn btn-outline-danger btn-sm btn-action btn-refund"
+                                   data-url="{{ route('refund.create', $order->id) }}">
+                                    Trả hàng / Hoàn tiền
+                                </a>
+                            @endif
 
                             {{-- ĐÁNH GIÁ TẤT CẢ --}}
                             @php
                                 $canReviewAll = $order->isCompleted()
                                     && !$order->refundRequest
-                                    && $order->items->where('review', null)->count() > 0;
+                                    && $order->items->contains(function ($item) {
+                                        return !$item->review;
+                                    });
                             @endphp
 
                             @if($canReviewAll)
@@ -779,16 +795,6 @@ body{
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-let searchTimer;
-
-function autoSearch() {
-    clearTimeout(searchTimer);
-
-    searchTimer = setTimeout(function () {
-        document.getElementById('orderSearchForm').submit();
-    }, 500);
-}
-
 document.querySelectorAll('.btn-cancel').forEach(function(button) {
     button.addEventListener('click', function () {
         let form = this.closest('.cancel-form');
@@ -830,7 +836,6 @@ document.querySelectorAll('.btn-confirm').forEach(function(btn) {
             title: 'Xác nhận đã nhận hàng?',
             html: `
                 Sau khi xác nhận, đơn hàng sẽ hoàn tất.<br><br>
-
                 <div style="
                     background:#f8f9fa;
                     border:1px solid #dee2e6;

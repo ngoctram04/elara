@@ -30,24 +30,141 @@ class OrderController extends Controller
             ->where('user_id', Auth::id())
             ->orderByRaw('COALESCE(updated_at, created_at) DESC');
 
+        /*
+        |--------------------------------------------------------------------------
+        | 1. Tìm kiếm theo keyword
+        |--------------------------------------------------------------------------
+        | Hỗ trợ:
+        | - DH00001
+        | - 1, 12, 123...
+        | - gõ chữ trạng thái như: hủy, đang giao, chưa đánh giá...
+        |--------------------------------------------------------------------------
+        */
         if ($request->filled('keyword')) {
             $keyword = trim($request->keyword);
+            $keywordLower = mb_strtolower($keyword, 'UTF-8');
             $numberKeyword = preg_replace('/\D/', '', $keyword);
 
-            $query->where(function ($q) use ($keyword, $numberKeyword) {
-                if (!empty($numberKeyword)) {
-                    $q->where('id', 'like', '%' . $numberKeyword . '%');
+            $query->where(function ($q) use ($keyword, $numberKeyword, $keywordLower) {
+                // Tìm theo ID số
+                if ($numberKeyword !== '') {
+                    $q->orWhere('id', (int) $numberKeyword)
+                        ->orWhere('id', 'like', '%' . $numberKeyword . '%');
                 }
 
+                // Tìm theo mã DH00001
                 $q->orWhereRaw(
                     "CONCAT('DH', LPAD(id, 5, '0')) LIKE ?",
                     ['%' . $keyword . '%']
                 );
+
+                // Tìm theo trạng thái từ khóa nhập tay
+                if (
+                    str_contains($keywordLower, 'đang xử lý') ||
+                    str_contains($keywordLower, 'dang xu ly') ||
+                    str_contains($keywordLower, 'chờ xử lý') ||
+                    str_contains($keywordLower, 'cho xu ly') ||
+                    str_contains($keywordLower, 'pending')
+                ) {
+                    $q->orWhere('status', Order::STATUS_PENDING);
+                }
+
+                if (
+                    str_contains($keywordLower, 'đang giao') ||
+                    str_contains($keywordLower, 'dang giao') ||
+                    str_contains($keywordLower, 'shipping')
+                ) {
+                    $q->orWhere('status', Order::STATUS_PROCESSING);
+                }
+
+                if (
+                    str_contains($keywordLower, 'chờ xác nhận') ||
+                    str_contains($keywordLower, 'cho xac nhan') ||
+                    str_contains($keywordLower, 'chưa nhận hàng') ||
+                    str_contains($keywordLower, 'chua nhan hang') ||
+                    str_contains($keywordLower, 'chưa bấm đã nhận') ||
+                    str_contains($keywordLower, 'chua bam da nhan')
+                ) {
+                    $q->orWhere(function ($sub) {
+                        $sub->where('status', Order::STATUS_COMPLETED)
+                            ->where('customer_confirmed', 0);
+                    });
+                }
+
+                if (
+                    str_contains($keywordLower, 'hoàn tất') ||
+                    str_contains($keywordLower, 'hoan tat') ||
+                    str_contains($keywordLower, 'đã nhận hàng') ||
+                    str_contains($keywordLower, 'da nhan hang') ||
+                    str_contains($keywordLower, 'completed')
+                ) {
+                    $q->orWhere(function ($sub) {
+                        $sub->where('status', Order::STATUS_COMPLETED)
+                            ->where('customer_confirmed', 1);
+                    });
+                }
+
+                if (
+                    str_contains($keywordLower, 'hủy') ||
+                    str_contains($keywordLower, 'huỷ') ||
+                    str_contains($keywordLower, 'huy') ||
+                    str_contains($keywordLower, 'cancel')
+                ) {
+                    $q->orWhere('status', Order::STATUS_CANCELLED);
+                }
+
+                if (
+                    str_contains($keywordLower, 'trả hàng') ||
+                    str_contains($keywordLower, 'tra hang') ||
+                    str_contains($keywordLower, 'hoàn tiền') ||
+                    str_contains($keywordLower, 'hoan tien') ||
+                    str_contains($keywordLower, 'refund')
+                ) {
+                    $q->orWhereHas('refundRequest');
+                }
+
+                if (
+                    str_contains($keywordLower, 'chưa đánh giá') ||
+                    str_contains($keywordLower, 'chua danh gia') ||
+                    str_contains($keywordLower, 'unreviewed')
+                ) {
+                    $q->orWhere(function ($sub) {
+                        $sub->where('status', Order::STATUS_COMPLETED)
+                            ->where('customer_confirmed', 1)
+                            ->whereDoesntHave('refundRequest')
+                            ->whereHas('items', function ($itemQ) {
+                                $itemQ->whereDoesntHave('review');
+                            });
+                    });
+                }
+
+                if (
+                    str_contains($keywordLower, 'đã đánh giá') ||
+                    str_contains($keywordLower, 'da danh gia') ||
+                    str_contains($keywordLower, 'reviewed')
+                ) {
+                    $q->orWhere(function ($sub) {
+                        $sub->where('status', Order::STATUS_COMPLETED)
+                            ->where('customer_confirmed', 1)
+                            ->whereDoesntHave('items', function ($itemQ) {
+                                $itemQ->whereDoesntHave('review');
+                            });
+                    });
+                }
             });
         }
 
-        if ($request->filled('status')) {
-            switch ($request->status) {
+        /*
+        |--------------------------------------------------------------------------
+        | 2. Lọc nâng cao
+        |--------------------------------------------------------------------------
+        | Ưu tiên filter mới, nhưng vẫn hỗ trợ status cũ để khỏi vỡ giao diện cũ.
+        |--------------------------------------------------------------------------
+        */
+        $filter = $request->get('filter', $request->get('status'));
+
+        if (!empty($filter)) {
+            switch ($filter) {
                 case 'processing':
                     $query->where('status', Order::STATUS_PENDING);
                     break;
@@ -56,8 +173,14 @@ class OrderController extends Controller
                     $query->where('status', Order::STATUS_PROCESSING);
                     break;
 
+                case 'waiting_confirm':
+                    $query->where('status', Order::STATUS_COMPLETED)
+                        ->where('customer_confirmed', 0);
+                    break;
+
                 case 'completed':
-                    $query->where('status', Order::STATUS_COMPLETED);
+                    $query->where('status', Order::STATUS_COMPLETED)
+                        ->where('customer_confirmed', 1);
                     break;
 
                 case 'cancelled':
@@ -65,7 +188,50 @@ class OrderController extends Controller
                     break;
 
                 case 'return':
+                case 'refund_all':
                     $query->whereHas('refundRequest');
+                    break;
+
+                case 'refund_pending':
+                    $query->whereHas('refundRequest', function ($q) {
+                        $q->where('status', 'pending');
+                    });
+                    break;
+
+                case 'refund_approved':
+                    $query->whereHas('refundRequest', function ($q) {
+                        $q->where('status', 'approved');
+                    });
+                    break;
+
+                case 'refunded':
+                    $query->whereHas('refundRequest', function ($q) {
+                        $q->where('status', 'refunded');
+                    });
+                    break;
+
+                case 'refund_rejected':
+                    $query->whereHas('refundRequest', function ($q) {
+                        $q->where('status', 'rejected');
+                    });
+                    break;
+
+                case 'unreviewed':
+                    $query->where('status', Order::STATUS_COMPLETED)
+                        ->where('customer_confirmed', 1)
+                        ->whereDoesntHave('refundRequest')
+                        ->whereHas('items', function ($q) {
+                            $q->whereDoesntHave('review');
+                        });
+                    break;
+
+                case 'reviewed':
+                    $query->where('status', Order::STATUS_COMPLETED)
+                        ->where('customer_confirmed', 1)
+                        ->whereHas('items')
+                        ->whereDoesntHave('items', function ($q) {
+                            $q->whereDoesntHave('review');
+                        });
                     break;
             }
         }
@@ -124,6 +290,10 @@ class OrderController extends Controller
      */
     public function cancel(Request $request, $id)
     {
+        $request->validate([
+            'cancel_reason' => 'required|string|max:500'
+        ]);
+
         $order = Order::with(['items.batches', 'items.variant', 'user'])
             ->where('id', $id)
             ->where('user_id', Auth::id())
@@ -146,12 +316,12 @@ class OrderController extends Controller
             }
 
             $order->update([
-                'status' => Order::STATUS_CANCELLED,
-                'payment_status' => $paymentStatus,
-                'cancel_reason' => $request->cancel_reason,
-                'cancelled_by' => 'customer',
+                'status'               => Order::STATUS_CANCELLED,
+                'payment_status'       => $paymentStatus,
+                'cancel_reason'        => $request->cancel_reason,
+                'cancelled_by'         => 'customer',
                 'cancelled_by_user_id' => Auth::id(),
-                'cancelled_at' => now()
+                'cancelled_at'         => now()
             ]);
 
             foreach ($order->items as $item) {

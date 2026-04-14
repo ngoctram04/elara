@@ -876,9 +876,7 @@ class CheckoutController extends Controller
                     ]));
                 }
 
-                return redirect()
-                    ->route('checkout.success', $order->id)
-                    ->with('success', 'Thanh toán VNPay thành công!');
+                return redirect()->route('checkout.success', $order->id);
             } catch (\Exception $e) {
                 DB::rollBack();
 

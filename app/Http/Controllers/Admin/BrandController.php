@@ -34,7 +34,7 @@ class BrandController extends Controller
             $query->orderByDesc('created_at');
         }
 
-        $brands = $query->paginate(7)->withQueryString();
+        $brands = $query->paginate(8)->withQueryString();
 
         return view('admin.brands.index', compact('brands'));
     }

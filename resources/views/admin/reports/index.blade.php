@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Dashboard báo cáo')
+@section('title', 'Thống kê')
 
 @push('styles')
     @vite('resources/css/reports.css')
@@ -88,7 +88,7 @@
     <div class="report-header-card">
         <div class="report-header-left">
             <div>
-                <h4 class="report-page-title mb-1">Dashboard báo cáo</h4>
+                <h4 class="report-page-title mb-1">Thống kê</h4>
                 <p class="report-page-subtitle mb-0">
                     Theo dõi doanh thu, lợi nhuận, tồn kho, vận chuyển và hiệu quả bán hàng trong khoảng thời gian đã chọn
                 </p>
@@ -149,9 +149,6 @@
                     <span class="report-stat-icon"><i class="bi bi-cash-stack"></i></span>
                 </div>
                 <div class="report-stat-value">{{ number_format($revenue ?? 0) }} đ</div>
-                <div class="report-stat-note text-muted small mt-2">
-                    Sau khi trừ các khoản hoàn tiền
-                </div>
             </div>
         </div>
 
@@ -162,9 +159,6 @@
                     <span class="report-stat-icon"><i class="bi bi-wallet2"></i></span>
                 </div>
                 <div class="report-stat-value">{{ number_format($paidInAdvance ?? 0) }} đ</div>
-                <div class="report-stat-note text-muted small mt-2">
-                    Tiền khách đã thanh toán online, chưa đồng nghĩa doanh thu chính thức
-                </div>
             </div>
         </div>
 
@@ -175,9 +169,6 @@
                     <span class="report-stat-icon"><i class="bi bi-graph-up-arrow"></i></span>
                 </div>
                 <div class="report-stat-value">{{ number_format($profit ?? 0) }} đ</div>
-                <div class="report-stat-note text-muted small mt-2">
-                    Đã gồm vốn, phí ship shop chịu và hao hụt
-                </div>
             </div>
         </div>
 
@@ -188,9 +179,6 @@
                     <span class="report-stat-icon"><i class="bi bi-truck"></i></span>
                 </div>
                 <div class="report-stat-value">{{ number_format($shippingCostTotal ?? 0) }} đ</div>
-                <div class="report-stat-note text-muted small mt-2">
-                    Tổng chi phí vận chuyển shop đã chi trong kỳ
-                </div>
             </div>
         </div>
     </div>

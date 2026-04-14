@@ -18,3 +18,4 @@ Schedule::command('orders:auto-confirm-delivered')
 Schedule::command('membership:reset')
     ->everyMinute()
     ->withoutOverlapping();
+//php artisan schedule:work

@@ -397,6 +397,8 @@ Route::prefix('admin')
         Route::get('/stock-import/{code}/pdf', [StockImportController::class, 'exportPdf'])->name('stock.exportPdf');
         Route::get('/stock-import/suppliers/search', [StockImportController::class, 'searchSuppliers'])
             ->name('stock.suppliers.search');
+    Route::get('/stock-import/variant/{variant}/suggest-price', [StockImportController::class, 'suggestPrice'])
+    ->name('stock.suggestPrice');
 
         /*
         |--------------------------------------------------------------------------

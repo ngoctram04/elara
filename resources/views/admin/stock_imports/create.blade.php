@@ -170,7 +170,7 @@
                                            min="0"
                                            step="0.01"
                                            required>
-                                    <div class="cell-helper"></div>
+                                    <div class="cell-helper suggested-price-text small text-muted mt-1"></div>
                                 </div>
                             </td>
 
@@ -250,22 +250,25 @@
             : '';
 
         return [
-    'id' => $v->id,
-    'product_name' => $v->product->name ?? '',
-    'attribute_value' => $v->attribute_value ?? '',
-    'stock_quantity' => (int) $v->stock_quantity,
-    'stock_text' => $stockText,
-    'stock_class' => $stockClass,
-    'label' => trim(($v->product->name ?? '') . ' - ' . ($v->attribute_value ?? '')),
-    'image' => $imageUrl,
-];
+            'id' => $v->id,
+            'product_name' => $v->product->name ?? '',
+            'attribute_name' => $v->attribute_name ?? '',
+            'attribute_value' => $v->attribute_value ?? '',
+            'stock_quantity' => (int) $v->stock_quantity,
+            'stock_text' => $stockText,
+            'stock_class' => $stockClass,
+            'label' => trim(($v->product->name ?? '') . ' - ' . ($v->attribute_value ?? '')),
+            'image' => $imageUrl,
+            'suggested_price' => $v->suggested_import_price,
+        ];
     })->values();
 @endphp
 
 <script>
     window.variantsData = @json($variantsForJs);
     window.stockImportRoutes = {
-        searchSuppliers: @json(route('admin.stock.suppliers.search'))
+        searchSuppliers: @json(route('admin.stock.suppliers.search')),
+        suggestPriceBase: @json(url('/admin/stock-import/variant'))
     };
 </script>
 @endsection

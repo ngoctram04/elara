@@ -106,11 +106,23 @@ class InventoryController extends Controller
             $query->where('stock_quantity', '>', 5);
         }
 
+        // KPI tính trên toàn bộ kết quả sau filter, không theo từng trang
+        $totalVariants = (clone $query)->count();
+        $totalStock = (clone $query)->sum('stock_quantity');
+        $lowStockCount = (clone $query)->whereBetween('stock_quantity', [1, 5])->count(); // hoặc <= 5 tùy ý bạn
+        $outOfStockCount = (clone $query)->where('stock_quantity', 0)->count();
+
         $query->orderBy('stock_quantity', $request->sort == 'high' ? 'desc' : 'asc');
 
         $variants = $query->paginate(10)->withQueryString();
 
-        return view('admin.inventory.report', compact('variants'));
+        return view('admin.inventory.report', compact(
+            'variants',
+            'totalVariants',
+            'totalStock',
+            'lowStockCount',
+            'outOfStockCount'
+        ));
     }
 
     public function lowStock(Request $request)

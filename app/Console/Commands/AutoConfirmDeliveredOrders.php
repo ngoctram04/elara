@@ -7,7 +7,7 @@ use App\Models\Order;
 
 class AutoConfirmDeliveredOrders extends Command
 {
-
+// php artisan orders:auto-confirm-delivered
     protected $signature = 'orders:auto-confirm-delivered';
     protected $description = 'Tự động xác nhận đơn hàng sau 7 ngày nếu khách chưa xác nhận';
 

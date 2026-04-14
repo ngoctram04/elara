@@ -87,7 +87,7 @@ class RefundController extends Controller
         if ($refund && $refund->order && $refund->order->user) {
             $refund->order->user->notify(new SystemNotification([
                 'title'   => 'Yêu cầu hoàn tiền được chấp nhận',
-                'message' => 'Đơn #' . $refund->order->id . ' đã được duyệt hoàn tiền',
+                'message' => 'Yêu cầu hoàn tiền cho đơn #' . $refund->order->id . ' đã được duyệt. Vui lòng chờ shipper đến lấy hàng. Sau khi cửa hàng nhận và kiểm tra, tiền sẽ được hoàn lại.',
                 'url'     => route('orders.show', $refund->order->id),
                 'type'    => 'refund',
             ]));

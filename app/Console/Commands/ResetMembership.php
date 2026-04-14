@@ -14,13 +14,13 @@ class ResetMembership extends Command
     {
         $now = now();
 
-        // TEST: giả lập năm 2027
-        if ($this->option('force-test')) {
-            $now = now()->setDate(2027, 1, 1);
-            $this->info('Đang chạy chế độ TEST: giả lập ngày 01/01/2027.');
-        }
+        // TEST: giả lập năm 2027 php artisan membership:reset --force-test
+        // if ($this->option('force-test')) {
+        //     $now = now()->setDate(2027, 1, 1);
+        //     $this->info('Đang chạy chế độ TEST: giả lập ngày 01/01/2027.');
+        // }
 
-        // Chỉ chạy vào ngày 01/01
+        // Chỉ chạy vào ngày 01/01 php artisan membership:reset
         if ($now->month != 1 || $now->day != 1) {
             $this->info('Hôm nay không phải ngày 01/01, bỏ qua reset hạng thành viên.');
             return self::SUCCESS;

@@ -11,7 +11,7 @@
         <div class="card border-0 shadow-sm">
             <div class="card-body">
                 <h6 class="text-muted mb-1">Tổng biến thể</h6>
-                <h4 class="fw-bold mb-0">{{ $variants->total() }}</h4>
+                <h4 class="fw-bold mb-0">{{ $totalVariants }}</h4>
             </div>
         </div>
     </div>
@@ -20,7 +20,7 @@
         <div class="card border-0 shadow-sm">
             <div class="card-body">
                 <h6 class="text-muted mb-1">Tổng tồn kho</h6>
-                <h4 class="fw-bold mb-0">{{ $variants->sum('stock_quantity') }}</h4>
+                <h4 class="fw-bold mb-0">{{ $totalStock }}</h4>
             </div>
         </div>
     </div>
@@ -30,7 +30,7 @@
             <div class="card-body">
                 <h6 class="text-muted mb-1">Sắp hết hàng</h6>
                 <h4 class="fw-bold text-warning mb-0">
-                    {{ $variants->where('stock_quantity', '<=', 5)->count() }}
+                    {{ $lowStockCount }}
                 </h4>
             </div>
         </div>
@@ -41,7 +41,7 @@
             <div class="card-body">
                 <h6 class="text-muted mb-1">Hết hàng</h6>
                 <h4 class="fw-bold text-danger mb-0">
-                    {{ $variants->where('stock_quantity', 0)->count() }}
+                    {{ $outOfStockCount }}
                 </h4>
             </div>
         </div>

@@ -23,6 +23,7 @@ class StockImportController extends Controller
             ->select(
                 'id',
                 'product_id',
+                'attribute_name',
                 'attribute_value',
                 'stock_quantity',
                 'cost_price'
@@ -31,6 +32,24 @@ class StockImportController extends Controller
             ->get();
 
         return view('admin.stock_imports.create', compact('variants'));
+    }
+
+    public function suggestPrice(ProductVariant $variant)
+    {
+        $latestImport = $variant->stockImports()
+            ->latest('created_at')
+            ->first();
+
+        $suggestedPrice = $latestImport?->cost_price ?? $variant->cost_price ?? null;
+
+        return response()->json([
+            'success' => true,
+            'variant_id' => $variant->id,
+            'variant_name' => $variant->displayName(),
+            'suggested_price' => $suggestedPrice,
+            'last_import_price' => $latestImport?->cost_price,
+            'last_import_date' => $latestImport?->created_at?->format('d/m/Y H:i'),
+        ]);
     }
 
     public function store(Request $request)

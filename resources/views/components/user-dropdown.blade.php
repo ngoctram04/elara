@@ -23,13 +23,6 @@
         </li>
 
         <li>
-            <a class="dropdown-item" href="{{ route('orders.history') }}">
-                <i class="bi bi-box-seam"></i>
-                <span>Danh sách đơn hàng</span>
-            </a>
-        </li>
-
-        <li>
     <a class="dropdown-item" href="{{ route('wishlist.index') }}">
         <i class="bi bi-heart"></i>
         <span>Danh sách yêu thích</span>

@@ -49,6 +49,7 @@ function calculateTotal() {
 function getVariantSearchText(item) {
     return normalizeText([
         item.product_name,
+        item.attribute_name,
         item.attribute_value,
         item.label
     ].join(' '));
@@ -143,8 +144,8 @@ function renderDropdown(row, items) {
                     ${escapeHtml(item.product_name)} - ${escapeHtml(item.attribute_value)}
                 </div>
                 <div class="variant-item-meta">
-    ${getStockBadgeHtml(item)}
-</div>
+                    ${getStockBadgeHtml(item)}
+                </div>
             </div>
         </div>
     `).join('');
@@ -198,14 +199,80 @@ function renderSelectedVariantInfo(row, variant) {
                     ${escapeHtml(variant.product_name)} - ${escapeHtml(variant.attribute_value)}
                 </div>
                 <div class="selected-variant-stock">
-    ${getStockBadgeHtml(variant)}
-</div>
+                    ${getStockBadgeHtml(variant)}
+                </div>
             </div>
         </div>
     `;
 }
 
-function selectVariant(row, variantId) {
+async function fetchSuggestedPrice(variantId) {
+    if (!stockImportRoutes.suggestPriceBase || !variantId) {
+        return null;
+    }
+
+    try {
+        const response = await fetch(
+            `${stockImportRoutes.suggestPriceBase}/${variantId}/suggest-price`,
+            {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error('Không thể lấy giá nhập gợi ý');
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
+}
+
+async function applySuggestedPrice(row, variant) {
+    const priceInput = row.querySelector('.price');
+    const hintText = row.querySelector('.suggested-price-text');
+
+    if (!priceInput || !hintText) return;
+
+    hintText.innerHTML = '';
+
+    const data = await fetchSuggestedPrice(variant.id);
+
+    if (data && data.success) {
+        if (data.suggested_price !== null && data.suggested_price !== undefined) {
+            priceInput.value = data.suggested_price;
+            calculateTotal();
+        }
+
+        if (data.last_import_price !== null && data.last_import_price !== undefined) {
+            hintText.innerHTML =
+                `Giá nhập gần nhất: <strong>${formatMoney(data.last_import_price)} đ</strong>` +
+                (data.last_import_date ? ` <span class="text-muted">(${escapeHtml(data.last_import_date)})</span>` : '');
+        } else if (data.suggested_price !== null && data.suggested_price !== undefined) {
+            hintText.innerHTML =
+                `Giá gợi ý hiện tại: <strong>${formatMoney(data.suggested_price)} đ</strong>`;
+        } else {
+            hintText.textContent = 'Biến thể này chưa có lịch sử nhập kho';
+        }
+
+        return;
+    }
+
+    if (variant.suggested_price !== null && variant.suggested_price !== undefined && variant.suggested_price !== '') {
+        priceInput.value = variant.suggested_price;
+        hintText.innerHTML = `Giá gợi ý: <strong>${formatMoney(variant.suggested_price)} đ</strong>`;
+        calculateTotal();
+    } else {
+        hintText.textContent = 'Biến thể này chưa có lịch sử nhập kho';
+    }
+}
+
+async function selectVariant(row, variantId) {
     const variant = variantsData.find(v => String(v.id) === String(variantId));
     if (!variant) return;
 
@@ -222,6 +289,8 @@ function selectVariant(row, variantId) {
     renderSelectedVariantInfo(row, variant);
     dropdown.classList.add('d-none');
 
+    await applySuggestedPrice(row, variant);
+
     checkDuplicateVariant();
 }
 
@@ -230,6 +299,8 @@ function resetVariant(row, keepText = true) {
     const textInput = row.querySelector('.variant-keyword');
     const info = row.querySelector('.selected-variant-info');
     const dropdown = row.querySelector('.variant-dropdown');
+    const priceInput = row.querySelector('.price');
+    const hintText = row.querySelector('.suggested-price-text');
 
     if (!hiddenInput || !textInput || !info || !dropdown) return;
 
@@ -242,10 +313,19 @@ function resetVariant(row, keepText = true) {
         textInput.value = '';
     }
 
+    if (priceInput) {
+        priceInput.value = '';
+    }
+
+    if (hintText) {
+        hintText.innerHTML = '';
+    }
+
     updateVariantBorder(row, '');
     dropdown.innerHTML = '';
     dropdown.classList.add('d-none');
 
+    calculateTotal();
     checkDuplicateVariant();
 }
 
@@ -356,6 +436,11 @@ function bindVariantSearch(row) {
             updateVariantBorder(row, '');
         }
 
+        const hintText = row.querySelector('.suggested-price-text');
+        if (hintText) {
+            hintText.innerHTML = '';
+        }
+
         closeAllDropdowns(box);
         renderDropdown(row, searchVariants(currentText));
     });
@@ -404,7 +489,6 @@ function bindVariantSearch(row) {
     });
 }
 
-/* Supplier autocomplete */
 function renderSupplierDropdown(items) {
     const dropdown = document.getElementById('supplierDropdown');
     if (!dropdown) return;
@@ -589,6 +673,10 @@ function createNewRow() {
     newRow.querySelectorAll('.variant-dropdown').forEach(el => {
         el.innerHTML = '';
         el.classList.add('d-none');
+    });
+
+    newRow.querySelectorAll('.suggested-price-text').forEach(el => {
+        el.innerHTML = '';
     });
 
     newRow.style.background = '';

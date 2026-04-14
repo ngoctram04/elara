@@ -455,11 +455,6 @@
             <hr class="profile-divider">
 
             <div class="profile-menu text-start">
-                <a class="profile-menu-link {{ request()->routeIs('orders.*') ? 'active' : '' }}"
-                   href="{{ route('orders.history') }}">
-                    <i class="bi bi-box-seam"></i>
-                    <span>Đơn hàng của tôi</span>
-                </a>
 
                 <a class="profile-menu-link {{ request()->routeIs('profile.index') ? 'active' : '' }}"
                    href="{{ route('profile.index') }}">

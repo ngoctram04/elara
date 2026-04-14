@@ -346,6 +346,38 @@
         height:96px;
     }
 }
+.refund-status-note{
+    margin-bottom:18px;
+    padding:14px 16px;
+    border-radius:14px;
+    font-size:14px;
+    line-height:1.6;
+    border:1px solid var(--rf-border);
+}
+
+.refund-status-note.pending{
+    background:#fff7ed;
+    border-color:#fed7aa;
+    color:#9a3412;
+}
+
+.refund-status-note.approved{
+    background:#eff6ff;
+    border-color:#bfdbfe;
+    color:#1d4ed8;
+}
+
+.refund-status-note.refunded{
+    background:#ecfdf3;
+    border-color:#bbf7d0;
+    color:#15803d;
+}
+
+.refund-status-note.rejected{
+    background:#fef2f2;
+    border-color:#fecaca;
+    color:#b91c1c;
+}
 </style>
 @endpush
 
@@ -432,7 +464,27 @@
                     </span>
                 </div>
             </div>
+            @php
+    $statusNoteClass = 'pending';
+    $statusNoteText = 'Yêu cầu hoàn tiền của bạn đang được cửa hàng xem xét.';
 
+    if ($refund->status === \App\Models\RefundRequest::STATUS_APPROVED) {
+        $statusNoteClass = 'approved';
+        $statusNoteText = 'Yêu cầu hoàn tiền đã được duyệt. Vui lòng chờ shipper đến lấy hàng và bàn giao sản phẩm hoàn cho shipper. Sau khi cửa hàng nhận và kiểm tra hàng trả, hệ thống sẽ tiến hành hoàn tiền cho bạn.';
+    } elseif ($refund->status === \App\Models\RefundRequest::STATUS_REFUNDED) {
+        $statusNoteClass = 'refunded';
+        $statusNoteText = 'Cửa hàng đã nhận hàng hoàn và hoàn tiền thành công cho yêu cầu này.';
+    } elseif ($refund->status === \App\Models\RefundRequest::STATUS_REJECTED) {
+        $statusNoteClass = 'rejected';
+        $statusNoteText = $refund->admin_note
+            ? 'Yêu cầu hoàn tiền đã bị từ chối. Lý do: ' . $refund->admin_note
+            : 'Yêu cầu hoàn tiền đã bị từ chối.';
+    }
+@endphp
+
+<div class="refund-status-note {{ $statusNoteClass }}">
+    {{ $statusNoteText }}
+</div>
             <div class="refund-section">
                 <div class="refund-info-box">
                     <div class="refund-row">
@@ -558,19 +610,26 @@
                 </div>
             </div>
 
-            @if($refund->media->where('type', 'image')->count())
-                <div class="refund-section">
-                    <div class="section-title">Ảnh minh chứng</div>
+            @if($refund->media->count())
+    <div class="refund-section">
+        <div class="section-title">Ảnh / video minh chứng</div>
 
-                    <div class="gallery">
-                        @foreach($refund->media->where('type', 'image') as $media)
-                            <div class="gallery-item">
-                                <img src="{{ asset('storage/' . $media->file_path) }}" alt="refund-proof">
-                            </div>
-                        @endforeach
-                    </div>
+        <div class="gallery">
+            @foreach($refund->media as $media)
+                <div class="gallery-item">
+                    @if($media->type === 'image')
+                        <img src="{{ asset('storage/' . $media->file_path) }}" alt="refund-proof">
+                    @elseif($media->type === 'video')
+                        <video controls>
+                            <source src="{{ asset('storage/' . $media->file_path) }}" type="video/mp4">
+                            Trình duyệt không hỗ trợ video.
+                        </video>
+                    @endif
                 </div>
-            @endif
+            @endforeach
+        </div>
+    </div>
+@endif
 
         </div>
     </div>

@@ -110,11 +110,11 @@
                             <th>Sản phẩm</th>
                             <th width="140">Số sao</th>
                             <th width="200">Nội dung</th>
-                            <th width="100">Ảnh/video</th>
-                            <th width="100">Nghi vấn</th>
-                            <th width="100">Phản hồi</th>
-                            <th width="100">Trạng thái</th>
-                            <th width="180">Hành động</th>
+                            <th width="80">Ảnh/video</th>
+                            <th width="90">Nghi vấn</th>
+                            <th width="90">Phản hồi</th>
+                            <th width="90">Trạng thái</th>
+                            <th width="160">Hành động</th>
                         </tr>
                     </thead>
 
