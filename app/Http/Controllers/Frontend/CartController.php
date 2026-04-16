@@ -182,16 +182,33 @@ class CartController extends Controller
         $finalTotal = max(0, $totalAfterPromotion - $birthdayDiscount);
 
         /* ======================================================
-     * 7. SẢN PHẨM GỢI Ý
-     * ====================================================== */
+ * 7. SẢN PHẨM GỢI Ý
+ * ====================================================== */
+        $reviewStats = DB::table('reviews')
+        ->join('order_items', 'order_items.id', '=', 'reviews.order_item_id')
+            ->join('product_variants', 'product_variants.id', '=', 'order_items.variant_id')
+            ->select(
+                'product_variants.product_id',
+                DB::raw('AVG(reviews.rating) as reviews_avg_rating'),
+                DB::raw('COUNT(reviews.id) as reviews_count')
+            )
+            ->where('reviews.is_visible', 1)
+            ->groupBy('product_variants.product_id');
+
         $suggestProducts = Product::with([
             'mainImage',
             'variants',
             'brand'
         ])
-            ->withAvg('reviews', 'rating')
-            ->withCount('reviews')
-            ->where('is_active', 1)
+        ->leftJoinSub($reviewStats, 'review_stats', function ($join) {
+            $join->on('products.id', '=', 'review_stats.product_id');
+        })
+        ->select(
+            'products.*',
+            DB::raw('COALESCE(review_stats.reviews_avg_rating, 0) as reviews_avg_rating'),
+            DB::raw('COALESCE(review_stats.reviews_count, 0) as reviews_count')
+        )
+            ->where('products.is_active', 1)
             ->inRandomOrder()
             ->take(4)
             ->get();

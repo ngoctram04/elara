@@ -19,13 +19,11 @@ use App\Mail\RefundRejectedMail;
 
 class RefundController extends Controller
 {
-
     public function index(Request $request)
     {
         $query = RefundRequest::with([
-            'user',
             'media',
-            'order',
+            'order.user',
             'items.variant.product',
             'items.variant.mainImage',
         ]);
@@ -35,15 +33,15 @@ class RefundController extends Controller
             $numberSearch = preg_replace('/\D/', '', $search);
 
             $query->where(function ($q) use ($search, $numberSearch) {
-                $q->whereHas('user', function ($u) use ($search) {
+                $q->whereHas('order.user', function ($u) use ($search) {
                     $u->where('name', 'like', '%' . $search . '%');
                 })
-                    ->orWhereRaw("CONCAT('HT', LPAD(id, 5, '0')) LIKE ?", ['%' . $search . '%'])
-                    ->orWhereRaw("CONCAT('DH', LPAD(order_id, 5, '0')) LIKE ?", ['%' . $search . '%']);
+                ->orWhereRaw("CONCAT('HT', LPAD(id, 5, '0')) LIKE ?", ['%' . $search . '%'])
+                ->orWhereRaw("CONCAT('DH', LPAD(order_id, 5, '0')) LIKE ?", ['%' . $search . '%']);
 
                 if ($numberSearch !== '') {
                     $q->orWhere('id', (int) $numberSearch)
-                        ->orWhere('order_id', (int) $numberSearch);
+                      ->orWhere('order_id', (int) $numberSearch);
                 }
             });
         }
@@ -56,17 +54,16 @@ class RefundController extends Controller
 
         if ($sort === 'old') {
             $query->orderBy('created_at', 'asc')
-                ->orderBy('id', 'asc');
+                  ->orderBy('id', 'asc');
         } else {
             $query->orderBy('created_at', 'desc')
-                ->orderBy('id', 'desc');
+                  ->orderBy('id', 'desc');
         }
 
         $refunds = $query->paginate(10)->withQueryString();
 
         return view('admin.refunds.index', compact('refunds'));
     }
-
 
     public function approve($id)
     {
@@ -96,14 +93,13 @@ class RefundController extends Controller
         return back()->with('success', 'Đã chấp nhận yêu cầu hoàn tiền');
     }
 
-
     public function reject(Request $request, $id)
     {
         $request->validate([
             'admin_note' => 'required|string|max:1000',
         ]);
 
-        $refund = RefundRequest::with('user', 'order.user')->findOrFail($id);
+        $refund = RefundRequest::with('order.user')->findOrFail($id);
 
         if ($refund->status !== RefundRequest::STATUS_PENDING) {
             return back()->with('error', 'Không thể từ chối yêu cầu này');
@@ -114,22 +110,22 @@ class RefundController extends Controller
             'admin_note' => trim($request->admin_note),
         ]);
 
-        if ($refund->user) {
-            $refund->user->notify(new SystemNotification([
+        if ($refund->order && $refund->order->user) {
+            $refund->order->user->notify(new SystemNotification([
                 'title'   => 'Yêu cầu hoàn tiền bị từ chối',
                 'message' => trim($request->admin_note),
                 'url'     => route('orders.show', $refund->order_id),
                 'type'    => 'refund',
             ]));
 
-            if (!empty($refund->user->email)) {
+            if (!empty($refund->order->user->email)) {
                 try {
-                    Mail::to($refund->user->email)->send(new RefundRejectedMail($refund));
+                    Mail::to($refund->order->user->email)->send(new RefundRejectedMail($refund));
                 } catch (\Exception $e) {
                     Log::error('Send refund rejected mail failed: ' . $e->getMessage(), [
                         'refund_id' => $refund->id,
-                        'user_id'   => $refund->user->id ?? null,
-                        'email'     => $refund->user->email ?? null,
+                        'user_id'   => $refund->order->user->id ?? null,
+                        'email'     => $refund->order->user->email ?? null,
                     ]);
                 }
             }
@@ -137,7 +133,6 @@ class RefundController extends Controller
 
         return back()->with('success', 'Đã từ chối yêu cầu hoàn tiền');
     }
-
 
     public function refunded(Request $request, $id)
     {
@@ -149,19 +144,14 @@ class RefundController extends Controller
         $totalLoss = 0;
         $restockQty = 0;
         $damagedQty = 0;
-
         $totalRefundProductAmount = 0;
-
         $shippingDeduction = 0;
-
-
         $finalRefundAmount = 0;
 
         DB::beginTransaction();
 
         try {
             $refund = RefundRequest::with([
-                'user',
                 'order.user',
                 'order.items',
                 'items.variant.product',
@@ -180,7 +170,9 @@ class RefundController extends Controller
             }
 
             $order->loadMissing('items');
+
             $manualNote = trim((string) $request->input('admin_note'));
+
             $refund->update([
                 'status'      => RefundRequest::STATUS_REFUNDED,
                 'admin_note'  => $manualNote !== '' ? $manualNote : $refund->admin_note,
@@ -188,7 +180,7 @@ class RefundController extends Controller
             ]);
 
             foreach ($refund->items as $item) {
-                $variantId = (int) ($item->pivot->variant_id ?: $item->variant_id);
+                $variantId = (int) $item->variant_id;
                 $qty = max(1, (int) ($item->pivot->quantity ?? 1));
                 $refundAmount = $this->getRefundItemAmountAfterDiscount($order, $item, $qty);
 
@@ -209,7 +201,6 @@ class RefundController extends Controller
 
                     if ($stock) {
                         $batchQty = $qty;
-
                         $before = (int) $stock->remaining_quantity;
                         $after = $before + $batchQty;
                         $unitCost = (float) ($stock->cost_price ?? 0);
@@ -297,20 +288,9 @@ class RefundController extends Controller
             if ($user && $totalRefundProductAmount > 0) {
                 $minusPoints = (int) floor($totalRefundProductAmount / 1000);
 
-                $user->loyalty_points = max(
-                    0,
-                    (int) ($user->loyalty_points ?? 0) - $minusPoints
-                );
-
-                $user->total_spent = max(
-                    0,
-                    (float) ($user->total_spent ?? 0) - $totalRefundProductAmount
-                );
-
-                $user->yearly_spent = max(
-                    0,
-                    (float) ($user->yearly_spent ?? 0) - $totalRefundProductAmount
-                );
+                $user->loyalty_points = max(0, (int) ($user->loyalty_points ?? 0) - $minusPoints);
+                $user->total_spent = max(0, (float) ($user->total_spent ?? 0) - $totalRefundProductAmount);
+                $user->yearly_spent = max(0, (float) ($user->yearly_spent ?? 0) - $totalRefundProductAmount);
 
                 if (method_exists($user, 'updateMemberLevel')) {
                     $user->updateMemberLevel();
@@ -375,12 +355,7 @@ class RefundController extends Controller
             }
 
             $extraNote[] = 'Tiền hoàn thực tế: ' . number_format($finalRefundAmount, 0, ',', '.') . 'đ';
-
-            if (!$isFullRefund) {
-                $extraNote[] = 'Hoàn một phần đơn hàng';
-            } else {
-                $extraNote[] = 'Hoàn toàn bộ đơn hàng';
-            }
+            $extraNote[] = !$isFullRefund ? 'Hoàn một phần đơn hàng' : 'Hoàn toàn bộ đơn hàng';
 
             $mergedNote = trim(implode(' | ', array_filter([
                 $refund->admin_note,
@@ -462,15 +437,16 @@ class RefundController extends Controller
 
         return true;
     }
+
     private function getRefundShippingDeduction(Order $order): int
     {
-
         if ((int) ($order->shipping_fee ?? 0) > 0) {
             return 0;
         }
 
         return max(0, (int) ($order->shipping_cost ?? 0));
     }
+
     private function getRefundItemAmountAfterDiscount(Order $order, $refundItem, int $refundQty): int
     {
         $order->loadMissing('items');
@@ -479,6 +455,7 @@ class RefundController extends Controller
         $orderDiscountTotal = $this->getOrderDiscountTotal($order);
 
         $orderProductSubtotal = 0;
+
         foreach ($order->items as $orderItem) {
             $lineSubtotal = (float) ($orderItem->price ?? 0) * (int) ($orderItem->quantity ?? 0);
             $orderProductSubtotal += $lineSubtotal;
@@ -502,7 +479,6 @@ class RefundController extends Controller
 
             $lineDiscountShare = ($fullLineSubtotal / $orderProductSubtotal) * $orderDiscountTotal;
             $discountPerUnit = $lineDiscountShare / $orderedQty;
-
             $refundAmount = $refundLineSubtotal - ($discountPerUnit * $refundQty);
 
             return max(0, (int) round($refundAmount));
@@ -510,7 +486,6 @@ class RefundController extends Controller
 
         return 0;
     }
-
 
     private function getOrderDiscountTotal(Order $order): float
     {
@@ -525,4 +500,4 @@ class RefundController extends Controller
 
         return $birthdayDiscount + $voucherDiscount;
     }
-}
+} 

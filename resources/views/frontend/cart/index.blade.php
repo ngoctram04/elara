@@ -117,13 +117,7 @@
                                             <button type="button" class="qty-btn js-plus" data-id="{{ $item['variant_id'] }}">+</button>
                                         </div>
 
-                                        <div class="stock-text js-stock-text">
-                                            @if($item['stock'] <= 5)
-                                                <span class="badge bg-danger">Sắp hết ({{ $item['stock'] }})</span>
-                                            @else
-                                                Còn {{ $item['stock'] }}
-                                            @endif
-                                        </div>
+
                                     </td>
 
                                     <td class="text-end">

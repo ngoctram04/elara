@@ -326,11 +326,11 @@
                                             ? asset('storage/'.$review->user->avatar)
                                             : asset('images/avatar-default.png') }}"
                                         class="review-avatar me-3"
-                                        alt="{{ $review->user->name }}">
+                                        alt="{{ $review->orderItem?->order?->user?->name }}">
 
                                     <div class="flex-grow-1">
                                         <div class="d-flex justify-content-between gap-2">
-                                            <div class="fw-semibold">{{ $review->user->name }}</div>
+                                            <div class="fw-semibold">{{ $review->orderItem?->order?->user?->name }}</div>
                                             <small class="text-muted">{{ $review->created_at->format('d/m/Y H:i') }}</small>
                                         </div>
 

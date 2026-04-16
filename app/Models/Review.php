@@ -4,6 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Review extends Model
 {
@@ -12,11 +15,7 @@ class Review extends Model
     protected $table = 'reviews';
 
     protected $fillable = [
-        'user_id',
-        'order_id',
         'order_item_id',
-        'product_id',
-        'variant_id',
         'rating',
         'comment',
         'is_visible',
@@ -32,92 +31,54 @@ class Review extends Model
         'replied_at' => 'datetime',
     ];
 
-    /*
-    |--------------------------------------------------------------------------
-    | Relationships
-    |--------------------------------------------------------------------------
-    */
-
-    public function user()
+    public function orderItem(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(OrderItem::class, 'order_item_id');
     }
 
-    public function order()
-    {
-        return $this->belongsTo(Order::class);
-    }
-
-    public function orderItem()
-    {
-        return $this->belongsTo(OrderItem::class);
-    }
-
-    public function product()
-    {
-        return $this->belongsTo(Product::class);
-    }
-
-    public function variant()
-    {
-        return $this->belongsTo(ProductVariant::class, 'variant_id');
-    }
-
-    public function media()
+    public function media(): HasMany
     {
         return $this->hasMany(ReviewMedia::class, 'review_id');
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Media Helpers
-    |--------------------------------------------------------------------------
-    */
-
-    public function images()
+    public function images(): HasMany
     {
         return $this->hasMany(ReviewMedia::class, 'review_id')
             ->where('file_type', 'image');
     }
 
-    public function video()
+    public function video(): HasOne
     {
         return $this->hasOne(ReviewMedia::class, 'review_id')
             ->where('file_type', 'video');
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Rating / Status Helpers
-    |--------------------------------------------------------------------------
-    */
-
-    public function getIsPositiveAttribute()
+    public function getIsPositiveAttribute(): bool
     {
         return $this->rating >= 4;
     }
 
-    public function getIsNegativeAttribute()
+    public function getIsNegativeAttribute(): bool
     {
         return $this->rating <= 2;
     }
 
-    public function getIsNeutralAttribute()
+    public function getIsNeutralAttribute(): bool
     {
         return $this->rating == 3;
     }
 
-    public function getIsRepliedAttribute()
+    public function getIsRepliedAttribute(): bool
     {
         return !empty($this->admin_reply);
     }
 
-    public function getStatusLabelAttribute()
+    public function getStatusLabelAttribute(): string
     {
         return $this->is_visible ? 'Hiển thị' : 'Đã ẩn';
     }
 
-    public function getSentimentLabelAttribute()
+    public function getSentimentLabelAttribute(): string
     {
         if ($this->is_negative) {
             return 'Tiêu cực';
@@ -129,12 +90,6 @@ class Review extends Model
 
         return 'Tích cực';
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Query Scopes
-    |--------------------------------------------------------------------------
-    */
 
     public function scopeVisible($query)
     {
@@ -164,5 +119,14 @@ class Review extends Model
     public function scopeReplied($query)
     {
         return $query->whereNotNull('admin_reply');
+    }
+    public function getUserAttribute()
+    {
+        return $this->orderItem?->order?->user;
+    }
+
+    public function getVariantAttribute()
+    {
+        return $this->orderItem?->variant;
     }
 }

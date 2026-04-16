@@ -139,11 +139,11 @@ $saleBadgeText = $maxDiscountPercent > 0 ? 'Giảm đến ' . $maxDiscountPercen
 
         <div class="category-meta">
             @if (($product->reviews_count ?? 0) > 0)
-                @php
-                    $avg = round($product->reviews_avg_rating, 1);
-                    $full = floor($avg);
-                    $half = ($avg - $full) >= 0.5;
-                @endphp
+    @php
+        $avg = round($product->reviews_avg_rating ?? 0, 1);
+        $full = floor($avg);
+        $half = ($avg - $full) >= 0.5;
+    @endphp
 
                 <span class="rating-stars">
                     @for ($i = 1; $i <= 5; $i++)

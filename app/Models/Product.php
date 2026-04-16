@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use App\Models\Review;
+use Illuminate\Support\Facades\DB;
 
 class Product extends Model
 {
@@ -21,11 +23,11 @@ class Product extends Model
         'is_active',
         'is_featured',
     ];
-    
 
-    /* ======================
-        RELATIONS
-    ====================== */
+    protected $appends = [
+        'reviews_avg_rating',
+        'reviews_count',
+    ];
 
     public function category(): BelongsTo
     {
@@ -54,15 +56,10 @@ class Product extends Model
             ->where('is_main', 0);
     }
 
-    /**
-     * 🔥 BIẾN THỂ
-     * - THỨ TỰ QUYẾT ĐỊNH BIẾN THỂ MẶC ĐỊNH
-     * - BIẾN THỂ ĐẦU TIÊN = MẶC ĐỊNH
-     */
     public function variants(): HasMany
     {
         return $this->hasMany(ProductVariant::class)
-            ->orderBy('id'); // hoặc orderBy('position')
+            ->orderBy('id');
     }
 
     public function promotions(): BelongsToMany
@@ -74,10 +71,6 @@ class Product extends Model
             'promotion_id'
         );
     }
-
-    /* ======================
-        HELPERS
-    ====================== */
 
     public function hasVariants(): bool
     {
@@ -93,19 +86,10 @@ class Product extends Model
         return asset('images/no-image.png');
     }
 
-    /**
-     * 🔥 BIẾN THỂ HIỂN THỊ TRÊN CARD
-     * - LUÔN LẤY BIẾN THỂ ĐẦU TIÊN
-     * - FRONTEND KHÔNG SORT
-     */
     public function displayVariant()
     {
         return $this->variants->first();
     }
-
-    /* ======================
-        🔥 FLASH SALE LOGIC
-    ====================== */
 
     public function activeFlashPromotion()
     {
@@ -149,30 +133,16 @@ class Product extends Model
         }
 
         if ($promo->discount_type === 'percent') {
-            return max(
-                (int) round($price * (100 - $promo->discount_value) / 100),
-                0
-            );
+            return max((int) round($price * (100 - $promo->discount_value) / 100), 0);
         }
 
         if ($promo->discount_type === 'fixed') {
-            return max(
-                (int) ($price - $promo->discount_value),
-                0
-            );
+            return max((int) ($price - $promo->discount_value), 0);
         }
 
         return $price;
     }
-    /* ======================
-    🔥 INVENTORY & SALES (QUAN TRỌNG)
-    - Luôn tính từ variants
-    - Tránh lệch dữ liệu
-====================== */
 
-    /**
-     * Tổng tồn kho = tổng stock của tất cả biến thể
-     */
     public function getTotalStockAttribute(): int
     {
         if ($this->relationLoaded('variants')) {
@@ -182,9 +152,6 @@ class Product extends Model
         return (int) $this->variants()->sum('stock_quantity');
     }
 
-    /**
-     * Tổng đã bán = tổng sold của tất cả biến thể
-     */
     public function getTotalSoldAttribute(): int
     {
         if ($this->relationLoaded('variants')) {
@@ -193,14 +160,47 @@ class Product extends Model
 
         return (int) $this->variants()->sum('sold_quantity');
     }
-    public function reviews()
-    {
-        return $this->hasMany(Review::class);
-    }
+
     public function questions()
     {
         return $this->hasMany(ProductQuestion::class)
             ->where('is_active', 1)
             ->latest();
+    }
+
+    public function getReviewsAvgRatingAttribute(): float
+    {
+        if (array_key_exists('reviews_avg_rating', $this->attributes)) {
+            return (float) $this->attributes['reviews_avg_rating'];
+        }
+
+        return (float) DB::table('reviews')
+            ->join('order_items', 'order_items.id', '=', 'reviews.order_item_id')
+            ->join('product_variants', 'product_variants.id', '=', 'order_items.variant_id')
+            ->where('product_variants.product_id', $this->id)
+            ->where('reviews.is_visible', 1)
+            ->avg('reviews.rating') ?: 0;
+    }
+
+    public function getReviewsCountAttribute(): int
+    {
+        if (array_key_exists('reviews_count', $this->attributes)) {
+            return (int) $this->attributes['reviews_count'];
+        }
+
+        return (int) DB::table('reviews')
+            ->join('order_items', 'order_items.id', '=', 'reviews.order_item_id')
+            ->join('product_variants', 'product_variants.id', '=', 'order_items.variant_id')
+            ->where('product_variants.product_id', $this->id)
+            ->where('reviews.is_visible', 1)
+            ->count('reviews.id');
+    }
+    public function reviews()
+    {
+        return Review::query()
+            ->join('order_items', 'order_items.id', '=', 'reviews.order_item_id')
+            ->join('product_variants', 'product_variants.id', '=', 'order_items.variant_id')
+            ->where('product_variants.product_id', $this->id)
+            ->select('reviews.*');
     }
 }

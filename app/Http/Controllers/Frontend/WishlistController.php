@@ -6,36 +6,46 @@ use App\Http\Controllers\Controller;
 use App\Models\Wishlist;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class WishlistController extends Controller
 {
-    /**
-     * ==============================
-     * Danh sách sản phẩm yêu thích
-     * URL: /wishlist
-     * ==============================
-     */
     public function index()
     {
         $userId = Auth::id();
 
-        // Load đầy đủ + rating
+        $reviewStats = DB::table('reviews')
+            ->join('order_items', 'order_items.id', '=', 'reviews.order_item_id')
+            ->join('product_variants', 'product_variants.id', '=', 'order_items.variant_id')
+            ->where('reviews.is_visible', 1)
+            ->groupBy('product_variants.product_id')
+            ->selectRaw('
+                product_variants.product_id,
+                AVG(reviews.rating) as reviews_avg_rating,
+                COUNT(reviews.id) as reviews_count
+            ');
+
         $wishlists = Wishlist::with([
-            'product' => function ($q) {
-                $q->with([
-                    'brand',
-                    'mainImage',
-                    'variants'
-                ])
-                    ->withAvg('reviews', 'rating')   // ⭐ trung bình
-                    ->withCount('reviews');          // ⭐ số lượt
+            'product' => function ($q) use ($reviewStats) {
+                $q->leftJoinSub($reviewStats, 'review_stats', function ($join) {
+                    $join->on('products.id', '=', 'review_stats.product_id');
+                })
+                    ->select(
+                        'products.*',
+                        DB::raw('COALESCE(review_stats.reviews_avg_rating, 0) as reviews_avg_rating'),
+                        DB::raw('COALESCE(review_stats.reviews_count, 0) as reviews_count')
+                    )
+                    ->with([
+                        'brand',
+                        'mainImage',
+                        'variants'
+                    ]);
             }
         ])
             ->where('user_id', $userId)
             ->latest()
             ->paginate(12);
 
-        // Danh sách product_id đã thích (để tô tim)
         $favorites = Wishlist::where('user_id', $userId)
             ->pluck('product_id')
             ->toArray();
@@ -46,16 +56,8 @@ class WishlistController extends Controller
         ));
     }
 
-
-    /**
-     * ==============================
-     * Toggle Wishlist (AJAX)
-     * Route: POST /wishlist/toggle
-     * ==============================
-     */
     public function toggle(Request $request)
     {
-        // Chưa đăng nhập
         if (!Auth::check()) {
             return response()->json([
                 'success' => false,
@@ -63,7 +65,6 @@ class WishlistController extends Controller
             ]);
         }
 
-        // Validate
         $request->validate([
             'product_id' => 'required|exists:products,id'
         ]);
@@ -71,19 +72,15 @@ class WishlistController extends Controller
         $userId    = Auth::id();
         $productId = (int) $request->product_id;
 
-        // Kiểm tra đã tồn tại chưa
         $wishlist = Wishlist::where('user_id', $userId)
             ->where('product_id', $productId)
             ->first();
 
-        // ===== Remove =====
         if ($wishlist) {
             $wishlist->delete();
             $favorited = false;
             $message   = 'Đã bỏ khỏi yêu thích';
-        }
-        // ===== Add =====
-        else {
+        } else {
             Wishlist::create([
                 'user_id'    => $userId,
                 'product_id' => $productId
@@ -93,10 +90,8 @@ class WishlistController extends Controller
             $message   = 'Đã thêm vào yêu thích';
         }
 
-        // Tổng số lượt thích
         $count = Wishlist::where('product_id', $productId)->count();
 
-        // Format hiển thị (1,2k)
         $formattedCount = $count;
         if ($count >= 1000) {
             $formattedCount = str_replace('.', ',', round($count / 1000, 1)) . 'k';

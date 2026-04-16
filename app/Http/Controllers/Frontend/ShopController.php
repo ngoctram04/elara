@@ -16,35 +16,43 @@ class ShopController extends Controller
 {
     public function index(Request $request)
     {
+        $reviewStats = DB::table('reviews')
+            ->join('order_items', 'order_items.id', '=', 'reviews.order_item_id')
+            ->join('product_variants', 'product_variants.id', '=', 'order_items.variant_id')
+            ->select(
+                'product_variants.product_id',
+                DB::raw('AVG(reviews.rating) as reviews_avg_rating'),
+                DB::raw('COUNT(reviews.id) as reviews_count')
+            )
+            ->where('reviews.is_visible', 1)
+            ->groupBy('product_variants.product_id');
+
         /* ==================================================
         | BASE QUERY: CHỈ FILTER, CHƯA SORT
         ================================================== */
-        $baseQuery = Product::with([
-            'mainImage',
-            'variants',
-            'brand',
-            'category'
-        ])
-            ->withAvg([
-                'reviews' => function ($q) {
-                    $q->where('is_visible', 1);
-                }
-            ], 'rating')
-            ->withCount([
-                'reviews' => function ($q) {
-                    $q->where('is_visible', 1);
-                }
+        $baseQuery = Product::query()
+            ->with([
+                'mainImage',
+                'variants',
+                'brand',
+                'category'
             ])
             ->withSum('variants as variants_total_sold', 'sold_quantity')
-            ->where('is_active', 1);
+            ->leftJoinSub($reviewStats, 'review_stats', function ($join) {
+                $join->on('products.id', '=', 'review_stats.product_id');
+            })
+            ->select('products.*')
+            ->selectRaw('COALESCE(review_stats.reviews_avg_rating, 0) as reviews_avg_rating')
+            ->selectRaw('COALESCE(review_stats.reviews_count, 0) as reviews_count')
+            ->where('products.is_active', 1);
 
         /* ================= SEARCH ================= */
         if ($request->filled('q')) {
             $keyword = trim($request->q);
 
             $baseQuery->where(function ($q) use ($keyword) {
-                $q->where('name', 'like', "%{$keyword}%")
-                    ->orWhere('slug', 'like', "%{$keyword}%")
+                $q->where('products.name', 'like', "%{$keyword}%")
+                    ->orWhere('products.slug', 'like', "%{$keyword}%")
                     ->orWhereHas('brand', function ($b) use ($keyword) {
                         $b->where('name', 'like', "%{$keyword}%");
                     })
@@ -75,25 +83,25 @@ class ShopController extends Controller
 
         /* ================= FILTER ================= */
         if ($request->filled('category')) {
-            $baseQuery->where('category_id', $request->category);
+            $baseQuery->where('products.category_id', $request->category);
         }
 
         if ($request->filled('price')) {
             match ($request->price) {
-                '0-100'   => $baseQuery->whereBetween('min_price', [0, 100000]),
-                '100-200' => $baseQuery->where('min_price', '>', 100000)->where('min_price', '<=', 200000),
-                '200-300' => $baseQuery->where('min_price', '>', 200000)->where('min_price', '<=', 300000),
-                '300+'    => $baseQuery->where('min_price', '>', 300000),
+                '0-100'   => $baseQuery->whereBetween('products.min_price', [0, 100000]),
+                '100-200' => $baseQuery->where('products.min_price', '>', 100000)->where('products.min_price', '<=', 200000),
+                '200-300' => $baseQuery->where('products.min_price', '>', 200000)->where('products.min_price', '<=', 300000),
+                '300+'    => $baseQuery->where('products.min_price', '>', 300000),
                 default   => null,
             };
         }
 
         if ($request->filled('brand')) {
-            $baseQuery->where('brand_id', $request->brand);
+            $baseQuery->where('products.brand_id', $request->brand);
         }
 
         if ($request->filled('brands') && is_array($request->brands)) {
-            $baseQuery->whereIn('brand_id', $request->brands);
+            $baseQuery->whereIn('products.brand_id', $request->brands);
         }
 
         /* ==================================================
@@ -105,27 +113,27 @@ class ShopController extends Controller
             case 'bestseller':
             case 'best_selling':
                 $query->orderByDesc('variants_total_sold')
-                    ->orderByDesc('id');
+                    ->orderByDesc('products.id');
                 break;
 
             case 'price_asc':
-                $query->orderBy('min_price')
-                    ->orderByDesc('id');
+                $query->orderBy('products.min_price')
+                    ->orderByDesc('products.id');
                 break;
 
             case 'price_desc':
-                $query->orderByDesc('min_price')
-                    ->orderByDesc('id');
+                $query->orderByDesc('products.min_price')
+                    ->orderByDesc('products.id');
                 break;
 
             case 'newest':
-                $query->orderByDesc('created_at')
-                    ->orderByDesc('id');
+                $query->orderByDesc('products.created_at')
+                    ->orderByDesc('products.id');
                 break;
 
             case 'rating':
                 $query->orderByDesc('reviews_avg_rating')
-                    ->orderByDesc('id');
+                    ->orderByDesc('products.id');
                 break;
 
             case 'discount':
@@ -138,12 +146,12 @@ class ShopController extends Controller
                         ->where('end_date', '>=', $now);
                 })
                     ->orderByDesc('variants_total_sold')
-                    ->orderByDesc('id');
+                    ->orderByDesc('products.id');
                 break;
 
             default:
-                $query->orderByDesc('created_at')
-                    ->orderByDesc('id');
+                $query->orderByDesc('products.created_at')
+                    ->orderByDesc('products.id');
                 break;
         }
 

@@ -7,12 +7,11 @@ use App\Models\Order;
 use App\Models\Review;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Mail;
 
 class CustomerController extends Controller
 {
-
     public function index(Request $request)
     {
         $this->autoUnlockExpiredCustomers();
@@ -103,11 +102,13 @@ class CustomerController extends Controller
         $totalSpent = (float) ($user->total_spent ?? 0);
 
         $reviews = Review::with([
-            'product',
-            'images',
-            'video',
+            'media',
+            'orderItem.order.user',
+            'orderItem.variant.product',
         ])
-            ->where('user_id', $user->id)
+            ->whereHas('orderItem.order', function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })
             ->latest()
             ->get();
 
@@ -215,13 +216,8 @@ class CustomerController extends Controller
 
     protected function getLockStatusText(User $user): string
     {
-        if ($user->is_active) {
-            return 'Hoạt động';
-        }
-
-        return 'Đang khóa';
+        return $user->is_active ? 'Hoạt động' : 'Đang khóa';
     }
-
 
     protected function formatLockedUntil($lockedUntil): ?string
     {
@@ -231,7 +227,6 @@ class CustomerController extends Controller
 
         return Carbon::parse($lockedUntil)->format('d/m/Y H:i');
     }
-
 
     protected function getRemainingLockTime($lockedUntil, bool $isActive): ?string
     {

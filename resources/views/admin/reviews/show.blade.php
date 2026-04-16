@@ -7,7 +7,14 @@
     <div class="card border-0 shadow-sm rounded-4">
         <div class="card-body p-4">
 
-            {{-- HEADER --}}
+            @php
+                $order = $review->orderItem?->order;
+                $user = $order?->user ?? $review->user;
+                $variant = $review->variant ?? $review->orderItem?->variant;
+                $product = $variant?->product;
+                $orderId = $order?->id ?? $review->order_id;
+            @endphp
+
             <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
                 <div>
                     <h4 class="fw-bold mb-1">Chi tiết đánh giá</h4>
@@ -17,23 +24,26 @@
                 </div>
 
                 <div class="d-flex gap-2 flex-wrap">
-                    @if($review->order_id)
-                        <a href="{{ route('admin.orders.show', $review->order_id) }}"
-                           class="btn btn-outline-primary btn-sm">
+                    @if($orderId)
+                        <a
+                            href="{{ route('admin.orders.show', $orderId) }}"
+                            class="btn btn-outline-primary btn-sm"
+                        >
                             <i class="bi bi-receipt me-1"></i>
                             Xem đơn hàng
                         </a>
                     @endif
 
-                    <a href="{{ route('admin.reviews.index') }}"
-                       class="btn btn-outline-secondary btn-sm">
+                    <a
+                        href="{{ route('admin.reviews.index') }}"
+                        class="btn btn-outline-secondary btn-sm"
+                    >
                         Quay lại
                     </a>
                 </div>
             </div>
 
             <div class="row g-4">
-                {{-- THÔNG TIN --}}
                 <div class="col-lg-8">
                     <div class="border rounded-4 p-4 h-100">
                         <h6 class="fw-bold mb-3">Thông tin đánh giá</h6>
@@ -42,34 +52,30 @@
                             <div class="col-md-6">
                                 <div class="small text-muted mb-1">Đơn hàng</div>
                                 <div class="fw-semibold">
-                                    @if($review->order_id)
-                                        DH{{ str_pad($review->order_id, 5, '0', STR_PAD_LEFT) }}
-                                    @else
-                                        N/A
-                                    @endif
+                                    {{ $orderId ? 'DH' . str_pad($orderId, 5, '0', STR_PAD_LEFT) : 'N/A' }}
                                 </div>
                             </div>
 
                             <div class="col-md-6">
                                 <div class="small text-muted mb-1">Khách hàng</div>
                                 <div class="fw-semibold">
-                                    {{ $review->user->name ?? 'N/A' }}
+                                    {{ $user?->name ?? 'N/A' }}
                                 </div>
                             </div>
 
                             <div class="col-md-6">
                                 <div class="small text-muted mb-1">Sản phẩm</div>
                                 <div class="fw-semibold">
-                                    {{ $review->product->name ?? 'N/A' }}
+                                    {{ $product?->name ?? 'N/A' }}
                                 </div>
                             </div>
 
                             <div class="col-md-6">
                                 <div class="small text-muted mb-1">Phân loại</div>
                                 <div class="fw-semibold">
-                                    @if($review->variant)
-                                        {{ $review->variant->attribute_name }}:
-                                        {{ $review->variant->attribute_value }}
+                                    @if($variant)
+                                        {{ $variant->attribute_name ?? 'Phân loại' }}:
+                                        {{ $variant->attribute_value ?? 'N/A' }}
                                     @else
                                         N/A
                                     @endif
@@ -88,14 +94,14 @@
                                 <div>
                                     <span class="text-warning">
                                         @for($i = 1; $i <= 5; $i++)
-                                            @if($i <= $review->rating)
+                                            @if($i <= (int) $review->rating)
                                                 <i class="bi bi-star-fill"></i>
                                             @else
                                                 <i class="bi bi-star"></i>
                                             @endif
                                         @endfor
                                     </span>
-                                    <span class="small text-muted ms-1">({{ $review->rating }})</span>
+                                    <span class="small text-muted ms-1">({{ $review->rating ?? 0 }})</span>
                                 </div>
                             </div>
 
@@ -164,29 +170,24 @@
                     </div>
                 </div>
 
-                {{-- TÓM TẮT --}}
                 <div class="col-lg-4">
                     <div class="border rounded-4 p-4 bg-light-subtle h-100">
                         <h6 class="fw-bold mb-3">Tóm tắt</h6>
 
                         <div class="mb-3">
                             <div class="small text-muted mb-1">Khách hàng</div>
-                            <div class="fw-semibold">{{ $review->user->name ?? 'N/A' }}</div>
+                            <div class="fw-semibold">{{ $user?->name ?? 'N/A' }}</div>
                         </div>
 
                         <div class="mb-3">
                             <div class="small text-muted mb-1">Sản phẩm</div>
-                            <div class="fw-semibold">{{ $review->product->name ?? 'N/A' }}</div>
+                            <div class="fw-semibold">{{ $product?->name ?? 'N/A' }}</div>
                         </div>
 
                         <div class="mb-3">
                             <div class="small text-muted mb-1">Đơn hàng</div>
                             <div class="fw-semibold">
-                                @if($review->order_id)
-                                    DH{{ str_pad($review->order_id, 5, '0', STR_PAD_LEFT) }}
-                                @else
-                                    N/A
-                                @endif
+                                {{ $orderId ? 'DH' . str_pad($orderId, 5, '0', STR_PAD_LEFT) : 'N/A' }}
                             </div>
                         </div>
 
@@ -213,7 +214,6 @@
 
             <hr class="my-4">
 
-            {{-- NỘI DUNG REVIEW --}}
             <div class="mb-4">
                 <h6 class="fw-bold mb-2">Nội dung đánh giá</h6>
                 <div class="border rounded-4 p-3 bg-light">
@@ -221,7 +221,6 @@
                 </div>
             </div>
 
-            {{-- ẢNH / VIDEO REVIEW --}}
             @if($review->media && $review->media->count())
                 <div class="mb-4">
                     <h6 class="fw-bold mb-3">Ảnh / Video review</h6>
@@ -256,7 +255,6 @@
                 <hr class="my-4">
             @endif
 
-            {{-- ADMIN REPLY --}}
             <div>
                 <h6 class="fw-bold mb-2">Trả lời từ cửa hàng</h6>
 

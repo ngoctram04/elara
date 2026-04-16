@@ -10,7 +10,6 @@
 <div class="card border-0 shadow-sm">
     <div class="card-body">
 
-        {{-- HEADER --}}
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h5 class="mb-1">Yêu cầu hoàn tiền</h5>
@@ -20,7 +19,6 @@
             </div>
         </div>
 
-        {{-- FILTER --}}
         <form method="GET" class="row g-2 mb-4 align-items-center">
             <div class="col-md-4">
                 <input
@@ -72,7 +70,6 @@
             </div>
         </form>
 
-        {{-- TABLE --}}
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
@@ -103,7 +100,7 @@
                                 </a>
                             </td>
 
-                            <td>{{ $refund->user->name ?? '---' }}</td>
+                            <td>{{ $refund->order->user->name ?? '---' }}</td>
 
                             <td style="max-width:260px;">
                                 <span class="text-muted">
@@ -240,7 +237,7 @@
                                                 <div class="small text-muted" style="line-height:1.7;">
                                                     <div class="mb-1 text-dark">Lưu ý</div>
                                                     - Còn nguyên seal: hoàn kho, hoàn lô<br>
-                                                    - Bị vỡ: không hoàn kho, không hoàn lô, ghi nhận hao hụt giá nhập
+                                                    - Bị vỡ / hư hỏng / đã mở: không hoàn kho, ghi nhận hao hụt giá nhập
                                                 </div>
                                             </div>
                                         </div>
@@ -271,8 +268,7 @@
 
                                     <div class="modal-header">
                                         <h5 class="modal-title">
-                                            Chi tiết yêu cầu hoàn tiền
-                                            - HT{{ str_pad($refund->id, 5, '0', STR_PAD_LEFT) }}
+                                            Chi tiết yêu cầu hoàn tiền - HT{{ str_pad($refund->id, 5, '0', STR_PAD_LEFT) }}
                                         </h5>
                                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                     </div>
@@ -286,7 +282,7 @@
 
                                             <div class="col-md-6">
                                                 <div class="small text-muted mb-1">Khách hàng</div>
-                                                <div>{{ $refund->user->name ?? '---' }}</div>
+                                                <div>{{ $refund->order->user->name ?? '---' }}</div>
                                             </div>
 
                                             <div class="col-md-6">
@@ -325,19 +321,34 @@
                                                     @foreach($refund->items as $item)
                                                         @php
                                                             $variant = $item->variant;
-                                                            $image = $variant?->image_path;
-                                                            $variantCode = $variant ? ('BT' . $variant->id) : '---';
+                                                            $product = $variant?->product;
+
+                                                            $image = null;
+
+                                                            if (!empty($variant?->mainImage?->image_path)) {
+                                                                $image = $variant->mainImage->image_path;
+                                                            } elseif (!empty($variant?->image_path)) {
+                                                                $image = $variant->image_path;
+                                                            } elseif (!empty($product?->mainImage?->image_path)) {
+                                                                $image = $product->mainImage->image_path;
+                                                            }
+
+                                                            $variantCode = $variant ? ('BT' . str_pad($variant->id, 5, '0', STR_PAD_LEFT)) : '---';
                                                             $rawCondition = strtolower(trim((string) ($item->pivot->condition_status ?? '')));
 
                                                             $conditionText = match($rawCondition) {
                                                                 'sealed', 'intact', 'new', 'con_nguyen', 'connguyenseal' => 'Còn nguyên seal',
-                                                                'broken', 'damaged', 'vo', 'bi_vo', 'bivo' => 'Bị vỡ',
+                                                                'opened', 'da_mo', 'damo' => 'Đã mở',
+                                                                'broken', 'damaged', 'vo', 'bi_vo', 'bivo' => 'Bị vỡ / hư hỏng',
+                                                                'expired', 'het_han', 'hethan' => 'Hết hạn',
                                                                 default => 'Không xác định',
                                                             };
 
                                                             $conditionClass = match($rawCondition) {
                                                                 'sealed', 'intact', 'new', 'con_nguyen', 'connguyenseal' => 'text-success border bg-success-subtle',
+                                                                'opened', 'da_mo', 'damo' => 'text-warning border bg-warning-subtle',
                                                                 'broken', 'damaged', 'vo', 'bi_vo', 'bivo' => 'text-danger border bg-danger-subtle',
+                                                                'expired', 'het_han', 'hethan' => 'text-secondary border bg-secondary-subtle',
                                                                 default => 'text-secondary border bg-light',
                                                             };
                                                         @endphp
@@ -350,6 +361,7 @@
                                                                         alt="variant-image"
                                                                         class="img-fluid rounded border"
                                                                         style="width:72px; height:72px; object-fit:cover;"
+                                                                        onerror="this.onerror=null;this.src='{{ asset('images/no-image.png') }}';"
                                                                     >
                                                                 @else
                                                                     <div class="d-flex align-items-center justify-content-center rounded border bg-light text-muted"
@@ -361,7 +373,7 @@
 
                                                             <div class="flex-grow-1">
                                                                 <div class="mb-1">
-                                                                    {{ $variant->product->name ?? 'Sản phẩm' }}
+                                                                    {{ $product->name ?? 'Sản phẩm' }}
                                                                 </div>
 
                                                                 <div class="small text-muted mb-1">
@@ -369,15 +381,26 @@
                                                                     <span class="text-dark">{{ $variantCode }}</span>
                                                                 </div>
 
-                                                                @if(!empty($variant->attribute_name) || !empty($variant->attribute_value))
+                                                                @if(!empty($variant?->attribute_name) || !empty($variant?->attribute_value))
                                                                     <div class="small text-muted mb-1">
-                                                                        Phân loại: {{ $variant->attribute_name }}: {{ $variant->attribute_value }}
+                                                                        Phân loại:
+                                                                        {{ $variant->attribute_name ?? '' }}
+                                                                        @if(!empty($variant?->attribute_name) && !empty($variant?->attribute_value))
+                                                                            :
+                                                                        @endif
+                                                                        {{ $variant->attribute_value ?? '' }}
                                                                     </div>
                                                                 @endif
 
                                                                 <div class="small text-muted mb-1">
                                                                     Số lượng hoàn: {{ $item->pivot->quantity ?? 1 }}
                                                                 </div>
+
+                                                                @if(!empty($item->pivot->reason))
+                                                                    <div class="small text-muted mb-1">
+                                                                        Lý do sản phẩm: {{ $item->pivot->reason }}
+                                                                    </div>
+                                                                @endif
 
                                                                 <div class="small">
                                                                     Tình trạng:
@@ -418,21 +441,30 @@
 
                                         <div class="d-flex flex-wrap gap-2">
                                             @forelse($refund->media as $media)
-                                                @if(Str::endsWith(strtolower($media->file_path), ['jpg', 'jpeg', 'png', 'webp']))
+                                                @php
+                                                    $filePath = $media->file_path ?? '';
+                                                    $lowerPath = strtolower($filePath);
+                                                    $isImage = Str::endsWith($lowerPath, ['jpg', 'jpeg', 'png', 'webp', 'gif']);
+                                                    $mediaUrl = asset('storage/' . ltrim($filePath, '/'));
+                                                @endphp
+
+                                                @if($isImage)
                                                     <img
-                                                        src="{{ asset('storage/' . $media->file_path) }}"
+                                                        src="{{ $mediaUrl }}"
                                                         width="120"
                                                         height="120"
                                                         class="refund-preview border"
                                                         style="object-fit:cover;border-radius:8px;cursor:pointer"
-                                                        alt="refund-media">
+                                                        alt="refund-media"
+                                                        onerror="this.onerror=null;this.src='{{ asset('images/no-image.png') }}';"
+                                                    >
                                                 @else
                                                     <video
                                                         width="200"
                                                         class="refund-preview border"
                                                         style="border-radius:8px;cursor:pointer"
                                                         muted>
-                                                        <source src="{{ asset('storage/' . $media->file_path) }}">
+                                                        <source src="{{ $mediaUrl }}">
                                                     </video>
                                                 @endif
                                             @empty
@@ -454,14 +486,12 @@
             </table>
         </div>
 
-        {{-- PAGINATION --}}
         <div class="mt-4">
             {{ $refunds->appends(request()->query())->links('vendor.pagination.custom-blue') }}
         </div>
     </div>
 </div>
 
-{{-- PREVIEW MEDIA MODAL --}}
 <div class="modal fade" id="previewMediaModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content bg-dark border-0">
@@ -493,6 +523,7 @@ document.querySelectorAll('.refund-preview').forEach(function (el) {
 
         img.style.display = 'none';
         video.style.display = 'none';
+        img.removeAttribute('src');
         video.pause();
         video.removeAttribute('src');
         video.load();

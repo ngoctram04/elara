@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\Wishlist;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
 {
@@ -14,10 +15,19 @@ class ProductController extends Controller
     {
         $userId = Auth::id();
 
+        $reviewStats = DB::table('reviews')
+            ->join('order_items', 'order_items.id', '=', 'reviews.order_item_id')
+            ->join('product_variants', 'product_variants.id', '=', 'order_items.variant_id')
+            ->select(
+                'product_variants.product_id',
+                DB::raw('AVG(reviews.rating) as reviews_avg_rating'),
+                DB::raw('COUNT(reviews.id) as reviews_count')
+            )
+            ->where('reviews.is_visible', 1)
+            ->groupBy('product_variants.product_id');
+
         /* ======================================================
          * 1. LOAD PRODUCT
-         * - CHI TIẾT SẢN PHẨM PHẢI LOAD TẤT CẢ BIẾN THỂ
-         * - ĐỂ BIẾN THỂ HẾT HÀNG VẪN HIỂN THỊ
          * ====================================================== */
         $product = Product::with([
             'images',
@@ -50,27 +60,26 @@ class ProductController extends Controller
 
         /* ======================================================
          * 2. REVIEW BASE QUERY
-         * - CHỈ LẤY REVIEW ĐANG HIỂN THỊ
          * ====================================================== */
         $visibleReviewsQuery = $product->reviews()
-            ->where('is_visible', 1);
+            ->where('reviews.is_visible', 1);
 
         /* ======================================================
          * 3. REVIEWS (FILTER + SORT)
          * ====================================================== */
         $reviewsQuery = (clone $visibleReviewsQuery)
             ->with([
-                'user:id,name,avatar',
+                'orderItem.order.user',
                 'media'
             ]);
 
         if ($request->filled('rating') && $request->rating !== 'all') {
-            $reviewsQuery->where('rating', $request->rating);
+            $reviewsQuery->where('reviews.rating', $request->rating);
         }
 
         if ($request->type === 'comment') {
-            $reviewsQuery->whereNotNull('comment')
-                ->where('comment', '!=', '');
+            $reviewsQuery->whereNotNull('reviews.comment')
+                ->where('reviews.comment', '!=', '');
         }
 
         if ($request->type === 'media') {
@@ -78,9 +87,9 @@ class ProductController extends Controller
         }
 
         if ($request->sort === 'old') {
-            $reviewsQuery->orderBy('created_at', 'asc');
+            $reviewsQuery->orderBy('reviews.created_at', 'asc');
         } else {
-            $reviewsQuery->orderBy('created_at', 'desc');
+            $reviewsQuery->orderBy('reviews.created_at', 'desc');
         }
 
         $reviews = $reviewsQuery->get();
@@ -91,20 +100,20 @@ class ProductController extends Controller
         $reviewCount = (clone $visibleReviewsQuery)->count();
 
         $avgRating = $reviewCount > 0
-            ? round((clone $visibleReviewsQuery)->avg('rating'), 1)
+            ? round((clone $visibleReviewsQuery)->avg('reviews.rating'), 1)
             : 0;
 
         $ratingStats = [];
 
         for ($i = 1; $i <= 5; $i++) {
             $ratingStats[$i] = (clone $visibleReviewsQuery)
-                ->where('rating', $i)
+                ->where('reviews.rating', $i)
                 ->count();
         }
 
         $withComment = (clone $visibleReviewsQuery)
-            ->whereNotNull('comment')
-            ->where('comment', '!=', '')
+            ->whereNotNull('reviews.comment')
+            ->where('reviews.comment', '!=', '')
             ->count();
 
         $withMedia = (clone $visibleReviewsQuery)
@@ -131,32 +140,27 @@ class ProductController extends Controller
 
         /* ======================================================
          * 7. RELATED PRODUCTS
-         * - CHỈ HIỂN THỊ SẢN PHẨM ĐANG BÁN
-         * - PHẢI CÓ ÍT NHẤT 1 BIẾN THỂ ACTIVE VÀ CÒN HÀNG
          * ====================================================== */
-        $relatedProducts = Product::with([
-            'mainImage',
-            'brand'
-        ])
-            ->withAvg([
-                'reviews' => function ($q) {
-                    $q->where('is_visible', 1);
-                }
-            ], 'rating')
-            ->withCount([
-                'reviews' => function ($q) {
-                    $q->where('is_visible', 1);
-                }
+        $relatedProducts = Product::query()
+            ->with([
+                'mainImage',
+                'brand'
             ])
+            ->leftJoinSub($reviewStats, 'review_stats', function ($join) {
+                $join->on('products.id', '=', 'review_stats.product_id');
+            })
+            ->select('products.*')
+            ->selectRaw('COALESCE(review_stats.reviews_avg_rating, 0) as reviews_avg_rating')
+            ->selectRaw('COALESCE(review_stats.reviews_count, 0) as reviews_count')
             ->withSum('variants as variants_sold_sum', 'sold_quantity')
-            ->where('is_active', 1)
-            ->where('id', '!=', $product->id)
-            ->where('category_id', $product->category_id)
+            ->where('products.is_active', 1)
+            ->where('products.id', '!=', $product->id)
+            ->where('products.category_id', $product->category_id)
             ->whereHas('variants', function ($q) {
                 $q->where('stock_quantity', '>', 0)
                     ->where('is_active', 1);
             })
-            ->orderByRaw("brand_id = ? DESC", [$product->brand_id])
+            ->orderByRaw("products.brand_id = ? DESC", [$product->brand_id])
             ->orderByDesc('variants_sold_sum')
             ->limit(8)
             ->get();
@@ -169,23 +173,20 @@ class ProductController extends Controller
                 ->pluck('id')
                 ->push($product->id);
 
-            $moreProducts = Product::with([
-                'mainImage',
-                'brand'
-            ])
-                ->withAvg([
-                    'reviews' => function ($q) {
-                        $q->where('is_visible', 1);
-                    }
-                ], 'rating')
-                ->withCount([
-                    'reviews' => function ($q) {
-                        $q->where('is_visible', 1);
-                    }
+            $moreProducts = Product::query()
+                ->with([
+                    'mainImage',
+                    'brand'
                 ])
-                ->where('is_active', 1)
-                ->where('category_id', $product->category_id)
-                ->whereNotIn('id', $excludeIds)
+                ->leftJoinSub($reviewStats, 'review_stats', function ($join) {
+                    $join->on('products.id', '=', 'review_stats.product_id');
+                })
+                ->select('products.*')
+                ->selectRaw('COALESCE(review_stats.reviews_avg_rating, 0) as reviews_avg_rating')
+                ->selectRaw('COALESCE(review_stats.reviews_count, 0) as reviews_count')
+                ->where('products.is_active', 1)
+                ->where('products.category_id', $product->category_id)
+                ->whereNotIn('products.id', $excludeIds)
                 ->whereHas('variants', function ($q) {
                     $q->where('stock_quantity', '>', 0)
                         ->where('is_active', 1);
@@ -213,23 +214,20 @@ class ProductController extends Controller
         $recentIdsWithoutCurrent = array_values(array_diff($recentViewed, [$product->id]));
 
         if (!empty($recentIdsWithoutCurrent)) {
-            $recentProducts = Product::with([
-                'mainImage',
-                'brand'
-            ])
-                ->withAvg([
-                    'reviews' => function ($q) {
-                        $q->where('is_visible', 1);
-                    }
-                ], 'rating')
-                ->withCount([
-                    'reviews' => function ($q) {
-                        $q->where('is_visible', 1);
-                    }
+            $recentProducts = Product::query()
+                ->with([
+                    'mainImage',
+                    'brand'
                 ])
+                ->leftJoinSub($reviewStats, 'review_stats', function ($join) {
+                    $join->on('products.id', '=', 'review_stats.product_id');
+                })
+                ->select('products.*')
+                ->selectRaw('COALESCE(review_stats.reviews_avg_rating, 0) as reviews_avg_rating')
+                ->selectRaw('COALESCE(review_stats.reviews_count, 0) as reviews_count')
                 ->withSum('variants as variants_sold_sum', 'sold_quantity')
-                ->where('is_active', 1)
-                ->whereIn('id', $recentIdsWithoutCurrent)
+                ->where('products.is_active', 1)
+                ->whereIn('products.id', $recentIdsWithoutCurrent)
                 ->whereHas('variants', function ($q) {
                     $q->where('is_active', 1);
                 })
@@ -261,31 +259,39 @@ class ProductController extends Controller
 
     public function quickView(int $id)
     {
-        $product = Product::with([
-            'images',
-            'mainImage',
-            'variants' => function ($q) {
-                $q->orderBy('id')
-                    ->with('images');
-            },
-            'category',
-            'brand',
-            'promotions' => function ($q) {
-                $q->where('is_active', 1);
-            }
-        ])
-            ->withAvg([
-                'reviews' => function ($q) {
-                    $q->where('is_visible', 1);
-                }
-            ], 'rating')
-            ->withCount([
-                'reviews' => function ($q) {
-                    $q->where('is_visible', 1);
+        $reviewStats = DB::table('reviews')
+            ->join('order_items', 'order_items.id', '=', 'reviews.order_item_id')
+            ->join('product_variants', 'product_variants.id', '=', 'order_items.variant_id')
+            ->select(
+                'product_variants.product_id',
+                DB::raw('AVG(reviews.rating) as reviews_avg_rating'),
+                DB::raw('COUNT(reviews.id) as reviews_count')
+            )
+            ->where('reviews.is_visible', 1)
+            ->groupBy('product_variants.product_id');
+
+        $product = Product::query()
+            ->with([
+                'images',
+                'mainImage',
+                'variants' => function ($q) {
+                    $q->orderBy('id')
+                        ->with('images');
+                },
+                'category',
+                'brand',
+                'promotions' => function ($q) {
+                    $q->where('is_active', 1);
                 }
             ])
-            ->where('id', $id)
-            ->where('is_active', 1)
+            ->leftJoinSub($reviewStats, 'review_stats', function ($join) {
+                $join->on('products.id', '=', 'review_stats.product_id');
+            })
+            ->select('products.*')
+            ->selectRaw('COALESCE(review_stats.reviews_avg_rating, 0) as reviews_avg_rating')
+            ->selectRaw('COALESCE(review_stats.reviews_count, 0) as reviews_count')
+            ->where('products.id', $id)
+            ->where('products.is_active', 1)
             ->firstOrFail();
 
         return response()->json([

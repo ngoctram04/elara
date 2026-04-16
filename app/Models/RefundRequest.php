@@ -16,7 +16,6 @@ class RefundRequest extends Model
 
     protected $fillable = [
         'order_id',
-        'user_id',
         'reason',
         'status',
         'admin_note',
@@ -45,11 +44,6 @@ class RefundRequest extends Model
         return $this->belongsTo(Order::class);
     }
 
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
-    }
-
     public function media(): HasMany
     {
         return $this->hasMany(RefundMedia::class, 'refund_request_id');
@@ -62,8 +56,7 @@ class RefundRequest extends Model
             'refund_request_items',
             'refund_request_id',
             'order_item_id'
-        ) -> withPivot([
-            'variant_id',
+        )->withPivot([
             'stock_import_id',
             'quantity',
             'reason',

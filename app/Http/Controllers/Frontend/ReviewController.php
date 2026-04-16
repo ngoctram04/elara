@@ -18,11 +18,6 @@ use App\Services\ContentFilterService;
 
 class ReviewController extends Controller
 {
-    /*
-    |--------------------------------------------------------------------------
-    | FORM ĐÁNH GIÁ TẤT CẢ SẢN PHẨM TRONG 1 ĐƠN
-    |--------------------------------------------------------------------------
-    */
     public function create($orderId)
     {
         $order = Order::with([
@@ -48,16 +43,12 @@ class ReviewController extends Controller
         return view('frontend.reviews.create', compact('order', 'reviewableItems'));
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | LƯU ĐÁNH GIÁ NHIỀU SẢN PHẨM TRONG 1 LẦN SUBMIT
-    |--------------------------------------------------------------------------
-    */
     public function store(Request $request, $orderId)
     {
         $order = Order::with([
             'items.variant.product',
             'items.review',
+            'user',
         ])
             ->where('id', $orderId)
             ->where('user_id', Auth::id())
@@ -75,18 +66,14 @@ class ReviewController extends Controller
             ], [
                 'reviews.required' => 'Không có dữ liệu đánh giá.',
                 'reviews.array' => 'Dữ liệu đánh giá không hợp lệ.',
-
                 'reviews.*.rating.integer' => 'Số sao đánh giá không hợp lệ.',
                 'reviews.*.rating.min' => 'Số sao tối thiểu là 1.',
                 'reviews.*.rating.max' => 'Số sao tối đa là 5.',
-
                 'reviews.*.comment.max' => 'Nội dung đánh giá tối đa 1000 ký tự.',
-
                 'reviews.*.images.array' => 'Dữ liệu ảnh không hợp lệ.',
                 'reviews.*.images.max' => 'Mỗi sản phẩm chỉ được tải tối đa 5 ảnh.',
                 'reviews.*.images.*.image' => 'Tệp tải lên phải là hình ảnh.',
                 'reviews.*.images.*.max' => 'Mỗi ảnh tối đa 2MB.',
-
                 'reviews.*.video.mimes' => 'Video phải có định dạng mp4, mov hoặc avi.',
                 'reviews.*.video.max' => 'Video tối đa 10MB.',
             ]);
@@ -143,12 +130,10 @@ class ReviewController extends Controller
                 $hasImages = $request->hasFile("reviews.$orderItemId.images");
                 $hasVideo = $request->hasFile("reviews.$orderItemId.video");
 
-                // Nếu block này chưa nhập gì thì bỏ qua
                 if (!$rating && empty($comment) && !$hasImages && !$hasVideo) {
                     continue;
                 }
 
-                // Nếu đã nhập gì đó thì bắt buộc phải có rating
                 if (!$rating) {
                     throw ValidationException::withMessages([
                         "reviews.$orderItemId.rating" => 'Vui lòng chọn số sao cho sản phẩm này.',
@@ -161,7 +146,6 @@ class ReviewController extends Controller
                     'text'    => $comment,
                 ];
 
-                // Lọc comment
                 if (!empty($comment)) {
                     $filterResult = app(ContentFilterService::class)->filter($comment);
 
@@ -174,25 +158,14 @@ class ReviewController extends Controller
                     $comment = $filterResult['text'] ?? $comment;
                 }
 
-                $productId = optional($orderItem->variant)->product_id;
-
-                if (!$productId) {
-                    continue;
-                }
-
                 $review = Review::create([
-                    'user_id'       => Auth::id(),
-                    'order_id'      => $order->id,
                     'order_item_id' => $orderItem->id,
-                    'product_id'    => $productId,
-                    'variant_id'    => $orderItem->variant_id,
                     'rating'        => $rating,
                     'comment'       => $comment,
                     'is_visible'    => 1,
                     'is_flagged'    => !empty($filterResult['flagged']),
                 ]);
 
-                // Upload ảnh
                 if ($request->hasFile("reviews.$orderItemId.images")) {
                     foreach ($request->file("reviews.$orderItemId.images") as $image) {
                         $path = $image->store('reviews', 'public');
@@ -205,7 +178,6 @@ class ReviewController extends Controller
                     }
                 }
 
-                // Upload video
                 if ($request->hasFile("reviews.$orderItemId.video")) {
                     $video = $request->file("reviews.$orderItemId.video");
                     $path = $video->store('reviews', 'public');
@@ -237,7 +209,6 @@ class ReviewController extends Controller
 
             DB::commit();
 
-            // Notification user
             $user = Auth::user();
             if ($user) {
                 Notification::send($user, new SystemNotification([
@@ -248,7 +219,6 @@ class ReviewController extends Controller
                 ]));
             }
 
-            // Notification admin
             $admins = User::where('role', 'admin')
                 ->where('is_active', 1)
                 ->get();
@@ -286,20 +256,24 @@ class ReviewController extends Controller
         } catch (\Throwable $e) {
             DB::rollBack();
 
-            Log::error('Store multiple reviews error: ' . $e->getMessage(), [
+            Log::error('Store multiple reviews error', [
+                'message'  => $e->getMessage(),
+                'file'     => $e->getFile(),
+                'line'     => $e->getLine(),
                 'order_id' => $orderId,
-                'user_id' => Auth::id(),
+                'user_id'  => Auth::id(),
             ]);
 
             if ($request->expectsJson()) {
                 return response()->json([
                     'message' => 'Có lỗi xảy ra khi gửi đánh giá.',
+                    'debug'   => $e->getMessage(),
                 ], 500);
             }
 
             return back()
                 ->withInput()
-                ->with('error', 'Có lỗi xảy ra khi gửi đánh giá.');
+                ->with('error', 'Có lỗi xảy ra khi gửi đánh giá: ' . $e->getMessage());
         }
     }
 }

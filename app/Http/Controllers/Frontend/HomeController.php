@@ -9,70 +9,74 @@ use App\Models\Product;
 use App\Models\Promotion;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class HomeController extends Controller
 {
     public function index()
     {
-        /* =====================================================
-           ADMIN -> chuyển về dashboard
-        ===================================================== */
         if (Auth::check() && Auth::user()->role === 'admin') {
             return redirect()->route('admin.reports.index');
         }
 
         $now = Carbon::now();
 
-        /* ===============================
-           DANH MỤC NHỎ (CHỈ LẤY DANH MỤC CON CÓ ẢNH)
-        =============================== */
+        $reviewStatsSub = DB::table('reviews')
+            ->join('order_items', 'reviews.order_item_id', '=', 'order_items.id')
+            ->join('product_variants', 'order_items.variant_id', '=', 'product_variants.id')
+            ->selectRaw('product_variants.product_id as product_id')
+            ->selectRaw('AVG(reviews.rating) as reviews_avg_rating')
+            ->selectRaw('COUNT(reviews.id) as reviews_count')
+            ->groupBy('product_variants.product_id');
+
+        $soldStatsSub = DB::table('product_variants')
+            ->selectRaw('product_variants.product_id as product_id')
+            ->selectRaw('SUM(product_variants.sold_quantity) as variants_sold_sum')
+            ->groupBy('product_variants.product_id');
+
         $categories = Category::with('parent')
             ->whereNotNull('parent_id')
             ->whereNotNull('image')
             ->orderBy('name')
             ->get();
 
-        /* ===============================
-           THƯƠNG HIỆU
-        =============================== */
         $brands = Brand::whereNotNull('image')
             ->orderBy('name')
             ->get();
 
-        /* ===============================
-           SẢN PHẨM NỔI BẬT
-        =============================== */
         $featuredProducts = Product::with([
             'mainImage',
             'brand',
             'variants',
         ])
-            ->withAvg('reviews', 'rating')
-            ->withCount('reviews')
-            ->where('is_active', true)
-            ->where('is_featured', true)
-            ->latest()
+            ->leftJoinSub($reviewStatsSub, 'review_stats', function ($join) {
+                $join->on('products.id', '=', 'review_stats.product_id');
+            })
+            ->select('products.*')
+            ->selectRaw('COALESCE(review_stats.reviews_avg_rating, 0) as reviews_avg_rating')
+            ->selectRaw('COALESCE(review_stats.reviews_count, 0) as reviews_count')
+            ->where('products.is_active', true)
+            ->where('products.is_featured', true)
+            ->latest('products.created_at')
             ->take(8)
             ->get();
 
-        /* ===============================
-           SẢN PHẨM MỚI
-        =============================== */
         $latestProducts = Product::with([
             'mainImage',
             'brand',
             'variants',
         ])
-            ->withAvg('reviews', 'rating')
-            ->withCount('reviews')
-            ->where('is_active', true)
-            ->latest()
+            ->leftJoinSub($reviewStatsSub, 'review_stats', function ($join) {
+                $join->on('products.id', '=', 'review_stats.product_id');
+            })
+            ->select('products.*')
+            ->selectRaw('COALESCE(review_stats.reviews_avg_rating, 0) as reviews_avg_rating')
+            ->selectRaw('COALESCE(review_stats.reviews_count, 0) as reviews_count')
+            ->where('products.is_active', true)
+            ->latest('products.created_at')
             ->take(8)
             ->get();
 
-        /* ===============================
-           FLASH SALE
-        =============================== */
         $flashSaleProducts = Product::with([
             'mainImage',
             'brand',
@@ -84,10 +88,17 @@ class HomeController extends Controller
                     ->where('end_date', '>=', $now);
             },
         ])
-            ->withAvg('reviews', 'rating')
-            ->withCount('reviews')
-            ->withSum('variants as variants_sold_sum', 'sold_quantity')
-            ->where('is_active', true)
+            ->leftJoinSub($reviewStatsSub, 'review_stats', function ($join) {
+                $join->on('products.id', '=', 'review_stats.product_id');
+            })
+            ->leftJoinSub($soldStatsSub, 'sold_stats', function ($join) {
+                $join->on('products.id', '=', 'sold_stats.product_id');
+            })
+            ->select('products.*')
+            ->selectRaw('COALESCE(review_stats.reviews_avg_rating, 0) as reviews_avg_rating')
+            ->selectRaw('COALESCE(review_stats.reviews_count, 0) as reviews_count')
+            ->selectRaw('COALESCE(sold_stats.variants_sold_sum, 0) as variants_sold_sum')
+            ->where('products.is_active', true)
             ->whereHas('promotions', function ($q) use ($now) {
                 $q->where('type', 'product')
                     ->where('is_active', true)
@@ -98,10 +109,6 @@ class HomeController extends Controller
             ->take(8)
             ->get();
 
-        /* ===============================
-           THỜI GIAN KẾT THÚC FLASH SALE
-           Lấy mốc kết thúc sớm nhất trong các promotion đang áp dụng
-        =============================== */
         $flashSaleEndTime = null;
 
         if ($flashSaleProducts->isNotEmpty()) {
@@ -112,21 +119,6 @@ class HomeController extends Controller
             $flashSaleEndTime = $allActivePromotions->min('end_date');
         }
 
-        /*
-        // Nếu muốn lấy trực tiếp từ bảng promotions thay vì theo sản phẩm đang hiển thị,
-        // thì dùng đoạn này thay cho block bên trên:
-
-        $flashSaleEndTime = Promotion::query()
-            ->where('type', 'product')
-            ->where('is_active', true)
-            ->where('start_date', '<=', $now)
-            ->where('end_date', '>=', $now)
-            ->min('end_date');
-        */
-
-        /* ===============================
-           BLOG
-        =============================== */
         $blogs = collect();
 
         if (class_exists(\App\Models\Blog::class)) {
@@ -136,9 +128,6 @@ class HomeController extends Controller
                 ->get();
         }
 
-        /* ===============================
-           VIEW
-        =============================== */
         return view('frontend.home', compact(
             'categories',
             'brands',

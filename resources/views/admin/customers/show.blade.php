@@ -178,9 +178,6 @@
         text-align:center;
     }
 
-    /* =========================
-       ORDER TABLE
-    ========================= */
     .order-table thead th{
         background:linear-gradient(to bottom, #f8fafc, #f1f5f9);
     }
@@ -444,9 +441,7 @@
                                 <td class="order-stt">{{ $key + 1 }}</td>
 
                                 <td>
-                                    <span>
-                                        DH{{ str_pad($order->id, 5, '0', STR_PAD_LEFT) }}
-                                    </span>
+                                    <span>DH{{ str_pad($order->id, 5, '0', STR_PAD_LEFT) }}</span>
                                 </td>
 
                                 <td>
@@ -540,12 +535,28 @@
 
                     <tbody>
                         @forelse($reviews as $key => $review)
+                            @php
+                                $variant = $review->orderItem?->variant;
+                                $product = $variant?->product;
+                                $images = $review->media?->where('file_type', 'image');
+                                $videos = $review->media?->where('file_type', 'video');
+                            @endphp
+
                             <tr class="{{ $key >= 5 ? 'd-none extra-review' : '' }}">
-                                <td>{{ $review->product->name ?? '—' }}</td>
+                                <td>
+                                    <div>{{ $product?->name ?? '—' }}</div>
+
+                                    @if($variant)
+                                        <div class="small text-muted mt-1">
+                                            {{ $variant->attribute_name ?? 'Phân loại' }}:
+                                            {{ $variant->attribute_value ?? '—' }}
+                                        </div>
+                                    @endif
+                                </td>
 
                                 <td style="white-space:nowrap;">
                                     @for($i = 1; $i <= 5; $i++)
-                                        @if($i <= $review->rating)
+                                        @if($i <= (int) $review->rating)
                                             <span style="color:#f5b301;">★</span>
                                         @else
                                             <span style="color:#cbd5e1;">☆</span>
@@ -558,10 +569,10 @@
                                 </td>
 
                                 <td style="min-width:250px;">
-                                    @if(($review->images && $review->images->count()) || $review->video)
+                                    @if(($images && $images->count()) || ($videos && $videos->count()))
                                         <div class="review-media-wrap">
-                                            @if($review->images && $review->images->count())
-                                                @foreach($review->images as $img)
+                                            @if($images && $images->count())
+                                                @foreach($images as $img)
                                                     <a href="{{ asset('storage/' . $img->file_path) }}" target="_blank">
                                                         <img
                                                             src="{{ asset('storage/' . $img->file_path) }}"
@@ -572,10 +583,12 @@
                                                 @endforeach
                                             @endif
 
-                                            @if($review->video)
-                                                <video class="review-video" controls preload="metadata">
-                                                    <source src="{{ asset('storage/' . $review->video->file_path) }}">
-                                                </video>
+                                            @if($videos && $videos->count())
+                                                @foreach($videos as $video)
+                                                    <video class="review-video" controls preload="metadata">
+                                                        <source src="{{ asset('storage/' . $video->file_path) }}">
+                                                    </video>
+                                                @endforeach
                                             @endif
                                         </div>
                                     @else
