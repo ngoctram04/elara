@@ -83,7 +83,22 @@ class ShopController extends Controller
 
         /* ================= FILTER ================= */
         if ($request->filled('category')) {
-            $baseQuery->where('products.category_id', $request->category);
+            $categoryId = (int) $request->category;
+
+            $selectedCategory = Category::with('children')->find($categoryId);
+
+            if ($selectedCategory) {
+                $categoryIds = [$selectedCategory->id];
+
+                if ($selectedCategory->children->isNotEmpty()) {
+                    $categoryIds = array_merge(
+                        $categoryIds,
+                        $selectedCategory->children->pluck('id')->toArray()
+                    );
+                }
+
+                $baseQuery->whereIn('products.category_id', $categoryIds);
+            }
         }
 
         if ($request->filled('price')) {
@@ -101,7 +116,10 @@ class ShopController extends Controller
         }
 
         if ($request->filled('brands') && is_array($request->brands)) {
-            $baseQuery->whereIn('products.brand_id', $request->brands);
+            $brandIds = array_filter($request->brands, fn($id) => !empty($id));
+            if (!empty($brandIds)) {
+                $baseQuery->whereIn('products.brand_id', $brandIds);
+            }
         }
 
         /* ==================================================
@@ -171,11 +189,57 @@ class ShopController extends Controller
             ->orderBy('name')
             ->get();
 
-        $brands = Brand::whereHas('products', function ($q) {
-            $q->where('is_active', 1);
-        })
-            ->orderBy('name')
-            ->get();
+        $brandsQuery = Brand::query()
+            ->whereHas('products', function ($q) use ($request) {
+                $q->where('products.is_active', 1);
+
+                if ($request->filled('q')) {
+                    $keyword = trim($request->q);
+
+                    $q->where(function ($sub) use ($keyword) {
+                        $sub->where('products.name', 'like', "%{$keyword}%")
+                            ->orWhere('products.slug', 'like', "%{$keyword}%")
+                            ->orWhereHas('category', function ($c) use ($keyword) {
+                                $c->where('name', 'like', "%{$keyword}%")
+                                    ->orWhereHas('parent', function ($parent) use ($keyword) {
+                                        $parent->where('name', 'like', "%{$keyword}%");
+                                    });
+                            });
+                    });
+                }
+
+                if ($request->filled('category')) {
+                    $categoryId = (int) $request->category;
+
+                    $selectedCategory = Category::with('children')->find($categoryId);
+
+                    if ($selectedCategory) {
+                        $categoryIds = [$selectedCategory->id];
+
+                        if ($selectedCategory->children->isNotEmpty()) {
+                            $categoryIds = array_merge(
+                                $categoryIds,
+                                $selectedCategory->children->pluck('id')->toArray()
+                            );
+                        }
+
+                        $q->whereIn('products.category_id', $categoryIds);
+                    }
+                }
+
+                if ($request->filled('price')) {
+                    match ($request->price) {
+                        '0-100'   => $q->whereBetween('products.min_price', [0, 100000]),
+                        '100-200' => $q->where('products.min_price', '>', 100000)->where('products.min_price', '<=', 200000),
+                        '200-300' => $q->where('products.min_price', '>', 200000)->where('products.min_price', '<=', 300000),
+                        '300+'    => $q->where('products.min_price', '>', 300000),
+                        default   => null,
+                    };
+                }
+            })
+            ->orderBy('name');
+
+        $brands = $brandsQuery->get();
 
         /* ================= POPULAR KEYWORDS ================= */
         $popularKeywords = SearchHistory::select('keyword', DB::raw('COUNT(*) as total'))

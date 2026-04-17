@@ -197,10 +197,13 @@ class Product extends Model
     }
     public function reviews()
     {
-        return Review::query()
-            ->join('order_items', 'order_items.id', '=', 'reviews.order_item_id')
-            ->join('product_variants', 'product_variants.id', '=', 'order_items.variant_id')
-            ->where('product_variants.product_id', $this->id)
-            ->select('reviews.*');
+        return $this->hasManyThrough(
+            \App\Models\Review::class,
+            \App\Models\OrderItem::class,
+            'variant_id',   // foreign key on order_items? -> cái này chưa đúng trực tiếp
+            'order_item_id',
+            'id',
+            'id'
+        );
     }
 }

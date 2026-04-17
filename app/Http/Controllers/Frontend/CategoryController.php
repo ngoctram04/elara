@@ -38,11 +38,36 @@ class CategoryController extends Controller
             'mainImage',
             'brand',
         ])
-            ->withAvg('reviews', 'rating')
-            ->withCount('reviews')
-            ->withSum('variants as variants_total_sold', 'sold_quantity')
             ->whereIn('category_id', $categoryIds)
-            ->where('is_active', true);
+            ->where('is_active', true)
+            ->select('products.*')
+
+            // Tổng sold của variants
+            ->selectSub(function ($q) {
+                $q->from('product_variants')
+                    ->whereColumn('product_variants.product_id', 'products.id')
+                    ->selectRaw('COALESCE(SUM(product_variants.sold_quantity), 0)');
+            }, 'variants_total_sold')
+
+            // AVG rating
+            ->selectSub(function ($q) {
+                $q->from('reviews')
+                    ->join('order_items', 'order_items.id', '=', 'reviews.order_item_id')
+                    ->join('product_variants', 'product_variants.id', '=', 'order_items.variant_id')
+                    ->whereColumn('product_variants.product_id', 'products.id')
+                    ->where('reviews.is_visible', 1)
+                    ->selectRaw('COALESCE(AVG(reviews.rating), 0)');
+            }, 'reviews_avg_rating')
+
+            // Count reviews
+            ->selectSub(function ($q) {
+                $q->from('reviews')
+                    ->join('order_items', 'order_items.id', '=', 'reviews.order_item_id')
+                    ->join('product_variants', 'product_variants.id', '=', 'order_items.variant_id')
+                    ->whereColumn('product_variants.product_id', 'products.id')
+                    ->where('reviews.is_visible', 1)
+                    ->selectRaw('COUNT(reviews.id)');
+            }, 'reviews_count');
 
         /* ==================================================
         | PRICE FILTER
@@ -50,10 +75,10 @@ class CategoryController extends Controller
         if ($request->filled('price')) {
             match ($request->price) {
                 '0-100'   => $baseQuery->whereBetween('min_price', [0, 100000]),
-                '100-200' => $baseQuery->where('min_price', '>',
-                    100000
-                )->where('min_price', '<=', 200000),
-                '200-300' => $baseQuery->where('min_price', '>', 200000)->where('min_price', '<=', 300000),
+                '100-200' => $baseQuery->where('min_price', '>', 100000)
+                    ->where('min_price', '<=', 200000),
+                '200-300' => $baseQuery->where('min_price', '>', 200000)
+                    ->where('min_price', '<=', 300000),
                 '300+'    => $baseQuery->where('min_price', '>', 300000),
                 default   => null,
             };
@@ -117,9 +142,9 @@ class CategoryController extends Controller
 
                 $query->whereHas('promotions', function ($sub) use ($now) {
                     $sub->where('type', 'product')
-                    ->where('is_active', 1)
-                    ->where('start_date', '<=', $now)
-                    ->where('end_date', '>=', $now);
+                        ->where('is_active', 1)
+                        ->where('start_date', '<=', $now)
+                        ->where('end_date', '>=', $now);
                 });
 
                 $query->orderByDesc('variants_total_sold')
@@ -143,8 +168,8 @@ class CategoryController extends Controller
         }
 
         $products = $query
-        ->paginate($limit)
-        ->withQueryString();
+            ->paginate($limit)
+            ->withQueryString();
 
         /* ==================================================
         | SIDEBAR CATEGORY
