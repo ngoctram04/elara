@@ -117,7 +117,6 @@
                                             <button type="button" class="qty-btn js-plus" data-id="{{ $item['variant_id'] }}">+</button>
                                         </div>
 
-
                                     </td>
 
                                     <td class="text-end">

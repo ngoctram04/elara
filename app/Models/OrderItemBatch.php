@@ -16,7 +16,6 @@ class OrderItemBatch extends Model
         'returned_quantity',
         'is_rolled_back',
     ];
-
     protected $casts = [
         'quantity'          => 'integer',
         'returned_quantity' => 'integer',

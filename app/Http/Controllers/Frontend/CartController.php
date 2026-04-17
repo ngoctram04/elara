@@ -19,187 +19,182 @@ class CartController extends Controller
      * ============================
      */
     public function index()
-    {
-        /* ======================================================
+{
+    /* ======================================================
      * 1. SYNC DB -> SESSION (nếu user đã đăng nhập)
      * ====================================================== */
-        if (Auth::check()) {
+    if (Auth::check()) {
+        $dbItems = Cart::where('user_id', Auth::id())->get();
 
-            $dbItems = Cart::where('user_id', Auth::id())->get();
+        $sessionCart = [];
 
-            $sessionCart = [];
-
-            foreach ($dbItems as $item) {
-                $sessionCart[$item->variant_id] = [
-                    'variant_id' => $item->variant_id,
-                    'quantity'   => $item->quantity,
-                ];
-            }
-
-            session()->put('cart', $sessionCart);
+        foreach ($dbItems as $item) {
+            $sessionCart[$item->variant_id] = [
+                'variant_id' => $item->variant_id,
+                'quantity'   => $item->quantity,
+            ];
         }
 
-        /* ======================================================
+        session()->put('cart', $sessionCart);
+    }
+
+    /* ======================================================
      * 2. LẤY CART TỪ SESSION
      * ====================================================== */
-        $rawCart = session()->get('cart', []);
-        $cart = [];
-        $total = 0;
-        $updatedSession = false;
+    $rawCart = session()->get('cart', []);
+    $cart = [];
+    $total = 0;
+    $updatedSession = false;
 
-        /* ======================================================
+    /* ======================================================
      * 3. LOAD VARIANTS
      * ====================================================== */
-        if (!empty($rawCart)) {
+    if (!empty($rawCart)) {
+        $variantIds = collect($rawCart)->pluck('variant_id');
 
-            $variantIds = collect($rawCart)->pluck('variant_id');
+        $variants = ProductVariant::with([
+            'product.mainImage',
+            'product',
+            'images',
+        ])
+            ->whereIn('id', $variantIds)
+            ->get()
+            ->keyBy('id');
 
-            $variants = ProductVariant::with([
-                'product.mainImage',
-                'product',
-                'images',
-            ])
-                ->whereIn('id', $variantIds)
-                ->get()
-                ->keyBy('id');
+        $productIds = $variants->pluck('product_id')->unique();
 
-            $productIds = $variants->pluck('product_id')->unique();
+        $productVariantsGroup = ProductVariant::whereIn('product_id', $productIds)
+            ->get()
+            ->groupBy('product_id');
 
-            $productVariantsGroup = ProductVariant::whereIn('product_id', $productIds)
-                ->get()
-                ->groupBy('product_id');
-
-            /* ======================================================
+        /* ======================================================
          * 4. BUILD CART DATA
          * ====================================================== */
-            foreach ($rawCart as $variantId => $item) {
+        foreach ($rawCart as $variantId => $item) {
+            $variant = $variants[$variantId] ?? null;
 
-                $variant = $variants[$variantId] ?? null;
-
-                // Variant bị xóa
-                if (!$variant) {
-                    unset($rawCart[$variantId]);
-                    $updatedSession = true;
-                    continue;
-                }
-
-                $stock = $variant->stock_quantity;
-                $quantity = min($item['quantity'], $stock);
-
-                // Nếu tồn kho thay đổi
-                if ($quantity != $item['quantity']) {
-                    $rawCart[$variantId]['quantity'] = $quantity;
-                    $updatedSession = true;
-                }
-
-                // Hết hàng
-                if ($quantity <= 0) {
-                    unset($rawCart[$variantId]);
-                    $updatedSession = true;
-                    continue;
-                }
-
-                $price = $variant->final_price ?? $variant->price;
-                $originalPrice = $variant->is_on_sale ? $variant->price : null;
-
-                $subTotal = $price * $quantity;
-                $total += $subTotal;
-
-                $productVariants = $productVariantsGroup[$variant->product_id] ?? collect();
-
-                $image =
-                    optional($variant->images->first())->image_path
-                    ?? optional($variant->product->mainImage)->image_path
-                    ?? null;
-
-                $cart[] = [
-                    'variant_id' => $variant->id,
-                    'product_id' => $variant->product_id,
-                    'slug'       => $variant->product->slug,
-                    'name'       => $variant->product->name,
-                    'variant'    => $variant->attribute_value,
-
-                    'price'          => $price,
-                    'original_price' => $originalPrice,
-
-                    'quantity'  => $quantity,
-                    'sub_total' => $subTotal,
-                    'stock'     => $stock,
-
-                    'variants' => $productVariants,
-                    'image'    => $image,
-                ];
+            // Variant bị xóa
+            if (!$variant) {
+                unset($rawCart[$variantId]);
+                $updatedSession = true;
+                continue;
             }
 
-            // Cập nhật lại session nếu có thay đổi
-            if ($updatedSession) {
-                session()->put('cart', $rawCart);
+            $stock = $variant->stock_quantity;
+            $quantity = min($item['quantity'], $stock);
+
+            // Nếu tồn kho thay đổi
+            if ($quantity != $item['quantity']) {
+                $rawCart[$variantId]['quantity'] = $quantity;
+                $updatedSession = true;
             }
+
+            // Hết hàng
+            if ($quantity <= 0) {
+                unset($rawCart[$variantId]);
+                $updatedSession = true;
+                continue;
+            }
+
+            $price = $variant->final_price ?? $variant->price;
+            $originalPrice = $variant->is_on_sale ? $variant->price : null;
+
+            $subTotal = $price * $quantity;
+            $total += $subTotal;
+
+            $productVariants = $productVariantsGroup[$variant->product_id] ?? collect();
+
+            $image =
+                optional($variant->images->first())->image_path
+                ?? optional($variant->product->mainImage)->image_path
+                ?? null;
+
+            $cart[] = [
+                'variant_id' => $variant->id,
+                'product_id' => $variant->product_id,
+                'slug'       => $variant->product->slug,
+                'name'       => $variant->product->name,
+                'variant'    => $variant->attribute_value,
+
+                'price'          => $price,
+                'original_price' => $originalPrice,
+
+                'quantity'  => $quantity,
+                'sub_total' => $subTotal,
+                'stock'     => $stock,
+
+                'variants' => $productVariants,
+                'image'    => $image,
+            ];
         }
 
-        /* ======================================================
+        // Cập nhật lại session nếu có thay đổi
+        if ($updatedSession) {
+            session()->put('cart', $rawCart);
+        }
+    }
+
+    /* ======================================================
      * 5. VOUCHER (lấy từ session)
      * ====================================================== */
-        $promotionDiscount = session('promotion_discount', 0);
+    $promotionDiscount = session('promotion_discount', 0);
 
-        // Tổng sau voucher
-        $totalAfterPromotion = max(0, $total - $promotionDiscount);
+    // Tổng sau voucher
+    $totalAfterPromotion = max(0, $total - $promotionDiscount);
 
-        /* ======================================================
+    /* ======================================================
      * 6. BIRTHDAY BENEFIT
+     * Áp dụng trong THÁNG sinh nhật và chưa dùng năm nay
      * ====================================================== */
-        $birthdayDiscount = 0;
-        $birthdayPercent = 0;
+    $birthdayDiscount = 0;
+    $birthdayPercent = 0;
 
-        $user = Auth::user();
+    $user = Auth::user();
 
-        if ($user && $user->date_of_birth) {
+    if ($user && $user->date_of_birth) {
+        $today = now();
+        $birthday = \Carbon\Carbon::parse($user->date_of_birth);
 
-            $today = now();
-            $birthday = \Carbon\Carbon::parse($user->date_of_birth);
+        if (
+            $today->month == $birthday->month &&
+            $user->birthday_discount_year != $today->year
+        ) {
+            $birthdayPercent = match ($user->member_level) {
+                'silver' => 5,
+                'gold' => 10,
+                'diamond' => 15,
+                default => 0
+            };
 
-            // Chỉ áp dụng trong tháng sinh nhật và chưa dùng năm nay
-            if (
-                $today->format('m-d') == $birthday->format('m-d') &&
-                $user->birthday_discount_year != $today->year
-            ) {
-
-                $birthdayPercent = match ($user->member_level) {
-                    'silver' => 5,
-                    'gold' => 10,
-                    'diamond' => 15,
-                    default => 0
-                };
-
-                $birthdayDiscount = round($totalAfterPromotion * $birthdayPercent / 100);
-            }
+            $birthdayDiscount = round($totalAfterPromotion * $birthdayPercent / 100);
         }
+    }
 
-        // Lưu session để Checkout dùng
-        session()->put('birthday_discount', $birthdayDiscount);
+    // Lưu session để Checkout dùng
+    session()->put('birthday_discount', $birthdayDiscount);
 
-        // Tổng cuối cùng
-        $finalTotal = max(0, $totalAfterPromotion - $birthdayDiscount);
+    // Tổng cuối cùng
+    $finalTotal = max(0, $totalAfterPromotion - $birthdayDiscount);
 
-        /* ======================================================
- * 7. SẢN PHẨM GỢI Ý
- * ====================================================== */
-        $reviewStats = DB::table('reviews')
+    /* ======================================================
+     * 7. SẢN PHẨM GỢI Ý
+     * ====================================================== */
+    $reviewStats = DB::table('reviews')
         ->join('order_items', 'order_items.id', '=', 'reviews.order_item_id')
-            ->join('product_variants', 'product_variants.id', '=', 'order_items.variant_id')
-            ->select(
-                'product_variants.product_id',
-                DB::raw('AVG(reviews.rating) as reviews_avg_rating'),
-                DB::raw('COUNT(reviews.id) as reviews_count')
-            )
-            ->where('reviews.is_visible', 1)
-            ->groupBy('product_variants.product_id');
+        ->join('product_variants', 'product_variants.id', '=', 'order_items.variant_id')
+        ->select(
+            'product_variants.product_id',
+            DB::raw('AVG(reviews.rating) as reviews_avg_rating'),
+            DB::raw('COUNT(reviews.id) as reviews_count')
+        )
+        ->where('reviews.is_visible', 1)
+        ->groupBy('product_variants.product_id');
 
-        $suggestProducts = Product::with([
-            'mainImage',
-            'variants',
-            'brand'
-        ])
+    $suggestProducts = Product::with([
+        'mainImage',
+        'variants',
+        'brand'
+    ])
         ->leftJoinSub($reviewStats, 'review_stats', function ($join) {
             $join->on('products.id', '=', 'review_stats.product_id');
         })
@@ -208,22 +203,29 @@ class CartController extends Controller
             DB::raw('COALESCE(review_stats.reviews_avg_rating, 0) as reviews_avg_rating'),
             DB::raw('COALESCE(review_stats.reviews_count, 0) as reviews_count')
         )
-            ->where('products.is_active', 1)
-            ->inRandomOrder()
-            ->take(4)
-            ->get();
+        ->where('products.is_active', 1)
+        ->inRandomOrder()
+        ->take(4)
+        ->get();
 
-        /* ======================================================
+    /* ======================================================
      * 8. VOUCHER KHẢ DỤNG
+     * - active
+     * - đúng thời gian
+     * - chưa hết lượt
+     * - voucher thường: hiện bình thường
+     * - voucher đổi điểm: chỉ hiện nếu thuộc user hiện tại
+     * - voucher đã dùng ở đơn không hủy: không hiện lại
      * ====================================================== */
-        $userId = Auth::id();
+    $userId = Auth::id();
 
-        $availablePromotions = Promotion::where('is_active', 1)
+    $availablePromotions = Promotion::query()
+        ->where('is_active', 1)
         ->where('type', 'order')
 
         ->where(function ($q) {
             $q->whereNull('start_date')
-            ->orWhere('start_date', '<=', now());
+                ->orWhere('start_date', '<=', now());
         })
 
         ->where(function ($q) {
@@ -231,38 +233,54 @@ class CartController extends Controller
                 ->orWhere('end_date', '>=', now());
         })
 
-            // chưa hết lượt
-            ->where(function ($q) {
-                $q->whereNull('usage_limit')
+        ->where(function ($q) {
+            $q->whereNull('usage_limit')
                 ->orWhereColumn('used_count', '<', 'usage_limit');
-            })
+        })
 
-            // chưa dùng
-            ->whereNotExists(function ($q) use ($userId) {
+        ->when($userId, function ($query) use ($userId) {
+            $query->where(function ($q) use ($userId) {
+                $q->whereNotExists(function ($sub) {
+                    $sub->select(DB::raw(1))
+                        ->from('user_point_rewards')
+                        ->whereColumn('user_point_rewards.promotion_id', 'promotions.id');
+                })
+                ->orWhereExists(function ($sub) use ($userId) {
+                    $sub->select(DB::raw(1))
+                        ->from('user_point_rewards')
+                        ->whereColumn('user_point_rewards.promotion_id', 'promotions.id')
+                        ->where('user_point_rewards.user_id', $userId);
+                });
+            });
+        })
+
+        ->when($userId, function ($query) use ($userId) {
+            $query->whereNotExists(function ($q) use ($userId) {
                 $q->select(DB::raw(1))
-                ->from('orders')
-                ->whereColumn('orders.promotion_code', 'promotions.code')
-                ->where('orders.user_id', $userId)
-                ->where('orders.status', '!=', 4); // nếu huỷ thì cho dùng lại
-            })
+                    ->from('orders')
+                    ->whereColumn('orders.promotion_code', 'promotions.code')
+                    ->where('orders.user_id', $userId)
+                    ->where('orders.status', '!=', 4);
+            });
+        })
 
-            ->orderByDesc('discount_value')
-            ->get();
+        ->orderByDesc('discount_value')
+        ->get();
 
-        /* ======================================================
+    /* ======================================================
      * 9. RETURN VIEW
      * ====================================================== */
-        return view('frontend.cart.index', [
-            'cart' => $cart,
-            'total' => $total,
-            'promotionDiscount' => $promotionDiscount,
-            'birthdayDiscount' => $birthdayDiscount,
-            'birthdayPercent' => $birthdayPercent,
-            'finalTotal' => $finalTotal,
-            'suggestProducts' => $suggestProducts,
-            'availablePromotions' => $availablePromotions,
-        ]);
-    }
+    return view('frontend.cart.index', [
+        'cart' => $cart,
+        'total' => $total,
+        'promotionDiscount' => $promotionDiscount,
+        'birthdayDiscount' => $birthdayDiscount,
+        'birthdayPercent' => $birthdayPercent,
+        'finalTotal' => $finalTotal,
+        'suggestProducts' => $suggestProducts,
+        'availablePromotions' => $availablePromotions,
+    ]);
+}
 
 
     /**
@@ -671,39 +689,34 @@ class CartController extends Controller
         ]);
     }
     private function getBirthdayBenefit($user, $amount)
-    {
-        // 1. Không có ngày sinh
-        if (!$user || !$user->date_of_birth) {
-            return 0;
-        }
-
-        $today = now();
-        $birthday = Carbon::parse($user->date_of_birth);
-
-        // 2. Chỉ áp dụng đúng ngày sinh (ngày + tháng)
-        if ($today->format('m-d') !== $birthday->format('m-d')) {
-            return 0;
-        }
-
-        // 3. Đã dùng ưu đãi trong năm nay
-        if ($user->birthday_discount_year == $today->year) {
-            return 0;
-        }
-
-        // 4. Xác định % theo hạng thành viên
-        $percent = match ($user->member_level) {
-            'silver'  => 5,
-            'gold'    => 10,
-            'diamond' => 15,
-            default   => 0, // bronze hoặc null
-        };
-
-        if ($percent <= 0) {
-            return 0;
-        }
-
-        // 5. Tính tiền giảm
-        return round(($amount * $percent) / 100);
+{
+    if (!$user || !$user->date_of_birth) {
+        return 0;
     }
+
+    $today = now();
+    $birthday = Carbon::parse($user->date_of_birth);
+
+    if ($today->month !== $birthday->month) {
+        return 0;
+    }
+
+    if ($user->birthday_discount_year == $today->year) {
+        return 0;
+    }
+
+    $percent = match ($user->member_level) {
+        'silver'  => 5,
+        'gold'    => 10,
+        'diamond' => 15,
+        default   => 0,
+    };
+
+    if ($percent <= 0) {
+        return 0;
+    }
+
+    return round(($amount * $percent) / 100);
+}
     
 }

@@ -12,7 +12,6 @@
 
 <div class="container order-detail-page pb-4">
 
-    {{-- HEADER --}}
     <div class="order-header mb-3">
         <div>
             <h4 class="order-title mb-1">

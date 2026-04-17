@@ -10,7 +10,6 @@ return [
     */
 
     'blocked_words' => [
-        // chửi tục / viết tắt
         'dit',
         'dit me',
         'ditmemay',
@@ -33,7 +32,7 @@ return [
         'lon',
         'buoi',
 
-        // tiếng Việt có dấu
+
         'địt',
         'địt mẹ',
         'địt mẹ mày',

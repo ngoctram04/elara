@@ -175,7 +175,6 @@ class RefundController extends Controller
                     };
 
                     $syncData[$item->id] = [
-                        'variant_id'         => $item->variant_id,
                         'quantity'           => (int) ($item->quantity ?? 1),
                         'reason'             => $reason,
                         'condition_status'   => $dbCondition,
