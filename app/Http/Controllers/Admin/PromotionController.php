@@ -122,8 +122,8 @@ class PromotionController extends Controller
                 break;
         }
 
-        $promotions = $promotionQuery->paginate(5, ['*'], 'promotions_page');
-        $rewards = $rewardQuery->paginate(5, ['*'], 'rewards_page');
+        $promotions = $promotionQuery->paginate(10, ['*'], 'promotions_page');
+        $rewards = $rewardQuery->paginate(10, ['*'], 'rewards_page');
 
         return view('admin.promotions.index', compact('promotions', 'rewards'));
     }

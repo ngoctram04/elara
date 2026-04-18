@@ -250,12 +250,26 @@
                 <div class="product-item">
                     <div class="product-main">
                         <div class="product-left">
-                            <img src="{{ $imageUrl }}"
-                                 class="product-image"
-                                 alt="{{ $product->name ?? 'Sản phẩm' }}">
+                            @if($product && $product->slug)
+                                <a href="{{ route('products.show', $product->slug) }}" class="product-link-image">
+                                    <img src="{{ $imageUrl }}"
+                                         class="product-image"
+                                         alt="{{ $product->name ?? 'Sản phẩm' }}">
+                                </a>
+                            @else
+                                <img src="{{ $imageUrl }}"
+                                     class="product-image"
+                                     alt="{{ $product->name ?? 'Sản phẩm' }}">
+                            @endif
 
                             <div class="product-info">
-                                <div class="product-name">{{ $product->name ?? 'Sản phẩm' }}</div>
+                                @if($product && $product->slug)
+                                    <a href="{{ route('products.show', $product->slug) }}" class="product-link-name">
+                                        <div class="product-name">{{ $product->name ?? 'Sản phẩm' }}</div>
+                                    </a>
+                                @else
+                                    <div class="product-name">{{ $product->name ?? 'Sản phẩm' }}</div>
+                                @endif
 
                                 <div class="product-variant">
                                     {{ $variant->attribute_name ?? 'Phân loại' }}: {{ $variant->attribute_value ?? 'N/A' }}

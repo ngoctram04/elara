@@ -37,11 +37,11 @@ class ShopController extends Controller
                 'brand',
                 'category'
             ])
+            ->select('products.*')
             ->withSum('variants as variants_total_sold', 'sold_quantity')
             ->leftJoinSub($reviewStats, 'review_stats', function ($join) {
                 $join->on('products.id', '=', 'review_stats.product_id');
             })
-            ->select('products.*')
             ->selectRaw('COALESCE(review_stats.reviews_avg_rating, 0) as reviews_avg_rating')
             ->selectRaw('COALESCE(review_stats.reviews_count, 0) as reviews_count')
             ->where('products.is_active', 1);

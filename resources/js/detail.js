@@ -180,12 +180,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function showStockError(max) {
+        if (typeof showToast === 'function') {
+            showToast(`Chỉ còn ${max} sản phẩm`, 'error');
+        }
+    }
+
     function updateQtyMax(stock) {
         if (!qtyInput) return;
 
         qtyInput.max = stock > 0 ? stock : 1;
 
-        let currentQty = parseInt(qtyInput.value || 1, 10);
+        let rawValue = qtyInput.value.trim();
+
+        if (rawValue === '') return;
+
+        let currentQty = parseInt(rawValue, 10);
+
         if (Number.isNaN(currentQty) || currentQty < 1) currentQty = 1;
         if (stock > 0 && currentQty > stock) currentQty = stock;
 
@@ -599,7 +610,24 @@ document.addEventListener('DOMContentLoaded', () => {
         form.addEventListener('submit', function (e) {
             e.preventDefault();
 
+            const rawQty = qtyInput ? qtyInput.value.trim() : '1';
+            const maxQty = qtyInput ? parseInt(qtyInput.max, 10) || 9999 : 9999;
+            let finalQty = parseInt(rawQty, 10);
+
+            if (!qtyInput || rawQty === '' || Number.isNaN(finalQty) || finalQty < 1) {
+                finalQty = 1;
+                if (qtyInput) qtyInput.value = 1;
+            }
+
+            if (finalQty > maxQty) {
+                finalQty = maxQty;
+                if (qtyInput) qtyInput.value = maxQty;
+                showStockError(maxQty);
+                return;
+            }
+
             const formData = new FormData(form);
+            formData.set('qty', finalQty);
 
             fetch(form.dataset.cartUrl, {
                 method: 'POST',
@@ -687,33 +715,86 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (minusBtn && qtyInput) {
         minusBtn.addEventListener('click', () => {
-            let current = parseInt(qtyInput.value, 10) || 1;
-            if (current > 1) {
-                qtyInput.value = current - 1;
+            let current = parseInt(qtyInput.value, 10);
+
+            if (Number.isNaN(current) || current <= 1) {
+                qtyInput.value = 1;
+                return;
             }
+
+            qtyInput.value = current - 1;
         });
     }
 
     if (plusBtn && qtyInput) {
         plusBtn.addEventListener('click', () => {
-            let current = parseInt(qtyInput.value, 10) || 1;
+            let current = parseInt(qtyInput.value, 10);
             let max = parseInt(qtyInput.max, 10) || 9999;
+
+            if (Number.isNaN(current) || current < 1) {
+                current = 1;
+            }
 
             if (current < max) {
                 qtyInput.value = current + 1;
+            } else {
+                qtyInput.value = max;
+                showStockError(max);
             }
         });
     }
 
     if (qtyInput) {
+        qtyInput.addEventListener('focus', () => {
+            if (qtyInput.value === '1') {
+                qtyInput.value = '';
+            }
+        });
+
         qtyInput.addEventListener('input', () => {
-            let value = parseInt(qtyInput.value, 10) || 1;
-            let max = parseInt(qtyInput.max, 10) || 9999;
+            const raw = qtyInput.value.trim();
+            const max = parseInt(qtyInput.max, 10) || 9999;
 
-            if (value < 1) value = 1;
-            if (value > max) value = max;
+            if (raw === '') return;
 
-            qtyInput.value = value;
+            let value = parseInt(raw, 10);
+
+            if (Number.isNaN(value)) {
+                qtyInput.value = '';
+                return;
+            }
+
+            if (value > max) {
+                qtyInput.value = max;
+                showStockError(max);
+                return;
+            }
+
+            if (value < 1) {
+                qtyInput.value = 1;
+            }
+        });
+
+        qtyInput.addEventListener('blur', () => {
+            const raw = qtyInput.value.trim();
+            const max = parseInt(qtyInput.max, 10) || 9999;
+
+            if (raw === '') {
+                qtyInput.value = 1;
+                return;
+            }
+
+            let value = parseInt(raw, 10);
+
+            if (Number.isNaN(value) || value < 1) {
+                qtyInput.value = 1;
+                return;
+            }
+
+            if (value > max) {
+                qtyInput.value = max;
+                showStockError(max);
+            }
         });
     }
 

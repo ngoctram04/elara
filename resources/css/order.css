@@ -539,4 +539,44 @@
     .summary-total-price {
         font-size: 18px;
     }
+    .product-link-image,
+.product-link-name {
+    text-decoration: none;
+    color: inherit;
+    display: inline-block;
+}
+
+.product-link-image {
+    flex-shrink: 0;
+    border-radius: 12px;
+}
+
+.product-link-image:hover .product-image {
+    opacity: 0.9;
+    transition: 0.2s ease;
+}
+
+.product-link-name:hover .product-name {
+    color: #1677a0;
+}
+}
+.product-link-image,
+.product-link-name {
+    text-decoration: none;
+    color: inherit;
+    display: inline-block;
+}
+
+.product-link-image {
+    flex-shrink: 0;
+    border-radius: 12px;
+}
+
+.product-link-image:hover .product-image {
+    opacity: 0.9;
+    transition: 0.2s ease;
+}
+
+.product-link-name:hover .product-name {
+    color: #1677a0;
 }

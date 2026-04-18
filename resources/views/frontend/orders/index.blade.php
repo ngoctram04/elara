@@ -233,6 +233,18 @@ body{
     border-bottom:none;
 }
 
+.order-link-image,
+.order-link-name{
+    text-decoration:none;
+    color:inherit;
+}
+
+.order-link-image{
+    flex-shrink:0;
+    display:inline-block;
+    border-radius:10px;
+}
+
 .order-img{
     width:72px;
     height:72px;
@@ -241,6 +253,11 @@ body{
     border:1px solid #e5e7eb;
     background:#fff;
     flex-shrink:0;
+    transition:all .2s ease;
+}
+
+.order-link-image:hover .order-img{
+    opacity:.92;
 }
 
 .order-item-info{
@@ -254,6 +271,10 @@ body{
     color:#1e293b;
     margin-bottom:5px;
     line-height:1.45;
+}
+
+.order-link-name:hover .order-name{
+    color:#2563eb;
 }
 
 .order-variant{
@@ -437,7 +458,6 @@ body{
                 <form method="GET" id="orderSearchForm">
                     <div class="row align-items-center g-3">
 
-                        {{-- SEARCH --}}
                         <div class="col-lg-4 col-md-5">
                             <div class="input-group search-box">
                                 <span class="input-group-text">
@@ -457,7 +477,6 @@ body{
                             </div>
                         </div>
 
-                        {{-- TABS --}}
                         <div class="col-lg-8 col-md-7">
                             <div class="order-tabs justify-content-md-end">
                                 <a href="{{ route('orders.history', ['keyword' => request('keyword')]) }}"
@@ -475,7 +494,6 @@ body{
                                     Đang giao
                                 </a>
 
-
                                 <a href="{{ route('orders.history', ['filter' => 'completed', 'keyword' => request('keyword')]) }}"
                                    class="tab {{ request('filter', request('status')) == 'completed' ? 'active' : '' }}">
                                     Hoàn tất
@@ -490,7 +508,6 @@ body{
                                    class="tab {{ request('filter', request('status')) == 'refund_all' ? 'active' : '' }}">
                                     Trả hàng / Hoàn tiền
                                 </a>
-
                             </div>
                         </div>
 
@@ -515,7 +532,6 @@ body{
 
             <div class="order-box">
 
-                {{-- HEADER --}}
                 <div class="order-header">
                     <div class="order-meta">
                         <div>
@@ -582,7 +598,6 @@ body{
                     </div>
                 </div>
 
-                {{-- ITEMS --}}
                 @foreach($order->items as $index => $item)
                     @php
                         $variant = $item->variant;
@@ -597,12 +612,26 @@ body{
                     @endphp
 
                     <div class="order-item {{ $index >= 1 ? 'extra-item d-none' : '' }}">
-                        <img src="{{ $imageUrl }}" class="order-img" alt="{{ $product->name ?? 'Sản phẩm' }}">
+                        @if($product && $product->slug)
+                            <a href="{{ route('products.show', $product->slug) }}" class="order-link-image">
+                                <img src="{{ $imageUrl }}" class="order-img" alt="{{ $product->name ?? 'Sản phẩm' }}">
+                            </a>
+                        @else
+                            <img src="{{ $imageUrl }}" class="order-img" alt="{{ $product->name ?? 'Sản phẩm' }}">
+                        @endif
 
                         <div class="order-item-info">
-                            <div class="order-name">
-                                {{ $product->name ?? 'Sản phẩm' }}
-                            </div>
+                            @if($product && $product->slug)
+                                <a href="{{ route('products.show', $product->slug) }}" class="order-link-name">
+                                    <div class="order-name">
+                                        {{ $product->name ?? 'Sản phẩm' }}
+                                    </div>
+                                </a>
+                            @else
+                                <div class="order-name">
+                                    {{ $product->name ?? 'Sản phẩm' }}
+                                </div>
+                            @endif
 
                             <div class="order-variant">
                                 {{ $variant->attribute_value ?? '' }} x{{ $item->quantity }}
@@ -626,7 +655,6 @@ body{
                     </div>
                 @endif
 
-                {{-- FOOTER --}}
                 <div class="order-footer">
                     <div class="order-payment-info">
                         <div>
@@ -662,13 +690,11 @@ body{
 
                         <div class="order-actions">
 
-                            {{-- CHI TIẾT ĐƠN --}}
                             <a href="{{ route('orders.show', $order->id) }}"
                                class="btn btn-outline-secondary btn-sm btn-action">
                                 Chi tiết
                             </a>
 
-                            {{-- XEM PHIẾU HOÀN TIỀN --}}
                             @if($order->refundRequest)
                                 <a href="{{ route('refund.show', $order->refundRequest->id) }}"
                                    class="btn btn-outline-danger btn-sm btn-action">
@@ -676,7 +702,6 @@ body{
                                 </a>
                             @endif
 
-                            {{-- KHÁCH XÁC NHẬN ĐÃ NHẬN HÀNG --}}
                             @if($order->status == 3 && !$order->customer_confirmed)
                                 <form action="{{ route('orders.confirmReceived', $order->id) }}"
                                       method="POST"
@@ -689,7 +714,6 @@ body{
                                 </form>
                             @endif
 
-                            {{-- HUỶ ĐƠN --}}
                             @if($order->canCancel())
                                 <form action="{{ route('orders.cancel', $order->id) }}"
                                       method="POST"
@@ -706,7 +730,6 @@ body{
                                 </form>
                             @endif
 
-                            {{-- MUA LẠI --}}
                             @if($order->isCompleted() || $order->isCancelled())
                                 <form action="{{ route('orders.reorder', $order->id) }}"
                                       method="POST"
@@ -719,7 +742,6 @@ body{
                                 </form>
                             @endif
 
-                            {{-- TRẢ HÀNG / HOÀN TIỀN --}}
                             @if($order->canRequestRefund())
                                 <a href="javascript:void(0)"
                                    class="btn btn-outline-danger btn-sm btn-action btn-refund"
@@ -728,7 +750,6 @@ body{
                                 </a>
                             @endif
 
-                            {{-- ĐÁNH GIÁ TẤT CẢ --}}
                             @php
                                 $canReviewAll = $order->isCompleted()
                                     && !$order->refundRequest
@@ -744,7 +765,6 @@ body{
                                 </a>
                             @endif
 
-                            {{-- TRẠNG THÁI HOÀN TIỀN --}}
                             @if($order->refundRequest)
                                 @if($order->refundRequest->status == 'pending')
                                     <span class="badge bg-warning text-dark badge-status-note">

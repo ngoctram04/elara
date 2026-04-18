@@ -303,7 +303,8 @@
                                             <input type="text"
                                                    name="name"
                                                    class="form-control @error('name') is-invalid @enderror"
-                                                   value="{{ old('name', $user->name) }}">
+                                                   value="{{ old('name', $user->name) }}"
+                                                   required>
                                             @error('name')
                                                 <div class="invalid-feedback">{{ $message }}</div>
                                             @enderror
@@ -322,7 +323,13 @@
                                             <input type="text"
                                                    name="phone"
                                                    class="form-control @error('phone') is-invalid @enderror"
-                                                   value="{{ old('phone', $user->phone) }}">
+                                                   value="{{ old('phone', $user->phone) }}"
+                                                   required
+                                                   maxlength="10"
+                                                   inputmode="numeric"
+                                                   pattern="0[0-9]{9}"
+                                                   title="Số điện thoại phải gồm 10 số và bắt đầu bằng 0"
+                                                   oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10)">
                                             @error('phone')
                                                 <div class="invalid-feedback">{{ $message }}</div>
                                             @enderror
@@ -333,7 +340,9 @@
                                             <input type="date"
                                                    name="date_of_birth"
                                                    class="form-control @error('date_of_birth') is-invalid @enderror"
-                                                   value="{{ old('date_of_birth', optional($user->date_of_birth)->format('Y-m-d')) }}">
+                                                   value="{{ old('date_of_birth', optional($user->date_of_birth)->format('Y-m-d')) }}"
+                                                   required
+                                                   max="{{ now()->subYears(13)->format('Y-m-d') }}">
                                             @error('date_of_birth')
                                                 <div class="invalid-feedback">{{ $message }}</div>
                                             @enderror

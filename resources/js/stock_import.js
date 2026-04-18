@@ -31,6 +31,32 @@ function formatMoney(number) {
     return Number(number || 0).toLocaleString('vi-VN');
 }
 
+function formatDateVN(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+
+    return `${day}/${month}/${year}`;
+}
+
+function getTodayStart() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today;
+}
+
+function parseInputDate(value) {
+    if (!value) return null;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    date.setHours(0, 0, 0, 0);
+    return date;
+}
+
 function calculateTotal() {
     let total = 0;
 
@@ -363,35 +389,110 @@ function checkDuplicateVariant() {
     });
 }
 
-function checkExpiry(input) {
+function checkExpiry(input, options = {}) {
+    const { showToastMessage = false } = options;
+
     const value = input.value;
     const wrapper = input.closest('.cell-wrapper');
     const warning = wrapper?.querySelector('.expiry-warning');
     const row = input.closest('tr');
+    const mfgInput = row?.querySelector('.mfg');
 
     input.style.border = '';
-    if (warning) warning.innerText = '';
+    if (warning) {
+        warning.innerText = '';
+        warning.classList.remove('text-danger', 'text-warning');
+    }
     if (row) row.style.background = '';
 
-    if (!value) return;
+    if (!value) {
+        return { valid: true, type: null, message: '' };
+    }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = getTodayStart();
+    const expiry = parseInputDate(value);
+    const mfg = parseInputDate(mfgInput?.value || '');
 
-    const expiry = new Date(value);
+    if (!expiry) {
+        return { valid: true, type: null, message: '' };
+    }
+
+    if (expiry.getTime() <= today.getTime()) {
+        const message = 'Hạn sử dụng phải lớn hơn ngày hôm nay';
+
+        input.style.border = '2px solid red';
+        if (warning) {
+            warning.innerText = message;
+            warning.classList.add('text-danger');
+        }
+        if (row) row.style.background = '#fff5f5';
+
+        if (showToastMessage && typeof showToast === 'function') {
+            showToast(message, 'error');
+        }
+
+        return { valid: false, type: 'expired', message };
+    }
+
+    if (mfg && expiry.getTime() <= mfg.getTime()) {
+        const message = 'Hạn sử dụng phải lớn hơn ngày sản xuất';
+
+        input.style.border = '2px solid red';
+        if (warning) {
+            warning.innerText = message;
+            warning.classList.add('text-danger');
+        }
+        if (row) row.style.background = '#fff5f5';
+
+        if (showToastMessage && typeof showToast === 'function') {
+            showToast(message, 'error');
+        }
+
+        return { valid: false, type: 'before_mfg', message };
+    }
+
     const diffTime = expiry - today;
     const diffDays = diffTime / (1000 * 60 * 60 * 24);
     const diffMonths = diffDays / 30;
 
     if (diffMonths <= 3) {
+        const message = 'Hạn sử dụng dưới 3 tháng';
+
         input.style.border = '2px solid red';
-        if (warning) warning.innerText = 'Hạn sử dụng dưới 3 tháng';
+        if (warning) {
+            warning.innerText = message;
+            warning.classList.add('text-danger');
+        }
         if (row) row.style.background = '#fff5f5';
-    } else if (diffMonths <= 6) {
-        input.style.border = '2px solid orange';
-        if (warning) warning.innerText = 'Hạn sử dụng dưới 6 tháng';
-        if (row) row.style.background = '#fff8e1';
+
+        return { valid: true, type: 'warning_3m', message };
     }
+
+    if (diffMonths <= 6) {
+        const message = 'Hạn sử dụng dưới 6 tháng';
+
+        input.style.border = '2px solid orange';
+        if (warning) {
+            warning.innerText = message;
+            warning.classList.add('text-warning');
+        }
+        if (row) row.style.background = '#fff8e1';
+
+        return { valid: true, type: 'warning_6m', message };
+    }
+
+    return { valid: true, type: null, message: '' };
+}
+
+function validateManufactureAndExpiry(row, options = {}) {
+    const { showToastMessage = false } = options;
+
+    const expInput = row.querySelector('.exp');
+    if (!expInput) {
+        return { valid: true, message: '' };
+    }
+
+    return checkExpiry(expInput, { showToastMessage });
 }
 
 function bindVariantSearch(row) {
@@ -663,6 +764,7 @@ function createNewRow() {
 
     newRow.querySelectorAll('.expiry-warning').forEach(el => {
         el.innerText = '';
+        el.classList.remove('text-danger', 'text-warning');
     });
 
     newRow.querySelectorAll('.selected-variant-info').forEach(el => {
@@ -707,19 +809,33 @@ document.addEventListener('DOMContentLoaded', function () {
     if (importForm) {
         importForm.addEventListener('submit', function (e) {
             let invalid = false;
+            let firstErrorMessage = '';
 
-            document.querySelectorAll('#importTable tbody tr').forEach(row => {
+            document.querySelectorAll('#importTable tbody tr').forEach((row) => {
                 const hiddenInput = row.querySelector('.variant-id');
 
                 if (!hiddenInput.value) {
                     invalid = true;
+                    if (!firstErrorMessage) {
+                        firstErrorMessage = 'Vui lòng chọn đúng biến thể từ danh sách gợi ý';
+                    }
                     updateVariantBorder(row, 'variant-invalid');
+                }
+
+                const expiryCheck = validateManufactureAndExpiry(row, { showToastMessage: false });
+                if (!expiryCheck.valid) {
+                    invalid = true;
+                    if (!firstErrorMessage) {
+                        firstErrorMessage = expiryCheck.message;
+                    }
                 }
             });
 
             if (invalid) {
                 e.preventDefault();
-                showToast('Vui lòng chọn đúng biến thể từ danh sách gợi ý', 'error');
+                if (typeof showToast === 'function') {
+                    showToast(firstErrorMessage || 'Vui lòng kiểm tra lại dữ liệu nhập kho', 'error');
+                }
                 return;
             }
 
@@ -731,8 +847,25 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (ids.length !== uniqueIds.length) {
                 e.preventDefault();
-                showToast('Có biến thể bị trùng, vui lòng kiểm tra lại', 'error');
+                if (typeof showToast === 'function') {
+                    showToast('Có biến thể bị trùng, vui lòng kiểm tra lại', 'error');
+                }
                 checkDuplicateVariant();
+                return;
+            }
+
+            const warningMessages = [];
+            document.querySelectorAll('#importTable tbody tr').forEach((row) => {
+                const expInput = row.querySelector('.exp');
+                const result = expInput ? checkExpiry(expInput, { showToastMessage: false }) : null;
+
+                if (result && result.valid && (result.type === 'warning_3m' || result.type === 'warning_6m')) {
+                    warningMessages.push(result.message);
+                }
+            });
+
+            if (warningMessages.length && typeof showToast === 'function') {
+                showToast(warningMessages[0], 'warning');
             }
         });
     }
@@ -769,6 +902,54 @@ document.addEventListener('click', function (e) {
 
 document.addEventListener('change', function (e) {
     if (e.target.classList.contains('exp')) {
-        checkExpiry(e.target);
+        checkExpiry(e.target, { showToastMessage: false });
+    }
+
+    if (e.target.classList.contains('mfg')) {
+        const row = e.target.closest('tr');
+        if (row) {
+            const expInput = row.querySelector('.exp');
+            if (expInput && expInput.value) {
+                checkExpiry(expInput, { showToastMessage: false });
+            }
+        }
     }
 });
+
+window.showToast = function (message, type = 'success') {
+    const icons = {
+        success: 'bi-check',
+        error: 'bi-x',
+        warning: 'bi-exclamation',
+        info: 'bi-info',
+    };
+
+    const old = document.getElementById('toast-overlay');
+    if (old) old.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'toast-overlay';
+    overlay.className = 'toast-overlay';
+
+    overlay.innerHTML = `
+        <div class="toast-box toast-${type}">
+            <div class="toast-icon">
+                <i class="bi ${icons[type] || 'bi-info'}"></i>
+            </div>
+            <div class="toast-text">${message}</div>
+            <div class="toast-hint">Nhấn để đóng</div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    overlay.addEventListener('click', hideToast);
+    setTimeout(hideToast, 4000);
+
+    function hideToast() {
+        overlay.style.opacity = '0';
+        setTimeout(() => {
+            if (overlay.parentNode) overlay.remove();
+        }, 300);
+    }
+};

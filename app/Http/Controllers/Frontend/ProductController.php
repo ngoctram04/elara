@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Frontend;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Models\Review;
 use App\Models\Wishlist;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -61,8 +62,12 @@ class ProductController extends Controller
         /* ======================================================
          * 2. REVIEW BASE QUERY
          * ====================================================== */
-        $visibleReviewsQuery = $product->reviews()
-            ->where('reviews.is_visible', 1);
+        $visibleReviewsQuery = Review::query()
+            ->join('order_items', 'order_items.id', '=', 'reviews.order_item_id')
+            ->join('product_variants', 'product_variants.id', '=', 'order_items.variant_id')
+            ->where('product_variants.product_id', $product->id)
+            ->where('reviews.is_visible', 1)
+            ->select('reviews.*');
 
         /* ======================================================
          * 3. REVIEWS (FILTER + SORT)

@@ -31,24 +31,30 @@ class ProfileController extends Controller
         $user = $request->user();
 
         $validated = $request->validate([
-            'name'          => ['required', 'string', 'max:255'],
-            'phone'         => ['nullable', 'string', 'max:15'],
-            'date_of_birth' => ['nullable', 'date', 'before:today'],
-            'gender'        => ['nullable', 'in:male,female,other'],
+            'name' => ['required', 'string', 'max:255'],
+            'phone' => ['required', 'regex:/^0[0-9]{9}$/', 'unique:users,phone,' . $user->id],
+            'date_of_birth' => ['required', 'date', 'before_or_equal:' . now()->subYears(13)->format('Y-m-d')],
+            'gender' => ['nullable', 'in:male,female,other'],
         ], [
-            'name.required'        => 'Vui lòng nhập tên',
-            'name.max'             => 'Tên tối đa 255 ký tự',
-            'phone.max'            => 'Số điện thoại tối đa 15 ký tự',
-            'date_of_birth.date'   => 'Ngày sinh không hợp lệ',
-            'date_of_birth.before' => 'Ngày sinh phải nhỏ hơn hôm nay',
-            'gender.in'            => 'Giới tính không hợp lệ',
+            'name.required' => 'Vui lòng nhập tên',
+            'name.max' => 'Tên tối đa 255 ký tự',
+
+            'phone.required' => 'Vui lòng nhập số điện thoại',
+            'phone.regex' => 'Số điện thoại phải gồm đúng 10 số và bắt đầu bằng 0',
+            'phone.unique' => 'Số điện thoại này đã được sử dụng',
+
+            'date_of_birth.required' => 'Vui lòng chọn ngày sinh',
+            'date_of_birth.date' => 'Ngày sinh không hợp lệ',
+            'date_of_birth.before_or_equal' => 'Bạn phải từ 13 tuổi trở lên',
+
+            'gender.in' => 'Giới tính không hợp lệ',
         ]);
 
         $user->fill([
-            'name'          => $validated['name'],
-            'phone'         => $validated['phone'] ?? null,
-            'date_of_birth' => $validated['date_of_birth'] ?? null,
-            'gender'        => $validated['gender'] ?? null,
+            'name' => $validated['name'],
+            'phone' => $validated['phone'],
+            'date_of_birth' => $validated['date_of_birth'],
+            'gender' => $validated['gender'] ?? null,
         ]);
 
         if (!$user->isDirty()) {
@@ -69,9 +75,9 @@ class ProfileController extends Controller
             'avatar' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ], [
             'avatar.required' => 'Vui lòng chọn ảnh',
-            'avatar.image'    => 'File phải là hình ảnh',
-            'avatar.mimes'    => 'Chỉ chấp nhận JPG, PNG hoặc WEBP',
-            'avatar.max'      => 'Ảnh tối đa 2MB',
+            'avatar.image' => 'File phải là hình ảnh',
+            'avatar.mimes' => 'Chỉ chấp nhận JPG, PNG hoặc WEBP',
+            'avatar.max' => 'Ảnh tối đa 2MB',
         ]);
 
         if ($validator->fails()) {
@@ -107,12 +113,12 @@ class ProfileController extends Controller
 
         $validator = Validator::make($request->all(), [
             'current_password' => ['required'],
-            'password'         => ['required', 'confirmed', 'min:8'],
+            'password' => ['required', 'confirmed', 'min:8'],
         ], [
             'current_password.required' => 'Vui lòng nhập mật khẩu hiện tại',
-            'password.required'         => 'Vui lòng nhập mật khẩu mới',
-            'password.confirmed'        => 'Xác nhận mật khẩu không khớp',
-            'password.min'              => 'Mật khẩu tối thiểu 8 ký tự',
+            'password.required' => 'Vui lòng nhập mật khẩu mới',
+            'password.confirmed' => 'Xác nhận mật khẩu không khớp',
+            'password.min' => 'Mật khẩu tối thiểu 8 ký tự',
         ]);
 
         if ($validator->fails()) {

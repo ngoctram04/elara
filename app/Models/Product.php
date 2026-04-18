@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use App\Models\Review;
 use Illuminate\Support\Facades\DB;
 
 class Product extends Model
@@ -174,12 +173,14 @@ class Product extends Model
             return (float) $this->attributes['reviews_avg_rating'];
         }
 
-        return (float) DB::table('reviews')
+        return (float) (
+            DB::table('reviews')
             ->join('order_items', 'order_items.id', '=', 'reviews.order_item_id')
             ->join('product_variants', 'product_variants.id', '=', 'order_items.variant_id')
             ->where('product_variants.product_id', $this->id)
             ->where('reviews.is_visible', 1)
-            ->avg('reviews.rating') ?: 0;
+            ->avg('reviews.rating') ?? 0
+        );
     }
 
     public function getReviewsCountAttribute(): int
@@ -194,16 +195,5 @@ class Product extends Model
             ->where('product_variants.product_id', $this->id)
             ->where('reviews.is_visible', 1)
             ->count('reviews.id');
-    }
-    public function reviews()
-    {
-        return $this->hasManyThrough(
-            \App\Models\Review::class,
-            \App\Models\OrderItem::class,
-            'variant_id',   // foreign key on order_items? -> cái này chưa đúng trực tiếp
-            'order_item_id',
-            'id',
-            'id'
-        );
     }
 }

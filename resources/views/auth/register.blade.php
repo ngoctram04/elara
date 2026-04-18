@@ -330,6 +330,7 @@
                             value="{{ old('name') }}"
                             class="field-input"
                             placeholder="Nhập họ và tên"
+                            required
                         >
                         @error('name')
                             <p class="field-error">{{ $message }}</p>
@@ -345,7 +346,16 @@
                             value="{{ old('phone') }}"
                             class="field-input"
                             placeholder="Nhập số điện thoại"
+                            required
+                            maxlength="10"
+                            inputmode="numeric"
+                            pattern="0[0-9]{9}"
+                            title="Số điện thoại phải gồm 10 số và bắt đầu bằng 0"
+                            oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10)"
                         >
+                        @error('phone')
+                            <p class="field-error">{{ $message }}</p>
+                        @enderror
                     </div>
 
                     <div class="field-group">
@@ -356,7 +366,12 @@
                             name="date_of_birth"
                             value="{{ old('date_of_birth') }}"
                             class="field-date"
+                            required
+                            max="{{ now()->subYears(13)->format('Y-m-d') }}"
                         >
+                        @error('date_of_birth')
+                            <p class="field-error">{{ $message }}</p>
+                        @enderror
                     </div>
 
                     <div class="field-group">
@@ -367,6 +382,9 @@
                             <option value="female" {{ old('gender') == 'female' ? 'selected' : '' }}>Nữ</option>
                             <option value="other" {{ old('gender') == 'other' ? 'selected' : '' }}>Khác</option>
                         </select>
+                        @error('gender')
+                            <p class="field-error">{{ $message }}</p>
+                        @enderror
                     </div>
 
                     <div class="field-group full-col">
@@ -378,6 +396,7 @@
                             value="{{ old('email') }}"
                             class="field-input"
                             placeholder="Nhập email của bạn"
+                            required
                         >
                         @error('email')
                             <p class="field-error">{{ $message }}</p>
@@ -418,6 +437,9 @@
                                     onchange="previewAvatar(event)"
                                     class="avatar-upload-input"
                                 >
+                                @error('avatar')
+                                    <p class="field-error">{{ $message }}</p>
+                                @enderror
                             </div>
                         </div>
                     </div>
@@ -442,7 +464,6 @@
                                 <i class="bi bi-eye"></i>
                             </button>
                         </div>
-
                         @error('password')
                             <p class="field-error">{{ $message }}</p>
                         @enderror
@@ -468,7 +489,6 @@
                                 <i class="bi bi-eye"></i>
                             </button>
                         </div>
-
                         @error('password_confirmation')
                             <p class="field-error">{{ $message }}</p>
                         @enderror

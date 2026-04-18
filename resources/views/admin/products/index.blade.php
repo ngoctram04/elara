@@ -94,7 +94,7 @@
                         <th width="150">Danh mục</th>
                         <th width="120">Kho</th>
                         <th width="140">Tình trạng</th>
-                        <th width="190">Hành động</th>
+                        <th width="200">Hành động</th>
                     </tr>
                 </thead>
 
