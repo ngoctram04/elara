@@ -426,6 +426,8 @@ Route::prefix('admin')
         */
         Route::get('/questions', [AdminProductQuestionController::class, 'index'])->name('questions.index');
         Route::post('/questions/answer', [AdminProductQuestionController::class, 'answer'])->name('questions.answer');
+    Route::patch('/questions/{id}/toggle-status', [AdminProductQuestionController::class, 'toggleStatus'])
+    ->name('questions.toggle-status');
 
         /*
         |--------------------------------------------------------------------------

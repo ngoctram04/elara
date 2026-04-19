@@ -65,12 +65,22 @@
     border-radius:8px;
     padding:12px;
 }
+
+.question-status-badge{
+    font-size:12px;
+}
+
+.action-group{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-top:10px;
+}
 </style>
 
 <div class="card border-0 shadow-sm">
     <div class="card-body">
 
-        {{-- HEADER --}}
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h5 class="fw-bold mb-1">
@@ -84,11 +94,10 @@
             </div>
         </div>
 
-        {{-- FILTER --}}
         <div class="filter-bar mb-3">
             <form method="GET" class="row g-2">
 
-                <div class="col-md-5">
+                <div class="col-md-4">
                     <input
                         type="text"
                         name="keyword"
@@ -98,16 +107,26 @@
                     >
                 </div>
 
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <select name="status" class="form-select form-select-sm">
                         <option value="">-- Tất cả trạng thái --</option>
-
                         <option value="answered" {{ request('status') == 'answered' ? 'selected' : '' }}>
                             Đã trả lời
                         </option>
-
                         <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>
                             Chưa trả lời
+                        </option>
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <select name="visibility" class="form-select form-select-sm">
+                        <option value="">-- Tất cả hiển thị --</option>
+                        <option value="visible" {{ request('visibility') == 'visible' ? 'selected' : '' }}>
+                            Đang hiển thị
+                        </option>
+                        <option value="hidden" {{ request('visibility') == 'hidden' ? 'selected' : '' }}>
+                            Đã ẩn
                         </option>
                     </select>
                 </div>
@@ -117,7 +136,6 @@
                         <option value="new" {{ request('sort', 'new') == 'new' ? 'selected' : '' }}>
                             Mới nhất
                         </option>
-
                         <option value="old" {{ request('sort') == 'old' ? 'selected' : '' }}>
                             Cũ nhất
                         </option>
@@ -136,11 +154,9 @@
                         Đặt lại
                     </a>
                 </div>
-
             </form>
         </div>
 
-        {{-- LIST QUESTION --}}
         <div class="card border-0 shadow-sm">
             <div class="card-body p-0">
 
@@ -152,7 +168,7 @@
                             <div class="col-md-3">
                                 <div class="product-info">
                                     <img
-                                        src="{{ $q->product->mainImage ? asset('storage/' . $q->product->mainImage->image_path) : asset('images/no-image.png') }}"
+                                        src="{{ $q->product && $q->product->mainImage ? asset('storage/' . $q->product->mainImage->image_path) : asset('images/no-image.png') }}"
                                         class="product-thumb"
                                         alt="{{ $q->product->name ?? 'Sản phẩm' }}"
                                     >
@@ -184,15 +200,54 @@
                                     {{ $q->question }}
                                 </div>
 
-                                @if($q->answers->count())
-                                    <span class="badge bg-success mt-2">
-                                        Đã trả lời
-                                    </span>
-                                @else
-                                    <span class="badge bg-warning text-dark mt-2">
-                                        Chưa trả lời
-                                    </span>
-                                @endif
+                                <div class="mt-2 d-flex gap-2 flex-wrap">
+                                    @if($q->answers->count())
+                                        <span class="badge bg-success question-status-badge">
+                                            Đã trả lời
+                                        </span>
+                                    @else
+                                        <span class="badge bg-warning text-dark question-status-badge">
+                                            Chưa trả lời
+                                        </span>
+                                    @endif
+
+                                    @if($q->is_active)
+                                        <span class="badge bg-primary question-status-badge">
+                                            Đang hiển thị
+                                        </span>
+                                    @else
+                                        <span class="badge bg-secondary question-status-badge">
+                                            Đã ẩn
+                                        </span>
+                                    @endif
+                                </div>
+
+                                <div class="action-group">
+                                    <form
+                                        action="{{ route('admin.questions.toggle-status', $q->id) }}"
+                                        method="POST"
+                                        class="toggle-status-form"
+                                        data-action-text="{{ $q->is_active ? 'ẩn' : 'hiện' }}"
+                                        data-confirm-title="{{ $q->is_active ? 'Ẩn câu hỏi?' : 'Hiện câu hỏi?' }}"
+                                        data-confirm-text="{{ $q->is_active ? 'Câu hỏi này sẽ không còn hiển thị ngoài website.' : 'Câu hỏi này sẽ được hiển thị lại ngoài website.' }}"
+                                        data-confirm-button="{{ $q->is_active ? 'Ẩn' : 'Hiện' }}"
+                                    >
+                                        @csrf
+                                        @method('PATCH')
+
+                                        @if($q->is_active)
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                                <i class="bi bi-eye-slash"></i>
+                                                Ẩn
+                                            </button>
+                                        @else
+                                            <button type="submit" class="btn btn-sm btn-outline-success">
+                                                <i class="bi bi-eye"></i>
+                                                Hiện
+                                            </button>
+                                        @endif
+                                    </form>
+                                </div>
                             </div>
 
                             {{-- ANSWERS --}}
@@ -200,7 +255,7 @@
                                 @foreach($q->answers as $a)
                                     <div class="answer-box {{ $a->is_admin ? 'answer-admin' : 'answer-user' }}">
                                         <div class="answer-meta">
-                                            <strong>{{ $a->user->name }}</strong>
+                                            <strong>{{ $a->user->name ?? 'Người dùng' }}</strong>
 
                                             @if($a->is_admin)
                                                 <span class="badge bg-danger ms-1">Shop</span>
@@ -215,31 +270,38 @@
                                     </div>
                                 @endforeach
 
-                                {{-- FORM REPLY --}}
-                                <form
-                                    action="{{ route('admin.questions.answer') }}"
-                                    method="POST"
-                                    class="reply-box">
-                                    @csrf
+                                @if($q->is_active)
+                                    <form
+                                        action="{{ route('admin.questions.answer') }}"
+                                        method="POST"
+                                        class="reply-box">
+                                        @csrf
 
-                                    <input
-                                        type="hidden"
-                                        name="question_id"
-                                        value="{{ $q->id }}"
-                                    >
+                                        <input
+                                            type="hidden"
+                                            name="question_id"
+                                            value="{{ $q->id }}"
+                                        >
 
-                                    <input
-                                        type="text"
-                                        name="answer"
-                                        class="form-control form-control-sm"
-                                        placeholder="Trả lời câu hỏi..."
-                                        required
-                                    >
+                                        <input
+                                            type="text"
+                                            name="answer"
+                                            class="form-control form-control-sm"
+                                            placeholder="Trả lời câu hỏi..."
+                                            required
+                                        >
 
-                                    <button class="btn btn-sm btn-primary">
-                                        <i class="bi bi-send"></i>
-                                    </button>
-                                </form>
+                                        <button class="btn btn-sm btn-primary">
+                                            <i class="bi bi-send"></i>
+                                        </button>
+                                    </form>
+                                @else
+                                    <div class="mt-3">
+                                        <div class="alert alert-secondary py-2 mb-0">
+                                            Câu hỏi đang bị ẩn, không thể trả lời.
+                                        </div>
+                                    </div>
+                                @endif
                             </div>
 
                         </div>
@@ -247,7 +309,6 @@
                 @empty
                     <div class="text-center py-5 text-muted">
                         <i class="bi bi-chat-left-text fs-1"></i>
-
                         <div class="mt-2">
                             Chưa có câu hỏi nào
                         </div>
@@ -257,7 +318,6 @@
             </div>
         </div>
 
-        {{-- PAGINATION --}}
         @if($questions->hasPages())
             <div class="mt-4">
                 {{ $questions->links('vendor.pagination.custom-blue') }}
@@ -266,5 +326,36 @@
 
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+document.querySelectorAll('.toggle-status-form').forEach(form => {
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const title = form.dataset.confirmTitle || 'Xác nhận thao tác?';
+        const text = form.dataset.confirmText || 'Bạn có chắc muốn thực hiện thao tác này?';
+        const confirmButtonText = form.dataset.confirmButton || 'Xác nhận';
+
+        Swal.fire({
+            title: title,
+            text: text,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: confirmButtonText,
+            cancelButtonText: 'Hủy',
+            reverseButtons: true,
+            customClass: {
+                popup: 'rounded-4'
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                form.submit();
+            }
+        });
+    });
+});
+</script>
 
 @endsection
