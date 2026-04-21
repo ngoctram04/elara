@@ -17,7 +17,7 @@ class ProductQuestionController extends Controller
             'product:id,name,slug',
             'product.mainImage',
             'user:id,name',
-            'answers.user:id,name'
+            'answers.user:id,name,role',
         ]);
 
         if ($request->filled('keyword')) {
@@ -65,12 +65,16 @@ class ProductQuestionController extends Controller
 
     public function answer(Request $request)
     {
+        if (!Auth::check() || Auth::user()->role !== 'admin') {
+            abort(403, 'Chỉ quản trị viên mới có quyền trả lời.');
+        }
+
         $request->validate([
             'question_id' => 'required|exists:product_questions,id',
-            'answer' => 'required|string|max:2000'
+            'answer'      => 'required|string|max:2000',
         ], [
             'answer.required' => 'Vui lòng nhập nội dung trả lời',
-            'answer.max' => 'Nội dung trả lời tối đa 2000 ký tự',
+            'answer.max'      => 'Nội dung trả lời tối đa 2000 ký tự',
         ]);
 
         $question = ProductQuestion::with('user', 'product')->findOrFail($request->question_id);
@@ -81,20 +85,19 @@ class ProductQuestionController extends Controller
 
         ProductAnswer::create([
             'question_id' => $question->id,
-            'user_id' => Auth::id(),
-            'answer' => $request->answer,
-            'is_admin' => 1
+            'user_id'     => Auth::id(),
+            'answer'      => $request->answer,
         ]);
 
         if ($question->user && $question->product) {
             $question->user->notify(new SystemNotification([
-                'title' => 'Câu hỏi đã được trả lời',
+                'title'   => 'Câu hỏi đã được trả lời',
                 'message' => 'Câu hỏi của bạn về "' . $question->product->name . '" đã được phản hồi',
-                'url' => route('products.show', $question->product->slug),
-                'type' => 'question',
-                'meta' => [
-                    'question_id' => $question->id
-                ]
+                'url'     => route('products.show', $question->product->slug),
+                'type'    => 'question',
+                'meta'    => [
+                    'question_id' => $question->id,
+                ],
             ]));
         }
 
