@@ -15,12 +15,10 @@ use App\Notifications\SystemNotification;
 
 class PromotionController extends Controller
 {
-
     public function index(Request $request)
     {
         $promotionQuery = Promotion::query();
         $rewardQuery = PointReward::query();
-
 
         if ($request->filled('search')) {
             $keyword = trim($request->search);
@@ -75,7 +73,6 @@ class PromotionController extends Controller
                 break;
         }
 
-
         if ($request->filled('reward_search')) {
             $rewardKeyword = trim($request->reward_search);
             $rewardQuery->where('title', 'like', '%' . $rewardKeyword . '%');
@@ -128,7 +125,6 @@ class PromotionController extends Controller
         return view('admin.promotions.index', compact('promotions', 'rewards'));
     }
 
- 
     public function create()
     {
         return redirect()->route('admin.promotions.choose');
@@ -139,12 +135,10 @@ class PromotionController extends Controller
         return view('admin.promotions.choose');
     }
 
- 
     public function createReward()
     {
         return view('admin.promotions.create_reward');
     }
-
 
     public function createProduct()
     {
@@ -158,7 +152,6 @@ class PromotionController extends Controller
         return view('admin.promotions.create_order');
     }
 
-    
     public function store(Request $request)
     {
         $request->merge([
@@ -259,7 +252,6 @@ class PromotionController extends Controller
             ->with('success', 'Tạo khuyến mãi thành công');
     }
 
-
     public function edit(Promotion $promotion)
     {
         if ($promotion->type === 'product') {
@@ -332,7 +324,6 @@ class PromotionController extends Controller
             ->with('success', 'Cập nhật khuyến mãi thành công');
     }
 
-
     public function toggle(Promotion $promotion)
     {
         $newStatus = !$promotion->is_active;
@@ -353,7 +344,6 @@ class PromotionController extends Controller
 
         return back()->with('success', 'Đã cập nhật trạng thái');
     }
-
 
     private function hasProductConflictByDateRange(Request $request, Promotion $ignore = null): bool
     {
@@ -386,7 +376,6 @@ class PromotionController extends Controller
             ->exists();
     }
 
-
     private function promotionHasConflictWhenActivating(Promotion $promotion): bool
     {
         $variantIds = PromotionProduct::where('promotion_id', $promotion->id)
@@ -414,6 +403,7 @@ class PromotionController extends Controller
         $request->validate([
             'name'            => 'required|string|max:255',
             'points_required' => 'required|integer|min:1',
+            'member_level'    => 'required|in:all,bronze,silver,gold,diamond',
             'discount_type'   => 'required|in:percent,fixed',
             'discount_value'  => 'required|numeric|min:1',
             'min_order_value' => 'nullable|numeric|min:0',
@@ -429,7 +419,7 @@ class PromotionController extends Controller
             $reward = PointReward::create([
                 'title'           => $request->name,
                 'points_required' => $request->points_required,
-                'member_level'    => 'bronze',
+                'member_level'    => $request->member_level,
                 'discount_type'   => $request->discount_type,
                 'discount_value'  => $request->discount_value,
                 'min_order_value' => $request->min_order_value,
@@ -455,6 +445,7 @@ class PromotionController extends Controller
                     'reward_id'        => $reward->id,
                     'title'            => $reward->title,
                     'points_required'  => $reward->points_required,
+                    'member_level'     => $reward->member_level,
                     'discount_type'    => $reward->discount_type,
                     'discount_value'   => $reward->discount_value,
                     'valid_days'       => $reward->valid_days,
@@ -469,7 +460,6 @@ class PromotionController extends Controller
             ->with('success', 'Tạo voucher đổi điểm thành công');
     }
 
-
     public function editReward(PointReward $reward)
     {
         return view('admin.promotions.edit_reward', compact('reward'));
@@ -480,6 +470,7 @@ class PromotionController extends Controller
         $request->validate([
             'name'            => 'required|string|max:255',
             'points_required' => 'required|integer|min:1',
+            'member_level'    => 'required|in:all,bronze,silver,gold,diamond',
             'discount_type'   => 'required|in:percent,fixed',
             'discount_value'  => 'required|numeric|min:1',
             'min_order_value' => 'nullable|numeric|min:0',
@@ -492,6 +483,7 @@ class PromotionController extends Controller
         $reward->update([
             'title'           => $request->name,
             'points_required' => $request->points_required,
+            'member_level'    => $request->member_level,
             'discount_type'   => $request->discount_type,
             'discount_value'  => $request->discount_value,
             'min_order_value' => $request->min_order_value,
@@ -505,7 +497,6 @@ class PromotionController extends Controller
             ->route('admin.promotions.index', ['tab' => 'rewards'])
             ->with('success', 'Cập nhật voucher thành công');
     }
-
 
     public function toggleReward(PointReward $reward)
     {
@@ -542,7 +533,6 @@ class PromotionController extends Controller
 
         return $query;
     }
-
 
     private function notifyCustomers(SystemNotification $notification): void
     {

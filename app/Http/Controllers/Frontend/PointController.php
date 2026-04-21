@@ -59,6 +59,10 @@ class PointController extends Controller
             })
             ->get()
             ->filter(function ($reward) use ($levels, $userIndex) {
+                if ($reward->member_level === 'all') {
+                    return true;
+                }
+
                 $rewardIndex = array_search($reward->member_level, $levels);
 
                 return $rewardIndex !== false && $rewardIndex <= $userIndex;
@@ -90,10 +94,8 @@ class PointController extends Controller
         DB::beginTransaction();
 
         try {
-            // Lock reward
             $reward = PointReward::lockForUpdate()->findOrFail($request->reward_id);
 
-            // Lock user
             $user = User::where('id', Auth::id())
                 ->lockForUpdate()
                 ->first();
@@ -108,7 +110,6 @@ class PointController extends Controller
 
             $now = now();
 
-            // Check thời gian đổi
             if ($reward->redeem_start_at && $now->lt($reward->redeem_start_at)) {
                 throw new \Exception("Voucher chưa đến thời gian đổi.");
             }
@@ -117,20 +118,21 @@ class PointController extends Controller
                 throw new \Exception("Voucher đã hết thời gian đổi.");
             }
 
-            // Check hạng thành viên
             $levels = ['bronze', 'silver', 'gold', 'diamond'];
             $userIndex = array_search($user->member_level, $levels);
-            $rewardIndex = array_search($reward->member_level, $levels);
 
             if ($userIndex === false) {
                 $userIndex = 0;
             }
 
-            if ($rewardIndex === false || $rewardIndex > $userIndex) {
-                throw new \Exception("Hạng thành viên của bạn chưa đủ để đổi voucher này.");
+            if ($reward->member_level !== 'all') {
+                $rewardIndex = array_search($reward->member_level, $levels);
+
+                if ($rewardIndex === false || $rewardIndex > $userIndex) {
+                    throw new \Exception("Hạng thành viên của bạn chưa đủ để đổi voucher này.");
+                }
             }
 
-            // Check đã đổi chưa
             $alreadyRedeemed = DB::table('user_point_rewards')
                 ->where('user_id', $user->id)
                 ->where('point_reward_id', $reward->id)
@@ -140,33 +142,17 @@ class PointController extends Controller
                 throw new \Exception("Bạn đã đổi voucher này rồi.");
             }
 
-            // Check điểm
             if ($user->loyalty_points < $reward->points_required) {
                 throw new \Exception("Bạn không đủ điểm.");
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | TRỪ ĐIỂM
-            |--------------------------------------------------------------------------
-            */
             $user->decrement('loyalty_points', $reward->points_required);
             $user->refresh();
 
-            /*
-            |--------------------------------------------------------------------------
-            | TẠO MÃ KHÔNG TRÙNG
-            |--------------------------------------------------------------------------
-            */
             do {
                 $code = 'POINT-' . strtoupper(Str::random(6));
             } while (Promotion::where('code', $code)->exists());
 
-            /*
-            |--------------------------------------------------------------------------
-            | TẠO VOUCHER (GẮN USER)
-            |--------------------------------------------------------------------------
-            */
             $promotion = Promotion::create([
                 'code' => $code,
                 'name' => $reward->title,
@@ -183,11 +169,6 @@ class PointController extends Controller
                 'user_id' => $user->id,
             ]);
 
-            /*
-            |--------------------------------------------------------------------------
-            | LƯU USER_POINT_REWARDS
-            |--------------------------------------------------------------------------
-            */
             DB::table('user_point_rewards')->insert([
                 'user_id' => $user->id,
                 'point_reward_id' => $reward->id,
@@ -195,11 +176,6 @@ class PointController extends Controller
                 'created_at' => now(),
             ]);
 
-            /*
-            |--------------------------------------------------------------------------
-            | LỊCH SỬ ĐIỂM
-            |--------------------------------------------------------------------------
-            */
             UserPointHistory::create([
                 'user_id' => $user->id,
                 'points' => -$reward->points_required,
@@ -209,11 +185,6 @@ class PointController extends Controller
 
             DB::commit();
 
-            /*
-            |--------------------------------------------------------------------------
-            | THÔNG BÁO
-            |--------------------------------------------------------------------------
-            */
             $user->notify(new SystemNotification([
                 'title' => 'Đổi điểm thành công',
                 'message' => 'Bạn đã nhận voucher: ' . $code,

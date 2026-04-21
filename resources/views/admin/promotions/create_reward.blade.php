@@ -48,6 +48,17 @@
                 </div>
 
                 <div class="col-md-6 mb-3">
+                    <label class="form-label">Hạng thành viên áp dụng</label>
+                    <select name="member_level" class="form-select" required>
+                        <option value="all" {{ old('member_level') == 'all' ? 'selected' : '' }}>Tất cả</option>
+                        <option value="bronze" {{ old('member_level', 'bronze') == 'bronze' ? 'selected' : '' }}>Đồng</option>
+                        <option value="silver" {{ old('member_level') == 'silver' ? 'selected' : '' }}>Bạc</option>
+                        <option value="gold" {{ old('member_level') == 'gold' ? 'selected' : '' }}>Vàng</option>
+                        <option value="diamond" {{ old('member_level') == 'diamond' ? 'selected' : '' }}>Kim cương</option>
+                    </select>
+                </div>
+
+                <div class="col-md-6 mb-3">
                     <label class="form-label">Loại giảm</label>
                     <select name="discount_type" class="form-select">
                         <option value="percent" {{ old('discount_type') == 'percent' ? 'selected' : '' }}>Giảm %</option>

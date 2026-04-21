@@ -201,6 +201,16 @@
         <div class="row justify-content-center">
             <div class="col-md-10">
 
+                @php
+                    $memberLevels = [
+                        'all' => 'Tất cả',
+                        'bronze' => 'Đồng',
+                        'silver' => 'Bạc',
+                        'gold' => 'Vàng',
+                        'diamond' => 'Kim cương',
+                    ];
+                @endphp
+
                 {{-- HEADER --}}
                 <div class="redeem-card mb-4">
                     <div class="redeem-header d-flex justify-content-between align-items-center flex-wrap gap-3">
@@ -239,11 +249,38 @@
                                         <div class="reward-meta">
                                             <div><strong>Cần:</strong> {{ number_format($reward->points_required, 0, ',', '.') }} điểm</div>
 
-                                            @if($reward->min_order_value)
-                                                <div><strong>Đơn tối thiểu:</strong> {{ number_format($reward->min_order_value, 0, ',', '.') }}đ</div>
+                                            <div>
+                                                <strong>Hạng áp dụng:</strong>
+                                                {{ $memberLevels[$reward->member_level] ?? 'Không xác định' }}
+                                            </div>
+
+                                            @if($reward->discount_type === 'percent')
+                                                <div>
+                                                    <strong>Ưu đãi:</strong>
+                                                    Giảm {{ rtrim(rtrim(number_format($reward->discount_value, 2, '.', ''), '0'), '.') }}%
+                                                </div>
+                                            @else
+                                                <div>
+                                                    <strong>Ưu đãi:</strong>
+                                                    Giảm {{ number_format($reward->discount_value, 0, ',', '.') }}đ
+                                                </div>
                                             @endif
 
-                                            <div><strong>Hạn sử dụng:</strong> {{ $reward->valid_days }} ngày</div>
+                                            @if($reward->min_order_value)
+                                                <div>
+                                                    <strong>Đơn tối thiểu:</strong>
+                                                    {{ number_format($reward->min_order_value, 0, ',', '.') }}đ
+                                                </div>
+                                            @endif
+
+                                            @if($reward->discount_type === 'percent' && $reward->max_discount)
+                                                <div>
+                                                    <strong>Giảm tối đa:</strong>
+                                                    {{ number_format($reward->max_discount, 0, ',', '.') }}đ
+                                                </div>
+                                            @endif
+
+                                            <div><strong>Hạn sử dụng voucher sau khi đổi:</strong> {{ $reward->valid_days }} ngày</div>
                                         </div>
                                     </div>
 
