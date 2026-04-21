@@ -14,7 +14,6 @@ use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
-
     public function index(Request $request)
     {
         $query = Product::with([
@@ -117,7 +116,6 @@ class ProductController extends Controller
             'brands'     => Brand::orderBy('name')->get(),
         ]);
     }
-
 
     public function create()
     {
@@ -226,7 +224,6 @@ class ProductController extends Controller
             ->with('success', 'Thêm sản phẩm thành công');
     }
 
-
     public function edit(Product $product)
     {
         $product->load([
@@ -256,7 +253,8 @@ class ProductController extends Controller
                 $q->with([
                     'images',
                     'stockImports' => function ($subQ) {
-                        $subQ->orderBy('created_at', 'asc');
+                        $subQ->orderBy('expiry_date', 'asc')
+                            ->orderBy('created_at', 'asc');
                     }
                 ]);
             }
@@ -264,7 +262,6 @@ class ProductController extends Controller
 
         return view('admin.products.show', compact('product'));
     }
-
 
     public function update(Request $request, Product $product)
     {
@@ -425,7 +422,6 @@ class ProductController extends Controller
             ->with('success', 'Cập nhật sản phẩm thành công');
     }
 
-
     private function recalculateProduct(Product $product): void
     {
         $product->update([
@@ -441,7 +437,6 @@ class ProductController extends Controller
 
         return str_contains($name, 'son') || str_contains($slug, 'son');
     }
-
 
     public function destroy(Product $product)
     {

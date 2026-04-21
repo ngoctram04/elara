@@ -178,7 +178,21 @@
                                     ->filter(function ($lot) {
                                         return ($lot->remaining_quantity ?? 0) > 0;
                                     })
-                                    ->sortBy('created_at')
+                                    ->sort(function ($a, $b) {
+                                        $aExpiry = $a->expired_at ?? $a->expiry_date ?? $a->expiration_date ?? null;
+                                        $bExpiry = $b->expired_at ?? $b->expiry_date ?? $b->expiration_date ?? null;
+
+                                        $aExpiryTs = $aExpiry ? strtotime($aExpiry) : PHP_INT_MAX;
+                                        $bExpiryTs = $bExpiry ? strtotime($bExpiry) : PHP_INT_MAX;
+
+                                        if ($aExpiryTs === $bExpiryTs) {
+                                            $aCreatedTs = $a->created_at ? strtotime($a->created_at) : PHP_INT_MAX;
+                                            $bCreatedTs = $b->created_at ? strtotime($b->created_at) : PHP_INT_MAX;
+                                            return $aCreatedTs <=> $bCreatedTs;
+                                        }
+
+                                        return $aExpiryTs <=> $bExpiryTs;
+                                    })
                                     ->values();
 
                                 $totalRemain = $lots->sum('remaining_quantity');
@@ -287,20 +301,22 @@
             ->filter(function ($lot) {
                 return ($lot->remaining_quantity ?? 0) > 0;
             })
-            ->sortBy('created_at')
+            ->sort(function ($a, $b) {
+                $aExpiry = $a->expired_at ?? $a->expiry_date ?? $a->expiration_date ?? null;
+                $bExpiry = $b->expired_at ?? $b->expiry_date ?? $b->expiration_date ?? null;
+
+                $aExpiryTs = $aExpiry ? strtotime($aExpiry) : PHP_INT_MAX;
+                $bExpiryTs = $bExpiry ? strtotime($bExpiry) : PHP_INT_MAX;
+
+                if ($aExpiryTs === $bExpiryTs) {
+                    $aCreatedTs = $a->created_at ? strtotime($a->created_at) : PHP_INT_MAX;
+                    $bCreatedTs = $b->created_at ? strtotime($b->created_at) : PHP_INT_MAX;
+                    return $aCreatedTs <=> $bCreatedTs;
+                }
+
+                return $aExpiryTs <=> $bExpiryTs;
+            })
             ->values();
-
-        $totalRemain = $lots->sum('remaining_quantity');
-
-        $avgCost = $totalRemain > 0
-            ? $lots->sum(function ($lot) {
-                return ($lot->remaining_quantity ?? 0) * ($lot->cost_price ?? 0);
-            }) / $totalRemain
-            : 0;
-
-        $minCost = $lots->count() ? $lots->min('cost_price') : 0;
-        $maxCost = $lots->count() ? $lots->max('cost_price') : 0;
-        $profitAvg = $salePrice - $avgCost;
     @endphp
 
     <div class="modal fade" id="lotModal{{ $variant->id }}" tabindex="-1" aria-hidden="true">
@@ -321,58 +337,6 @@
                 </div>
 
                 <div class="modal-body">
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-3">
-                            <div class="border rounded-4 p-3 bg-light h-100">
-                                <div class="small text-muted mb-1">Giá bán</div>
-                                <div class="fw-bold text-primary">{{ number_format($salePrice, 0, ',', '.') }}đ</div>
-                            </div>
-                        </div>
-
-                        <div class="col-md-3">
-                            <div class="border rounded-4 p-3 bg-light h-100">
-                                <div class="small text-muted mb-1">Vốn thấp nhất</div>
-                                <div class="fw-bold">{{ number_format($minCost, 0, ',', '.') }}đ</div>
-                            </div>
-                        </div>
-
-                        <div class="col-md-3">
-                            <div class="border rounded-4 p-3 bg-light h-100">
-                                <div class="small text-muted mb-1">Vốn cao nhất</div>
-                                <div class="fw-bold">{{ number_format($maxCost, 0, ',', '.') }}đ</div>
-                            </div>
-                        </div>
-
-                        <div class="col-md-3">
-                            <div class="border rounded-4 p-3 bg-light h-100">
-                                <div class="small text-muted mb-1">Vốn TB tồn</div>
-                                <div class="fw-bold {{ $profitAvg < 0 ? 'text-danger' : 'text-success' }}">
-                                    {{ number_format($avgCost, 0, ',', '.') }}đ
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        @if($totalRemain > 0)
-                            @if($profitAvg < 0)
-                                <div class="alert alert-danger rounded-4 py-3 mb-0">
-                                    Biến thể này đang bán dưới vốn trung bình khoảng
-                                    <strong>{{ number_format(abs($profitAvg), 0, ',', '.') }}đ / sản phẩm</strong>.
-                                </div>
-                            @else
-                                <div class="alert alert-success rounded-4 py-3 mb-0">
-                                    Biến thể này đang lãi trung bình khoảng
-                                    <strong>{{ number_format($profitAvg, 0, ',', '.') }}đ / sản phẩm</strong>.
-                                </div>
-                            @endif
-                        @else
-                            <div class="alert alert-secondary rounded-4 py-3 mb-0">
-                                Không có lô tồn nào cho biến thể này.
-                            </div>
-                        @endif
-                    </div>
-
                     <div class="table-responsive">
                         <table class="table align-middle">
                             <thead class="table-light">
@@ -380,10 +344,12 @@
                                     <th>Biến thể</th>
                                     <th class="text-end">Giá bán</th>
                                     <th>Lô nhập</th>
+                                    <th class="text-center">Ngày nhập</th>
                                     <th class="text-center">Ngày sản xuất</th>
                                     <th class="text-center">HSD</th>
                                     <th class="text-end">Giá nhập</th>
                                     <th class="text-center">Còn lại</th>
+                                    <th class="text-center">Ưu tiên xuất</th>
                                     <th class="text-end">Chênh lệch</th>
                                 </tr>
                             </thead>
@@ -401,8 +367,10 @@
                                             ?? $lot->expiry_date
                                             ?? $lot->expiration_date
                                             ?? null;
+
+                                        $importedAt = $lot->created_at ?? null;
                                     @endphp
-                                    <tr>
+                                    <tr class="{{ $index === 0 ? 'table-warning' : '' }}">
                                         <td class="fw-semibold">
                                             @if($index === 0)
                                                 {{ $product->name }} - {{ $variant->attribute_value }}
@@ -417,6 +385,10 @@
 
                                         <td class="fw-semibold">
                                             {{ $lot->lot_code ?? $lot->batch_code ?? ('L' . $lot->id) }}
+                                        </td>
+
+                                        <td class="text-center">
+                                            {{ $importedAt ? \Carbon\Carbon::parse($importedAt)->format('d/m/Y H:i') : '--' }}
                                         </td>
 
                                         <td class="text-center">
@@ -435,6 +407,14 @@
                                             {{ $lot->remaining_quantity ?? 0 }}
                                         </td>
 
+                                        <td class="text-center">
+                                            @if($index === 0)
+                                                <span class="badge bg-warning text-dark">Xuất trước</span>
+                                            @else
+                                                <span class="text-muted">--</span>
+                                            @endif
+                                        </td>
+
                                         <td class="text-end fw-semibold {{ $diff < 0 ? 'text-danger' : 'text-success' }}">
                                             @if($diff < 0)
                                                 -{{ number_format(abs($diff), 0, ',', '.') }}
@@ -445,7 +425,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="8" class="text-center text-muted py-4">
+                                        <td colspan="10" class="text-center text-muted py-4">
                                             Không có dữ liệu lô nhập còn tồn
                                         </td>
                                     </tr>
