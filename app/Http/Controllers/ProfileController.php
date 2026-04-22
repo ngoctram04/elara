@@ -13,19 +13,13 @@ use Illuminate\Support\Facades\Validator;
 
 class ProfileController extends Controller
 {
-    /**
-     * Hiển thị trang thông tin tài khoản
-     */
+
     public function edit(Request $request): View
     {
         return view('frontend.profile.index', [
             'user' => $request->user(),
         ]);
     }
-
-    /**
-     * Cập nhật thông tin cá nhân
-     */
     public function update(Request $request): RedirectResponse
     {
         $user = $request->user();
@@ -66,9 +60,7 @@ class ProfileController extends Controller
         return back()->with('success', 'Cập nhật thông tin thành công.');
     }
 
-    /**
-     * Cập nhật avatar
-     */
+
     public function updateAvatar(Request $request): RedirectResponse
     {
         $validator = Validator::make($request->all(), [
@@ -100,9 +92,6 @@ class ProfileController extends Controller
         return back()->with('success', 'Cập nhật ảnh đại diện thành công.');
     }
 
-    /**
-     * Đổi mật khẩu
-     */
     public function updatePassword(Request $request): RedirectResponse
     {
         $user = $request->user();
@@ -147,9 +136,6 @@ class ProfileController extends Controller
         return back()->with('success', 'Đổi mật khẩu thành công.');
     }
 
-    /**
-     * Xóa tài khoản
-     */
     public function destroy(Request $request): RedirectResponse
     {
         $validator = Validator::make($request->all(), [
@@ -185,9 +171,6 @@ class ProfileController extends Controller
         return redirect('/')->with('success', 'Tài khoản đã được xoá.');
     }
 
-    /**
-     * Trang thành viên / tích điểm
-     */
     public function membership()
     {
         $user = Auth::user();

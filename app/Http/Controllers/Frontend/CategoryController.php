@@ -13,14 +13,8 @@ class CategoryController extends Controller
 {
     public function show(Request $request, string $slug)
     {
-        /* ==================================================
-        | CATEGORY HIỆN TẠI
-        ================================================== */
         $category = Category::where('slug', $slug)->firstOrFail();
 
-        /* ==================================================
-        | CATEGORY IDS (cha -> lấy cả con)
-        ================================================== */
         if ($category->parent_id) {
             $categoryIds = [$category->id];
         } else {
@@ -30,9 +24,6 @@ class CategoryController extends Controller
                 ->toArray();
         }
 
-        /* ==================================================
-        | BASE QUERY: CHỈ FILTER, CHƯA SORT
-        ================================================== */
         $baseQuery = Product::with([
             'variants',
             'mainImage',
@@ -42,14 +33,12 @@ class CategoryController extends Controller
             ->where('is_active', true)
             ->select('products.*')
 
-            // Tổng sold của variants
             ->selectSub(function ($q) {
                 $q->from('product_variants')
                     ->whereColumn('product_variants.product_id', 'products.id')
                     ->selectRaw('COALESCE(SUM(product_variants.sold_quantity), 0)');
             }, 'variants_total_sold')
 
-            // AVG rating
             ->selectSub(function ($q) {
                 $q->from('reviews')
                     ->join('order_items', 'order_items.id', '=', 'reviews.order_item_id')
@@ -59,7 +48,6 @@ class CategoryController extends Controller
                     ->selectRaw('COALESCE(AVG(reviews.rating), 0)');
             }, 'reviews_avg_rating')
 
-            // Count reviews
             ->selectSub(function ($q) {
                 $q->from('reviews')
                     ->join('order_items', 'order_items.id', '=', 'reviews.order_item_id')
@@ -69,9 +57,6 @@ class CategoryController extends Controller
                     ->selectRaw('COUNT(reviews.id)');
             }, 'reviews_count');
 
-        /* ==================================================
-        | PRICE FILTER
-        ================================================== */
         if ($request->filled('price')) {
             match ($request->price) {
                 '0-100'   => $baseQuery->whereBetween('min_price', [0, 100000]),
@@ -83,17 +68,10 @@ class CategoryController extends Controller
                 default   => null,
             };
         }
-
-        /* ==================================================
-        | BRAND FILTER
-        ================================================== */
         if ($request->filled('brands') && is_array($request->brands)) {
             $baseQuery->whereIn('brand_id', $request->brands);
         }
 
-        /* ==================================================
-        | LẤY BRAND DYNAMIC TỪ QUERY CHƯA SORT
-        ================================================== */
         $filteredQuery = clone $baseQuery;
 
         $brands = Brand::whereIn('id', function ($q) use ($filteredQuery) {
@@ -106,9 +84,6 @@ class CategoryController extends Controller
             ->orderBy('name')
             ->get();
 
-        /* ==================================================
-        | QUERY CHÍNH: CLONE RA RỒI MỚI SORT
-        ================================================== */
         $query = clone $baseQuery;
 
         switch ($request->sort) {
@@ -157,9 +132,6 @@ class CategoryController extends Controller
                 break;
         }
 
-        /* ==================================================
-        | PAGINATE
-        ================================================== */
         $allowedLimits = [9, 18, 36];
         $limit = (int) $request->get('limit', 9);
 
@@ -171,17 +143,11 @@ class CategoryController extends Controller
             ->paginate($limit)
             ->withQueryString();
 
-        /* ==================================================
-        | SIDEBAR CATEGORY
-        ================================================== */
+      
         $allCategories = Category::parents()
             ->with('children')
             ->orderBy('name')
             ->get();
-
-        /* ==================================================
-        | VIEW
-        ================================================== */
         return view('frontend.category.show', compact(
             'category',
             'products',

@@ -66,33 +66,21 @@ class Order extends Model
         'cancelled_by_user_id' => 'integer',
     ];
 
-    /*
-    |--------------------------------------------------------------------------
-    | ORDER STATUS
-    |--------------------------------------------------------------------------
-    */
+  
     public const STATUS_PENDING    = 1;
     public const STATUS_PROCESSING = 2;
     public const STATUS_COMPLETED  = 3;
     public const STATUS_CANCELLED  = 4;
     public const STATUS_RETURNED   = 5;
 
-    /*
-    |--------------------------------------------------------------------------
-    | PAYMENT STATUS
-    |--------------------------------------------------------------------------
-    */
+   
     public const PAYMENT_UNPAID         = 0;
     public const PAYMENT_PAID           = 1;
     public const PAYMENT_FAILED         = 2;
     public const PAYMENT_REFUNDED       = 3;
     public const PAYMENT_REFUND_PENDING = 4;
 
-    /*
-    |--------------------------------------------------------------------------
-    | RELATIONSHIPS
-    |--------------------------------------------------------------------------
-    */
+ 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -113,11 +101,7 @@ class Order extends Model
         return $this->hasOne(RefundRequest::class);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | ACCESSORS - ORDER STATUS
-    |--------------------------------------------------------------------------
-    */
+    
     public function getStatusNameAttribute(): string
     {
         if (
@@ -149,11 +133,6 @@ class Order extends Model
         };
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | ACCESSORS - PAYMENT
-    |--------------------------------------------------------------------------
-    */
     public function getPaymentMethodNameAttribute(): string
     {
         return match ($this->payment_method) {
@@ -198,11 +177,7 @@ class Order extends Model
         };
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | HELPERS - ORDER LOGIC
-    |--------------------------------------------------------------------------
-    */
+
     public function canCancel(): bool
     {
         return (int) $this->status === self::STATUS_PENDING;
@@ -252,11 +227,7 @@ class Order extends Model
         return $this->cancelledByUser->name ?? null;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | ACCESSORS - DISCOUNT
-    |--------------------------------------------------------------------------
-    */
+   
     public function getVoucherDiscountAttribute($value): float
     {
         if ((float) $value > 0) {
@@ -275,11 +246,6 @@ class Order extends Model
         return (float) ($value ?? 0);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | SCOPES
-    |--------------------------------------------------------------------------
-    */
     public function scopePending($query)
     {
         return $query->where('status', self::STATUS_PENDING);
@@ -325,11 +291,7 @@ class Order extends Model
         return $query->where('payment_status', self::PAYMENT_UNPAID);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | BUSINESS METHODS
-    |--------------------------------------------------------------------------
-    */
+  
     public function refundVoucher(): void
     {
         if ($this->promotion_code) {
@@ -339,15 +301,10 @@ class Order extends Model
         }
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | MODEL EVENTS
-    |--------------------------------------------------------------------------
-    */
+ 
     protected static function booted(): void
     {
         static::updating(function (Order $order) {
-            // 1. Giao thành công -> gửi mail
             if (
                 $order->isDirty('status') &&
                 (int) $order->status === self::STATUS_COMPLETED
@@ -368,7 +325,6 @@ class Order extends Model
                 }
             }
 
-            // 2. Huỷ đơn
             if (
                 $order->isDirty('status') &&
                 (int) $order->status === self::STATUS_CANCELLED
@@ -385,7 +341,6 @@ class Order extends Model
                 }
             }
 
-            // 3. COD giao xong = đã thanh toán
             if (
                 $order->payment_method === 'cod' &&
                 $order->isDirty('status') &&
@@ -398,7 +353,6 @@ class Order extends Model
                 }
             }
 
-            // 4. Khi payment_status chuyển paid mà chưa có paid_at
             if (
                 $order->isDirty('payment_status') &&
                 (int) $order->payment_status === self::PAYMENT_PAID &&
@@ -407,7 +361,6 @@ class Order extends Model
                 $order->paid_at = now();
             }
 
-            // 5. Khi khách xác nhận nhận hàng
             if (
                 $order->isDirty('customer_confirmed') &&
                 (bool) $order->customer_confirmed === true &&

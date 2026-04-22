@@ -38,9 +38,7 @@ class StockImport extends Model
         'updated_at'       => 'datetime',
     ];
 
-    /* =====================================================
-        RELATIONS
-    ===================================================== */
+
 
     public function variant()
     {
@@ -64,9 +62,7 @@ class StockImport extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    /* =====================================================
-        ACCESSORS
-    ===================================================== */
+
 
     public function getSoldQuantityAttribute()
     {
@@ -103,9 +99,7 @@ class StockImport extends Model
         return now()->diffInMonths($this->expiry_date, false);
     }
 
-    /* =====================================================
-        AUTO FIX DATA + AUTO SYNC STOCK
-    ===================================================== */
+
 
     protected static function booted()
     {

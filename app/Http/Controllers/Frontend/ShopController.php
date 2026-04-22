@@ -27,9 +27,6 @@ class ShopController extends Controller
             ->where('reviews.is_visible', 1)
             ->groupBy('product_variants.product_id');
 
-        /* ==================================================
-        | BASE QUERY: CHỈ FILTER, CHƯA SORT
-        ================================================== */
         $baseQuery = Product::query()
             ->with([
                 'mainImage',
@@ -46,7 +43,6 @@ class ShopController extends Controller
             ->selectRaw('COALESCE(review_stats.reviews_count, 0) as reviews_count')
             ->where('products.is_active', 1);
 
-        /* ================= SEARCH ================= */
         if ($request->filled('q')) {
             $keyword = trim($request->q);
 
@@ -80,8 +76,6 @@ class ShopController extends Controller
             $history = array_slice($history, 0, 8);
             session(['search_history' => $history]);
         }
-
-        /* ================= FILTER ================= */
         if ($request->filled('category')) {
             $categoryId = (int) $request->category;
 
@@ -122,9 +116,6 @@ class ShopController extends Controller
             }
         }
 
-        /* ==================================================
-        | QUERY CHÍNH: CLONE RA RỒI MỚI SORT
-        ================================================== */
         $query = clone $baseQuery;
 
         switch ($request->sort) {
@@ -173,7 +164,6 @@ class ShopController extends Controller
                 break;
         }
 
-        /* ================= PAGINATION ================= */
         $allowedLimits = [9, 18, 36];
         $limit = (int) $request->get('limit', 9);
 
@@ -183,7 +173,6 @@ class ShopController extends Controller
 
         $products = $query->paginate($limit)->withQueryString();
 
-        /* ================= SIDEBAR ================= */
         $categories = Category::whereNull('parent_id')
             ->with('children')
             ->orderBy('name')
@@ -241,7 +230,6 @@ class ShopController extends Controller
 
         $brands = $brandsQuery->get();
 
-        /* ================= POPULAR KEYWORDS ================= */
         $popularKeywords = SearchHistory::select('keyword', DB::raw('COUNT(*) as total'))
             ->groupBy('keyword')
             ->orderByDesc('total')

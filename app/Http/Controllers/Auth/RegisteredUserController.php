@@ -30,7 +30,7 @@ class RegisteredUserController extends Controller
                 'lowercase',
                 'email:rfc,dns',
                 'max:255',
-                Rule::unique('users', 'email') // ← chuẩn nhất
+                Rule::unique('users', 'email') 
             ],
 
             'phone'         => ['nullable', 'string', 'max:20'],
@@ -49,13 +49,10 @@ class RegisteredUserController extends Controller
             'password.confirmed' => 'Xác nhận mật khẩu không khớp',
         ]);
 
-        // Lưu avatar
         $avatarPath = null;
         if ($request->hasFile('avatar')) {
             $avatarPath = $request->file('avatar')->store('avatars', 'public');
-        }
-
-        // Tạo user
+        }   
         $user = User::create([
             'name'          => $validated['name'],
             'email'         => $validated['email'],

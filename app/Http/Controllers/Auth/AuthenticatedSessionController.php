@@ -39,32 +39,9 @@ class AuthenticatedSessionController extends Controller
             ]);
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | (OPTIONAL) CHẶN LOGIN NẾU CHƯA XÁC THỰC EMAIL
-        |--------------------------------------------------------------------------
-        */
-        /*
-        if (! $user->hasVerifiedEmail()) {
-
-            Auth::logout();
-
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-
-            return back()->withErrors([
-                'email' => 'Vui lòng xác thực email trước khi đăng nhập.',
-            ]);
-        }
-        */
-
-
-
         if ($user->role === 'admin') {
             return redirect()->route('admin.reports.index');
         }
-
-        // User thường → LUÔN về trang chủ "/"
         return redirect()->route('home');
     }
 

@@ -27,7 +27,6 @@ document.addEventListener('click', function (e) {
             return;
         }
 
-        // ===== Đổi icon tất cả card cùng product =====
         document.querySelectorAll('.btn-wishlist[data-product-id="'+productId+'"]')
         .forEach(button => {
             const icon = button.querySelector('i');
@@ -41,7 +40,6 @@ document.addEventListener('click', function (e) {
             }
         });
 
-        // ===== Toast =====
         if (data.favorited) {
             window.showToast?.('Đã thêm vào yêu thích', 'success');
         } else {

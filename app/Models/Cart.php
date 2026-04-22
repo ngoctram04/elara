@@ -12,7 +12,6 @@ class Cart extends Model
         'quantity',
     ];
 
-    /* ================= RELATION ================= */
 
     public function variant()
     {

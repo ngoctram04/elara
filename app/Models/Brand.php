@@ -13,7 +13,6 @@ class Brand extends Model
         'image',
     ];
 
-    // 1 thương hiệu có nhiều sản phẩm
     public function products()
     {
         return $this->hasMany(Product::class);

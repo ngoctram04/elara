@@ -742,7 +742,15 @@ body{
                                 </form>
                             @endif
 
-                            @if($order->canRequestRefund())
+                            @php
+                                $hasReviewedItem = $order->items->contains(fn($item) => $item->review);
+                            @endphp
+
+                            @if(
+                                $order->canRequestRefund()
+                                && !$order->refundRequest
+                                && !$hasReviewedItem
+                            )
                                 <a href="javascript:void(0)"
                                    class="btn btn-outline-danger btn-sm btn-action btn-refund"
                                    data-url="{{ route('refund.create', $order->id) }}">

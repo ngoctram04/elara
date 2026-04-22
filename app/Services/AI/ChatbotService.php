@@ -19,11 +19,7 @@ class ChatbotService
 
         $msg = $this->normalize($original);
 
-        /*
-        |--------------------------------------------------------------------------
-        | NHÓM CÂU NGẮN CƠ BẢN
-        |--------------------------------------------------------------------------
-        */
+
         if ($this->isGreetingOnly($msg)) {
             return $this->text(
                 "Xin chào! Mình là trợ lý tư vấn của ELARA.\n" .
@@ -39,11 +35,7 @@ class ChatbotService
             return $this->text('Cảm ơn bạn đã ghé ELARA. Khi nào cần tư vấn thêm mình luôn sẵn sàng.');
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | ƯU TIÊN SUPPORT / ĐƠN HÀNG TRƯỚC KHI SEARCH SẢN PHẨM
-        |--------------------------------------------------------------------------
-        */
+  
         if ($this->isHumanSupport($msg)) {
             return $this->html(
                 'Nếu bạn cần hỗ trợ gấp hoặc muốn gặp nhân viên, bạn vui lòng ' .
@@ -60,11 +52,7 @@ class ChatbotService
             );
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | CHĂM SÓC DA / ROUTINE
-        |--------------------------------------------------------------------------
-        */
+  
         if ($this->isRoutineQuestion($msg)) {
             $routine = $this->tools->suggestRoutineByMessage($original);
             $steps = $routine['routine'] ?? [];
@@ -102,11 +90,7 @@ class ChatbotService
             );
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | THÔNG TIN SHOP
-        |--------------------------------------------------------------------------
-        */
+ 
         if ($this->isPromotionQuestion($msg)) {
             $promo = $this->tools->getPromotions();
 
@@ -155,11 +139,7 @@ class ChatbotService
             );
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | TÌM SẢN PHẨM / GIÁ
-        |--------------------------------------------------------------------------
-        */
+        
         $budget = $this->extractBudget($msg);
         $keyword = $this->extractProductKeyword($original);
 
@@ -279,11 +259,6 @@ class ChatbotService
             return $this->text('Bạn hãy nhắn tên sản phẩm hoặc nhóm sản phẩm, mình sẽ tìm giá giúp bạn nhé. Ví dụ: "serum", "nước tẩy trang", "kem chống nắng dưới 300k".');
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | FALLBACK AI - NHƯNG VẪN BÁM CSDL
-        |--------------------------------------------------------------------------
-        */
         if ($this->gemini->isConfigured()) {
             $dbContext = $this->buildDatabaseContext($original, $keyword, $budget);
 

@@ -28,63 +28,40 @@ class ChatMessage extends Model
     public $timestamps = true;
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | Relationships
-    |--------------------------------------------------------------------------
-    */
 
-    // Thuộc cuộc trò chuyện
     public function conversation()
     {
         return $this->belongsTo(ChatConversation::class, 'conversation_id');
     }
 
-    // Người gửi tin nhắn
     public function sender()
     {
         return $this->belongsTo(User::class, 'sender_id')->withDefault();
     }
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | Helper functions
-    |--------------------------------------------------------------------------
-    */
-
-    // Tin nhắn của user
     public function isFromUser()
     {
         return $this->sender && $this->sender->role === 'customer';
     }
 
-    // Tin nhắn của admin
     public function isFromAdmin()
     {
         return $this->sender && $this->sender->role === 'admin';
     }
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | Accessors
-    |--------------------------------------------------------------------------
-    */
-
-    // Lấy danh sách ảnh
     public function getImagesListAttribute()
     {
         return $this->images ?? [];
     }
 
-    // Kiểm tra có ảnh
+   
     public function hasImages()
     {
         return !empty($this->images);
     }
 
-    // Preview tin nhắn (dùng trong danh sách chat)
     public function getPreviewAttribute()
     {
         if (!empty($this->message)) {
@@ -99,19 +76,12 @@ class ChatMessage extends Model
     }
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | Helpers khác
-    |--------------------------------------------------------------------------
-    */
-
-    // Kiểm tra có nội dung
     public function hasContent()
     {
         return !empty($this->message) || $this->hasImages();
     }
 
-    // Lấy thời gian format
+
     public function getTimeAttribute()
     {
         return $this->created_at
@@ -119,7 +89,6 @@ class ChatMessage extends Model
             : '';
     }
 
-    // Lấy ngày format
     public function getDateAttribute()
     {
         return $this->created_at

@@ -16,7 +16,7 @@ class PromotionProduct extends Model
         'variant_id',
     ];
 
-    /* ================= RELATIONSHIPS ================= */
+   
 
     public function promotion()
     {

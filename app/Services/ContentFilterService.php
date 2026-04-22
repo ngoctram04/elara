@@ -21,8 +21,6 @@ class ContentFilterService
         }
 
         $normalized = $this->normalize($text);
-
-        // 1. Chặn hoàn toàn
         $blockedWords = config('content_filter.blocked_words', []);
         foreach ($blockedWords as $word) {
             $originalWord = trim((string) $word);
@@ -48,7 +46,6 @@ class ContentFilterService
             }
         }
 
-        // 2. Chỉ đánh dấu nghi vấn
         $flagWords = config('content_filter.flag_words', []);
         foreach ($flagWords as $word) {
             $originalWord = trim((string) $word);
@@ -86,8 +83,6 @@ class ContentFilterService
     private function normalize(string $text): string
     {
         $text = mb_strtolower($text, 'UTF-8');
-
-        // thay các kiểu lách phổ biến
         $text = strtr($text, [
             '0' => 'o',
             '1' => 'i',
@@ -104,13 +99,11 @@ class ContentFilterService
             '!' => 'i',
         ]);
 
-        // bỏ dấu tiếng Việt
+  
         $text = Str::ascii($text);
 
-        // bỏ ký tự đặc biệt nhưng giữ chữ, số, khoảng trắng
         $text = preg_replace('/[^a-z0-9\s]/', ' ', $text);
 
-        // gom nhiều khoảng trắng
         $text = preg_replace('/\s+/', ' ', $text);
 
         return trim($text);
@@ -121,14 +114,11 @@ class ContentFilterService
         if ($text === '' || $word === '') {
             return false;
         }
-
-        // match nguyên cụm từ
         $exactPattern = '/(?:^|\s)' . preg_quote($word, '/') . '(?:\s|$)/i';
         if (preg_match($exactPattern, $text)) {
             return true;
         }
 
-        // match kiểu chèn khoảng trắng giữa các ký tự: d i t, s c a m
         $chars = preg_split('//u', $word, -1, PREG_SPLIT_NO_EMPTY);
 
         if (!$chars) {

@@ -16,21 +16,16 @@ class OrderCompletedMail extends Mailable implements ShouldQueue
 
     public Order $order;
 
-    /**
-     * Create a new message instance.
-     */
+
     public function __construct(Order $order)
     {
-        // Load đầy đủ quan hệ để tránh lỗi khi queue
         $this->order = $order->load([
             'items.variant.product.images',
             'user'
         ]);
     }
 
-    /**
-     * Email subject
-     */
+
     public function envelope(): Envelope
     {
         return new Envelope(
@@ -38,9 +33,7 @@ class OrderCompletedMail extends Mailable implements ShouldQueue
         );
     }
 
-    /**
-     * Email content
-     */
+
     public function content(): Content
     {
         return new Content(
@@ -52,9 +45,6 @@ class OrderCompletedMail extends Mailable implements ShouldQueue
         );
     }
 
-    /**
-     * Attachments (có thể thêm PDF hóa đơn sau này)
-     */
     public function attachments(): array
     {
         return [];

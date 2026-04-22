@@ -15,8 +15,8 @@ class Promotion extends Model
     protected $fillable = [
         'code',
         'name',
-        'type',              // product | order
-        'discount_type',     // percent | fixed
+        'type',              
+        'discount_type',  
         'discount_value',
         'min_order_value',
         'max_discount',
@@ -33,17 +33,13 @@ class Promotion extends Model
         'is_active'  => 'boolean',
     ];
 
-    /* =====================================================
-        RELATIONSHIPS
-    ===================================================== */
 
-    // Promotion → promotion_products
     public function promotionProducts()
     {
         return $this->hasMany(PromotionProduct::class, 'promotion_id');
     }
 
-    // Promotion → products (qua bảng trung gian)
+
     public function products()
     {
         return $this->belongsToMany(
@@ -54,11 +50,7 @@ class Promotion extends Model
         );
     }
 
-    /* =====================================================
-        SCOPES
-    ===================================================== */
 
-    // Khuyến mãi đang hiệu lực (dùng cho frontend / checkout)
     public function scopeActive($query)
     {
         return $query->where('is_active', 1)
@@ -66,11 +58,7 @@ class Promotion extends Model
             ->where('end_date', '>=', now());
     }
 
-    /* =====================================================
-        BUSINESS LOGIC
-    ===================================================== */
-
-    // Kiểm tra khuyến mãi có hợp lệ để dùng không
+  
     public function isValid(): bool
     {
         return $this->is_active
@@ -78,13 +66,7 @@ class Promotion extends Model
             && (!$this->usage_limit || $this->used_count < $this->usage_limit);
     }
 
-    /* =====================================================
-        TIME STATUS (CHO ADMIN UI)
-    ===================================================== */
-
-    /**
-     * upcoming | active | expiring | expired
-     */
+  
     public function getTimeStatusAttribute(): string
     {
         $now = Carbon::now();
@@ -104,9 +86,7 @@ class Promotion extends Model
         return 'active';
     }
 
-    /**
-     * Số ngày còn lại (INT – không lẻ, không âm)
-     */
+  
     public function getDaysLeftAttribute(): int
     {
         $now = Carbon::now();
@@ -122,9 +102,7 @@ class Promotion extends Model
         return max(1, $now->diffInDays($this->end_date));
     }
 
-    /**
-     * Label hiển thị cho admin
-     */
+ 
     public function getTimeStatusLabelAttribute(): string
     {
         return match ($this->time_status) {
@@ -135,9 +113,6 @@ class Promotion extends Model
         };
     }
 
-    /**
-     * Màu badge Bootstrap
-     */
     public function getTimeStatusColorAttribute(): string
     {
         return match ($this->time_status) {

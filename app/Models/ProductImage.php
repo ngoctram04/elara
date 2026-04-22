@@ -17,26 +17,17 @@ class ProductImage extends Model
         'is_main' => 'boolean',
     ];
 
-    /* ======================
-        RELATIONS
-    ====================== */
 
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
     }
 
-    /* ======================
-        HELPERS
-    ====================== */
-
-    // Lấy full URL ảnh
     public function getUrlAttribute(): string
     {
         return asset('storage/' . $this->image_path);
     }
-
-    // Scope ảnh chính
+  
     public function scopeMain($query)
     {
         return $query->where('is_main', true);

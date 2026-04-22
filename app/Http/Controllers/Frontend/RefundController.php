@@ -16,9 +16,7 @@ use Illuminate\Support\Facades\Mail;
 
 class RefundController extends Controller
 {
-    /**
-     * Kiểm tra đơn có còn trong thời hạn yêu cầu hoàn tiền hay không
-     */
+
     protected function ensureRefundAllowed(Order $order): void
     {
         if ((int) $order->user_id !== (int) Auth::id()) {
@@ -40,6 +38,9 @@ class RefundController extends Controller
         if ($order->refundRequest) {
             throw new \Exception('Đơn hàng này đã gửi yêu cầu hoàn tiền.');
         }
+        if ($order->items()->whereHas('review')->exists()) {
+            throw new \Exception('Đơn hàng đã được đánh giá, không thể trả hàng / hoàn tiền.');
+        }
 
         $deadline = $order->received_at->copy()->addDays(3);
 
@@ -48,9 +49,6 @@ class RefundController extends Controller
         }
     }
 
-    /**
-     * Form yêu cầu hoàn tiền
-     */
     public function create(Order $order)
     {
         try {
@@ -70,9 +68,6 @@ class RefundController extends Controller
         }
     }
 
-    /**
-     * Gửi yêu cầu hoàn tiền
-     */
     public function store(Request $request)
     {
         $request->validate([
@@ -106,11 +101,6 @@ class RefundController extends Controller
                 }
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | Ghép lý do chung + tình trạng từng sản phẩm
-            |--------------------------------------------------------------------------
-            */
             $reason = trim((string) $request->reason);
             $itemDescriptions = [];
 
@@ -140,11 +130,6 @@ class RefundController extends Controller
                 $fullReason .= "\n\nChi tiết sản phẩm khách chọn:\n" . implode("\n", $itemDescriptions);
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | Tạo yêu cầu hoàn tiền
-            |--------------------------------------------------------------------------
-            */
             $refund = RefundRequest::create([
                 'order_id' => $order->id,
                 'user_id'  => Auth::id(),
@@ -152,11 +137,6 @@ class RefundController extends Controller
                 'status'   => RefundRequest::STATUS_PENDING,
             ]);
 
-            /*
-            |--------------------------------------------------------------------------
-            | Lưu item được chọn
-            |--------------------------------------------------------------------------
-            */
             if (method_exists($refund, 'items')) {
                 $syncData = [];
 
@@ -193,11 +173,6 @@ class RefundController extends Controller
                 $refund->items()->sync($syncData);
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | Upload ảnh
-            |--------------------------------------------------------------------------
-            */
             if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $image) {
                     if ($image && $image->isValid()) {
@@ -212,11 +187,6 @@ class RefundController extends Controller
                 }
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | Upload video
-            |--------------------------------------------------------------------------
-            */
             if ($request->hasFile('video')) {
                 $video = $request->file('video');
 
@@ -231,19 +201,9 @@ class RefundController extends Controller
                 }
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | Gửi email về admin
-            |--------------------------------------------------------------------------
-            */
             Mail::to(config('mail.from.address'))
                 ->send(new RefundRequestMail($order, $refund));
 
-            /*
-            |--------------------------------------------------------------------------
-            | Thông báo admin
-            |--------------------------------------------------------------------------
-            */
             User::where('role', 'admin')->each(function ($admin) use ($order) {
                 $admin->notify(new SystemNotification([
                     'title'   => 'Yêu cầu hoàn tiền',

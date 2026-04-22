@@ -27,9 +27,6 @@ class ProductController extends Controller
             ->where('reviews.is_visible', 1)
             ->groupBy('product_variants.product_id');
 
-        /* ======================================================
-         * 1. LOAD PRODUCT
-         * ====================================================== */
         $product = Product::with([
             'images',
             'mainImage',
@@ -58,10 +55,6 @@ class ProductController extends Controller
             ->where('slug', $slug)
             ->where('is_active', 1)
             ->firstOrFail();
-
-        /* ======================================================
-         * 2. REVIEW BASE QUERY
-         * ====================================================== */
         $visibleReviewsQuery = Review::query()
             ->join('order_items', 'order_items.id', '=', 'reviews.order_item_id')
             ->join('product_variants', 'product_variants.id', '=', 'order_items.variant_id')
@@ -69,9 +62,6 @@ class ProductController extends Controller
             ->where('reviews.is_visible', 1)
             ->select('reviews.*');
 
-        /* ======================================================
-         * 3. REVIEWS (FILTER + SORT)
-         * ====================================================== */
         $reviewsQuery = (clone $visibleReviewsQuery)
             ->with([
                 'orderItem.order.user',
@@ -98,10 +88,6 @@ class ProductController extends Controller
         }
 
         $reviews = $reviewsQuery->get();
-
-        /* ======================================================
-         * 4. REVIEW STATS
-         * ====================================================== */
         $reviewCount = (clone $visibleReviewsQuery)->count();
 
         $avgRating = $reviewCount > 0
@@ -125,14 +111,7 @@ class ProductController extends Controller
             ->whereHas('media')
             ->count();
 
-        /* ======================================================
-         * 5. TOTAL SOLD
-         * ====================================================== */
         $totalSold = $product->total_sold;
-
-        /* ======================================================
-         * 6. WISHLIST
-         * ====================================================== */
         $favorites = [];
 
         if ($userId) {
@@ -142,10 +121,6 @@ class ProductController extends Controller
         }
 
         $favoritesCount = Wishlist::where('product_id', $product->id)->count();
-
-        /* ======================================================
-         * 7. RELATED PRODUCTS
-         * ====================================================== */
         $relatedProducts = Product::query()
             ->with([
                 'mainImage',
@@ -169,10 +144,6 @@ class ProductController extends Controller
             ->orderByDesc('variants_sold_sum')
             ->limit(8)
             ->get();
-
-        /* ======================================================
-         * 8. FALLBACK RELATED
-         * ====================================================== */
         if ($relatedProducts->count() < 8) {
             $excludeIds = $relatedProducts
                 ->pluck('id')
@@ -203,9 +174,6 @@ class ProductController extends Controller
             $relatedProducts = $relatedProducts->merge($moreProducts);
         }
 
-        /* ======================================================
-         * 9. RECENT VIEWED PRODUCTS (SESSION)
-         * ====================================================== */
         $recentViewed = session()->get('recent_viewed_products', []);
 
         $recentViewed = array_values(array_diff($recentViewed, [$product->id]));
@@ -242,10 +210,6 @@ class ProductController extends Controller
                 })
                 ->values();
         }
-
-        /* ======================================================
-         * 10. RETURN VIEW
-         * ====================================================== */
         return view('frontend.detail', compact(
             'product',
             'reviews',

@@ -36,17 +36,13 @@ class InventoryLog extends Model
         'reference_id'    => 'integer',
     ];
 
-    /**
-     * Quan hệ biến thể sản phẩm
-     */
+ 
     public function variant()
     {
         return $this->belongsTo(ProductVariant::class, 'variant_id');
     }
 
-    /**
-     * Quan hệ sản phẩm (thông qua variant)
-     */
+    
     public function product()
     {
         return $this->hasOneThrough(
@@ -59,9 +55,6 @@ class InventoryLog extends Model
         );
     }
 
-    /**
-     * Quan hệ lô hàng
-     */
     public function stockImport()
     {
         return $this->belongsTo(StockImport::class, 'stock_import_id');

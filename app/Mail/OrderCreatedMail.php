@@ -17,12 +17,9 @@ class OrderCreatedMail extends Mailable implements ShouldQueue
     public Order $order;
     public bool $forAdmin;
 
-    /**
-     * Create a new message instance.
-     */
+
     public function __construct(Order $order, bool $forAdmin = false)
     {
-        // Load đầy đủ quan hệ để tránh lỗi khi queue
         $this->order = $order->load([
             'items.variant.product.images',
             'user'
@@ -31,9 +28,6 @@ class OrderCreatedMail extends Mailable implements ShouldQueue
         $this->forAdmin = $forAdmin;
     }
 
-    /**
-     * Get the message envelope.
-     */
     public function envelope(): Envelope
     {
         return new Envelope(
@@ -43,9 +37,6 @@ class OrderCreatedMail extends Mailable implements ShouldQueue
         );
     }
 
-    /**
-     * Get the message content definition.
-     */
     public function content(): Content
     {
         return new Content(
@@ -58,9 +49,7 @@ class OrderCreatedMail extends Mailable implements ShouldQueue
         );
     }
 
-    /**
-     * Get any attachments.
-     */
+
     public function attachments(): array
     {
         return [];

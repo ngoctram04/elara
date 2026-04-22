@@ -9,17 +9,12 @@ use Illuminate\Support\Facades\Session;
 
 class BlogController extends Controller
 {
-    /**
-     * Danh sách blog
-     */
     public function index()
     {
-        // 1) Bài lớn bên trái: bài mới nhất
         $latestBlog = Blog::where('is_active', 1)
             ->orderBy('created_at', 'desc')
             ->first();
 
-        // 2) Cột phải: khám phá thêm
         $discoverBlogsQuery = Blog::where('is_active', 1);
 
         if ($latestBlog) {
@@ -30,7 +25,6 @@ class BlogController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // 3) Bài viết vừa xem từ session, chỉ lấy 3 bài
         $recentViewedIds = Session::get('recent_viewed_blogs', []);
 
         $recentViewedBlogs = collect();
@@ -53,16 +47,12 @@ class BlogController extends Controller
         ));
     }
 
-    /**
-     * Chi tiết blog
-     */
     public function show($slug)
     {
         $blog = Blog::where('slug', $slug)
             ->where('is_active', 1)
             ->firstOrFail();
 
-        // lưu lịch sử xem bằng session
         $recentViewed = Session::get('recent_viewed_blogs', []);
 
         $recentViewed = array_values(array_filter($recentViewed, function ($id) use ($blog) {
@@ -71,12 +61,10 @@ class BlogController extends Controller
 
         array_unshift($recentViewed, $blog->id);
 
-        // lưu tối đa 12 bài trong session
         $recentViewed = array_slice($recentViewed, 0, 12);
 
         Session::put('recent_viewed_blogs', $recentViewed);
 
-        // tăng lượt xem nhưng không cập nhật updated_at
         $blog->timestamps = false;
         $blog->increment('views');
         $blog->refresh();

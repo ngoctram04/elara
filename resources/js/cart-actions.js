@@ -1,8 +1,5 @@
 document.addEventListener('click', function (e) {
 
-    /* =====================================================
-       UTIL
-    ===================================================== */
     const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
 
     const toast = (msg, type = 'success') => {
@@ -15,10 +12,6 @@ document.addEventListener('click', function (e) {
         return path.includes('cart') || path.includes('gio-hang');
     };
 
-
-    /* =====================================================
-       CLICK CARD → ĐI CHI TIẾT
-    ===================================================== */
     const clickable = e.target.closest(
         '.js-go-detail, .js-card, .js-category-card'
     );
@@ -39,9 +32,6 @@ document.addEventListener('click', function (e) {
     }
 
 
-    /* =====================================================
-       WISHLIST (GLOBAL – QUAN TRỌNG)
-    ===================================================== */
     const wishBtn = e.target.closest('.btn-wishlist');
     if (wishBtn) {
 
@@ -69,7 +59,7 @@ document.addEventListener('click', function (e) {
         })
         .then(data => {
 
-            // Update icon của nút vừa click
+
             const icon = wishBtn.querySelector('i');
             if (icon) {
                 if (data.favorited) {
@@ -81,7 +71,7 @@ document.addEventListener('click', function (e) {
                 }
             }
 
-            // Update count nếu đang ở trang detail
+      
             const countEl = document.getElementById('wishlist-count');
             if (countEl && data.count !== undefined) {
                 countEl.innerText = data.count;
@@ -97,9 +87,7 @@ document.addEventListener('click', function (e) {
     }
 
 
-    /* =====================================================
-       ADD TO CART (AJAX)
-    ===================================================== */
+
     const addBtn = e.target.closest('.btn-add-to-cart');
     if (addBtn) {
 

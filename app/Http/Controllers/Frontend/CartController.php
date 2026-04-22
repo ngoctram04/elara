@@ -14,16 +14,8 @@ use Illuminate\Support\Facades\DB;
 
 class CartController extends Controller
 {
-    /**
-     * ============================
-     * TRANG GIỎ HÀNG (A++)
-     * ============================
-     */
     public function index()
     {
-        /* ======================================================
-         * 1. SYNC DB -> SESSION (nếu user đã đăng nhập)
-         * ====================================================== */
         if (Auth::check()) {
             $dbItems = Cart::where('user_id', Auth::id())->get();
 
@@ -38,18 +30,10 @@ class CartController extends Controller
 
             session()->put('cart', $sessionCart);
         }
-
-        /* ======================================================
-         * 2. LẤY CART TỪ SESSION
-         * ====================================================== */
         $rawCart = session()->get('cart', []);
         $cart = [];
         $total = 0;
         $updatedSession = false;
-
-        /* ======================================================
-         * 3. LOAD VARIANTS
-         * ====================================================== */
         if (!empty($rawCart)) {
             $variantIds = collect($rawCart)->pluck('variant_id');
 
@@ -68,13 +52,9 @@ class CartController extends Controller
                 ->get()
                 ->groupBy('product_id');
 
-            /* ======================================================
-             * 4. BUILD CART DATA
-             * ====================================================== */
             foreach ($rawCart as $variantId => $item) {
                 $variant = $variants[$variantId] ?? null;
 
-                // Variant bị xóa
                 if (!$variant) {
                     unset($rawCart[$variantId]);
                     $updatedSession = true;
@@ -84,13 +64,11 @@ class CartController extends Controller
                 $stock = $variant->stock_quantity;
                 $quantity = min($item['quantity'], $stock);
 
-                // Nếu tồn kho thay đổi
                 if ($quantity != $item['quantity']) {
                     $rawCart[$variantId]['quantity'] = $quantity;
                     $updatedSession = true;
                 }
 
-                // Hết hàng
                 if ($quantity <= 0) {
                     unset($rawCart[$variantId]);
                     $updatedSession = true;
@@ -129,24 +107,15 @@ class CartController extends Controller
                 ];
             }
 
-            // Cập nhật lại session nếu có thay đổi
             if ($updatedSession) {
                 session()->put('cart', $rawCart);
             }
         }
 
-        /* ======================================================
-         * 5. VOUCHER (lấy từ session)
-         * ====================================================== */
         $promotionDiscount = session('promotion_discount', 0);
 
-        // Tổng sau voucher
         $totalAfterPromotion = max(0, $total - $promotionDiscount);
 
-        /* ======================================================
-         * 6. BIRTHDAY BENEFIT
-         * Chỉ áp dụng ĐÚNG NGÀY sinh nhật và chưa dùng năm nay
-         * ====================================================== */
         $birthdayDiscount = 0;
         $birthdayPercent = 0;
 
@@ -166,15 +135,9 @@ class CartController extends Controller
             }
         }
 
-        // Lưu session để Checkout dùng
-        session()->put('birthday_discount', $birthdayDiscount);
-
-        // Tổng cuối cùng
+        session()->put('birthday_discount', $birthdayDiscount);       
         $finalTotal = max(0, $totalAfterPromotion - $birthdayDiscount);
 
-        /* ======================================================
-         * 7. SẢN PHẨM GỢI Ý
-         * ====================================================== */
         $reviewStats = DB::table('reviews')
             ->join('order_items', 'order_items.id', '=', 'reviews.order_item_id')
             ->join('product_variants', 'product_variants.id', '=', 'order_items.variant_id')
@@ -204,15 +167,6 @@ class CartController extends Controller
             ->take(4)
             ->get();
 
-        /* ======================================================
-         * 8. VOUCHER KHẢ DỤNG
-         * - active
-         * - đúng thời gian
-         * - chưa hết lượt
-         * - voucher thường: hiện bình thường
-         * - voucher đổi điểm: chỉ hiện nếu thuộc user hiện tại
-         * - voucher đã dùng ở đơn không hủy: không hiện lại
-         * ====================================================== */
         $userId = Auth::id();
 
         $availablePromotions = Promotion::query()
@@ -263,9 +217,6 @@ class CartController extends Controller
             ->orderByDesc('discount_value')
             ->get();
 
-        /* ======================================================
-         * 9. RETURN VIEW
-         * ====================================================== */
         return view('frontend.cart.index', [
             'cart' => $cart,
             'total' => $total,
@@ -278,16 +229,9 @@ class CartController extends Controller
         ]);
     }
 
-    /**
-     * ============================
-     * THÊM VÀO GIỎ
-     * ============================
-     */
     public function add(Request $request)
     {
-        /* ==============================
-         * 1. LẤY SỐ LƯỢNG (tương thích mọi form)
-         * ============================== */
+
         $qty = $request->input('qty', $request->input('quantity', 1));
         $request->merge(['qty' => $qty]);
 
@@ -296,24 +240,16 @@ class CartController extends Controller
             'qty'        => 'required|integer|min:1',
         ]);
 
-        /* ==============================
-         * 2. ÉP KIỂU
-         * ============================== */
+
         $variantId = (int) $request->variant_id;
         $qty       = (int) $request->qty;
 
         $variant = ProductVariant::findOrFail($variantId);
 
-        /* ==============================
-         * 3. KIỂM TRA TỒN KHO
-         * ============================== */
         if ($variant->stock_quantity <= 0) {
             return $this->jsonError('Sản phẩm đã hết hàng');
         }
 
-        /* ==============================
-         * 4. LẤY SESSION CART
-         * ============================== */
         $cart = session()->get('cart', []);
 
         $cart = collect($cart)->mapWithKeys(function ($item) {
@@ -323,9 +259,6 @@ class CartController extends Controller
             ]];
         })->toArray();
 
-        /* ==============================
-         * 5. THÊM / GỘP SẢN PHẨM
-         * ============================== */
         $currentQty = $cart[$variantId]['quantity'] ?? 0;
         $newQty = $currentQty + $qty;
 
@@ -338,14 +271,8 @@ class CartController extends Controller
             'quantity'   => $newQty,
         ];
 
-        /* ==============================
-         * 6. LƯU SESSION
-         * ============================== */
         session()->put('cart', $cart);
 
-        /* ==============================
-         * 7. SYNC DB (nếu đăng nhập)
-         * ============================== */
         if (Auth::check()) {
             Cart::updateOrCreate(
                 [
@@ -357,15 +284,8 @@ class CartController extends Controller
                 ]
             );
         }
-
-        /* ==============================
-         * 8. ĐẾM TỔNG SỐ LƯỢNG
-         * ============================== */
         $cartCount = collect($cart)->sum('quantity');
 
-        /* ==============================
-         * 9. RESPONSE (LUÔN JSON cho AJAX)
-         * ============================== */
         if ($request->ajax() || $request->expectsJson()) {
             return response()->json([
                 'success'    => true,
@@ -377,11 +297,6 @@ class CartController extends Controller
         return back()->with('success', 'Đã thêm sản phẩm vào giỏ hàng');
     }
 
-    /**
-     * ============================
-     * ĐỔI SỐ LƯỢNG
-     * ============================
-     */
     public function changeQty(Request $request)
     {
         $request->validate([
@@ -415,11 +330,6 @@ class CartController extends Controller
         return response()->json(['success' => true]);
     }
 
-    /**
-     * ============================
-     * ĐỔI BIẾN THỂ
-     * ============================
-     */
     public function changeVariant(Request $request)
     {
         $request->validate([
@@ -501,11 +411,6 @@ class CartController extends Controller
         ]);
     }
 
-    /**
-     * ============================
-     * XÓA ITEM
-     * ============================
-     */
     public function remove($variantId)
     {
         $cart = session()->get('cart', []);
@@ -521,11 +426,6 @@ class CartController extends Controller
         return response()->json(['success' => true]);
     }
 
-    /**
-     * ============================
-     * XÓA TOÀN BỘ
-     * ============================
-     */
     public function clear()
     {
         session()->forget('cart');
@@ -549,9 +449,6 @@ class CartController extends Controller
         return back()->withErrors(['qty' => $message]);
     }
 
-    /* ============================
-     * ÁP DỤNG VOUCHER
-     * ============================ */
     public function applyPromotion(Request $request)
     {
         $request->validate([
@@ -572,7 +469,6 @@ class CartController extends Controller
             })
             ->first();
 
-        // ===== Không tồn tại / hết hạn =====
         if (!$promotion) {
             return response()->json([
                 'success' => false,
@@ -580,11 +476,6 @@ class CartController extends Controller
             ]);
         }
 
-        /**
-         * ======================================
-         * CHẶN KHI HẾT LƯỢT (QUAN TRỌNG)
-         * ======================================
-         */
         if (
             $promotion->usage_limit !== null &&
             $promotion->used_count >= $promotion->usage_limit
@@ -597,7 +488,6 @@ class CartController extends Controller
 
         $total = (float) $request->total;
 
-        /* ===== Đơn tối thiểu ===== */
         $minimum = (float) ($promotion->min_order_value ?? 0);
 
         if ($minimum > 0 && $total < $minimum) {
@@ -609,8 +499,6 @@ class CartController extends Controller
                     . 'Mua thêm ' . number_format($needMore) . 'đ để áp dụng.'
             ]);
         }
-
-        /* ===== Tính giảm ===== */
         $value = (float) $promotion->discount_value;
 
         if ($promotion->discount_type === 'percent') {
@@ -619,7 +507,6 @@ class CartController extends Controller
             $discount = $value;
         }
 
-        /* ===== Giảm tối đa ===== */
         if (!empty($promotion->max_discount)) {
             $discount = min($discount, $promotion->max_discount);
         }
@@ -659,13 +546,10 @@ class CartController extends Controller
 
         $today = Carbon::today();
         $birthday = Carbon::parse($user->date_of_birth);
-
-        // Chỉ áp dụng đúng ngày sinh
         if ($today->month != $birthday->month || $today->day != $birthday->day) {
             return 0;
         }
 
-        // Mỗi năm 1 lần
         if ((int) $user->birthday_discount_year === (int) $today->year) {
             return 0;
         }

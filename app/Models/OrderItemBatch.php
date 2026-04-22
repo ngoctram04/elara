@@ -22,9 +22,7 @@ class OrderItemBatch extends Model
         'is_rolled_back'    => 'boolean',
     ];
 
-    /* ========================
-        RELATIONS
-    ======================== */
+
 
     public function orderItem(): BelongsTo
     {

@@ -54,11 +54,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'locked_until'           => 'datetime',
     ];
 
-    /*
-    |--------------------------------------------------------------------------
-    | Relationships
-    |--------------------------------------------------------------------------
-    */
+  
 
     public function orders()
     {
@@ -110,11 +106,6 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(ChatMessage::class, 'sender_id');
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Accessors
-    |--------------------------------------------------------------------------
-    */
 
     public function getAgeAttribute()
     {
@@ -130,11 +121,7 @@ class User extends Authenticatable implements MustVerifyEmail
         return asset('images/avatar-default.png');
     }
 
-    /**
-     * Tổng giá trị sản phẩm đã hoàn trong năm hiện tại
-     * - chỉ tính tiền sản phẩm
-     * - không dùng refund_total vì refund_total có thể đã bị trừ ship
-     */
+
     public function getYearlyRefundProductTotalAttribute(): float
     {
         return (float) DB::table('refund_requests')
@@ -146,11 +133,7 @@ class User extends Authenticatable implements MustVerifyEmail
             ->sum(DB::raw('COALESCE(order_items.price, 0) * COALESCE(refund_request_items.quantity, 0)'));
     }
 
-    /**
-     * Tổng giá trị sản phẩm đã hoàn toàn thời gian
-     * - chỉ tính tiền sản phẩm
-     * - không dùng refund_total vì refund_total có thể đã bị trừ ship
-     */
+
     public function getRefundProductTotalAttribute(): float
     {
         return (float) DB::table('refund_requests')
@@ -161,12 +144,7 @@ class User extends Authenticatable implements MustVerifyEmail
             ->sum(DB::raw('COALESCE(order_items.price, 0) * COALESCE(refund_request_items.quantity, 0)'));
     }
 
-    /**
-     * Chi tiêu năm hiện tại:
-     * - chỉ tính tiền sản phẩm sau giảm giá (orders.total)
-     * - không tính ship
-     * - trừ theo GIÁ TRỊ SẢN PHẨM đã hoàn
-     */
+
     public function getYearlySpentCalculatedAttribute(): float
     {
         $completedTotal = (float) $this->orders()
@@ -180,12 +158,7 @@ class User extends Authenticatable implements MustVerifyEmail
         return max(0, $completedTotal - $refundedProductTotal);
     }
 
-    /**
-     * Tổng chi tiêu toàn thời gian:
-     * - chỉ tính tiền sản phẩm sau giảm giá (orders.total)
-     * - không tính ship
-     * - trừ theo GIÁ TRỊ SẢN PHẨM đã hoàn
-     */
+
     public function getTotalSpentCalculatedAttribute(): float
     {
         $completedTotal = (float) $this->orders()
@@ -227,11 +200,7 @@ class User extends Authenticatable implements MustVerifyEmail
         };
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Helpers
-    |--------------------------------------------------------------------------
-    */
+
 
     public function calculateYearlySpent()
     {
@@ -298,9 +267,7 @@ class User extends Authenticatable implements MustVerifyEmail
         ])->save();
     }
 
-    /**
-     * Cập nhật hạng theo yearly_spent đang lưu
-     */
+
     public function updateMemberLevel()
     {
         $spent = (float) ($this->yearly_spent ?? 0);
@@ -321,9 +288,7 @@ class User extends Authenticatable implements MustVerifyEmail
         ])->save();
     }
 
-    /**
-     * Đồng bộ lại dữ liệu membership từ dữ liệu đơn hàng / hoàn hàng
-     */
+  
     public function refreshMembershipData()
     {
         $yearlySpent = $this->yearly_spent_calculated;

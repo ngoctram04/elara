@@ -15,9 +15,7 @@ use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
-    /**
-     * Danh sách đơn hàng
-     */
+
     public function index(Request $request)
     {
         $query = Order::with([
@@ -29,36 +27,22 @@ class OrderController extends Controller
         ])
             ->where('user_id', Auth::id())
             ->orderByRaw('COALESCE(updated_at, created_at) DESC');
-
-        /*
-        |--------------------------------------------------------------------------
-        | 1. Tìm kiếm theo keyword
-        |--------------------------------------------------------------------------
-        | Hỗ trợ:
-        | - DH00001
-        | - 1, 12, 123...
-        | - gõ chữ trạng thái như: hủy, đang giao, chưa đánh giá...
-        |--------------------------------------------------------------------------
-        */
         if ($request->filled('keyword')) {
             $keyword = trim($request->keyword);
             $keywordLower = mb_strtolower($keyword, 'UTF-8');
             $numberKeyword = preg_replace('/\D/', '', $keyword);
 
             $query->where(function ($q) use ($keyword, $numberKeyword, $keywordLower) {
-                // Tìm theo ID số
                 if ($numberKeyword !== '') {
                     $q->orWhere('id', (int) $numberKeyword)
                         ->orWhere('id', 'like', '%' . $numberKeyword . '%');
                 }
 
-                // Tìm theo mã DH00001
                 $q->orWhereRaw(
                     "CONCAT('DH', LPAD(id, 5, '0')) LIKE ?",
                     ['%' . $keyword . '%']
                 );
 
-                // Tìm theo trạng thái từ khóa nhập tay
                 if (
                     str_contains($keywordLower, 'đang xử lý') ||
                     str_contains($keywordLower, 'dang xu ly') ||
@@ -154,13 +138,6 @@ class OrderController extends Controller
             });
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | 2. Lọc nâng cao
-        |--------------------------------------------------------------------------
-        | Ưu tiên filter mới, nhưng vẫn hỗ trợ status cũ để khỏi vỡ giao diện cũ.
-        |--------------------------------------------------------------------------
-        */
         $filter = $request->get('filter', $request->get('status'));
 
         if (!empty($filter)) {
@@ -265,9 +242,6 @@ class OrderController extends Controller
         return view('frontend.refund.show', compact('refund'));
     }
 
-    /**
-     * Chi tiết đơn hàng
-     */
     public function show($id)
     {
         $order = Order::with([
@@ -285,9 +259,6 @@ class OrderController extends Controller
         return view('frontend.orders.show', compact('order'));
     }
 
-    /**
-     * Huỷ đơn hàng
-     */
     public function cancel(Request $request, $id)
     {
         $request->validate([
@@ -412,9 +383,6 @@ class OrderController extends Controller
         }
     }
 
-    /**
-     * Khách xác nhận đã nhận hàng
-     */
     public function confirmReceived($id)
     {
         $order = Order::with('user')
@@ -453,9 +421,7 @@ class OrderController extends Controller
         }
     }
 
-    /**
-     * Mua lại đơn hàng
-     */
+
     public function reorder($id)
     {
         $userId = Auth::id();

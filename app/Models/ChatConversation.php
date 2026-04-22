@@ -23,33 +23,23 @@ class ChatConversation extends Model
 
     public $timestamps = true;
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | Relationships
-    |--------------------------------------------------------------------------
-    */
-
-    // Khách hàng
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id')->withDefault();
     }
 
-    // Admin hỗ trợ
+
     public function admin()
     {
         return $this->belongsTo(User::class, 'admin_id')->withDefault();
     }
 
-    // Danh sách tin nhắn
     public function messages()
     {
         return $this->hasMany(ChatMessage::class, 'conversation_id')
             ->orderBy('created_at', 'asc');
     }
 
-    // Tin nhắn mới nhất
     public function lastMessage()
     {
         return $this->hasOne(ChatMessage::class, 'conversation_id')
@@ -57,13 +47,6 @@ class ChatConversation extends Model
     }
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | Accessors
-    |--------------------------------------------------------------------------
-    */
-
-    // Lấy preview tin nhắn cuối
     public function getLastMessagePreviewAttribute()
     {
         if (!$this->lastMessage) {
@@ -73,7 +56,6 @@ class ChatConversation extends Model
         return $this->lastMessage->preview ?? '';
     }
 
-    // Thời gian tin nhắn cuối
     public function getLastMessageTimeAttribute()
     {
         if (!$this->lastMessage) {
@@ -86,19 +68,11 @@ class ChatConversation extends Model
     }
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | Helpers
-    |--------------------------------------------------------------------------
-    */
-
-    // Kiểm tra conversation còn mở
     public function isOpen()
     {
         return $this->status === 'open';
     }
 
-    // Đóng conversation
     public function close()
     {
         $this->update([
@@ -106,7 +80,6 @@ class ChatConversation extends Model
         ]);
     }
 
-    // Mở conversation
     public function reopen()
     {
         $this->update([
@@ -114,7 +87,6 @@ class ChatConversation extends Model
         ]);
     }
 
-    // Đếm tin nhắn chưa đọc
     public function unreadMessages()
     {
         return $this->messages()
@@ -122,7 +94,6 @@ class ChatConversation extends Model
             ->count();
     }
 
-    // Đánh dấu đã đọc
     public function markAsRead()
     {
         $this->messages()
@@ -132,7 +103,6 @@ class ChatConversation extends Model
             ]);
     }
 
-    // Kiểm tra có tin nhắn chưa đọc
     public function hasUnreadMessages()
     {
         return $this->unreadMessages() > 0;

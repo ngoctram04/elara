@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 
 /*
 |--------------------------------------------------------------------------
@@ -24,10 +25,14 @@ use App\Http\Controllers\Frontend\BlogController as FrontendBlogController;
 use App\Http\Controllers\Frontend\ProductQuestionController;
 use App\Http\Controllers\Frontend\ChatController;
 
+/*
+|--------------------------------------------------------------------------
+| MODELS / MAIL
+|--------------------------------------------------------------------------
+*/
 use App\Models\Order;
 use App\Mail\OrderCompletedMail;
 use App\Mail\OrderCreatedMail;
-use Illuminate\Support\Facades\Mail;
 
 /*
 |--------------------------------------------------------------------------
@@ -41,7 +46,6 @@ use App\Http\Controllers\ProfileController;
 | ADMIN CONTROLLERS
 |--------------------------------------------------------------------------
 */
-use App\Services\AI\GeminiService;
 use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\BrandController;
@@ -76,8 +80,8 @@ Route::get('/products', [ShopController::class, 'index'])->name('shop');
 
 // Search autocomplete
 Route::get('/search/suggest', [ShopController::class, 'suggest'])->name('search.suggest');
-Route::get('/search/history', [ShopController::class, 'history']);
-Route::post('/search/history/delete', [ShopController::class, 'deleteHistory']);
+Route::get('/search/history', [ShopController::class, 'history'])->name('search.history');
+Route::post('/search/history/delete', [ShopController::class, 'deleteHistory'])->name('search.history.delete');
 
 // Category
 Route::get('/category/{slug}', [FrontendCategoryController::class, 'show'])->name('category.show');
@@ -106,19 +110,12 @@ Route::get('/vnpay-return', [CheckoutController::class, 'vnpayReturn'])->name('v
 |--------------------------------------------------------------------------
 */
 Route::prefix('cart')->name('cart.')->group(function () {
-
     Route::get('/', [CartController::class, 'index'])->name('index');
-
     Route::post('/add', [CartController::class, 'add'])->name('add');
-
     Route::post('/change-qty', [CartController::class, 'changeQty'])->name('changeQty');
-
     Route::post('/change-variant', [CartController::class, 'changeVariant'])->name('changeVariant');
-
     Route::delete('/remove/{variantId}', [CartController::class, 'remove'])->name('remove');
-
     Route::delete('/clear', [CartController::class, 'clear'])->name('clear');
-
     Route::post('/apply-promotion', [CartController::class, 'applyPromotion'])->name('applyPromotion');
 });
 
@@ -132,13 +129,9 @@ Route::post('/cart/get-available-promotions', [CartController::class, 'getAvaila
 |--------------------------------------------------------------------------
 | AI CHAT (PUBLIC - KHÔNG CẦN LOGIN)
 |--------------------------------------------------------------------------
-| SỬA QUAN TRỌNG:
-| Bỏ middleware auth/check_active để khách chưa đăng nhập vẫn chat được
 */
 Route::prefix('ai-chat')->name('chat.ai.')->group(function () {
-
     Route::get('/', [ChatController::class, 'aiChat'])->name('index');
-
     Route::post('/send', [ChatController::class, 'sendAI'])->name('send');
 });
 
@@ -151,20 +144,12 @@ Route::middleware(['auth', 'check_active'])
     ->prefix('checkout')
     ->name('checkout.')
     ->group(function () {
-
         Route::post('/buy-now', [CheckoutController::class, 'buyNow'])->name('buyNow');
-
         Route::post('/from-cart', [CheckoutController::class, 'fromCart'])->name('fromCart');
-
         Route::get('/', [CheckoutController::class, 'index'])->name('index');
-
         Route::post('/', [CheckoutController::class, 'store'])->name('store');
-
-        Route::post('/calculate-shipping', [CheckoutController::class, 'calculateShippingAjax'])
-            ->name('calculateShipping');
-
+        Route::post('/calculate-shipping', [CheckoutController::class, 'calculateShippingAjax'])->name('calculateShipping');
         Route::get('/success/{order}', [CheckoutController::class, 'success'])->name('success');
-
         Route::post('/cancel/{id}', [CheckoutController::class, 'cancel'])->name('cancel');
     });
 
@@ -187,11 +172,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth')->group(function () {
-
     Route::get('/points/history', [PointController::class, 'history'])->name('points.history');
-
     Route::get('/points/redeem', [PointController::class, 'redeemPage'])->name('points.redeem.page');
-
     Route::post('/points/redeem', [PointController::class, 'redeem'])->name('points.redeem');
 });
 
@@ -200,11 +182,14 @@ Route::middleware('auth')->group(function () {
 | REFUND (LOGIN)
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'check_active'])->prefix('refund')->name('refund.')->group(function () {
-    Route::get('/create/{order}', [RefundController::class, 'create'])->name('create');
-    Route::post('/store', [RefundController::class, 'store'])->name('store');
-    Route::get('/{id}', [OrderController::class, 'showRefund'])->name('show');
-});
+Route::middleware(['auth', 'check_active'])
+    ->prefix('refund')
+    ->name('refund.')
+    ->group(function () {
+        Route::get('/create/{order}', [RefundController::class, 'create'])->name('create');
+        Route::post('/store', [RefundController::class, 'store'])->name('store');
+        Route::get('/{id}', [OrderController::class, 'showRefund'])->name('show');
+    });
 
 /*
 |--------------------------------------------------------------------------
@@ -215,17 +200,11 @@ Route::middleware(['auth', 'check_active'])
     ->prefix('orders')
     ->name('orders.')
     ->group(function () {
-
         Route::get('/', [OrderController::class, 'index'])->name('history');
-
         Route::get('/{id}', [OrderController::class, 'show'])->name('show');
-
         Route::put('/{id}/cancel', [OrderController::class, 'cancel'])->name('cancel');
-
         Route::post('/{id}/reorder', [OrderController::class, 'reorder'])->name('reorder');
-
-        Route::post('/{id}/confirm-received', [OrderController::class, 'confirmReceived'])
-            ->name('confirmReceived');
+        Route::post('/{id}/confirm-received', [OrderController::class, 'confirmReceived'])->name('confirmReceived');
     });
 
 /*
@@ -237,9 +216,7 @@ Route::middleware(['auth', 'check_active'])
     ->prefix('wishlist')
     ->name('wishlist.')
     ->group(function () {
-
         Route::get('/', [WishlistController::class, 'index'])->name('index');
-
         Route::post('/toggle', [WishlistController::class, 'toggle'])->name('toggle');
     });
 
@@ -252,17 +229,11 @@ Route::middleware(['auth', 'check_active'])
     ->prefix('profile')
     ->name('profile.')
     ->group(function () {
-
         Route::get('/', [ProfileController::class, 'edit'])->name('index');
-
         Route::patch('/', [ProfileController::class, 'update'])->name('update');
-
         Route::post('/avatar', [ProfileController::class, 'updateAvatar'])->name('avatar');
-
         Route::post('/password', [ProfileController::class, 'updatePassword'])->name('password');
-
         Route::delete('/', [ProfileController::class, 'destroy'])->name('destroy');
-
         Route::get('/address', fn() => view('frontend.profile.address'))->name('address');
     });
 
@@ -283,15 +254,13 @@ Route::prefix('admin')
         */
         Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
         Route::post('/reports/export-pdf', [ReportController::class, 'exportPdf'])->name('reports.exportPdf');
-
         Route::get('/reports/products', [ReportController::class, 'products'])->name('reports.products');
         Route::get('/reports/customers', [ReportController::class, 'customers'])->name('reports.customers');
-        Route::get('/reports/customers/{customer}/orders', [ReportController::class, 'customerOrders'])
-            ->name('reports.customerOrders');
+        Route::get('/reports/customers/{customer}/orders', [ReportController::class, 'customerOrders'])->name('reports.customerOrders');
         Route::get('/reports/slow-products', [ReportController::class, 'slowProducts'])->name('reports.slowProducts');
         Route::get('/reports/low-stock', [ReportController::class, 'lowStock'])->name('reports.lowStock');
         Route::get('/reports/wishlist', [ReportController::class, 'wishlist'])->name('reports.wishlist');
-        Route::get('reports/cancel-orders', [ReportController::class, 'cancelOrders'])->name('reports.cancelOrders');
+        Route::get('/reports/cancel-orders', [ReportController::class, 'cancelOrders'])->name('reports.cancelOrders');
         Route::get('/reports/refund-orders', [ReportController::class, 'refundOrders'])->name('reports.refundOrders');
 
         /*
@@ -310,8 +279,7 @@ Route::prefix('admin')
         */
         Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
         Route::get('/customers/{user}', [CustomerController::class, 'show'])->name('customers.show');
-        Route::post('/customers/{user}/toggle-status', [CustomerController::class, 'toggleStatus'])
-            ->name('customers.toggle-status');
+        Route::post('/customers/{user}/toggle-status', [CustomerController::class, 'toggleStatus'])->name('customers.toggle-status');
 
         /*
         |--------------------------------------------------------------------------
@@ -364,9 +332,7 @@ Route::prefix('admin')
         |--------------------------------------------------------------------------
         */
         Route::prefix('promotions')->name('promotions.')->group(function () {
-
             Route::get('/', [PromotionController::class, 'index'])->name('index');
-
             Route::get('/create', [PromotionController::class, 'chooseType'])->name('create');
             Route::get('/create-product', [PromotionController::class, 'createProduct'])->name('createProduct');
             Route::get('/create-order', [PromotionController::class, 'createOrder'])->name('createOrder');
@@ -395,10 +361,8 @@ Route::prefix('admin')
         Route::get('/stock-import/history', [StockImportController::class, 'history'])->name('stock.history');
         Route::get('/stock-import/{code}', [StockImportController::class, 'show'])->name('stock.show');
         Route::get('/stock-import/{code}/pdf', [StockImportController::class, 'exportPdf'])->name('stock.exportPdf');
-        Route::get('/stock-import/suppliers/search', [StockImportController::class, 'searchSuppliers'])
-            ->name('stock.suppliers.search');
-    Route::get('/stock-import/variant/{variant}/suggest-price', [StockImportController::class, 'suggestPrice'])
-    ->name('stock.suggestPrice');
+        Route::get('/stock-import/suppliers/search', [StockImportController::class, 'searchSuppliers'])->name('stock.suppliers.search');
+        Route::get('/stock-import/variant/{variant}/suggest-price', [StockImportController::class, 'suggestPrice'])->name('stock.suggestPrice');
 
         /*
         |--------------------------------------------------------------------------
@@ -426,8 +390,7 @@ Route::prefix('admin')
         */
         Route::get('/questions', [AdminProductQuestionController::class, 'index'])->name('questions.index');
         Route::post('/questions/answer', [AdminProductQuestionController::class, 'answer'])->name('questions.answer');
-    Route::patch('/questions/{id}/toggle-status', [AdminProductQuestionController::class, 'toggleStatus'])
-    ->name('questions.toggle-status');
+        Route::patch('/questions/{id}/toggle-status', [AdminProductQuestionController::class, 'toggleStatus'])->name('questions.toggle-status');
 
         /*
         |--------------------------------------------------------------------------
@@ -451,32 +414,22 @@ Route::prefix('admin')
         });
     });
 
-/*
-|--------------------------------------------------------------------------
-| PRODUCT QUESTIONS (Q&A)
-|--------------------------------------------------------------------------
-*/
+
 Route::middleware(['auth', 'check_active'])
     ->prefix('questions')
     ->name('questions.')
     ->group(function () {
-
         Route::post('/store', [ProductQuestionController::class, 'store'])->name('store');
         Route::post('/answer', [ProductQuestionController::class, 'answer'])->name('answer');
         Route::delete('/question/{id}', [ProductQuestionController::class, 'deleteQuestion'])->name('deleteQuestion');
         Route::delete('/answer/{id}', [ProductQuestionController::class, 'deleteAnswer'])->name('deleteAnswer');
     });
 
-/*
-|--------------------------------------------------------------------------
-| REVIEWS (LOGIN)
-|--------------------------------------------------------------------------
-*/
+
 Route::middleware(['auth', 'check_active'])
     ->prefix('reviews')
     ->name('reviews.')
     ->group(function () {
-
         Route::get('/order/{order}', [ReviewController::class, 'create'])->name('create');
         Route::post('/order/{order}', [ReviewController::class, 'store'])->name('store');
     });
@@ -490,7 +443,6 @@ Route::middleware(['auth', 'check_active'])
     ->prefix('chat')
     ->name('chat.')
     ->group(function () {
-
         Route::get('/', [ChatController::class, 'index'])->name('index');
         Route::get('/messages', [ChatController::class, 'messages'])->name('messages');
         Route::post('/send', [ChatController::class, 'send'])->name('send');
@@ -499,53 +451,48 @@ Route::middleware(['auth', 'check_active'])
 
 /*
 |--------------------------------------------------------------------------
-| TEST MAIL - ORDER COMPLETED
+| TEST MAIL - CHỈ CHẠY LOCAL
 |--------------------------------------------------------------------------
 */
-Route::get('/test-order-completed', function () {
+if (app()->environment('local')) {
+    Route::get('/test-order-completed', function () {
+        $order = Order::with('user')->first();
 
-    $order = Order::with('user')->first();
+        if (!$order) {
+            return 'Không có đơn hàng trong database';
+        }
 
-    if (!$order) {
-        return 'Không có đơn hàng trong database';
-    }
+        if (!$order->user || !$order->user->email) {
+            return 'Đơn hàng không có user hoặc email';
+        }
 
-    if (!$order->user || !$order->user->email) {
-        return 'Đơn hàng không có user hoặc email';
-    }
+        Mail::to($order->user->email)->send(new OrderCompletedMail($order));
 
-    Mail::to($order->user->email)->send(new OrderCompletedMail($order));
+        return 'Order Completed Mail Sent';
+    })->name('test.order.completed');
 
-    return 'Order Completed Mail Sent';
-});
+    Route::get('/test-order-created', function () {
+        $order = Order::with('user')->first();
 
-/*
-|--------------------------------------------------------------------------
-| TEST MAIL - ORDER CREATED (KHÁCH + ADMIN)
-|--------------------------------------------------------------------------
-*/
-Route::get('/test-order-created', function () {
+        if (!$order) {
+            return 'Không có đơn hàng trong database';
+        }
 
-    $order = Order::with('user')->first();
+        if (!$order->user || !$order->user->email) {
+            return 'Đơn hàng không có user hoặc email';
+        }
 
-    if (!$order) {
-        return 'Không có đơn hàng trong database';
-    }
+        Mail::to($order->user->email)->send(new OrderCreatedMail($order));
 
-    if (!$order->user || !$order->user->email) {
-        return 'Đơn hàng không có user hoặc email';
-    }
+        $adminEmail = config('mail.from.address');
 
-    Mail::to($order->user->email)->send(new OrderCreatedMail($order));
+        if ($adminEmail) {
+            Mail::to($adminEmail)->send(new OrderCreatedMail($order, true));
+        }
 
-    $adminEmail = config('mail.from.address');
-
-    if ($adminEmail) {
-        Mail::to($adminEmail)->send(new OrderCreatedMail($order, true));
-    }
-
-    return 'Order Created Mail Sent (Customer + Admin)';
-});
+        return 'Order Created Mail Sent (Customer + Admin)';
+    })->name('test.order.created');
+}
 
 /*
 |--------------------------------------------------------------------------
@@ -570,6 +517,7 @@ Route::get('/notification/{id}', function (\Illuminate\Http\Request $request, $i
 
     return redirect($noti->data['url'] ?? route('home'));
 })->middleware('auth')->name('notification.redirect');
+
 /*
 |--------------------------------------------------------------------------
 | AUTH

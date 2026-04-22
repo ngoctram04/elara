@@ -11,10 +11,10 @@ class IsAdmin
 {
     public function handle(Request $request, Closure $next): Response
     {
-        // Chưa đăng nhập
+
         if (!Auth::check()) {
 
-            // Nếu là request API / AJAX
+  
             if ($request->expectsJson()) {
                 abort(401, 'Unauthenticated');
             }
@@ -24,7 +24,6 @@ class IsAdmin
 
         $user = Auth::user();
 
-        // Không phải admin
         if ($user->role !== 'admin') {
 
             if ($request->expectsJson()) {
@@ -34,7 +33,6 @@ class IsAdmin
             abort(403);
         }
 
-        // Là admin → cho qua
         return $next($request);
     }
 }

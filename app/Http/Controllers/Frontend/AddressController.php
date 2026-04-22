@@ -42,7 +42,7 @@ class AddressController extends Controller
 
         DB::transaction(function () use ($request, $user) {
 
-            // Mặc định nếu tick hoặc là địa chỉ đầu tiên
+           
             $isDefault = $request->has('is_default') || $user->addresses()->count() == 0;
 
             if ($isDefault) {
@@ -63,9 +63,6 @@ class AddressController extends Controller
         return back()->with('success', 'Thêm địa chỉ thành công');
     }
 
-    /**
-     * Cập nhật địa chỉ
-     */
     public function update(Request $request, $id)
     {
         $request->validate([
@@ -86,7 +83,6 @@ class AddressController extends Controller
                 ->where('id', $id)
                 ->firstOrFail();
 
-            // Nếu chọn làm mặc định
             if ($request->has('is_default')) {
                 $user->addresses()->update(['is_default' => 0]);
                 $address->is_default = 1;
@@ -108,9 +104,6 @@ class AddressController extends Controller
         return back()->with('success', 'Cập nhật địa chỉ thành công');
     }
 
-    /**
-     * Đặt làm địa chỉ mặc định
-     */
     public function setDefault($id)
     {
         /** @var User $user */
@@ -130,9 +123,6 @@ class AddressController extends Controller
         return back()->with('success', 'Đã đặt làm địa chỉ mặc định');
     }
 
-    /**
-     * Xóa địa chỉ
-     */
     public function destroy($id)
     {
         /** @var User $user */
@@ -148,7 +138,6 @@ class AddressController extends Controller
 
             $address->delete();
 
-            // Nếu xóa địa chỉ mặc định → tự chọn cái khác
             if ($wasDefault) {
                 $newDefault = $user->addresses()->first();
                 if ($newDefault) {

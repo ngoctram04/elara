@@ -18,25 +18,19 @@ class ProductQuestion extends Model
         'is_active'
     ];
 
-    /**
-     * Quan hệ với sản phẩm
-     */
+ 
     public function product()
     {
         return $this->belongsTo(Product::class);
     }
 
-    /**
-     * Người đặt câu hỏi
-     */
+
     public function user()
     {
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * Các câu trả lời
-     */
+   
     public function answers()
     {
         return $this->hasMany(ProductAnswer::class, 'question_id')

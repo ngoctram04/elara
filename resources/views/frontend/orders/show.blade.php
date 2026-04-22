@@ -385,55 +385,79 @@
                     <span class="summary-total-price">{{ number_format($order->grand_total) }}đ</span>
                 </div>
 
-                @php
-                    $refund = $order->refundRequest;
-                @endphp
+               @php
+    $refund = $order->refundRequest;
 
-                @if($order->isCompleted() || $refund)
-                    <div class="refund-box">
-                        @if($order->canRequestRefund())
-                            <button type="button"
-                                    class="btn btn-outline-danger btn-sm px-3 btn-action-soft btn-refund"
-                                    data-url="{{ route('refund.create', $order->id) }}">
-                                <i class="bi bi-arrow-counterclockwise me-1"></i>
-                                Yêu cầu trả hàng / hoàn tiền
-                            </button>
-                        @endif
+    // ❌ Có ít nhất 1 sản phẩm đã review
+    $hasReviewedItem = $order->items->contains(fn($item) => $item->review);
 
-                        @if($refund)
-                            <div class="refund-top-action mb-2">
-                                <a href="{{ route('refund.show', $refund->id) }}"
-                                   class="btn btn-outline-danger btn-sm btn-action-soft">
-                                    <i class="bi bi-receipt-cutoff me-1"></i>
-                                    Xem phiếu hoàn tiền
-                                </a>
-                            </div>
+    // ❌ Còn sản phẩm chưa review
+    $hasUnreviewedItems = $order->items->contains(fn($item) => !$item->review);
+@endphp
 
-                            @if($refund->status == 'pending')
-                                <div class="refund-alert refund-warning">
-                                    <b>Đã gửi yêu cầu hoàn tiền</b><br>
-                                    Vui lòng chờ cửa hàng phản hồi trong vòng <b>24 giờ</b>.
-                                </div>
-                            @elseif($refund->status == 'approved')
-                                <div class="refund-alert refund-primary">
-                                    <b>Yêu cầu hoàn tiền đã được chấp nhận</b><br>
-                                    Cửa hàng đang tiến hành xử lý hoàn tiền.
-                                </div>
-                            @elseif($refund->status == 'refunded')
-                                <div class="refund-alert refund-success">
-                                    <b>Đã hoàn tiền thành công</b>
-                                </div>
-                            @elseif($refund->status == 'rejected')
-                                <div class="refund-alert refund-danger">
-                                    <b>Yêu cầu hoàn tiền đã bị từ chối</b>
-                                    @if($refund->admin_note)
-                                        <br>Lý do: {{ $refund->admin_note }}
-                                    @endif
-                                </div>
-                            @endif
-                        @endif
-                    </div>
-                @endif
+@if($order->isCompleted() || $refund)
+    <div class="refund-box">
+
+        {{-- ✅ CHỈ HIỆN NÚT KHI:
+            - Được phép refund
+            - CHƯA có refund
+            - CHƯA đánh giá --}}
+        @if(
+            $order->canRequestRefund()
+            && !$refund
+            && !$hasReviewedItem
+        )
+            <button type="button"
+                    class="btn btn-outline-danger btn-sm px-3 btn-action-soft btn-refund"
+                    data-url="{{ route('refund.create', $order->id) }}">
+                <i class="bi bi-arrow-counterclockwise me-1"></i>
+                Yêu cầu trả hàng / hoàn tiền
+            </button>
+        @endif
+
+        {{-- 👇 Nếu đã đánh giá thì hiện message --}}
+        @if($hasReviewedItem && !$refund)
+            <div class="refund-alert refund-muted mt-2">
+                Bạn đã đánh giá sản phẩm, không thể yêu cầu hoàn tiền.
+            </div>
+        @endif
+
+        {{-- 👇 Nếu đã có refund --}}
+        @if($refund)
+            <div class="refund-top-action mb-2">
+                <a href="{{ route('refund.show', $refund->id) }}"
+                   class="btn btn-outline-danger btn-sm btn-action-soft">
+                    <i class="bi bi-receipt-cutoff me-1"></i>
+                    Xem phiếu hoàn tiền
+                </a>
+            </div>
+
+            @if($refund->status == 'pending')
+                <div class="refund-alert refund-warning">
+                    <b>Đã gửi yêu cầu hoàn tiền</b><br>
+                    Vui lòng chờ cửa hàng phản hồi trong vòng <b>24 giờ</b>.
+                </div>
+            @elseif($refund->status == 'approved')
+                <div class="refund-alert refund-primary">
+                    <b>Yêu cầu hoàn tiền đã được chấp nhận</b><br>
+                    Cửa hàng đang tiến hành xử lý hoàn tiền.
+                </div>
+            @elseif($refund->status == 'refunded')
+                <div class="refund-alert refund-success">
+                    <b>Đã hoàn tiền thành công</b>
+                </div>
+            @elseif($refund->status == 'rejected')
+                <div class="refund-alert refund-danger">
+                    <b>Yêu cầu hoàn tiền đã bị từ chối</b>
+                    @if($refund->admin_note)
+                        <br>Lý do: {{ $refund->admin_note }}
+                    @endif
+                </div>
+            @endif
+        @endif
+
+    </div>
+@endif
             </div>
         </div>
     </div>

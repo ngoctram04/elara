@@ -37,9 +37,6 @@ class ProductQuestionController extends Controller
         return back()->with('success', 'Câu hỏi đã được gửi.');
     }
 
-    /**
-     * Frontend không cho trả lời nếu nghiệp vụ là chỉ admin mới được trả lời
-     */
     public function answer(Request $request)
     {
         abort(403, 'Chỉ quản trị viên mới có quyền trả lời câu hỏi.');

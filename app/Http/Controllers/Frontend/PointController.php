@@ -16,11 +16,7 @@ use App\Notifications\SystemNotification;
 
 class PointController extends Controller
 {
-    /*
-    |--------------------------------------------------------------------------
-    | 1️⃣ LỊCH SỬ ĐIỂM
-    |--------------------------------------------------------------------------
-    */
+
     public function history()
     {
         $histories = UserPointHistory::where('user_id', Auth::id())
@@ -30,11 +26,6 @@ class PointController extends Controller
         return view('frontend.points.history', compact('histories'));
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | 2️⃣ TRANG ĐỔI ĐIỂM
-    |--------------------------------------------------------------------------
-    */
     public function redeemPage()
     {
         $user = Auth::user();
@@ -80,11 +71,6 @@ class PointController extends Controller
         ));
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | 3️⃣ ĐỔI VOUCHER
-    |--------------------------------------------------------------------------
-    */
     public function redeem(Request $request)
     {
         $request->validate([
