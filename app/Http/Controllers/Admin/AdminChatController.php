@@ -19,7 +19,6 @@ class AdminChatController extends Controller
             'messages'
         ]);
 
-
         if ($request->filled('keyword')) {
 
             $keyword = $request->keyword;

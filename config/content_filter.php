@@ -1,14 +1,6 @@
 <?php
 
 return [
-    /*
-    |--------------------------------------------------------------------------
-    | Từ bị chặn hoàn toàn
-    |--------------------------------------------------------------------------
-    | Gồm chửi tục, xúc phạm nặng, spam vô nghĩa.
-    | Có từ nào quá gắt dễ chặn nhầm thì bỏ bớt sau.
-    */
-
     'blocked_words' => [
         'dit',
         'dit me',
@@ -42,7 +34,6 @@ return [
         'cặc',
         'lồn',
 
-        // xúc phạm cá nhân / chửi shop
         'ngu',
         'óc chó',
         'oc cho',
@@ -68,7 +59,6 @@ return [
         'biến',
         'bien',
 
-        // tiếng Anh
         'fuck',
         'fck',
         'shit',
@@ -79,7 +69,6 @@ return [
         'motherfucker',
         'mf',
 
-        // spam / nội dung nhảm rất thường gặp
         'aaaaaaaa',
         'bbbbbbbb',
         'cccccccc',
@@ -92,12 +81,7 @@ return [
         'hahahaahah',
     ],
 
-    /*
-    |--------------------------------------------------------------------------
-    | Từ nhạy cảm / nghi vấn
-    |--------------------------------------------------------------------------
-    | Không chặn. Chỉ đánh dấu để admin chú ý.
-    */
+
 
     'flag_words' => [
         'scam',
