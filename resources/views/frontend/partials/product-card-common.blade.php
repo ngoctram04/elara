@@ -10,11 +10,7 @@ $imageUrl = $product->mainImage
 
 $isFavorited = in_array($product->id, $favorites ?? []);
 
-/*
-|--------------------------------------------------------------------------
-| GIÁ & KHUYẾN MÃI KIỂU SHOPEE
-|--------------------------------------------------------------------------
-*/
+
 $pricedVariants = $variants
     ->filter(fn ($v) => (float) ($v->price ?? 0) > 0)
     ->values();
@@ -77,21 +73,18 @@ $saleBadgeText = $maxDiscountPercent > 0 ? 'Giảm đến ' . $maxDiscountPercen
 
     <div class="category-image position-relative {{ $outOfStock ? 'out-of-stock' : '' }}">
 
-        {{-- SALE --}}
         @if ($saleBadgeText)
             <span class="category-badge sale-badge">
                 {{ $saleBadgeText }}
             </span>
         @endif
 
-        {{-- HẾT HÀNG --}}
         @if ($outOfStock)
             <span class="category-badge stock-badge">
                 Hết hàng
             </span>
         @endif
 
-        {{-- ❤️ --}}
         <button type="button"
                 class="wishlist-btn btn-wishlist"
                 data-product-id="{{ $product->id }}">
@@ -103,14 +96,12 @@ $saleBadgeText = $maxDiscountPercent > 0 ? 'Giảm đến ' . $maxDiscountPercen
              loading="lazy">
 
         <div class="category-overlay">
-            {{-- VIEW --}}
             <button type="button"
                     class="category-icon left js-go-detail">
                 <i class="bi bi-eye"></i>
             </button>
 
             @unless($outOfStock)
-                {{-- BUY --}}
                 <button
                     type="button"
                     class="category-buy btn-buy-now"
@@ -120,7 +111,6 @@ $saleBadgeText = $maxDiscountPercent > 0 ? 'Giảm đến ' . $maxDiscountPercen
                     Mua ngay
                 </button>
 
-                {{-- CART --}}
                 <button
                     type="button"
                     class="category-icon right btn-add-to-cart"

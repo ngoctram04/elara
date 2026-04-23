@@ -5,11 +5,6 @@
     $outOfStock = !$addVariant;
     $isFavorited = in_array($product->id, $favorites ?? []);
 
-    /*
-    |--------------------------------------------------------------------------
-    | GIÁ FLASH SALE KIỂU RANGE
-    |--------------------------------------------------------------------------
-    */
     $pricedVariants = $variants
         ->filter(fn ($v) => (float) ($v->price ?? 0) > 0)
         ->values();

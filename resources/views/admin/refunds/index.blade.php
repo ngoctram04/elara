@@ -170,7 +170,6 @@
                             </td>
                         </tr>
 
-                        {{-- MODAL TỪ CHỐI --}}
                         <div class="modal fade" id="rejectModal{{ $refund->id }}" tabindex="-1" aria-hidden="true">
                             <div class="modal-dialog">
                                 <div class="modal-content border-0 shadow-sm">
@@ -211,7 +210,6 @@
                             </div>
                         </div>
 
-                        {{-- MODAL XÁC NHẬN HOÀN TIỀN --}}
                         <div class="modal fade" id="refundConfirmModal{{ $refund->id }}" tabindex="-1" aria-hidden="true">
                             <div class="modal-dialog">
                                 <div class="modal-content border-0 shadow-sm">
@@ -261,7 +259,6 @@
                             </div>
                         </div>
 
-                        {{-- MODAL CHI TIẾT --}}
                         <div class="modal fade" id="refundModal{{ $refund->id }}" tabindex="-1" aria-hidden="true">
                             <div class="modal-dialog modal-lg modal-dialog-scrollable">
                                 <div class="modal-content border-0 shadow-sm">

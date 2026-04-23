@@ -1,6 +1,4 @@
-/* ==============================
-   HELPER
-============================== */
+
 function escapeHtml(text) {
     return String(text ?? "")
         .replace(/&/g, "&amp;")
@@ -29,9 +27,7 @@ function appendAiMessage(chat, label, content, isHtml = false) {
     chat.scrollTop = chat.scrollHeight;
 }
 
-/* ==============================
-   MỞ / ĐÓNG AI CHAT
-============================== */
+
 window.toggleAIChat = function () {
     const box = document.getElementById("ai-chat-box");
     const chat = document.getElementById("ai-messages");
@@ -51,9 +47,7 @@ window.toggleAIChat = function () {
     }
 };
 
-/* ==============================
-   GỬI CÂU HỎI AI
-============================== */
+
 window.sendAI = function () {
     const input = document.getElementById("ai-input");
     const chat = document.getElementById("ai-messages");
@@ -192,9 +186,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const markAllReadUrl = document.body.dataset.markAllReadUrl;
     const isLoggedIn = document.body.dataset.auth === "1";
 
-    /* ==============================
-       LOAD HISTORY
-    ============================== */
     function loadHistory() {
         if (!box) return;
 
@@ -230,9 +221,6 @@ document.addEventListener("DOMContentLoaded", function () {
             });
     }
 
-    /* ==============================
-       SEARCH AUTOCOMPLETE
-    ============================== */
     if (input && box) {
         input.addEventListener("focus", loadHistory);
 
@@ -270,9 +258,6 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    /* ==============================
-       CHAT NHÂN VIÊN - UNREAD BADGE
-    ============================== */
     function loadUnreadChat() {
         if (!isLoggedIn || !unreadChatUrl) return;
 
@@ -297,9 +282,6 @@ document.addEventListener("DOMContentLoaded", function () {
         setInterval(loadUnreadChat, 5000);
     }
 
-    /* ==============================
-       VOICE SEARCH
-    ============================== */
     if (voiceBtn && voicePopup && input) {
         voiceBtn.addEventListener("click", () => {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -338,9 +320,6 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    /* ==============================
-       MARK ALL NOTIFICATIONS AS READ
-    ============================== */
     if (markAllBtn && markAllReadUrl) {
         markAllBtn.addEventListener("click", function () {
             fetch(markAllReadUrl, {
@@ -360,9 +339,6 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    /* ==============================
-       GLOBAL CLICK EVENTS
-    ============================== */
     document.addEventListener("click", function (e) {
         const deleteBtn = e.target.closest(".delete-history");
         if (deleteBtn) {
@@ -407,9 +383,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    /* ==============================
-       ENTER TO SEND AI CHAT
-    ============================== */
+
     if (aiInput) {
         aiInput.addEventListener("keydown", function (e) {
             if (e.key === "Enter") {

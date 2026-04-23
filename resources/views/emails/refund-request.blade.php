@@ -15,7 +15,6 @@
 <table width="600" cellpadding="0" cellspacing="0"
 style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 4px 10px rgba(0,0,0,0.05);">
 
-<!-- HEADER -->
 
 <tr>
 <td style="background:#2563eb;color:#fff;padding:20px;font-size:20px;font-weight:bold;text-align:center;">
@@ -23,7 +22,6 @@ ELARA - Yêu cầu hoàn tiền mới
 </td>
 </tr>
 
-<!-- CONTENT -->
 
 <tr>
 <td style="padding:25px;color:#333;font-size:14px;line-height:1.6;">
@@ -56,14 +54,12 @@ ELARA - Yêu cầu hoàn tiền mới
 Vui lòng vào trang quản trị để xem và xử lý yêu cầu này.
 </p>
 
-{{-- MEDIA --}}
 @if($refund->media && $refund->media->count())
 
 <p style="margin-top:20px;"><b>Hình ảnh / video minh chứng:</b></p>
 
 @foreach($refund->media as $media)
 
-{{-- IMAGE --}}
 @if($media->type == 'image')
 
 <img src="{{ $message->embed(storage_path('app/public/'.$media->file_path)) }}"
@@ -71,7 +67,6 @@ style="max-width:120px;margin:5px;border-radius:6px;">
 
 @endif
 
-{{-- VIDEO --}}
 @if($media->type == 'video')
 
 <div style="margin:5px 0;">
@@ -87,7 +82,6 @@ Xem video minh chứng
 
 @endif
 
-<!-- BUTTON -->
 
 <div style="text-align:center;margin-top:25px;">
 
@@ -100,7 +94,6 @@ Xem yêu cầu hoàn tiền </a>
 </td>
 </tr>
 
-<!-- FOOTER -->
 
 <tr>
 <td style="background:#f1f5f9;text-align:center;padding:15px;font-size:12px;color:#777;">

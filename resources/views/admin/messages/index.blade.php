@@ -29,7 +29,6 @@
 <div class="card border-0 shadow-sm">
     <div class="card-body">
 
-        {{-- HEADER --}}
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h5 class="fw-bold mb-1">
@@ -43,7 +42,6 @@
             </div>
         </div>
 
-        {{-- FILTER --}}
         <div class="filter-bar mb-3">
             <form method="GET" class="row g-2">
 
@@ -161,7 +159,6 @@
             </table>
         </div>
 
-        {{-- PAGINATION --}}
         @if($conversations->hasPages())
             <div class="mt-4">
                 {{ $conversations->withQueryString()->links('vendor.pagination.custom-blue') }}

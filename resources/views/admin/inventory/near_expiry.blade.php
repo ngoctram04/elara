@@ -7,7 +7,6 @@
 <div class="card border-0 shadow-sm">
     <div class="card-body">
 
-        {{-- HEADER --}}
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h5 class="fw-bold mb-1">Quản lý lô hàng</h5>
@@ -19,7 +18,6 @@
             </span>
         </div>
 
-        {{-- FILTER --}}
         <form method="GET" class="row g-2 mb-4">
 
             <div class="col-md-4">
@@ -63,7 +61,6 @@
             </div>
         </form>
 
-        {{-- ALERT --}}
         <div class="alert alert-warning mb-4 py-2">
             <i class="bi bi-info-circle me-1"></i>
             <b>Quy tắc:</b>
@@ -84,7 +81,6 @@
             </span>
         </div>
 
-        {{-- TABLE --}}
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
 
@@ -215,7 +211,6 @@
             </table>
         </div>
 
-        {{-- PAGINATION --}}
         @if($lots->hasPages())
             <div class="mt-4 d-flex justify-content-center">
                 {{ $lots->appends(request()->query())->links('vendor.pagination.custom-blue') }}

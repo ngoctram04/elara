@@ -7,7 +7,6 @@
 <div class="card border-0 shadow-sm">
     <div class="card-body">
 
-        {{-- HEADER --}}
         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
             <div>
                 <h5 class="mb-1">Quản lý Blog</h5>
@@ -23,7 +22,6 @@
             </a>
         </div>
 
-        {{-- FILTER --}}
         <form method="GET" class="row g-2 mb-4 align-items-center">
             <div class="col-md-4">
                 <input
@@ -60,7 +58,6 @@
             </div>
         </form>
 
-        {{-- TABLE --}}
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
@@ -160,7 +157,6 @@
             </table>
         </div>
 
-        {{-- PAGINATION --}}
         @if($blogs->hasPages())
             <div class="mt-4">
                 {{ $blogs->links('vendor.pagination.custom-blue') }}

@@ -205,7 +205,6 @@
     <div class="card border-0 shadow-sm brand-card">
         <div class="card-body p-3 p-md-4">
 
-            {{-- HEADER --}}
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
                 <div>
                     <h5 class="brand-title mb-1">Danh sách thương hiệu</h5>
@@ -218,7 +217,6 @@
                 </a>
             </div>
 
-            {{-- SEARCH + SORT --}}
             <div class="brand-filter-box">
                 <form method="GET" class="row g-2 align-items-center">
                     <div class="col-md-4">
@@ -256,7 +254,6 @@
                 </form>
             </div>
 
-            {{-- TABLE --}}
             <div class="table-responsive brand-table-wrap">
                 <table class="table align-middle">
                     <thead>

@@ -218,7 +218,6 @@
 
                 <div class="category-form-box">
 
-                    {{-- TÊN DANH MỤC --}}
                     <div class="mb-3">
                         <label for="name" class="form-label">
                             Tên danh mục <span class="text-danger">*</span>
@@ -239,7 +238,6 @@
                         @enderror
                     </div>
 
-                    {{-- ẢNH: CHỈ CHO DANH MỤC NHỎ --}}
                     @if($category->parent_id)
                         <div class="mb-3">
                             <label class="form-label d-block">Hình ảnh danh mục nhỏ</label>
@@ -290,7 +288,6 @@
                         </div>
                     @endif
 
-                    {{-- ACTION --}}
                     <div class="category-action">
                         <button type="submit" class="btn btn-primary category-btn">
                             <i class="bi bi-save me-1"></i> Cập nhật

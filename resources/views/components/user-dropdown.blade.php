@@ -1,6 +1,5 @@
 <div class="dropdown user-menu">
 
-    {{-- TOGGLE --}}
     <a href="#"
        class="user-toggle"
        data-bs-toggle="dropdown"
@@ -13,7 +12,6 @@
         <i class="bi bi-chevron-down user-caret"></i>
     </a>
 
-    {{-- MENU --}}
     <ul class="dropdown-menu dropdown-menu-end shadow-sm user-dropdown">
         <li>
             <a class="dropdown-item" href="{{ route('profile.index') }}">

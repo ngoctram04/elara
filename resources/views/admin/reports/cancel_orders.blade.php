@@ -7,7 +7,6 @@
 <div class="card border-0 shadow-sm">
     <div class="card-body">
 
-        {{-- HEADER --}}
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h5 class="fw-bold mb-1">
@@ -27,7 +26,6 @@
             </a>
         </div>
 
-        {{-- FILTER --}}
         <form method="GET" class="row g-2 mb-4 align-items-end">
             <div class="col-md-2">
                 <label class="small text-muted">Từ ngày</label>
@@ -67,7 +65,6 @@
             </div>
         </form>
 
-        {{-- TABLE --}}
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
@@ -119,7 +116,6 @@
             </table>
         </div>
 
-        {{-- PAGINATION --}}
         @if($orders->hasPages())
             <div class="mt-4">
                 {{ $orders->withQueryString()->links('pagination::bootstrap-5') }}

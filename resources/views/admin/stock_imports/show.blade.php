@@ -7,7 +7,6 @@
 <div class="card border-0 shadow-sm">
     <div class="card-body">
 
-        {{-- HEADER --}}
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h5 class="fw-bold mb-1">Phiếu nhập kho</h5>
@@ -34,7 +33,6 @@
             $total = 0;
         @endphp
 
-        {{-- INFO --}}
         <div class="row mb-4">
             <div class="col-md-6">
                 <p class="mb-1">
@@ -86,7 +84,6 @@
             </div>
         </div>
 
-        {{-- TABLE --}}
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
@@ -153,7 +150,6 @@
             </table>
         </div>
 
-        {{-- TOTAL --}}
         <div class="text-end mt-4">
             <h5 class="fw-bold text-danger mb-0">
                 Tổng tiền: {{ number_format($total) }} đ

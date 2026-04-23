@@ -4,11 +4,6 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 
-/*
-|--------------------------------------------------------------------------
-| FRONTEND CONTROLLERS
-|--------------------------------------------------------------------------
-*/
 use App\Http\Controllers\Frontend\HomeController;
 use App\Http\Controllers\Frontend\ShopController;
 use App\Http\Controllers\Frontend\ProductController as FrontendProductController;
@@ -24,28 +19,12 @@ use App\Http\Controllers\Frontend\RefundController;
 use App\Http\Controllers\Frontend\BlogController as FrontendBlogController;
 use App\Http\Controllers\Frontend\ProductQuestionController;
 use App\Http\Controllers\Frontend\ChatController;
-
-/*
-|--------------------------------------------------------------------------
-| MODELS / MAIL
-|--------------------------------------------------------------------------
-*/
 use App\Models\Order;
 use App\Mail\OrderCompletedMail;
 use App\Mail\OrderCreatedMail;
-
-/*
-|--------------------------------------------------------------------------
-| USER PROFILE
-|--------------------------------------------------------------------------
-*/
 use App\Http\Controllers\ProfileController;
 
-/*
-|--------------------------------------------------------------------------
-| ADMIN CONTROLLERS
-|--------------------------------------------------------------------------
-*/
+
 use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\BrandController;
@@ -62,53 +41,28 @@ use App\Http\Controllers\Admin\AdminChatController;
 use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\ReviewController as AdminReviewController;
 
-/*
-|--------------------------------------------------------------------------
-| FRONTEND – PUBLIC
-|--------------------------------------------------------------------------
-*/
 
-// Home
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
 Route::get('/policy', function () {
     return view('frontend.pages.policy');
 })->name('policy');
-
-// Shop
 Route::get('/products', [ShopController::class, 'index'])->name('shop');
 
-// Search autocomplete
 Route::get('/search/suggest', [ShopController::class, 'suggest'])->name('search.suggest');
 Route::get('/search/history', [ShopController::class, 'history'])->name('search.history');
 Route::post('/search/history/delete', [ShopController::class, 'deleteHistory'])->name('search.history.delete');
-
-// Category
 Route::get('/category/{slug}', [FrontendCategoryController::class, 'show'])->name('category.show');
 
-// Product detail
 Route::get('/product/{slug}', [FrontendProductController::class, 'show'])->name('products.show');
 
-/*
-|--------------------------------------------------------------------------
-| BLOG - TIN TỨC
-|--------------------------------------------------------------------------
-*/
+
 Route::get('/blogs', [FrontendBlogController::class, 'index'])->name('blogs.index');
 Route::get('/blogs/{slug}', [FrontendBlogController::class, 'show'])->name('blogs.show');
 
-/*
-|--------------------------------------------------------------------------
-| VNPAY RETURN (PUBLIC)
-|--------------------------------------------------------------------------
-*/
+
 Route::get('/vnpay-return', [CheckoutController::class, 'vnpayReturn'])->name('vnpay.return');
 
-/*
-|--------------------------------------------------------------------------
-| CART (KHÔNG CẦN LOGIN)
-|--------------------------------------------------------------------------
-*/
 Route::prefix('cart')->name('cart.')->group(function () {
     Route::get('/', [CartController::class, 'index'])->name('index');
     Route::post('/add', [CartController::class, 'add'])->name('add');
@@ -125,21 +79,11 @@ Route::post('/cart/apply-best-promotion', [CartController::class, 'applyBestProm
 Route::post('/cart/get-available-promotions', [CartController::class, 'getAvailablePromotions'])
     ->name('cart.getAvailablePromotions');
 
-/*
-|--------------------------------------------------------------------------
-| AI CHAT (PUBLIC - KHÔNG CẦN LOGIN)
-|--------------------------------------------------------------------------
-*/
 Route::prefix('ai-chat')->name('chat.ai.')->group(function () {
     Route::get('/', [ChatController::class, 'aiChat'])->name('index');
     Route::post('/send', [ChatController::class, 'sendAI'])->name('send');
 });
 
-/*
-|--------------------------------------------------------------------------
-| CHECKOUT (LOGIN)
-|--------------------------------------------------------------------------
-*/
 Route::middleware(['auth', 'check_active'])
     ->prefix('checkout')
     ->name('checkout.')
@@ -153,11 +97,6 @@ Route::middleware(['auth', 'check_active'])
         Route::post('/cancel/{id}', [CheckoutController::class, 'cancel'])->name('cancel');
     });
 
-/*
-|--------------------------------------------------------------------------
-| ADDRESS
-|--------------------------------------------------------------------------
-*/
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/profile/addresses', [AddressController::class, 'index'])->name('addresses.index');
     Route::post('/profile/addresses', [AddressController::class, 'store'])->name('addresses.store');
@@ -166,22 +105,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/addresses/{id}', [AddressController::class, 'update'])->name('addresses.update');
 });
 
-/*
-|--------------------------------------------------------------------------
-| POINTS
-|--------------------------------------------------------------------------
-*/
 Route::middleware('auth')->group(function () {
     Route::get('/points/history', [PointController::class, 'history'])->name('points.history');
     Route::get('/points/redeem', [PointController::class, 'redeemPage'])->name('points.redeem.page');
     Route::post('/points/redeem', [PointController::class, 'redeem'])->name('points.redeem');
 });
 
-/*
-|--------------------------------------------------------------------------
-| REFUND (LOGIN)
-|--------------------------------------------------------------------------
-*/
 Route::middleware(['auth', 'check_active'])
     ->prefix('refund')
     ->name('refund.')
@@ -191,11 +120,6 @@ Route::middleware(['auth', 'check_active'])
         Route::get('/{id}', [OrderController::class, 'showRefund'])->name('show');
     });
 
-/*
-|--------------------------------------------------------------------------
-| ORDER HISTORY (LOGIN)
-|--------------------------------------------------------------------------
-*/
 Route::middleware(['auth', 'check_active'])
     ->prefix('orders')
     ->name('orders.')
@@ -207,11 +131,6 @@ Route::middleware(['auth', 'check_active'])
         Route::post('/{id}/confirm-received', [OrderController::class, 'confirmReceived'])->name('confirmReceived');
     });
 
-/*
-|--------------------------------------------------------------------------
-| WISHLIST (LOGIN)
-|--------------------------------------------------------------------------
-*/
 Route::middleware(['auth', 'check_active'])
     ->prefix('wishlist')
     ->name('wishlist.')
@@ -220,11 +139,6 @@ Route::middleware(['auth', 'check_active'])
         Route::post('/toggle', [WishlistController::class, 'toggle'])->name('toggle');
     });
 
-/*
-|--------------------------------------------------------------------------
-| USER PROFILE
-|--------------------------------------------------------------------------
-*/
 Route::middleware(['auth', 'check_active'])
     ->prefix('profile')
     ->name('profile.')
@@ -237,21 +151,11 @@ Route::middleware(['auth', 'check_active'])
         Route::get('/address', fn() => view('frontend.profile.address'))->name('address');
     });
 
-/*
-|--------------------------------------------------------------------------
-| ADMIN
-|--------------------------------------------------------------------------
-*/
 Route::prefix('admin')
     ->name('admin.')
     ->middleware(['auth', 'check_active', 'is_admin'])
     ->group(function () {
 
-        /*
-        |--------------------------------------------------------------------------
-        | REPORTS - THỐNG KÊ
-        |--------------------------------------------------------------------------
-        */
         Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
         Route::post('/reports/export-pdf', [ReportController::class, 'exportPdf'])->name('reports.exportPdf');
         Route::get('/reports/products', [ReportController::class, 'products'])->name('reports.products');
@@ -262,75 +166,27 @@ Route::prefix('admin')
         Route::get('/reports/wishlist', [ReportController::class, 'wishlist'])->name('reports.wishlist');
         Route::get('/reports/cancel-orders', [ReportController::class, 'cancelOrders'])->name('reports.cancelOrders');
         Route::get('/reports/refund-orders', [ReportController::class, 'refundOrders'])->name('reports.refundOrders');
-
-        /*
-        |--------------------------------------------------------------------------
-        | PROFILE
-        |--------------------------------------------------------------------------
-        */
         Route::get('/profile', [AdminProfileController::class, 'show'])->name('profile.show');
         Route::get('/profile/edit', [AdminProfileController::class, 'edit'])->name('profile.edit');
         Route::put('/profile', [AdminProfileController::class, 'update'])->name('profile.update');
-
-        /*
-        |--------------------------------------------------------------------------
-        | CUSTOMERS
-        |--------------------------------------------------------------------------
-        */
         Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
         Route::get('/customers/{user}', [CustomerController::class, 'show'])->name('customers.show');
         Route::post('/customers/{user}/toggle-status', [CustomerController::class, 'toggleStatus'])->name('customers.toggle-status');
-
-        /*
-        |--------------------------------------------------------------------------
-        | CATEGORIES
-        |--------------------------------------------------------------------------
-        */
         Route::resource('categories', CategoryController::class)->except(['update']);
         Route::put('categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
-
-        /*
-        |--------------------------------------------------------------------------
-        | BRANDS
-        |--------------------------------------------------------------------------
-        */
         Route::resource('brands', BrandController::class)->except(['show']);
-
-        /*
-        |--------------------------------------------------------------------------
-        | PRODUCTS
-        |--------------------------------------------------------------------------
-        */
         Route::resource('products', ProductController::class);
         Route::patch('products/{product}/toggle', [ProductController::class, 'toggle'])->name('products.toggle');
-
-        /*
-        |--------------------------------------------------------------------------
-        | ORDERS
-        |--------------------------------------------------------------------------
-        */
         Route::prefix('orders')->name('orders.')->group(function () {
             Route::get('/', [AdminOrderController::class, 'index'])->name('index');
             Route::get('/{id}', [AdminOrderController::class, 'show'])->name('show');
             Route::post('/update-status/{id}', [AdminOrderController::class, 'updateStatus'])->name('updateStatus');
             Route::post('/cancel/{id}', [AdminOrderController::class, 'cancel'])->name('cancel');
         });
-
-        /*
-        |--------------------------------------------------------------------------
-        | REFUNDS
-        |--------------------------------------------------------------------------
-        */
         Route::get('/refunds', [AdminRefundController::class, 'index'])->name('refunds.index');
         Route::post('/refunds/{id}/approve', [AdminRefundController::class, 'approve'])->name('refunds.approve');
         Route::post('/refunds/{id}/reject', [AdminRefundController::class, 'reject'])->name('refunds.reject');
         Route::post('/refunds/{id}/refunded', [AdminRefundController::class, 'refunded'])->name('refunds.refunded');
-
-        /*
-        |--------------------------------------------------------------------------
-        | PROMOTIONS
-        |--------------------------------------------------------------------------
-        */
         Route::prefix('promotions')->name('promotions.')->group(function () {
             Route::get('/', [PromotionController::class, 'index'])->name('index');
             Route::get('/create', [PromotionController::class, 'chooseType'])->name('create');
@@ -351,11 +207,6 @@ Route::prefix('admin')
             Route::patch('/reward/{reward}/toggle', [PromotionController::class, 'toggleReward'])->name('toggleReward');
         });
 
-        /*
-        |--------------------------------------------------------------------------
-        | STOCK IMPORT
-        |--------------------------------------------------------------------------
-        */
         Route::get('/stock-import', [StockImportController::class, 'create'])->name('stock.create');
         Route::post('/stock-import', [StockImportController::class, 'store'])->name('stock.store');
         Route::get('/stock-import/history', [StockImportController::class, 'history'])->name('stock.history');
@@ -363,49 +214,19 @@ Route::prefix('admin')
         Route::get('/stock-import/{code}/pdf', [StockImportController::class, 'exportPdf'])->name('stock.exportPdf');
         Route::get('/stock-import/suppliers/search', [StockImportController::class, 'searchSuppliers'])->name('stock.suppliers.search');
         Route::get('/stock-import/variant/{variant}/suggest-price', [StockImportController::class, 'suggestPrice'])->name('stock.suggestPrice');
-
-        /*
-        |--------------------------------------------------------------------------
-        | INVENTORY
-        |--------------------------------------------------------------------------
-        */
         Route::get('/inventory/logs', [InventoryController::class, 'logs'])->name('inventory.logs');
         Route::get('/inventory/low-stock', [InventoryController::class, 'lowStock'])->name('inventory.low');
         Route::get('/inventory/report', [InventoryController::class, 'report'])->name('inventory.report');
         Route::get('/inventory/near-expiry', [InventoryController::class, 'nearExpiry'])->name('inventory.near_expiry');
-
-        /*
-        |--------------------------------------------------------------------------
-        | BLOG
-        |--------------------------------------------------------------------------
-        */
         Route::resource('blogs', BlogController::class);
         Route::post('/blogs/{id}/toggle', [BlogController::class, 'toggle'])->name('blogs.toggle');
         Route::post('/blogs/upload-image', [BlogController::class, 'uploadImage'])->name('blogs.uploadImage');
-
-        /*
-        |--------------------------------------------------------------------------
-        | CUSTOMER SUPPORT - Q&A
-        |--------------------------------------------------------------------------
-        */
         Route::get('/questions', [AdminProductQuestionController::class, 'index'])->name('questions.index');
         Route::post('/questions/answer', [AdminProductQuestionController::class, 'answer'])->name('questions.answer');
         Route::patch('/questions/{id}/toggle-status', [AdminProductQuestionController::class, 'toggleStatus'])->name('questions.toggle-status');
-
-        /*
-        |--------------------------------------------------------------------------
-        | CUSTOMER SUPPORT - CHAT
-        |--------------------------------------------------------------------------
-        */
         Route::get('/messages', [AdminChatController::class, 'index'])->name('messages.index');
         Route::get('/messages/{id}', [AdminChatController::class, 'show'])->name('messages.show');
         Route::post('/messages/{id}', [AdminChatController::class, 'send'])->name('messages.send');
-
-        /*
-        |--------------------------------------------------------------------------
-        | REVIEWS
-        |--------------------------------------------------------------------------
-        */
         Route::prefix('reviews')->name('reviews.')->group(function () {
             Route::get('/', [AdminReviewController::class, 'index'])->name('index');
             Route::get('/{id}', [AdminReviewController::class, 'show'])->name('show');
@@ -434,11 +255,7 @@ Route::middleware(['auth', 'check_active'])
         Route::post('/order/{order}', [ReviewController::class, 'store'])->name('store');
     });
 
-/*
-|--------------------------------------------------------------------------
-| CHAT WITH STAFF (LOGIN)
-|--------------------------------------------------------------------------
-*/
+
 Route::middleware(['auth', 'check_active'])
     ->prefix('chat')
     ->name('chat.')
@@ -449,11 +266,7 @@ Route::middleware(['auth', 'check_active'])
         Route::get('/unread-count', [ChatController::class, 'unreadCount'])->name('unreadCount');
     });
 
-/*
-|--------------------------------------------------------------------------
-| TEST MAIL - CHỈ CHẠY LOCAL
-|--------------------------------------------------------------------------
-*/
+
 if (app()->environment('local')) {
     Route::get('/test-order-completed', function () {
         $order = Order::with('user')->first();
@@ -494,11 +307,6 @@ if (app()->environment('local')) {
     })->name('test.order.created');
 }
 
-/*
-|--------------------------------------------------------------------------
-| NOTIFICATIONS
-|--------------------------------------------------------------------------
-*/
 Route::post('/notifications/mark-all-read', function (\Illuminate\Http\Request $request) {
     $user = $request->user();
     abort_unless($user, 401);
@@ -518,9 +326,4 @@ Route::get('/notification/{id}', function (\Illuminate\Http\Request $request, $i
     return redirect($noti->data['url'] ?? route('home'));
 })->middleware('auth')->name('notification.redirect');
 
-/*
-|--------------------------------------------------------------------------
-| AUTH
-|--------------------------------------------------------------------------
-*/
 require __DIR__ . '/auth.php';

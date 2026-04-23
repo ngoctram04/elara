@@ -64,7 +64,6 @@
         </div>
     </div>
 
-    {{-- THÔNG TIN CHUNG --}}
     <div class="card order-card mb-3">
         <div class="card-body">
             <div class="row g-3">
@@ -158,7 +157,6 @@
         </div>
     </div>
 
-    {{-- TIMELINE --}}
     <div class="card order-card mb-3">
         <div class="card-body">
             <h6 class="section-title mb-3">Trạng thái đơn hàng</h6>
@@ -189,7 +187,6 @@
         </div>
     </div>
 
-    {{-- THÔNG TIN NHẬN HÀNG --}}
     <div class="card order-card mb-3">
         <div class="card-body">
             <h6 class="section-title mb-3">Thông tin nhận hàng</h6>
@@ -224,7 +221,6 @@
         </div>
     </div>
 
-    {{-- DANH SÁCH SẢN PHẨM --}}
     <div class="card order-card">
         <div class="card-body">
             <h6 class="section-title mb-3">Sản phẩm trong đơn</h6>
@@ -354,7 +350,6 @@
                 </div>
             @endforeach
 
-            {{-- TỔNG TIỀN --}}
             <div class="summary-box mt-3">
                 <div class="summary-row">
                     <span>Tạm tính</span>
@@ -388,20 +383,14 @@
                @php
     $refund = $order->refundRequest;
 
-    // ❌ Có ít nhất 1 sản phẩm đã review
     $hasReviewedItem = $order->items->contains(fn($item) => $item->review);
 
-    // ❌ Còn sản phẩm chưa review
     $hasUnreviewedItems = $order->items->contains(fn($item) => !$item->review);
 @endphp
 
 @if($order->isCompleted() || $refund)
     <div class="refund-box">
 
-        {{-- ✅ CHỈ HIỆN NÚT KHI:
-            - Được phép refund
-            - CHƯA có refund
-            - CHƯA đánh giá --}}
         @if(
             $order->canRequestRefund()
             && !$refund
@@ -415,14 +404,12 @@
             </button>
         @endif
 
-        {{-- 👇 Nếu đã đánh giá thì hiện message --}}
         @if($hasReviewedItem && !$refund)
             <div class="refund-alert refund-muted mt-2">
                 Bạn đã đánh giá sản phẩm, không thể yêu cầu hoàn tiền.
             </div>
         @endif
 
-        {{-- 👇 Nếu đã có refund --}}
         @if($refund)
             <div class="refund-top-action mb-2">
                 <a href="{{ route('refund.show', $refund->id) }}"

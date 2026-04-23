@@ -247,7 +247,6 @@
 
             <div class="col-lg-9">
 
-                {{-- PROFILE --}}
                 <div class="card account-card mb-4">
                     <div class="card-body">
                         <h5 class="account-section-title">Hồ sơ của tôi</h5>
@@ -371,7 +370,6 @@
                     </div>
                 </div>
 
-                {{-- SECURITY --}}
                 <div class="card account-card">
                     <div class="card-body">
                         <h5 class="account-section-title">Đổi mật khẩu</h5>

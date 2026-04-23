@@ -10,7 +10,6 @@
 
 <div class="container policy-page pb-4">
     <div class="row g-3">
-        {{-- SIDEBAR --}}
         <div class="col-lg-3">
             <div class="policy-sidebar">
                 <div class="policy-sidebar-box">
@@ -37,9 +36,7 @@
             </div>
         </div>
 
-        {{-- CONTENT --}}
         <div class="col-lg-9">
-            {{-- SHIPPING --}}
             <section id="ship" class="policy-card mb-3">
                 <div class="policy-card-header">
                     <div class="policy-card-icon">
@@ -76,7 +73,6 @@
                 </div>
             </section>
 
-            {{-- TERMS --}}
             <section id="terms" class="policy-card mb-3">
                 <div class="policy-card-header">
                     <div class="policy-card-icon">
@@ -114,7 +110,6 @@
                 </div>
             </section>
 
-            {{-- MEMBERSHIP --}}
             <section id="rank" class="policy-card">
                 <div class="policy-card-header">
                     <div class="policy-card-icon">

@@ -84,7 +84,6 @@
 @endphp
 
 <div class="report-page">
-    {{-- HEADER --}}
     <div class="report-header-card">
         <div class="report-header-left">
             <div>
@@ -111,7 +110,6 @@
         </form>
     </div>
 
-    {{-- BỘ LỌC --}}
     <div class="report-filter-card mb-4">
         <form method="GET" action="{{ route('admin.reports.index') }}" class="row g-3 align-items-end">
             <div class="col-lg-3 col-md-4">
@@ -140,7 +138,6 @@
         </form>
     </div>
 
-    {{-- KPI CHÍNH --}}
     <div class="row g-3 mb-4">
         <div class="col-lg-3 col-md-6">
             <div class="report-stat-card stat-primary h-100">
@@ -183,7 +180,6 @@
         </div>
     </div>
 
-    {{-- TÓM TẮT GỌN --}}
     <div class="row g-3 mb-4">
         <div class="col-lg-6">
             <div class="report-highlight-card h-100">
@@ -258,7 +254,6 @@
         </div>
     </div>
 
-    {{-- BIỂU ĐỒ --}}
     <div class="row g-3 mb-4">
         <div class="col-lg-8">
             <div class="report-panel h-100">
@@ -333,7 +328,6 @@
         </div>
     </div>
 
-    {{-- BẢNG THỐNG KÊ 1 --}}
     <div class="row g-3 mb-4">
         <div class="col-lg-6">
             <div class="report-panel h-100">
@@ -408,7 +402,6 @@
         </div>
     </div>
 
-    {{-- BẢNG THỐNG KÊ 2 --}}
     <div class="row g-3 mb-4">
         <div class="col-lg-6">
             <div class="report-panel h-100">
@@ -479,7 +472,6 @@
         </div>
     </div>
 
-    {{-- BẢNG THỐNG KÊ 3 --}}
     <div class="row g-3 mb-4">
         <div class="col-lg-6">
             <div class="report-panel h-100">
@@ -562,7 +554,6 @@
         </div>
     </div>
 
-    {{-- BẢNG ĐƠN HOÀN TRẢ --}}
     <div class="row g-3">
         <div class="col-12">
             <div class="report-panel">

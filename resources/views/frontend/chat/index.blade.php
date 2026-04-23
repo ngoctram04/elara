@@ -8,11 +8,8 @@
 <div class="container">
 
 <div class="chat-wrapper">
-
-    {{-- CHAT BOX --}}
     <div id="chat-box"></div>
 
-    {{-- PREVIEW IMAGE --}}
     <div id="image-preview" class="preview-box" style="display:none;">
         <img id="preview-img">
         <span onclick="removePreview()">
@@ -20,7 +17,6 @@
         </span>
     </div>
 
-    {{-- INPUT --}}
     <div class="chat-input">
 
         <label class="file-btn">
@@ -45,7 +41,6 @@
 
 <style>
 
-/* CHAT CONTAINER */
 .chat-wrapper{
 max-width:800px;
 margin:auto;
@@ -58,7 +53,6 @@ flex-direction:column;
 overflow:hidden;
 }
 
-/* CHAT BOX */
 #chat-box{
 flex:1;
 overflow-y:auto;
@@ -69,7 +63,6 @@ flex-direction:column;
 gap:12px;
 }
 
-/* MESSAGE */
 .message{
 display:flex;
 gap:8px;
@@ -85,7 +78,6 @@ flex-direction:row-reverse;
 align-self:flex-start;
 }
 
-/* avatar */
 .avatar{
 width:34px;
 height:34px;
@@ -97,20 +89,17 @@ justify-content:center;
 font-size:13px;
 }
 
-/* content */
 .message-content{
 display:flex;
 flex-direction:column;
 }
 
-/* sender name */
 .sender{
 font-size:12px;
 color:#777;
 margin-bottom:2px;
 }
 
-/* bubble */
 .bubble{
 padding:10px 14px;
 border-radius:14px;
@@ -130,14 +119,12 @@ background:#e5e7eb;
 border-bottom-left-radius:4px;
 }
 
-/* time */
 .time{
 font-size:11px;
 color:#999;
 margin-top:2px;
 }
 
-/* image */
 .bubble img{
 max-width:220px;
 border-radius:8px;
@@ -145,7 +132,6 @@ margin-top:5px;
 cursor:pointer;
 }
 
-/* INPUT */
 .chat-input{
 display:flex;
 align-items:center;
@@ -163,7 +149,6 @@ padding:8px 14px;
 outline:none;
 }
 
-/* send button */
 .chat-input button{
 background:#2563eb;
 border:none;
@@ -176,7 +161,6 @@ align-items:center;
 justify-content:center;
 }
 
-/* file button */
 .file-btn{
 cursor:pointer;
 font-size:20px;
@@ -193,7 +177,6 @@ color:#2563eb;
 display:none;
 }
 
-/* preview */
 .preview-box{
 padding:8px 20px;
 background:#f9fafb;
@@ -216,7 +199,6 @@ display:flex;
 align-items:center;
 }
 
-/* scrollbar */
 #chat-box::-webkit-scrollbar{
 width:6px;
 }
@@ -231,14 +213,10 @@ border-radius:3px;
 
 <script>
 
-/* SCROLL */
 function scrollBottom(){
 const box=document.getElementById('chat-box');
 box.scrollTop=box.scrollHeight;
 }
-
-
-/* LOAD MESSAGES */
 
 function loadMessages(){
 
@@ -253,7 +231,6 @@ data.forEach(msg=>{
 
 let isUser = msg.sender_id == {{ auth()->id() }};
 
-/* HIỂN THỊ NGÀY */
 
 if(msg.date !== lastDate){
 
@@ -283,7 +260,7 @@ ${isUser ? 'Bạn' : (msg.sender_name ?? 'Admin')}
 <div class="bubble">
 `;
 
-/* IMAGE OR TEXT */
+
 
 if(msg.message){
 
@@ -324,7 +301,6 @@ scrollBottom();
 }
 
 
-/* PREVIEW IMAGE */
 
 document.getElementById("file").addEventListener("change",function(){
 
@@ -354,7 +330,6 @@ document.getElementById("image-preview").style.display="none";
 }
 
 
-/* SEND MESSAGE */
 
 function sendMessage(){
 
@@ -392,7 +367,6 @@ loadMessages();
 }
 
 
-/* ENTER SEND */
 
 document.getElementById("message")
 .addEventListener("keypress",function(e){
@@ -404,8 +378,6 @@ sendMessage();
 
 });
 
-
-/* AUTO REFRESH */
 
 setInterval(loadMessages,2000);
 

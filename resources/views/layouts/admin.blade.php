@@ -23,7 +23,6 @@
 
 <div class="admin-wrapper">
 
-{{-- ================= SIDEBAR ================= --}}
 <aside class="sidebar" id="sidebar">
 
 <div class="sidebar-logo">
@@ -33,7 +32,6 @@
 
 <ul class="sidebar-menu">
 
-{{-- USERS --}}
 <li>
 <a href="{{ route('admin.customers.index') }}"
 class="{{ request()->routeIs('admin.customers.*') ? 'active' : '' }}">
@@ -42,7 +40,6 @@ Quản lý người dùng
 </a>
 </li>
 
-{{-- CATEGORY --}}
 <li>
 <a href="{{ route('admin.categories.index') }}"
 class="{{ request()->is('admin/categories*') ? 'active' : '' }}">
@@ -51,7 +48,6 @@ Quản lý danh mục
 </a>
 </li>
 
-{{-- BRAND --}}
 <li>
 <a href="{{ route('admin.brands.index') }}"
 class="{{ request()->is('admin/brands*') ? 'active' : '' }}">
@@ -60,7 +56,6 @@ Quản lý thương hiệu
 </a>
 </li>
 
-{{-- PRODUCT --}}
 <li>
 <a href="{{ route('admin.products.index') }}"
 class="{{ request()->is('admin/products*') ? 'active' : '' }}">
@@ -68,7 +63,7 @@ class="{{ request()->is('admin/products*') ? 'active' : '' }}">
 Quản lý sản phẩm
 </a>
 </li>
-{{-- REVIEWS --}}
+
 <li>
 <a href="{{ route('admin.reviews.index') }}"
 class="{{ request()->is('admin/reviews*') ? 'active' : '' }}">
@@ -76,8 +71,7 @@ class="{{ request()->is('admin/reviews*') ? 'active' : '' }}">
 Quản lý đánh giá
 </a>
 </li>
-{{-- STOCK --}}
-{{-- ================= INVENTORY ================= --}}
+
 <li>
 
 <a class="d-flex justify-content-between align-items-center
@@ -140,7 +134,6 @@ Quản lý lô hàng
 
 </li>
 
-{{-- ================= ORDERS ================= --}}
 <li>
 
 <a class="d-flex justify-content-between align-items-center
@@ -183,7 +176,6 @@ Yêu cầu hoàn tiền
 
 </li>
 
-{{-- PROMOTION --}}
 <li>
 <a href="{{ route('admin.promotions.index') }}"
 class="{{ request()->is('admin/promotions*') ? 'active' : '' }}">
@@ -191,7 +183,7 @@ class="{{ request()->is('admin/promotions*') ? 'active' : '' }}">
 Quản lý khuyến mãi
 </a>
 </li>
-{{-- BLOG --}}
+
 <li>
 <a href="{{ route('admin.blogs.index') }}"
 class="{{ request()->is('admin/blogs*') ? 'active' : '' }}">
@@ -199,7 +191,6 @@ class="{{ request()->is('admin/blogs*') ? 'active' : '' }}">
 Quản lý Blog
 </a>
 </li>
-{{-- ================= CUSTOMER SUPPORT ================= --}}
 <li>
 
 <a class="d-flex justify-content-between align-items-center
@@ -241,7 +232,7 @@ Tin nhắn khách hàng
 </div>
 
 </li>
-{{-- REPORT --}}
+
 <li>
 <a href="{{ route('admin.reports.index') }}"
 class="{{ request()->is('admin/reports*') ? 'active' : '' }}">
@@ -254,20 +245,16 @@ Thống kê
 
 </aside>
 
-{{-- ================= MAIN ================= --}}
 <main class="main-content">
 
 <header class="topbar d-flex align-items-center">
 
-    {{-- MENU --}}
     <button class="btn btn-light" id="toggleSidebar">
         <i class="bi bi-list"></i>
     </button>
 
-    {{-- RIGHT SIDE --}}
     <div class="ms-auto d-flex align-items-center gap-2">
 
-        {{-- 🔔 NOTIFICATION --}}
         <div class="dropdown">
 
             <a href="#" class="btn btn-light position-relative" data-bs-toggle="dropdown">
@@ -308,12 +295,10 @@ Thống kê
 <a href="{{ route('notification.redirect', $noti->id) }}"
    class="dropdown-item noti-item d-flex gap-3 px-3 py-3 {{ $isUnread ? 'noti-unread' : '' }}">
 
-    {{-- ICON --}}
     <div class="noti-icon">
         <i class="bi {{ $noti->data['icon'] ?? 'bi-bell' }}"></i>
     </div>
 
-    {{-- CONTENT --}}
     <div class="flex-grow-1">
 
         <div class="d-flex justify-content-between align-items-center">
@@ -322,7 +307,6 @@ Thống kê
                 {{ $noti->data['title'] ?? 'Thông báo' }}
             </div>
 
-            {{-- 🔴 DOT chưa đọc --}}
             @if($isUnread)
                 <span class="noti-dot"></span>
             @endif
@@ -353,7 +337,6 @@ Thống kê
 
         </div>
 
-        {{-- 👤 USER DROPDOWN --}}
         <div class="dropdown">
 
             <button
@@ -445,21 +428,17 @@ document.addEventListener("DOMContentLoaded", function(){
 
                 if(data.success){
 
-                    // ✅ 1. Ẩn badge đỏ (số lượng)
                     const badge = document.querySelector('.badge.bg-danger');
                     if(badge){
                         badge.remove();
                     }
 
-                    // ✅ 2. Xóa dấu chấm đỏ
                     document.querySelectorAll('.noti-dot').forEach(e => e.remove());
 
-                    // ✅ 3. Bỏ nền unread
                     document.querySelectorAll('.noti-unread').forEach(e => {
                         e.classList.remove('noti-unread');
                     });
 
-                    // ✅ 4. Disable nút luôn (khỏi bấm lại)
                     btn.disabled = true;
                     btn.innerText = "Đã đọc";
 

@@ -7,7 +7,6 @@
 <div class="card border-0 shadow-sm">
     <div class="card-body">
 
-        {{-- HEADER --}}
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h5 class="fw-bold mb-1">Sản phẩm sắp hết hàng</h5>
@@ -21,7 +20,6 @@
             </span>
         </div>
 
-        {{-- FILTER --}}
         <form method="GET" class="row g-2 mb-4">
             <div class="col-md-4">
                 <input
@@ -60,7 +58,6 @@
             </div>
         </form>
 
-        {{-- TABLE --}}
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
 
@@ -80,7 +77,6 @@
                     @forelse($variants as $v)
                         <tr>
 
-                            {{-- ẢNH BIẾN THỂ --}}
                             <td class="text-center">
                                 @php
                                     $img = $v->images->first()->image_path ?? null;
@@ -105,7 +101,6 @@
                                 @endif
                             </td>
 
-                            {{-- SẢN PHẨM --}}
                             <td>
                                 <div class="fw-medium">
                                     {{ $v->product->name ?? '-' }}
@@ -120,12 +115,10 @@
                                 </small>
                             </td>
 
-                            {{-- MÃ BIẾN THỂ --}}
                             <td class="text-muted fw-semibold">
                                 BT{{ str_pad($v->id, 5, '0', STR_PAD_LEFT) }}
                             </td>
 
-                            {{-- BIẾN THỂ --}}
                             <td>
                                 <div class="fw-medium">
                                     {{ $v->attribute_value ?? '-' }}
@@ -138,7 +131,6 @@
                                 @endif
                             </td>
 
-                            {{-- TỒN KHO --}}
                             <td class="text-center">
                                 <span class="badge
                                     @if($v->stock_quantity <= 2)
@@ -153,7 +145,6 @@
                                 </span>
                             </td>
 
-                            {{-- TRẠNG THÁI --}}
                             <td class="text-center">
                                 @if($v->stock_quantity <= 2)
                                     <span class="badge bg-danger">
@@ -170,7 +161,6 @@
                                 @endif
                             </td>
 
-                            {{-- ACTION --}}
                             <td class="text-center">
                                 <a href="{{ route('admin.stock.create', ['variant' => $v->id]) }}"
                                    class="btn btn-sm btn-primary">
@@ -193,7 +183,6 @@
             </table>
         </div>
 
-        {{-- PAGINATION --}}
         @if($variants->hasPages())
             <div class="mt-4">
                 {{ $variants->links('vendor.pagination.custom-blue') }}

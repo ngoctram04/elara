@@ -17,8 +17,6 @@
     @if($latestBlog || $discoverBlogs->count())
         <section class="blog-highlight-layout mb-5">
             <div class="row g-4 align-items-stretch">
-
-                {{-- CỘT TRÁI: BÀI MỚI THÊM / MỚI CẬP NHẬT --}}
                 <div class="col-lg-7">
                     @if($latestBlog)
                         @php
@@ -76,8 +74,6 @@
                         </article>
                     @endif
                 </div>
-
-                {{-- CỘT PHẢI: KHÁM PHÁ THÊM --}}
                 <div class="col-lg-5">
                     <div class="side-blogs-wrapper">
                         <div class="side-blogs-header">
@@ -136,7 +132,6 @@
         </section>
     @endif
 
-    {{-- PHẦN DƯỚI: BÀI VIẾT VỪA XEM --}}
     @if($recentViewedBlogs->count())
         <section class="blog-grid-section">
             <div class="section-heading mb-4">

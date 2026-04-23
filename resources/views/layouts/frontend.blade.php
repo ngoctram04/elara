@@ -258,14 +258,12 @@
         </div>
     </footer>
 
-    {{-- AI CHAT BUTTON --}}
     <div class="floating-left">
         <button type="button" class="float-btn ai-btn" onclick="toggleAIChat()">
             <i class="bi bi-robot"></i>
         </button>
     </div>
 
-    {{-- CHAT NHÂN VIÊN --}}
     <div class="floating-right">
         <a href="{{ auth()->check() ? route('chat.index') : route('login') }}" class="float-btn contact-btn position-relative">
             <div class="chat-float">
@@ -275,7 +273,6 @@
         </a>
     </div>
 
-    {{-- AI CHAT BOX --}}
     <div id="ai-chat-box" class="ai-chat-box" style="display:none;">
         <div class="ai-header">
             <span>AI tư vấn ELARA</span>

@@ -236,7 +236,6 @@
 
                 <div class="row g-4">
 
-                    {{-- ================= AVATAR ================= --}}
                     <div class="col-lg-4">
                         <div class="profile-avatar-card text-center">
                             <div class="profile-avatar-label">Ảnh đại diện</div>
@@ -267,14 +266,11 @@
                             @enderror
                         </div>
                     </div>
-
-                    {{-- ================= FORM ================= --}}
                     <div class="col-lg-8">
                         <div class="profile-form-card">
                             <div class="profile-section-title">Thông tin cơ bản</div>
 
                             <div class="row g-3">
-                                {{-- Name --}}
                                 <div class="col-md-6">
                                     <label class="form-label">Họ tên</label>
                                     <input type="text"
@@ -286,7 +282,6 @@
                                     @enderror
                                 </div>
 
-                                {{-- Phone --}}
                                 <div class="col-md-6">
                                     <label class="form-label">Số điện thoại</label>
                                     <input type="text"
@@ -298,7 +293,6 @@
                                     @enderror
                                 </div>
 
-                                {{-- Date of birth --}}
                                 <div class="col-md-6">
                                     <label class="form-label">Ngày sinh</label>
                                     <input type="date"
@@ -310,7 +304,6 @@
                                     @enderror
                                 </div>
 
-                                {{-- Gender --}}
                                 <div class="col-md-6">
                                     <label class="form-label">Giới tính</label>
                                     <select name="gender"
@@ -325,7 +318,6 @@
                                     @enderror
                                 </div>
 
-                                {{-- Email (readonly) --}}
                                 <div class="col-12">
                                     <label class="form-label">Email</label>
                                     <input type="email"
@@ -335,13 +327,11 @@
                                 </div>
                             </div>
 
-                            {{-- ================= PASSWORD ================= --}}
                             <div class="profile-password-box">
                                 <div class="profile-section-title mb-2">Đổi mật khẩu</div>
                                 <div class="profile-password-subtext">Không bắt buộc. Chỉ nhập khi bạn muốn thay đổi mật khẩu hiện tại.</div>
 
                                 <div class="row g-3">
-                                    {{-- Current password --}}
                                     <div class="col-md-6">
                                         <label class="form-label">Mật khẩu hiện tại</label>
                                         <div class="input-group">
@@ -357,8 +347,6 @@
                                             <div class="invalid-feedback d-block">{{ $message }}</div>
                                         @enderror
                                     </div>
-
-                                    {{-- New password --}}
                                     <div class="col-md-6">
                                         <label class="form-label">Mật khẩu mới</label>
                                         <div class="input-group">
@@ -375,7 +363,6 @@
                                         @enderror
                                     </div>
 
-                                    {{-- Confirm --}}
                                     <div class="col-md-6">
                                         <label class="form-label">Nhập lại mật khẩu</label>
                                         <div class="input-group">
@@ -394,7 +381,6 @@
                                 </div>
                             </div>
 
-                            {{-- ACTION --}}
                             <div class="profile-action">
                                 <button class="btn btn-primary profile-btn">
                                     <i class="bi bi-save me-1"></i> Lưu thay đổi

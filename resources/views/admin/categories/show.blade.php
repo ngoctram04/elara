@@ -215,7 +215,6 @@
     <div class="card shadow-sm border-0 category-detail-card">
         <div class="card-body p-3 p-md-4">
 
-            {{-- HEADER --}}
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
                 <div>
                     <h5 class="category-detail-title mb-1">{{ $category->name }}</h5>
@@ -229,7 +228,6 @@
                 </a>
             </div>
 
-            {{-- SEARCH + SORT --}}
             <div class="category-filter-box">
                 <form method="GET" class="row g-2 align-items-center">
                     <div class="col-md-5">
@@ -267,7 +265,6 @@
                 </form>
             </div>
 
-            {{-- TABLE --}}
             <div class="table-responsive category-table-wrap">
                 <table class="table align-middle">
                     <thead>

@@ -19,7 +19,6 @@
 
                 <div class="row">
 
-                    {{-- LEFT --}}
                     <div class="col-lg-6">
 
                         <div class="mb-3">
@@ -83,8 +82,6 @@
                         </div>
 
                     </div>
-
-                    {{-- RIGHT --}}
                     <div class="col-lg-6">
 
                         <div class="mb-3">
@@ -97,7 +94,6 @@
                             @enderror
                         </div>
 
-                        {{-- ẢNH CHÍNH --}}
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Ảnh đại diện</label>
                             <div class="mb-2">
@@ -117,7 +113,6 @@
                             @enderror
                         </div>
 
-                        {{-- ẢNH PHỤ --}}
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Ảnh phụ</label>
 
@@ -157,7 +152,6 @@
 
                 <hr>
 
-                {{-- VARIANTS --}}
                 <h5 class="fw-semibold text-primary mb-3">Biến thể</h5>
 
                 <div class="mb-3">

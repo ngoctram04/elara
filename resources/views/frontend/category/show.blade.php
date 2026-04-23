@@ -9,7 +9,6 @@
     ['label' => $category->name]
 ]" />
 
-{{-- ================= CATEGORY BANNER ================= --}}
 <section class="category-banner mb-3">
     <h1 class="fw-bold text-uppercase">{{ $category->name }}</h1>
 </section>
@@ -17,14 +16,9 @@
 <div class="container">
     <div class="row">
 
-        {{-- ================= SIDEBAR ================= --}}
         <aside class="col-md-3 mb-4">
             <form method="GET" class="sidebar-box">
-
-                {{-- GIỮ SORT --}}
                 <input type="hidden" name="sort" value="{{ request('sort') }}">
-
-                {{-- CATEGORY --}}
                 @foreach($allCategories as $parent)
                     <div class="accordion-item {{ $parent->children->pluck('id')->contains($category->id) ? 'active' : '' }}">
                         <button type="button" class="accordion-header">
@@ -46,7 +40,6 @@
                     </div>
                 @endforeach
 
-                {{-- PRICE --}}
                 <div class="sidebar-section">
                     <div class="sidebar-title">Khoảng giá</div>
 
@@ -73,7 +66,6 @@
                     </label>
                 </div>
 
-                {{-- BRAND --}}
                 @if($brands->count())
                     <div class="sidebar-section">
                         <div class="sidebar-title">Thương hiệu</div>
@@ -97,10 +89,8 @@
             </form>
         </aside>
 
-        {{-- ================= PRODUCTS ================= --}}
         <section class="col-md-9">
 
-            {{-- ===== TOOLBAR ===== --}}
             <div class="product-toolbar mb-4">
                 <div class="toolbar-left">
                     <span class="toolbar-label">Sắp xếp:</span>
@@ -136,7 +126,6 @@
                     </a>
                 </div>
 
-                {{-- LIMIT --}}
                 <div class="toolbar-right">
                     <form method="GET">
                         @foreach(request()->except('limit') as $key => $value)
@@ -158,7 +147,6 @@
                 </div>
             </div>
 
-            {{-- ===== PRODUCT GRID ===== --}}
             <div class="row g-4">
                 @forelse($products as $product)
                     <div class="col-lg-4 col-md-6">
@@ -171,7 +159,6 @@
                 @endforelse
             </div>
 
-            {{-- ===== PAGINATION ===== --}}
             <div class="mt-4">
                 {{ $products->links('vendor.pagination.custom-blue') }}
             </div>

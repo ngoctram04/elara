@@ -31,7 +31,6 @@
 
             <div class="row">
 
-                {{-- Tên --}}
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Tên voucher</label>
                     <input type="text"
@@ -41,7 +40,6 @@
                            required>
                 </div>
 
-                {{-- Điểm --}}
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Số điểm cần</label>
                     <input type="number"
@@ -52,7 +50,6 @@
                            required>
                 </div>
 
-                {{-- Hạng thành viên --}}
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Hạng thành viên áp dụng</label>
                     <select name="member_level" class="form-select" required>
@@ -64,7 +61,6 @@
                     </select>
                 </div>
 
-                {{-- Loại giảm --}}
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Loại giảm</label>
                     <select name="discount_type" class="form-select">
@@ -77,7 +73,6 @@
                     </select>
                 </div>
 
-                {{-- Giá trị --}}
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Giá trị giảm</label>
                     <input type="number"
@@ -88,7 +83,6 @@
                            required>
                 </div>
 
-                {{-- Đơn tối thiểu --}}
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Đơn tối thiểu</label>
                     <input type="number"
@@ -98,7 +92,6 @@
                            min="0">
                 </div>
 
-                {{-- Giảm tối đa --}}
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Giảm tối đa</label>
                     <input type="number"
@@ -108,7 +101,6 @@
                            min="0">
                 </div>
 
-                {{-- Ngày hiệu lực --}}
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Số ngày hiệu lực sau khi đổi</label>
                     <input type="number"
@@ -119,7 +111,6 @@
                            required>
                 </div>
 
-                {{-- Bắt đầu --}}
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Bắt đầu cho đổi</label>
                     <input type="datetime-local"
@@ -128,7 +119,6 @@
                            value="{{ old('redeem_start_at', $reward->redeem_start_at ? $reward->redeem_start_at->format('Y-m-d\TH:i') : '') }}">
                 </div>
 
-                {{-- Kết thúc --}}
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Kết thúc cho đổi</label>
                     <input type="datetime-local"

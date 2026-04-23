@@ -12,14 +12,7 @@ $isFavorited = in_array($product->id, $favorites ?? []);
 
 $saleVariant = $variants->first(fn ($v) => $v->is_on_sale);
 
-/*
-|--------------------------------------------------------------------------
-| TÍNH GIÁ KIỂU SHOPEE
-|--------------------------------------------------------------------------
-| - final_prices: giá bán thực tế (sau giảm nếu có)
-| - original_prices: giá gốc
-| - min/max để hiện khoảng giá
-*/
+
 $finalPrices = $variants
     ->map(fn ($v) => (float) ($v->final_price ?? $v->price ?? 0))
     ->filter(fn ($price) => $price > 0)
@@ -41,11 +34,7 @@ $maxOriginalPrice = $originalPrices->last();
 $hasPriceRange = $minFinalPrice && $maxFinalPrice && $minFinalPrice != $maxFinalPrice;
 $hasSalePrice = $saleVariant && $minOriginalPrice > $minFinalPrice;
 
-/*
-|--------------------------------------------------------------------------
-| FORMAT GIÁ
-|--------------------------------------------------------------------------
-*/
+
 $finalPriceText = $hasPriceRange
     ? number_format($minFinalPrice, 0, ',', '.') . 'đ - ' . number_format($maxFinalPrice, 0, ',', '.') . 'đ'
     : number_format($minFinalPrice, 0, ',', '.') . 'đ';
@@ -64,21 +53,18 @@ if ($hasSalePrice) {
 
     <div class="category-image position-relative">
 
-        {{-- SALE --}}
         @if ($saleVariant)
             <span class="category-badge">
                 {{ $saleVariant->discount_label }}
             </span>
         @endif
 
-        {{-- HẾT HÀNG --}}
         @if ($outOfStock)
             <span class="category-badge bg-secondary">
                 Hết hàng
             </span>
         @endif
 
-        {{-- ❤️ --}}
         <button type="button"
                 class="wishlist-btn btn-wishlist"
                 data-product-id="{{ $product->id }}">
@@ -91,13 +77,11 @@ if ($hasSalePrice) {
 
         <div class="category-overlay">
 
-            {{-- VIEW --}}
             <button type="button"
                     class="category-icon left js-go-detail">
                 <i class="bi bi-eye"></i>
             </button>
 
-            {{-- BUY --}}
             <button
                 type="button"
                 class="category-buy btn-buy-now"
@@ -107,7 +91,6 @@ if ($hasSalePrice) {
                 Mua ngay
             </button>
 
-            {{-- CART --}}
             <button
                 type="button"
                 class="category-icon right btn-add-to-cart"

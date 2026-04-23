@@ -13,7 +13,6 @@
 
 <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff; border-radius:8px; overflow:hidden;">
 
-{{-- HEADER --}}
 <tr>
 <td style="background:#111827; padding:25px 30px; text-align:center;">
 <h2 style="color:#ffffff; margin:0; font-weight:600; letter-spacing:1px;">
@@ -27,7 +26,6 @@ ELARA
 </tr>
 
 
-{{-- GREETING --}}
 <tr>
 <td style="padding:30px;">
 <p style="margin:0 0 10px 0; font-size:16px;">
@@ -44,7 +42,6 @@ Cảm ơn bạn đã mua sắm tại <strong>ELARA</strong>.
 </tr>
 
 
-{{-- ORDER INFO --}}
 <tr>
 <td style="padding:0 30px 20px 30px;">
 
@@ -69,7 +66,6 @@ Cảm ơn bạn đã mua sắm tại <strong>ELARA</strong>.
 </tr>
 
 
-{{-- PRODUCT TABLE --}}
 <tr>
 <td style="padding:0 30px 30px 30px;">
 
@@ -166,7 +162,6 @@ Không có sản phẩm trong đơn hàng.
 </tr>
 
 
-{{-- TOTAL --}}
 <tr>
 <td style="padding:0 30px 30px 30px;">
 
@@ -188,7 +183,6 @@ Không có sản phẩm trong đơn hàng.
 </tr>
 
 
-{{-- CONFIRM RECEIVE MESSAGE --}}
 <tr>
 <td style="padding:0 30px 20px 30px;">
 
@@ -201,7 +195,6 @@ và nhấn nút <strong>"Đã nhận hàng"</strong> để xác nhận hoàn t�
 </tr>
 
 
-{{-- BUTTON --}}
 <tr>
 <td style="padding:0 30px 40px 30px; text-align:center;">
 
@@ -222,8 +215,6 @@ Xem lịch sử đơn hàng
 </td>
 </tr>
 
-
-{{-- FOOTER --}}
 <tr>
 <td style="background:#f3f4f6; padding:20px 30px; text-align:center; font-size:12px; color:#6b7280;">
 

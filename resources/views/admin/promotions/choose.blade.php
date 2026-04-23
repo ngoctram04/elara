@@ -7,7 +7,6 @@
 <div class="card border-0 shadow-sm">
 <div class="card-body">
 
-{{-- HEADER --}}
 
 <div class="d-flex justify-content-between align-items-center mb-4">
 
@@ -33,7 +32,6 @@ Quay lại
 
 <div class="row g-4">
 
-{{-- Khuyến mãi sản phẩm --}}
 
 <div class="col-md-6">
 
@@ -58,7 +56,6 @@ Khuyến mãi sản phẩm
 
 </div>
 
-{{-- Khuyến mãi đơn hàng --}}
 
 <div class="col-md-6">
 

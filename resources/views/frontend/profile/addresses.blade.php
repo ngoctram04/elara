@@ -297,12 +297,10 @@
 <div class="address-page">
     <div class="container py-4">
         <div class="row">
-            {{-- SIDEBAR --}}
             @include('frontend.partials.account-sidebar')
 
-            {{-- CONTENT --}}
             <div class="col-md-9">
-                {{-- DANH SÁCH --}}
+
                 <div class="address-main-card mb-4">
                     <div class="address-card-header">
                         <h5>Danh sách địa chỉ</h5>
@@ -333,7 +331,6 @@
 
                                     <div class="col-md-5 mt-3 mt-md-0">
                                         <div class="address-actions">
-                                            {{-- Sửa --}}
                                             <button type="button"
                                                     class="btn btn-address btn-soft-secondary"
                                                     onclick="openEditModal(
@@ -350,7 +347,6 @@
                                                 Sửa
                                             </button>
 
-                                            {{-- Đặt mặc định --}}
                                             @if(!$address->is_default)
                                                 <form action="{{ route('addresses.default', $address->id) }}" method="POST">
                                                     @csrf
@@ -361,7 +357,6 @@
                                                 </form>
                                             @endif
 
-                                            {{-- Xóa --}}
                                             <button type="button"
                                                     class="btn btn-address btn-soft-danger"
                                                     onclick="openDeleteModal('{{ route('addresses.destroy', $address->id) }}')">
@@ -382,7 +377,6 @@
                     </div>
                 </div>
 
-                {{-- FORM THÊM --}}
                 <div class="address-form-card">
                     <div class="address-card-header">
                         <h5 class="form-title">Thêm địa chỉ mới</h5>
@@ -474,7 +468,6 @@
     </div>
 </div>
 
-{{-- MODAL XÓA --}}
 <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content address-modal">
@@ -507,7 +500,6 @@
     </div>
 </div>
 
-{{-- MODAL SỬA --}}
 <div class="modal fade" id="editAddressModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content address-modal">

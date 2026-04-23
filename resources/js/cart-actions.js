@@ -127,7 +127,6 @@ document.addEventListener('click', function (e) {
 
                 toast(data.message || 'Đã thêm vào giỏ', 'success');
 
-                // Update badge
                 const badge =
                     document.querySelector('.cart-count') ||
                     document.querySelector('.cart-badge');
@@ -136,7 +135,6 @@ document.addEventListener('click', function (e) {
                     badge.innerText = data.cart_count;
                 }
 
-                // Nếu đang ở trang cart → reload
                 if (isCartPage()) {
                     setTimeout(() => location.reload(), 600);
                 }
@@ -156,9 +154,6 @@ document.addEventListener('click', function (e) {
     }
 
 
-    /* =====================================================
-       BUY NOW (AJAX)
-    ===================================================== */
     const buyBtn = e.target.closest('.btn-buy-now');
     if (buyBtn) {
 

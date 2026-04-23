@@ -6,7 +6,6 @@
 <div class="card border-0 shadow-sm">
     <div class="card-body">
 
-        {{-- HEADER --}}
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h5 class="fw-bold mb-1">Danh sách sản phẩm</h5>
@@ -19,7 +18,6 @@
             </a>
         </div>
 
-        {{-- FILTER --}}
         <form class="mb-4" method="GET">
             <div class="d-flex flex-wrap gap-2 align-items-center">
 
@@ -82,7 +80,6 @@
             </div>
         </form>
 
-        {{-- TABLE --}}
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light text-center">
@@ -166,7 +163,6 @@
                                 </div>
                             </td>
 
-                            {{-- GIÁ --}}
                             <td class="text-end">
                                 @if($originMin)
                                     @if($hasPromotion)
@@ -203,7 +199,6 @@
                                 {{ $product->category?->name ?? '---' }}
                             </td>
 
-                            {{-- KHO --}}
                             <td class="text-center">
                                 <div class="fw-semibold">
                                     Tồn: {{ $product->total_stock ?? 0 }}
@@ -213,7 +208,6 @@
                                 </div>
                             </td>
 
-                            {{-- TÌNH TRẠNG --}}
                             <td class="text-center">
                                 <div class="fw-semibold">
     @if(($product->total_stock ?? 0) > 0)
@@ -283,7 +277,6 @@
             </table>
         </div>
 
-        {{-- PAGINATION --}}
         <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
             <small class="text-muted">
                 @if($products->total() > 0)

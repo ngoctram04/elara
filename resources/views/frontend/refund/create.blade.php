@@ -53,17 +53,6 @@
                         $oldCondition = old("item_conditions.{$item->id}", 'sealed');
                         $oldNote = old("item_notes.{$item->id}");
 
-                        /*
-                        |--------------------------------------------------------------------------
-                        | TÊN BIẾN THỂ HIỂN THỊ CHO KHÁCH
-                        |--------------------------------------------------------------------------
-                        | Ưu tiên lấy các field phổ biến:
-                        | - variant_name / name
-                        | - attribute_value / value
-                        | - attribute_name + attribute_value
-                        | - option1/option2/option3
-                        | - dung tích / màu / size nếu có
-                        */
                         $variantDisplay = null;
 
                         if ($variant) {

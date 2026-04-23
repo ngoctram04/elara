@@ -11,7 +11,6 @@
 
 <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff; border-radius:8px; overflow:hidden;">
 
-    {{-- HEADER --}}
     <tr>
         <td style="background:#111827; padding:25px 30px; text-align:center;">
             <h2 style="color:#ffffff; margin:0; font-weight:600; letter-spacing:1px;">
@@ -30,7 +29,6 @@
         </td>
     </tr>
 
-    {{-- GREETING --}}
     <tr>
         <td style="padding:30px;">
             @if($forAdmin)
@@ -48,8 +46,6 @@
             @endif
         </td>
     </tr>
-
-    {{-- ORDER INFO --}}
     <tr>
         <td style="padding:0 30px 20px 30px;">
             <table width="100%" cellpadding="8" cellspacing="0" style="background:#f9fafb; border-radius:6px;">
@@ -71,7 +67,6 @@
         </td>
     </tr>
 
-    {{-- PRODUCT TABLE --}}
     <tr>
         <td style="padding:0 30px 30px 30px;">
 
@@ -151,7 +146,6 @@
         </td>
     </tr>
 
-    {{-- TOTAL --}}
     <tr>
         <td style="padding:0 30px 30px 30px;">
 
@@ -169,7 +163,6 @@
         </td>
     </tr>
 
-    {{-- FOOTER --}}
     <tr>
         <td style="background:#f3f4f6; padding:20px 30px; text-align:center; font-size:12px; color:#6b7280;">
             © {{ date('Y') }} ELARA. All rights reserved.

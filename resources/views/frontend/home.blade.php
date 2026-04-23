@@ -6,9 +6,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
 
 <style>
-    /* ===============================
-       BRAND / CATEGORY NAME OVERLAY
-    =============================== */
+
     .brand-card,
     .home-category-card {
         display: block;
@@ -55,7 +53,6 @@
 @section('content')
 <div class="page-wrapper home-page">
 
-    {{-- ================= BANNER ================= --}}
     <section class="home-banner mb-4">
         <div id="homeBanner"
              class="carousel slide carousel-fade rounded-4 overflow-hidden"
@@ -93,7 +90,6 @@
         </div>
     </section>
 
-    {{-- ================= FLASH SALE ================= --}}
     @if(isset($flashSaleProducts) && $flashSaleProducts->count())
         <section class="flash-sale-section home-block mb-4"
                  data-countdown-end="{{ $flashSaleEndTime ? \Carbon\Carbon::parse($flashSaleEndTime)->timestamp * 1000 : '' }}">
@@ -140,8 +136,6 @@
             </div>
         </section>
     @endif
-
-    {{-- ================= BRANDS ================= --}}
     @if(isset($brands) && $brands->count())
         <section class="home-section brand-section mb-4">
             <div class="swiper brand-slider small-slider">
@@ -169,8 +163,6 @@
             </div>
         </section>
     @endif
-
-    {{-- ================= FEATURED PRODUCTS ================= --}}
     @if(isset($featuredProducts) && $featuredProducts->count())
         <section class="home-section mb-4">
             <div class="section-head">
@@ -197,8 +189,6 @@
             </div>
         </section>
     @endif
-
-    {{-- ================= CATEGORIES ================= --}}
     @if(isset($categories) && $categories->count())
         <section class="home-section category-section mb-4">
             <div class="swiper category-slider small-slider">
@@ -234,8 +224,6 @@
             </div>
         </section>
     @endif
-
-    {{-- ================= LATEST PRODUCTS ================= --}}
     @if(isset($latestProducts) && $latestProducts->count())
         <section class="home-section mb-4">
             <div class="section-head">
@@ -262,8 +250,6 @@
             </div>
         </section>
     @endif
-
-    {{-- ================= BLOG ================= --}}
     @if(isset($blogs) && $blogs->count())
         @php
             $mainBlog = $blogs->first();
@@ -301,7 +287,6 @@
 
     <div class="row g-4 blog-layout align-items-stretch">
 
-        {{-- BLOG CHÍNH --}}
         @if($mainBlog)
             <div class="col-lg-7 d-flex">
                 <article class="blog-feature-card w-100 h-100">
@@ -357,7 +342,6 @@
         @endif
 
 
-        {{-- BLOG PHỤ --}}
         <div class="col-lg-5 d-flex">
             <div class="blog-side-list w-100 h-100">
 

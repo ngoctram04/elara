@@ -6,8 +6,6 @@
 <div class="container-fluid">
     <div class="card border-0 shadow-sm rounded-4">
         <div class="card-body p-4">
-
-            {{-- HEADER --}}
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
                 <div>
                     <h4 class="fw-bold mb-1">Chi tiết sản phẩm</h4>
@@ -142,7 +140,6 @@
                 </div>
             </div>
 
-            {{-- VARIANTS --}}
             <div class="border rounded-4 p-4">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h5 class="fw-bold text-primary mb-0">
@@ -290,7 +287,6 @@
     </div>
 </div>
 
-{{-- MODAL CHI TIẾT LÔ --}}
 @foreach($product->variants as $variant)
     @php
         $salePrice = ($variant->final_price ?? $variant->price) < $variant->price

@@ -6,8 +6,6 @@
 <div class="container-fluid">
     <div class="card border-0 shadow-sm rounded-4">
         <div class="card-body p-4">
-
-            {{-- HEADER --}}
             <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
                 <div>
                     <h4 class="fw-bold mb-1">Lịch sử nhập kho</h4>
@@ -23,7 +21,6 @@
                 </a>
             </div>
 
-            {{-- FILTER --}}
             <div class="border rounded-4 p-3 bg-light-subtle mb-4">
                 <form method="GET" class="row g-3 align-items-end">
 
@@ -73,7 +70,6 @@
                 </form>
             </div>
 
-            {{-- TABLE --}}
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
@@ -135,7 +131,6 @@
                 </table>
             </div>
 
-            {{-- PAGINATION --}}
             <div class="mt-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <small class="text-muted">
                     @if($imports->total() > 0)

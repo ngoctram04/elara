@@ -14,7 +14,6 @@
                 </div>
             </div>
 
-            {{-- ALERT --}}
             @if($errors->any())
                 <div class="alert alert-danger customer-alert">
                     <ul class="mb-0 ps-3">
@@ -25,7 +24,6 @@
                 </div>
             @endif
 
-            {{-- FILTER --}}
             <form method="GET" class="filter-box mb-3">
                 <div class="row g-2">
                     <div class="col-12 col-md-4 col-lg-4">
@@ -72,7 +70,6 @@
                 </div>
             </form>
 
-            {{-- TABLE --}}
             <div class="table-responsive customer-table-wrap">
                 <table class="table customer-table align-middle mb-0">
                     <thead>
@@ -104,7 +101,6 @@
 
                                 <td class="text-muted">{{ $customer->email }}</td>
 
-                                {{-- HẠNG THÀNH VIÊN --}}
                                 <td>
                                     @switch($customer->member_level)
                                         @case('bronze')
@@ -128,7 +124,6 @@
                                     @endswitch
                                 </td>
 
-                                {{-- TỔNG CHI TIÊU --}}
                                 <td class="text-nowrap">
                                     {{ number_format($customer->spending ?? 0, 0, ',', '.') }} ₫
                                 </td>
@@ -137,12 +132,10 @@
                                     {{ number_format($customer->yearly_spending ?? 0, 0, ',', '.') }} ₫
                                 </td>
 
-                                {{-- ĐIỂM --}}
                                 <td>
                                     {{ number_format($customer->loyalty_points ?? 0, 0, ',', '.') }}
                                 </td>
 
-                                {{-- TRẠNG THÁI --}}
                                 <td>
                                     @if($customer->is_active)
                                         <span class="badge rounded-pill bg-success-subtle text-success-emphasis border badge-status">
@@ -155,7 +148,6 @@
                                     @endif
                                 </td>
 
-                                {{-- CẢNH BÁO --}}
                                 <td>
                                     @if($customer->cancel_count >= 5)
                                         <span class="badge bg-danger-subtle text-danger-emphasis border badge-warning">
@@ -170,7 +162,6 @@
                                     @endif
                                 </td>
 
-                                {{-- CHI TIẾT --}}
                                 <td class="text-center">
                                     <a
                                         href="{{ route('admin.customers.show', $customer) }}"
@@ -180,7 +171,6 @@
                                     </a>
                                 </td>
 
-                                {{-- THAO TÁC --}}
                                 <td class="text-center">
                                     @if($customer->is_active)
                                         <button
@@ -191,7 +181,6 @@
                                             Khóa
                                         </button>
 
-                                        {{-- MODAL --}}
                                         <div class="modal fade" id="blockModal{{ $customer->id }}" tabindex="-1" aria-hidden="true">
                                             <div class="modal-dialog modal-dialog-centered">
                                                 <form
@@ -272,7 +261,6 @@
                 </table>
             </div>
 
-            {{-- PAGINATION --}}
             <div class="mt-3 customer-pagination">
                 {{ $customers->links() }}
             </div>

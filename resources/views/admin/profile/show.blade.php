@@ -214,7 +214,6 @@
     <div class="card shadow-sm border-0 profile-card">
         <div class="card-body p-3 p-md-4">
 
-            {{-- HEADER --}}
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                 <div>
                     <h5 class="profile-main-title mb-1">Thông tin cá nhân</h5>
@@ -268,11 +267,9 @@
 
             <hr class="profile-divider">
 
-            {{-- THÔNG TIN CHI TIẾT --}}
             <h6 class="profile-section-title">Thông tin chi tiết</h6>
 
             <div class="row g-3">
-                {{-- SĐT --}}
                 <div class="col-md-6">
                     <div class="profile-info-box">
                         <div class="profile-info-label">
@@ -284,7 +281,6 @@
                     </div>
                 </div>
 
-                {{-- Ngày tạo --}}
                 <div class="col-md-6">
                     <div class="profile-info-box">
                         <div class="profile-info-label">
@@ -296,7 +292,6 @@
                     </div>
                 </div>
 
-                {{-- Ngày sinh --}}
                 <div class="col-md-6">
                     <div class="profile-info-box">
                         <div class="profile-info-label">
@@ -314,8 +309,6 @@
                         </div>
                     </div>
                 </div>
-
-                {{-- Giới tính --}}
                 <div class="col-md-6">
                     <div class="profile-info-box">
                         <div class="profile-info-label">

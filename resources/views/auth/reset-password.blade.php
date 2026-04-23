@@ -196,10 +196,8 @@
             <form method="POST" action="{{ route('password.store') }}">
                 @csrf
 
-                {{-- Token --}}
                 <input type="hidden" name="token" value="{{ $request->route('token') }}">
 
-                {{-- Email --}}
                 <div class="auth-form-group">
                     <label for="email" class="auth-label">Email</label>
                     <input
@@ -215,7 +213,6 @@
                     <x-input-error :messages="$errors->get('email')" class="auth-error" />
                 </div>
 
-                {{-- Mật khẩu mới --}}
                 <div class="auth-form-group">
                     <label for="password" class="auth-label">Mật khẩu mới</label>
 
@@ -242,8 +239,6 @@
 
                     <x-input-error :messages="$errors->get('password')" class="auth-error" />
                 </div>
-
-                {{-- Xác nhận mật khẩu --}}
                 <div class="auth-form-group">
                     <label for="password_confirmation" class="auth-label">Xác nhận mật khẩu</label>
 
@@ -271,7 +266,6 @@
                     <x-input-error :messages="$errors->get('password_confirmation')" class="auth-error" />
                 </div>
 
-                {{-- Button --}}
                 <div class="mt-2">
                     <button type="submit" class="auth-btn">
                         <i class="bi bi-arrow-repeat"></i>

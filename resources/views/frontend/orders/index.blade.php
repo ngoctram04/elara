@@ -14,7 +14,6 @@ body{
     color:#334155;
 }
 
-/* PAGE */
 .order-history-page{
     max-width: 1120px;
     margin: 0 auto;
@@ -27,7 +26,6 @@ body{
     margin-bottom:16px;
 }
 
-/* FILTER */
 .order-filter-card{
     background:#fff;
     border:1px solid #e8eef5;
@@ -107,7 +105,6 @@ body{
     border-color:#bfdbfe;
 }
 
-/* ORDER CARD */
 .order-box{
     background:#fff;
     border:1px solid #e8eef5;
@@ -153,7 +150,6 @@ body{
     color:#dc2626 !important;
 }
 
-/* updated badge */
 .order-updated-badge{
     display:inline-flex;
     align-items:center;
@@ -175,7 +171,6 @@ body{
     border-color:#bbf7d0;
 }
 
-/* status */
 .order-status{
     display:flex;
     align-items:center;
@@ -220,7 +215,6 @@ body{
     border-color:#fecaca;
 }
 
-/* item */
 .order-item{
     display:flex;
     gap:14px;
@@ -292,7 +286,6 @@ body{
     white-space:nowrap;
 }
 
-/* expand */
 .order-expand-wrap{
     border-bottom:1px solid #f1f5f9;
     padding:4px 0 8px;
@@ -315,7 +308,6 @@ body{
     text-decoration:underline;
 }
 
-/* footer */
 .order-footer{
     padding:14px 16px 16px;
     border-top:1px solid #edf2f7;
@@ -393,7 +385,6 @@ body{
     font-weight:500;
 }
 
-/* empty */
 .order-empty{
     background:#fff;
     border:1px dashed #cbd5e1;
@@ -404,12 +395,10 @@ body{
     text-align:center;
 }
 
-/* pagination spacing */
 .pagination{
     margin-bottom:0;
 }
 
-/* mobile */
 @media (max-width: 767.98px){
     .order-header{
         flex-direction:column;

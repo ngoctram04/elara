@@ -12,7 +12,6 @@
 
     <div class="card-body">
 
-        {{-- ERROR --}}
         @if ($errors->any())
             <div class="alert alert-danger">
                 <ul class="mb-0">
@@ -27,7 +26,6 @@
 
         <div class="row g-3">
 
-            {{-- NAME --}}
             <div class="col-md-6">
                 <label class="form-label">Tên chương trình</label>
                 <input
@@ -40,7 +38,6 @@
                 >
             </div>
 
-            {{-- CODE --}}
             <div class="col-md-6">
                 <label class="form-label">Mã giảm giá</label>
                 <input
@@ -56,10 +53,8 @@
                 </small>
             </div>
 
-            {{-- DISCOUNT TYPE (hidden, fixed percent) --}}
 <input type="hidden" name="discount_type" value="percent">
 
-{{-- DISCOUNT VALUE --}}
 <div class="col-md-6">
     <label class="form-label">Giá trị giảm (%)</label>
     <input
@@ -78,7 +73,6 @@
 </div>
 
 
-            {{-- MIN ORDER --}}
             <div class="col-md-6">
                 <label class="form-label">Đơn hàng tối thiểu</label>
                 <input
@@ -91,7 +85,6 @@
                 >
             </div>
 
-            {{-- MAX DISCOUNT --}}
             <div class="col-md-6">
                 <label class="form-label">Giảm tối đa</label>
                 <input
@@ -104,7 +97,6 @@
                 >
             </div>
 
-            {{-- USAGE LIMIT --}}
             <div class="col-md-6">
                 <label class="form-label">Số lượt sử dụng</label>
                 <input
@@ -117,7 +109,6 @@
                 >
             </div>
 
-            {{-- DATE --}}
             <div class="col-md-6">
                 <label class="form-label">Thời gian áp dụng</label>
                 <div class="d-flex gap-2">
@@ -138,7 +129,6 @@
                 </div>
             </div>
 
-            {{-- ACTIVE --}}
             <div class="col-12">
                 <label class="form-check-label">
                     <input
@@ -155,7 +145,6 @@
         </div>
     </div>
 
-    {{-- FOOTER --}}
     <div class="card-footer text-end">
         <a href="{{ route('admin.promotions.index') }}"
            class="btn btn-light">
@@ -169,7 +158,6 @@
 
 </form>
 
-{{-- AUTO UPPERCASE CODE --}}
 <script>
     document.querySelector('input[name="code"]')
         ?.addEventListener('input', function () {

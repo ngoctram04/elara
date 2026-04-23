@@ -74,11 +74,9 @@ $birthdayDiscount = $birthdayDiscount ?? 0;
 
 <div class="row g-4">
 
-{{-- LEFT --}}
 
 <div class="col-lg-7">
 
-    {{-- ĐỊA CHỈ NHẬN HÀNG --}}
     <div class="checkout-card p-4 mb-3">
         <h6 class="fw-bold mb-3">Địa chỉ nhận hàng</h6>
 
@@ -108,7 +106,6 @@ $birthdayDiscount = $birthdayDiscount ?? 0;
             </a>
         </div>
 
-        {{-- gửi về server --}}
         <input type="hidden"
                name="address_id"
                id="selected-address-id"
@@ -122,8 +119,6 @@ $birthdayDiscount = $birthdayDiscount ?? 0;
         @endif
     </div>
 
-
-    {{-- PHƯƠNG THỨC THANH TOÁN --}}
     <div class="checkout-card p-4 mb-3">
         <h6 class="fw-bold mb-3">Phương thức thanh toán</h6>
 
@@ -142,8 +137,6 @@ $birthdayDiscount = $birthdayDiscount ?? 0;
         </label>
     </div>
 
-
-    {{-- GHI CHÚ --}}
     <div class="checkout-card p-4">
         <h6 class="fw-bold mb-2">Ghi chú</h6>
         <textarea name="note"
@@ -154,7 +147,6 @@ $birthdayDiscount = $birthdayDiscount ?? 0;
 
 </div>
 
-{{-- RIGHT --}}
 
 <div class="col-lg-5">
 <div class="checkout-card p-4 order-sticky">
@@ -200,7 +192,7 @@ $imageUrl = $image ? asset('storage/'.$image) : asset('images/no-image.png');
 
 @php
 $promotionDiscount = $discount ?? 0;
-$birthdayDiscount = $birthdayDiscount ?? 0; // dùng từ controller
+$birthdayDiscount = $birthdayDiscount ?? 0; 
 $totalDiscount = $promotionDiscount + $birthdayDiscount;
 @endphp
 @if($birthdayDiscount > 0)
@@ -306,9 +298,7 @@ $totalDiscount = $promotionDiscount + $birthdayDiscount;
 const memberLevel = "{{ auth()->user()->member_level ?? 'bronze' }}";
 </script>
 <script>
-// =============================
-// 1. CHỌN PAYMENT
-// =============================
+
 document.querySelectorAll('.payment-option').forEach(option=>{
     option.addEventListener('click',()=>{
         document.querySelectorAll('.payment-option')
@@ -319,29 +309,20 @@ document.querySelectorAll('.payment-option').forEach(option=>{
     });
 });
 
-
-// =============================
-// 2. BIẾN GIÁ TRỊ
-// =============================
 const subtotal = {{ $subtotal }};
 const promotionDiscount = {{ $discount }};
 const birthdayDiscount = {{ $birthdayDiscount }};
 
-// QUAN TRỌNG: dùng total từ server
 const totalWithoutShip = {{ $total }};
 
 let serverShipping = {{ $shippingFee }};
 
 
-// =============================
-// 3. HÀM TÍNH SHIP
-// =============================
 function calculateShipping(province){
 
     province = province.toLowerCase();
     let shipping = 35000;
 
-    // 1. Ship theo khu vực
     if(province.includes('vĩnh long')){
         shipping = 15000;
     }
@@ -359,9 +340,6 @@ function calculateShipping(province){
             }
         }
     }
-
-    // 2. Freeship theo hạng (DỰA TRÊN TOTAL TỪ SERVER)
-    // 2. Freeship theo hạng
 if(memberLevel === 'diamond'){
     shipping = 0;
 }
@@ -369,10 +347,8 @@ else if(memberLevel === 'gold' && totalWithoutShip >= 300000){
     shipping = 0;
 }
 
-    // 3. Tính tổng
     let grandTotal = totalWithoutShip + shipping;
 
-    // 4. Hiển thị
     let shippingText = shipping === 0
         ? 'Miễn phí'
         : new Intl.NumberFormat('vi-VN').format(shipping) + 'đ';
@@ -384,9 +360,6 @@ else if(memberLevel === 'gold' && totalWithoutShip >= 300000){
 }
 
 
-// =============================
-// 4. CHỌN ĐỊA CHỈ TRONG MODAL
-// =============================
 document.querySelectorAll('.address-option').forEach(item=>{
     item.addEventListener('click', function(){
 
@@ -396,10 +369,8 @@ document.querySelectorAll('.address-option').forEach(item=>{
         let full = this.dataset.full;
         let province = this.dataset.province;
 
-        // cập nhật hidden input
         document.getElementById('selected-address-id').value = id;
 
-        // cập nhật hiển thị
         document.getElementById('selected-address-info').innerHTML = `
             <div class="fw-semibold">
                 ${name} (${phone})
@@ -409,10 +380,8 @@ document.querySelectorAll('.address-option').forEach(item=>{
             </div>
         `;
 
-        // tính lại ship
         calculateShipping(province);
 
-        // đóng modal
         let modal = bootstrap.Modal.getInstance(
             document.getElementById('changeAddressModal')
         );
@@ -420,13 +389,8 @@ document.querySelectorAll('.address-option').forEach(item=>{
     });
 });
 
-
-// =============================
-// 5. TÍNH SHIP NGAY KHI LOAD
-// =============================
 window.addEventListener('load', function(){
 
-    // lấy address đang được chọn (mặc định)
     let selectedId = document.getElementById('selected-address-id').value;
 
     let defaultAddress = document.querySelector(

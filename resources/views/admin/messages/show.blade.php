@@ -25,7 +25,6 @@ Trao đổi tin nhắn với khách hàng
 
 <div class="chat-wrapper">
 
-{{-- CHAT BODY --}}
 
 <div id="chat-box" class="chat-body">
 
@@ -84,7 +83,6 @@ $isAdmin = $msg->sender_id == auth()->id();
 </div>
 
 
-{{-- INPUT --}}
 
 <div class="chat-footer">
 
@@ -165,7 +163,6 @@ border-radius:10px;
 overflow:hidden;
 }
 
-/* chat body */
 
 .chat-body{
 height:480px;
@@ -176,8 +173,6 @@ display:flex;
 flex-direction:column;
 gap:14px;
 }
-
-/* message row */
 
 .message-row{
 display:flex;
@@ -190,7 +185,6 @@ margin-left:auto;
 flex-direction:row-reverse;
 }
 
-/* avatar */
 
 .avatar{
 width:36px;
@@ -204,14 +198,12 @@ font-size:16px;
 color:#555;
 }
 
-/* content */
 
 .message-content{
 display:flex;
 flex-direction:column;
 }
 
-/* sender */
 
 .sender{
 font-size:12px;
@@ -219,7 +211,6 @@ color:#777;
 margin-bottom:3px;
 }
 
-/* bubble */
 
 .bubble{
 padding:10px 14px;
@@ -240,7 +231,6 @@ color:white;
 border-bottom-right-radius:4px;
 }
 
-/* image */
 
 .bubble img{
 max-width:220px;
@@ -248,15 +238,11 @@ border-radius:8px;
 cursor:pointer;
 }
 
-/* time */
-
 .time{
 font-size:11px;
 color:#999;
 margin-top:2px;
 }
-
-/* footer */
 
 .chat-footer{
 border-top:1px solid #eee;
@@ -264,7 +250,6 @@ background:white;
 padding:10px 15px;
 }
 
-/* input */
 
 .chat-input{
 display:flex;
@@ -281,7 +266,6 @@ outline:none;
 font-size:14px;
 }
 
-/* send button */
 
 .chat-input button{
 background:#2563eb;
@@ -295,7 +279,6 @@ align-items:center;
 justify-content:center;
 }
 
-/* file button */
 
 .file-btn{
 font-size:20px;
@@ -307,7 +290,6 @@ color:#555;
 display:none;
 }
 
-/* scrollbar */
 
 .chat-body::-webkit-scrollbar{
 width:6px;

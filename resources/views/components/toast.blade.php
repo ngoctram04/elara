@@ -1,4 +1,3 @@
-{{-- ================= SESSION TOAST ================= --}}
 @if (session('success') || session('error') || session('warning') || session('info'))
     @php
         $type = session('success') ? 'success'
@@ -49,7 +48,6 @@
     </script>
 @endif
 
-{{-- ================= STYLE ================= --}}
 <style>
 .toast-overlay{
     position: fixed;

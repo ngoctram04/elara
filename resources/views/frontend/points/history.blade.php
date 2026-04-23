@@ -366,13 +366,10 @@
     <div class="container pb-4">
         <div class="row g-4">
 
-            {{-- SIDEBAR --}}
             @include('frontend.partials.account-sidebar')
 
-            {{-- CONTENT --}}
             <div class="col-md-9">
 
-                {{-- HEADER CARD --}}
                 <div class="points-summary-card mb-4">
                     <div class="points-summary-body">
                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
@@ -434,7 +431,6 @@
                     </div>
                 </div>
 
-                {{-- TABLE CARD --}}
                 <div class="points-table-card">
                     <div class="points-table-header">
                         <h5 class="points-table-title">Danh sách giao dịch điểm</h5>

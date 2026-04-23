@@ -6,7 +6,6 @@
 <div class="card border-0 shadow-sm">
     <div class="card-body">
 
-        {{-- HEADER --}}
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h5 class="fw-bold mb-1">Lịch sử thay đổi tồn kho</h5>
@@ -20,7 +19,6 @@
             </span>
         </div>
 
-        {{-- ===================== FILTER ===================== --}}
         <form method="GET" class="row g-2 mb-4 align-items-center">
 
             <div class="col-md-4">
@@ -99,7 +97,6 @@
 
         </form>
 
-        {{-- ===================== TABLE ===================== --}}
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
 
@@ -158,7 +155,6 @@
 
                         <tr>
 
-                            {{-- SẢN PHẨM --}}
                             <td>
                                 <div class="d-flex align-items-center gap-2">
                                     @if($img)
@@ -195,7 +191,6 @@
                                 </div>
                             </td>
 
-                            {{-- BIẾN THỂ --}}
                             <td>
                                 @if($variant)
                                     <div class="fw-semibold">
@@ -210,7 +205,6 @@
                                 @endif
                             </td>
 
-                            {{-- LOẠI --}}
                             <td class="text-center">
                                 <span class="badge {{ $typeClass }}">
                                     @if($typeIcon)
@@ -220,7 +214,6 @@
                                 </span>
                             </td>
 
-                            {{-- THAY ĐỔI --}}
                             <td class="text-center fw-bold">
                                 @if($log->quantity_change > 0)
                                     <span class="text-success">+{{ $log->quantity_change }}</span>
@@ -231,17 +224,14 @@
                                 @endif
                             </td>
 
-                            {{-- TỒN TRƯỚC --}}
                             <td class="text-center text-muted">
                                 {{ $log->stock_before }}
                             </td>
 
-                            {{-- TỒN SAU --}}
                             <td class="text-center fw-semibold">
                                 {{ $log->stock_after }}
                             </td>
 
-                            {{-- THỜI GIAN --}}
                             <td class="text-center text-muted small">
                                 {{ optional($log->created_at)->format('d/m/Y H:i') }}
                             </td>
@@ -260,7 +250,6 @@
             </table>
         </div>
 
-        {{-- ===================== PAGINATION ===================== --}}
         @if($logs->hasPages())
             <div class="mt-4 d-flex justify-content-center">
                 {{ $logs->links('vendor.pagination.custom-blue') }}

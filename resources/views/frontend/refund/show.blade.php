@@ -393,17 +393,6 @@
 
         $orderShippingFee = (float) (optional($refund->order)->shipping_fee ?? 0);
 
-        /*
-        |--------------------------------------------------------------------------
-        | XỬ LÝ HIỂN THỊ PHÍ SHIP
-        |--------------------------------------------------------------------------
-        | 1. Nếu tiền hoàn thực tế nhỏ hơn tiền sản phẩm hoàn
-        |    => có khoản ship bị khấu trừ trực tiếp
-        | 2. Nếu không bị khấu trừ trực tiếp nhưng đơn gốc có ship
-        |    => ship không hoàn
-        | 3. Nếu không có ship thật
-        |    => hiển thị 0đ
-        */
         $shippingDeducted = max(0, $productRefundTotal - $finalRefundTotal);
 
         $shippingLabel = 'Phí vận chuyển đã khấu trừ';

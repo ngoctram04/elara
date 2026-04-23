@@ -285,7 +285,6 @@
 
 <div class="customer-detail-page">
 
-    {{-- ================= KHÁCH HÀNG ================= --}}
     <div class="card shadow-sm border-0 mb-4 customer-card">
         <div class="card-body p-3 p-md-4">
 
@@ -408,7 +407,6 @@
         </div>
     </div>
 
-    {{-- ================= LỊCH SỬ MUA ================= --}}
     <div class="card shadow-sm border-0 mb-4 customer-card">
         <div class="card-body p-3 p-md-4">
 
@@ -507,7 +505,6 @@
         </div>
     </div>
 
-    {{-- ================= ĐÁNH GIÁ ================= --}}
     <div class="card shadow-sm border-0 customer-card">
         <div class="card-body p-3 p-md-4">
 

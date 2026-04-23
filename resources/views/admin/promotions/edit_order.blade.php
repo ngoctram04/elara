@@ -10,12 +10,10 @@
     @csrf
     @method('PUT')
 
-    {{-- 🔒 FIX CỨNG GIẢM THEO % --}}
     <input type="hidden" name="discount_type" value="percent">
 
     <div class="card-body">
 
-        {{-- ERROR --}}
         @if ($errors->any())
             <div class="alert alert-danger">
                 <ul class="mb-0">
@@ -30,7 +28,6 @@
 
         <div class="row g-3">
 
-            {{-- NAME --}}
             <div class="col-md-6">
                 <label class="form-label">Tên chương trình</label>
                 <input
@@ -42,7 +39,6 @@
                 >
             </div>
 
-            {{-- CODE (READ ONLY) --}}
             <div class="col-md-6">
                 <label class="form-label">Mã giảm giá</label>
                 <input
@@ -53,7 +49,6 @@
                 >
             </div>
 
-            {{-- ✅ DISCOUNT VALUE – FIX 10,00 --}}
             <div class="col-md-6">
                 <label class="form-label">Giá trị giảm (%)</label>
                 <input
@@ -71,7 +66,6 @@
                 </small>
             </div>
 
-            {{-- MIN ORDER --}}
             <div class="col-md-6">
                 <label class="form-label">Đơn tối thiểu</label>
                 <input
@@ -83,7 +77,6 @@
                 >
             </div>
 
-            {{-- MAX DISCOUNT --}}
             <div class="col-md-6">
                 <label class="form-label">Giảm tối đa</label>
                 <input
@@ -95,7 +88,6 @@
                 >
             </div>
 
-            {{-- USAGE LIMIT --}}
             <div class="col-md-6">
                 <label class="form-label">Giới hạn lượt dùng</label>
                 <input
@@ -107,7 +99,6 @@
                 >
             </div>
 
-            {{-- DATE --}}
             <div class="col-md-6">
                 <label class="form-label">Thời gian áp dụng</label>
                 <div class="d-flex gap-2">
@@ -128,7 +119,6 @@
                 </div>
             </div>
 
-            {{-- ACTIVE --}}
             <div class="col-12">
                 <label class="form-check-label">
                     <input

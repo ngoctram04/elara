@@ -164,7 +164,6 @@
                     <div class="qa-card">
                         <div class="row">
 
-                            {{-- PRODUCT --}}
                             <div class="col-md-3">
                                 <div class="product-info">
                                     <img
@@ -186,7 +185,6 @@
                                 </div>
                             </div>
 
-                            {{-- QUESTION --}}
                             <div class="col-md-3">
                                 <div class="fw-semibold">
                                     {{ $q->user->name ?? 'User' }}
@@ -250,7 +248,6 @@
                                 </div>
                             </div>
 
-                            {{-- ANSWERS --}}
                             <div class="col-md-6">
                                 @foreach($q->answers as $a)
                                     <div class="answer-box {{ $a->is_admin ? 'answer-admin' : 'answer-user' }}">

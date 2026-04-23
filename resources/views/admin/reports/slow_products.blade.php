@@ -7,7 +7,6 @@
 <div class="card border-0 shadow-sm">
 <div class="card-body">
 
-{{-- HEADER --}}
 <div class="d-flex justify-content-between align-items-center mb-4">
 
 <div>
@@ -31,9 +30,6 @@ Quay lại Dashboard
 
 </div>
 
-
-
-{{-- FILTER --}}
 <form method="GET"
 class="row g-2 mb-4 align-items-end">
 
@@ -87,9 +83,6 @@ class="btn btn-outline-secondary btn-sm">
 
 </form>
 
-
-
-{{-- TABLE --}}
 <div class="table-responsive">
 
 <table class="table table-hover align-middle mb-0">
@@ -227,8 +220,6 @@ Không có dữ liệu
 </div>
 
 
-
-{{-- PAGINATION --}}
 @if($products->hasPages())
 
 <div class="mt-4">

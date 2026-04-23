@@ -1,8 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-/* ==================================================
-   SIDEBAR TOGGLE
-================================================== */
 
 const toggleBtn   = document.getElementById('toggleSidebar');
 const sidebar     = document.getElementById('sidebar');
@@ -10,15 +7,11 @@ const mainContent = document.querySelector('.main-content');
 
 if (sidebar) {
 
-    // ===== Overlay (mobile) =====
     const overlay = document.createElement('div');
     overlay.classList.add('sidebar-overlay');
     document.body.appendChild(overlay);
 
 
-    /* ===============================
-       RESTORE SIDEBAR STATE
-    =============================== */
 
     const savedState = localStorage.getItem('sidebar');
 
@@ -27,24 +20,13 @@ if (sidebar) {
         mainContent?.classList.add('full');
     }
 
-
-    /* ===============================
-       CLOSE SIDEBAR
-    =============================== */
-
     const closeSidebar = () => {
         sidebar.classList.remove('show');
         overlay.classList.remove('active');
     };
 
 
-    /* ===============================
-       TOGGLE SIDEBAR
-    =============================== */
-
     const toggleSidebar = () => {
-
-        // ===== MOBILE =====
         if (window.innerWidth <= 768) {
 
             sidebar.classList.toggle('show');
@@ -52,7 +34,6 @@ if (sidebar) {
 
         }
 
-        // ===== DESKTOP =====
         else {
 
             const isHidden = sidebar.classList.toggle('hidden');
@@ -61,7 +42,6 @@ if (sidebar) {
                 mainContent.classList.toggle('full', isHidden);
             }
 
-            // lưu trạng thái
             localStorage.setItem(
                 'sidebar',
                 isHidden ? 'hidden' : 'show'
@@ -76,16 +56,9 @@ if (sidebar) {
     }
 
 
-    /* ===============================
-       OVERLAY CLICK
-    =============================== */
 
     overlay.addEventListener('click', closeSidebar);
 
-
-    /* ===============================
-       WINDOW RESIZE
-    =============================== */
 
     window.addEventListener('resize', () => {
 
@@ -100,9 +73,6 @@ if (sidebar) {
 
 
 
-/* ==================================================
-   THÊM ẢNH PHỤ SẢN PHẨM
-================================================== */
 
 const btnAddImage  = document.getElementById('btn-add-image');
 const imageWrapper = document.getElementById('image-wrapper');
@@ -135,10 +105,6 @@ if (btnAddImage && imageWrapper) {
 
 }
 
-
-/* ==================================================
-   XOÁ ẢNH PHỤ
-================================================== */
 
 document.addEventListener('click', (e) => {
 

@@ -6,8 +6,6 @@
 <div class="container-fluid py-4">
     <div class="card shadow-sm border-0">
         <div class="card-body">
-
-            {{-- HEADER --}}
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
                 <div>
                     <h4 class="mb-1">Danh sách đơn hoàn trả / hoàn tiền</h4>
@@ -23,7 +21,6 @@
                 </a>
             </div>
 
-            {{-- FILTER --}}
             <form method="GET"
                   action="{{ route('admin.reports.refundOrders') }}"
                   class="row g-3 mb-4">
@@ -55,7 +52,6 @@
                 </div>
             </form>
 
-            {{-- TABLE --}}
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
@@ -73,7 +69,6 @@
                     <tbody>
                         @forelse($refunds as $refund)
                             @php
-                                // 🔥 XÓA "Sản phẩm ID xxx:"
                                 $cleanReason = preg_replace(
                                     '/(Sản phẩm|Product)\s*ID\s*\d+\s*[:\-]?\s*/i',
                                     '',
@@ -127,7 +122,6 @@
                 </table>
             </div>
 
-            {{-- PAGINATION --}}
             @if(method_exists($refunds, 'links'))
                 <div class="mt-4">
                     {{ $refunds->links() }}

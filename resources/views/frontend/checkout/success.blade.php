@@ -8,7 +8,6 @@ body{
     background:#f5f6fa;
 }
 
-/* Card */
 .success-card{
     border:0;
     border-radius:16px;
@@ -18,7 +17,6 @@ body{
     margin:auto;
 }
 
-/* Icon */
 .success-icon{
     width:90px;
     height:90px;
@@ -32,19 +30,16 @@ body{
     margin:auto;
 }
 
-/* Error icon */
 .error-icon{
     background:#fdeaea;
     color:#dc3545;
 }
 
-/* Title */
 .success-title{
     font-weight:700;
     margin-top:15px;
 }
 
-/* Order info */
 .order-info{
     background:#f8f9fa;
     border-radius:10px;
@@ -67,7 +62,6 @@ body{
     color:#dc3545;
 }
 
-/* Buttons */
 .btn-action{
     border-radius:10px;
     font-weight:600;
@@ -79,7 +73,6 @@ body{
 
 <div class="success-card p-4 p-md-5 text-center">
 
-    {{-- ICON --}}
     <div class="success-icon {{ session('error') ? 'error-icon' : '' }}">
         {{ session('error') ? '✕' : '✓' }}
     </div>
@@ -92,7 +85,6 @@ body{
         Cảm ơn bạn đã mua sắm tại <strong>ELARA</strong>
     </p>
 
-    {{-- ORDER INFO --}}
     <div class="order-info text-start">
 
         <div class="row">
@@ -129,7 +121,6 @@ body{
 
         <hr>
 
-        {{-- Breakdown tiền --}}
         <div class="row">
             <div class="col-6 label">Tạm tính:</div>
             <div class="col-6 text-end">
@@ -153,7 +144,6 @@ body{
 
     </div>
 
-    {{-- BUTTONS --}}
     <div class="mt-4 d-flex justify-content-center flex-wrap gap-2">
 
         <a href="{{ route('home') }}"

@@ -203,7 +203,6 @@
         </div>
     </div>
 
-    {{-- ===== TOAST HIỂN THỊ LỖI VALIDATION ===== --}}
     @if ($errors->any())
         @push('scripts')
             <script>
@@ -216,7 +215,6 @@
         @endpush
     @endif
 
-    {{-- ===== THÀNH CÔNG / LỖI TỪ CONTROLLER ===== --}}
     @if(session('success'))
         @push('scripts')
             <script>

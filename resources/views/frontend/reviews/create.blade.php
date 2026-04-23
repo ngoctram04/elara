@@ -405,7 +405,6 @@
                                     </div>
                                 </div>
 
-                                {{-- STAR --}}
                                 <div class="mb-4">
                                     <label class="section-label">Chất lượng sản phẩm</label>
 
@@ -431,7 +430,6 @@
                                          data-item-id="{{ $itemId }}"></div>
                                 </div>
 
-                                {{-- QUICK TAG --}}
                                 <div class="mb-4">
                                     <label class="section-label">Đánh giá nhanh</label>
 
@@ -443,7 +441,6 @@
                                     </div>
                                 </div>
 
-                                {{-- COMMENT --}}
                                 <div class="mb-4">
                                     <label class="section-label">Nhận xét</label>
 
@@ -461,7 +458,6 @@
                                          data-item-id="{{ $itemId }}"></div>
                                 </div>
 
-                                {{-- MEDIA --}}
                                 <div class="mb-2">
                                     <div class="media-label">Hình ảnh / Video</div>
 
